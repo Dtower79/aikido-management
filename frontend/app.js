@@ -7,7 +7,6 @@ let userData = JSON.parse(localStorage.getItem('aikido_user'));
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Validadores de DNI en tiempo real (Login y Nuevo Alumno)
     setupDniInput('dni-login');
     setupDniInput('new-dni');
 
@@ -36,10 +35,7 @@ function showLogin() {
 function showDashboard() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
-    
-    // Cargar datos iniciales necesarios
     loadDojos();
-    // Por defecto mostramos la sección activa (Nuevo Alumno)
 }
 
 function showSection(sectionId) {
@@ -51,10 +47,11 @@ function showSection(sectionId) {
     const btn = document.querySelector(`button[onclick="showSection('${sectionId}')"]`);
     if(btn) btn.classList.add('active');
 
-    // --- LÓGICA DE CARGA SEGÚN SECCIÓN ---
-    if(sectionId === 'alumnos') loadAlumnos();
-    if(sectionId === 'dojos') loadDojosView(); // <--- AÑADE ESTA LÍNEA
-    if(sectionId === 'nuevo-alumno') loadDojos(); // Para rellenar el select
+    // LÓGICA DE CARGA SEGÚN SECCIÓN
+    if(sectionId === 'alumnos') loadAlumnosActivos();
+    if(sectionId === 'bajas') loadAlumnosBaja(); // Nueva función
+    if(sectionId === 'dojos') loadDojosView();
+    if(sectionId === 'nuevo-alumno') loadDojos();
 }
 
 // --- LOGIN / LOGOUT ---
@@ -92,12 +89,56 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 function logout() {
     localStorage.removeItem('aikido_jwt');
     localStorage.removeItem('aikido_user');
-    location.reload(); // Recarga limpia
+    location.reload();
+}
+
+// --- SISTEMA DE MODALES ---
+function showModal(title, message, type = 'info', onConfirm = null) {
+    const overlay = document.getElementById('custom-modal');
+    const iconDiv = document.getElementById('modal-icon');
+    const titleEl = document.getElementById('modal-title');
+    const msgEl = document.getElementById('modal-message');
+    const btnOk = document.getElementById('modal-btn-ok');
+    const btnCancel = document.getElementById('modal-btn-cancel');
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+    
+    if (type === 'success') {
+        iconDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        iconDiv.style.color = '#10b981';
+    } else if (type === 'error') {
+        iconDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+        iconDiv.style.color = '#ef4444';
+    } else if (type === 'warning') {
+        iconDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        iconDiv.style.color = '#f59e0b';
+    } else {
+        iconDiv.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+        iconDiv.style.color = '#3b82f6';
+    }
+
+    if (onConfirm) {
+        btnCancel.classList.remove('hidden'); 
+        btnOk.innerText = "Confirmar";
+        btnOk.onclick = () => {
+            onConfirm();
+            closeModal();
+        };
+    } else {
+        btnCancel.classList.add('hidden'); 
+        btnOk.innerText = "Aceptar";
+        btnOk.onclick = closeModal;
+    }
+    overlay.classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('custom-modal').classList.add('hidden');
 }
 
 // --- GESTIÓN DE ALUMNOS ---
 
-// 1. Cargar Dojos para el Select
 async function loadDojos() {
     const select = document.getElementById('new-dojo');
     try {
@@ -106,22 +147,17 @@ async function loadDojos() {
         });
         const data = await res.json();
         
-        // Guardamos la selección actual si estamos editando
         const currentVal = select.value;
-
         select.innerHTML = '<option value="">Selecciona un Dojo...</option>';
         data.data.forEach(dojo => {
             const d = dojo.attributes || dojo;
             const id = dojo.documentId || dojo.id; 
             select.innerHTML += `<option value="${id}">${d.nombre}</option>`;
         });
-
         if(currentVal) select.value = currentVal;
-
     } catch (e) { console.error("Error cargando dojos", e); }
 }
 
-// 2. Crear O Editar Alumno (Lógica Mixta)
 document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('btn-submit-alumno');
@@ -129,31 +165,28 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
     btn.disabled = true;
     btn.innerText = "Procesando...";
 
-    // Miramos si hay un ID oculto (Modo Edición)
     const editId = document.getElementById('edit-id').value;
     const isEdit = !!editId;
 
-    // Recoger datos
     const alumnoData = {
         nombre: document.getElementById('new-nombre').value,
         apellidos: document.getElementById('new-apellidos').value,
         dni: document.getElementById('new-dni').value,
         email: document.getElementById('new-email').value,
         telefono: document.getElementById('new-telefono').value,
-        fecha_nacimiento: document.getElementById('new-nacimiento').value || null, // null si está vacío para que no falle date
+        fecha_nacimiento: document.getElementById('new-nacimiento').value || null,
         direccion: document.getElementById('new-direccion').value,
         poblacion: document.getElementById('new-poblacion').value,
         cp: document.getElementById('new-cp').value,
         grado: document.getElementById('new-grado').value,
         grupo: document.getElementById('new-grupo').value,
-        dojo: document.getElementById('new-dojo').value 
+        dojo: document.getElementById('new-dojo').value,
+        activo: true // Por defecto al crear o editar, aseguramos que esté activo
     };
 
     try {
         let url = `${API_URL}/api/alumnos`;
         let method = 'POST';
-
-        // Si es edición, cambiamos URL y método
         if (isEdit) {
             url = `${API_URL}/api/alumnos/${editId}`;
             method = 'PUT';
@@ -169,18 +202,15 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
         });
 
         if (res.ok) {
-            showModal("Éxito", isEdit ? "Alumno actualizado correctamente" : "Alumno creado correctamente", "success");
-            resetForm(); // Limpiar y volver a modo creación
-            showSection('alumnos'); // Volver a la tabla
-            loadAlumnos(); // Recargar lista para ver cambios
+            showModal("Éxito", isEdit ? "Alumno actualizado" : "Alumno creado", "success");
+            resetForm(); 
+            showSection('alumnos'); 
+            loadAlumnosActivos(); 
         } else {
             const err = await res.json();
-            // CAMBIO AQUÍ
-            showModal("Error", err.error?.message || "Revisa los datos introducidos", "error");
+            showModal("Error", err.error?.message || "Revisa los datos", "error");
         }
     } catch (error) {
-        console.error(error);
-        // CAMBIO AQUÍ
         showModal("Error de Conexión", "No se pudo contactar con el servidor", "error");
     } finally {
         btn.disabled = false;
@@ -188,38 +218,28 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
     }
 });
 
-// Función para limpiar el formulario y salir del modo edición
 function resetForm() {
     document.getElementById('form-nuevo-alumno').reset();
-    document.getElementById('edit-id').value = ""; // Borrar ID
-    
-    // Restaurar textos y botones
+    document.getElementById('edit-id').value = ""; 
     document.querySelector('#sec-nuevo-alumno h2').innerHTML = '<i class="fa-solid fa-user-plus"></i> Alta de Alumno';
     document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO";
     document.getElementById('btn-cancelar-edit').classList.add('hidden');
 }
 
-// 3. Preparar Edición (Se llama al hacer clic en el lápiz)
 async function editarAlumno(documentId) {
-    // 1. Ir a la vista de formulario
     showSection('nuevo-alumno');
-    
-    // 2. Cambiar títulos visuales
     document.querySelector('#sec-nuevo-alumno h2').innerHTML = '<i class="fa-solid fa-pen"></i> Editant Alumne';
     document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR DATOS";
     document.getElementById('btn-cancelar-edit').classList.remove('hidden');
     
-    // 3. Cargar datos del alumno desde la API (para tener todos los campos, no solo los de la tabla)
-    // Usamos el documentId que es el estándar de Strapi v5
     try {
         const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, {
             headers: { 'Authorization': `Bearer ${jwtToken}` }
         });
         const json = await res.json();
-        const data = json.data; // En v5 data es el objeto directo, en v4 data.attributes
-        const props = data.attributes || data; // Compatibilidad
+        const data = json.data; 
+        const props = data.attributes || data; 
 
-        // 4. Rellenar campos
         document.getElementById('edit-id').value = data.documentId || data.id;
         document.getElementById('new-nombre').value = props.nombre || '';
         document.getElementById('new-apellidos').value = props.apellidos || '';
@@ -233,81 +253,157 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = props.grado || '';
         document.getElementById('new-grupo').value = props.grupo || 'General';
         
-        // El select de Dojo puede tardar en cargar, así que esperamos un poco o seteamos valor
         if (props.dojo) {
-            // Strapi v5 devuelve el objeto relacionado directo o en data
             const dojoId = props.dojo.documentId || (props.dojo.data ? props.dojo.data.documentId : null) || props.dojo.id;
             if(dojoId) document.getElementById('new-dojo').value = dojoId;
         }
-
     } catch (e) {
-        console.error("Error cargando alumno", e);
-        alert("No se pudieron cargar los datos del alumno.");
+        showModal("Error", "No se pudieron cargar los datos.", "error");
         showSection('alumnos');
     }
 }
 
-// 4. Listar Alumnos (Tabla)
-async function loadAlumnos() {
-    const tbody = document.getElementById('lista-alumnos-body');
-    tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</td></tr>';
+// --- GESTIÓN DE BAJAS Y ACTIVOS ---
 
+// 1. Cargar ACTIVOS (activo = true)
+async function loadAlumnosActivos() {
+    const tbody = document.getElementById('lista-alumnos-body');
+    tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando activos...</td></tr>';
+    
+    // FILTRO: filters[activo][$eq]=true
+    const url = `${API_URL}/api/alumnos?populate=*&sort=apellidos:asc&filters[activo][$eq]=true&pagination[limit]=100`;
+    fetchAlumnosGenerico(url, tbody, true); // true = modo activo (botón borrar)
+}
+
+// 2. Cargar BAJAS (activo = false)
+async function loadAlumnosBaja() {
+    const tbody = document.getElementById('lista-bajas-body');
+    tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando bajas...</td></tr>';
+
+    // FILTRO: filters[activo][$eq]=false
+    const url = `${API_URL}/api/alumnos?populate=*&sort=apellidos:asc&filters[activo][$eq]=false&pagination[limit]=100`;
+    fetchAlumnosGenerico(url, tbody, false); // false = modo baja (botón restaurar)
+}
+
+// Función genérica para pintar tablas
+async function fetchAlumnosGenerico(url, tbodyElement, esActivo) {
     try {
-        const response = await fetch(`${API_URL}/api/alumnos?populate=*&sort=apellidos:asc&pagination[limit]=100`, {
-            headers: { 'Authorization': `Bearer ${jwtToken}` }
-        });
+        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const data = await response.json();
         
-        if (response.ok) renderTablaAlumnos(data.data);
+        if (response.ok) {
+            renderTablaAlumnos(data.data, tbodyElement, esActivo);
+        } else {
+            if(response.status === 401 || response.status === 403) logout();
+        }
     } catch (error) {
-        tbody.innerHTML = '<tr><td colspan="5">Error de conexión</td></tr>';
+        tbodyElement.innerHTML = '<tr><td colspan="5">Error de conexión</td></tr>';
     }
 }
 
-function renderTablaAlumnos(alumnos) {
-    const tbody = document.getElementById('lista-alumnos-body');
+function renderTablaAlumnos(alumnos, tbody, esActivo) {
     tbody.innerHTML = '';
 
     if (!alumnos || alumnos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No hay alumnos.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No hay alumnos en esta lista.</td></tr>';
         return;
     }
 
     alumnos.forEach(alumno => {
         const props = alumno.attributes || alumno; 
-        const docId = alumno.documentId || alumno.id; // Clave para editar
+        const docId = alumno.documentId || alumno.id; 
+        const nombreCompleto = `${props.apellidos || ''}, ${props.nombre || ''}`;
 
         let dojoNombre = "-";
         if (props.dojo) {
              const d = props.dojo.data ? props.dojo.data.attributes : props.dojo;
-             // Ajuste para Strapi v5 que a veces devuelve el objeto directo
              if(d && d.nombre) dojoNombre = d.nombre;
-             else if (props.dojo.nombre) dojoNombre = props.dojo.nombre;
         }
-        
         const grupo = props.grupo ? ` (${props.grupo})` : "";
+
+        // Definir botones según si es activo o baja
+        let botones = '';
+        if (esActivo) {
+            // Botón Editar y Botón Baja
+            botones = `
+                <button class="action-btn-icon" onclick="editarAlumno('${docId}')" title="Editar">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="action-btn-icon delete" onclick="confirmarBaja('${docId}', '${nombreCompleto}')" title="Dar de Baja">
+                    <i class="fa-solid fa-user-xmark"></i>
+                </button>
+            `;
+        } else {
+            // Botón Reactivar
+            botones = `
+                <button class="action-btn-icon restore" onclick="confirmarReactivacion('${docId}', '${nombreCompleto}')" title="Reactivar Alumno">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+            `;
+        }
 
         const row = `
             <tr>
-                <td><strong>${props.apellidos || ''}</strong>, ${props.nombre || ''}</td>
+                <td><strong>${nombreCompleto}</strong></td>
                 <td style="font-family: monospace;">${props.dni || '-'}</td>
                 <td><span class="badge">${props.grado || 'S/G'}</span></td>
                 <td>${dojoNombre}${grupo}</td>
-                <td>
-                    <!-- AQUÍ LLAMAMOS A LA FUNCIÓN DE EDITAR -->
-                    <button class="action-btn-icon" onclick="editarAlumno('${docId}')" title="Editar">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                </td>
+                <td>${botones}</td>
             </tr>
         `;
         tbody.innerHTML += row;
     });
 }
 
-function filtrarAlumnos() {
-    const filter = document.getElementById('search-alumno').value.toUpperCase();
-    const tr = document.getElementById('tabla-alumnos').getElementsByTagName('tr');
+// 3. Acciones de Baja / Reactivación
+
+function confirmarBaja(documentId, nombre) {
+    showModal(
+        "Confirmar Baja", 
+        `¿Estás seguro de que quieres dar de baja a ${nombre}? Pasará al histórico de bajas.`, 
+        "warning", 
+        () => cambiarEstadoAlumno(documentId, false) // false = poner activo en false
+    );
+}
+
+function confirmarReactivacion(documentId, nombre) {
+    showModal(
+        "Reactivar Alumno", 
+        `¿Quieres volver a dar de alta a ${nombre}? Aparecerá de nuevo en la lista principal.`, 
+        "info", 
+        () => cambiarEstadoAlumno(documentId, true) // true = poner activo en true
+    );
+}
+
+async function cambiarEstadoAlumno(documentId, nuevoEstado) {
+    try {
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}` 
+            },
+            body: JSON.stringify({ data: { activo: nuevoEstado } })
+        });
+
+        if (res.ok) {
+            showModal("Éxito", nuevoEstado ? "Alumno reactivado." : "Alumno dado de baja.", "success");
+            // Recargar la vista actual para ver que desaparece/aparece
+            if(nuevoEstado) showSection('bajas'); // Si reactivamos, estamos en bajas
+            else showSection('alumnos'); // Si damos de baja, estamos en activos
+        } else {
+            showModal("Error", "No se pudo cambiar el estado.", "error");
+        }
+    } catch (error) {
+        showModal("Error", "Error de conexión.", "error");
+    }
+}
+
+// --- FILTRO BÚSQUEDA GENÉRICO ---
+function filtrarAlumnos(tablaId) {
+    const inputId = tablaId === 'tabla-alumnos' ? 'search-alumno' : 'search-baja';
+    const filter = document.getElementById(inputId).value.toUpperCase();
+    const tr = document.getElementById(tablaId).getElementsByTagName('tr');
 
     for (let i = 1; i < tr.length; i++) { 
         const tdNombre = tr[i].getElementsByTagName('td')[0];
@@ -320,42 +416,25 @@ function filtrarAlumnos() {
 }
 
 // --- GESTIÓN DE DOJOS ---
-
 async function loadDojosView() {
     const container = document.getElementById('grid-dojos');
     container.innerHTML = '<p class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando dojos...</p>';
-
     try {
         const response = await fetch(`${API_URL}/api/dojos?pagination[limit]=100`, {
             headers: { 'Authorization': `Bearer ${jwtToken}` }
         });
         const data = await response.json();
-        
-        if (response.ok) {
-            renderDojosCards(data.data);
-        } else {
-            container.innerHTML = '<p>Error cargando datos.</p>';
-        }
-    } catch (error) {
-        console.error(error);
-        container.innerHTML = '<p>Error de conexión.</p>';
-    }
+        if (response.ok) renderDojosCards(data.data);
+    } catch (error) { container.innerHTML = '<p>Error.</p>'; }
 }
 
 function renderDojosCards(dojos) {
     const container = document.getElementById('grid-dojos');
     container.innerHTML = '';
-
-    if (!dojos || dojos.length === 0) {
-        container.innerHTML = '<p>No hay dojos registrados.</p>';
-        return;
-    }
+    if (!dojos || dojos.length === 0) { container.innerHTML = '<p>No hay dojos.</p>'; return; }
 
     dojos.forEach(dojo => {
-        // Compatibilidad v4/v5
         const props = dojo.attributes || dojo;
-        
-        // Datos seguros (por si están vacíos en la BD)
         const nombre = props.nombre || "Dojo Sin Nombre";
         const direccion = props.direccion || "Dirección no disponible";
         const poblacion = props.poblacion || "";
@@ -364,22 +443,10 @@ function renderDojosCards(dojos) {
 
         const card = `
             <div class="dojo-card">
-                <div class="dojo-header">
-                    <h3><i class="fa-solid fa-torii-gate"></i> ${nombre}</h3>
-                    <!-- <span class="student-count"><i class="fa-solid fa-users"></i> ?</span> -->
-                </div>
+                <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${nombre}</h3></div>
                 <div class="dojo-body">
-                    <div class="dojo-info-row">
-                        <i class="fa-solid fa-map-location-dot"></i>
-                        <span>${direccion}<br><strong>${poblacion}</strong></span>
-                    </div>
-                    
-                    ${webText ? `
-                    <div class="dojo-info-row">
-                        <i class="fa-solid fa-globe"></i>
-                        <a href="${web}" target="_blank" class="dojo-link">${webText}</a>
-                    </div>
-                    ` : ''}
+                    <div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${direccion}<br><strong>${poblacion}</strong></span></div>
+                    ${webText ? `<div class="dojo-info-row"><i class="fa-solid fa-globe"></i><a href="${web}" target="_blank" class="dojo-link">${webText}</a></div>` : ''}
                 </div>
             </div>
         `;
@@ -387,43 +454,9 @@ function renderDojosCards(dojos) {
     });
 }
 
-// --- SISTEMA DE MODALES ---
-function showModal(title, message, type = 'info') {
-    const overlay = document.getElementById('custom-modal');
-    const iconDiv = document.getElementById('modal-icon');
-    const titleEl = document.getElementById('modal-title');
-    const msgEl = document.getElementById('modal-message');
-
-    // Configurar contenido
-    titleEl.innerText = title;
-    msgEl.innerText = message;
-    
-    // Iconos y colores según tipo
-    if (type === 'success') {
-        iconDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
-        iconDiv.style.color = '#10b981'; // Verde
-    } else if (type === 'error') {
-        iconDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
-        iconDiv.style.color = '#ef4444'; // Rojo
-    } else {
-        iconDiv.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
-        iconDiv.style.color = '#3b82f6'; // Azul
-    }
-
-    // Mostrar
-    overlay.classList.remove('hidden');
-}
-
-function closeModal() {
-    document.getElementById('custom-modal').classList.add('hidden');
-}
-
-// --- BOTÓN VOLVER ARRIBA ---
 const btnScroll = document.getElementById('btn-back-to-top');
-const contentContainer = document.querySelector('.content'); // El div que tiene el scroll
-
+const contentContainer = document.querySelector('.content'); 
 if (contentContainer && btnScroll) {
-    // Escuchar el scroll del contenedor principal
     contentContainer.addEventListener('scroll', () => {
         if (contentContainer.scrollTop > 300) {
             btnScroll.classList.add('show');
@@ -433,12 +466,7 @@ if (contentContainer && btnScroll) {
             btnScroll.style.display = 'none';
         }
     });
-
-    // Acción al pulsar
     btnScroll.addEventListener('click', () => {
-        contentContainer.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
+        contentContainer.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }

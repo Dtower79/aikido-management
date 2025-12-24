@@ -557,3 +557,14 @@ tr:hover { background: rgba(255,255,255,0.02); }
         grid-template-columns: 1fr; /* Una sola columna para tarjetas */
     }
 }
+
+/* Botón Reactivar (Verde) */
+.action-btn-icon.restore {
+    color: var(--text-muted);
+    border-color: var(--border);
+}
+.action-btn-icon.restore:hover {
+    color: #10b981; /* Verde */
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
