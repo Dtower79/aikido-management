@@ -169,16 +169,19 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
         });
 
         if (res.ok) {
-            alert(isEdit ? "✅ Alumno actualizado" : "✅ Alumno creado");
+            showModal("Éxito", isEdit ? "Alumno actualizado correctamente" : "Alumno creado correctamente", "success");
             resetForm(); // Limpiar y volver a modo creación
             showSection('alumnos'); // Volver a la tabla
+            loadAlumnos(); // Recargar lista para ver cambios
         } else {
             const err = await res.json();
-            alert("❌ Error: " + (err.error?.message || "Revisa los datos"));
+            // CAMBIO AQUÍ
+            showModal("Error", err.error?.message || "Revisa los datos introducidos", "error");
         }
     } catch (error) {
-        alert("❌ Error de conexión");
         console.error(error);
+        // CAMBIO AQUÍ
+        showModal("Error de Conexión", "No se pudo contactar con el servidor", "error");
     } finally {
         btn.disabled = false;
         btn.innerText = originalText;
@@ -382,4 +385,35 @@ function renderDojosCards(dojos) {
         `;
         container.innerHTML += card;
     });
+}
+
+// --- SISTEMA DE MODALES ---
+function showModal(title, message, type = 'info') {
+    const overlay = document.getElementById('custom-modal');
+    const iconDiv = document.getElementById('modal-icon');
+    const titleEl = document.getElementById('modal-title');
+    const msgEl = document.getElementById('modal-message');
+
+    // Configurar contenido
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+    
+    // Iconos y colores según tipo
+    if (type === 'success') {
+        iconDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+        iconDiv.style.color = '#10b981'; // Verde
+    } else if (type === 'error') {
+        iconDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+        iconDiv.style.color = '#ef4444'; // Rojo
+    } else {
+        iconDiv.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+        iconDiv.style.color = '#3b82f6'; // Azul
+    }
+
+    // Mostrar
+    overlay.classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('custom-modal').classList.add('hidden');
 }
