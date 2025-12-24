@@ -40,9 +40,23 @@ body {
     text-align: center;
 }
 
-.logo-area h1 { margin: 0; font-weight: 300; letter-spacing: 2px; }
-.logo-area .accent { color: var(--accent); font-weight: 600; }
-.logo-area p { color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; margin-bottom: 30px; }
+.logo-area {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.logo-img-login {
+    max-width: 180px; 
+    height: auto;
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.3)); 
+}
+
+.logo-img-sidebar {
+    max-width: 140px; 
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
 
 .input-group {
     position: relative;
@@ -99,8 +113,8 @@ body {
     padding: 20px;
     border-bottom: 1px solid var(--border);
     text-align: center;
+    background: rgba(0,0,0,0.2);
 }
-.sidebar-header h2 { margin: 0; color: var(--text); letter-spacing: 1px; }
 
 .menu { flex: 1; padding: 20px 10px; }
 .menu-btn {
@@ -151,7 +165,7 @@ body {
 }
 .section-header h2 { margin: 0; font-weight: 400; }
 
-#search-alumno {
+#search-alumno, #search-baja {
     background: var(--bg-card);
     border: 1px solid var(--border);
     color: white;
@@ -174,33 +188,14 @@ tr:last-child td { border-bottom: none; }
 tr:hover { background: rgba(255,255,255,0.02); }
 .loading { text-align: center; color: var(--text-muted); padding: 30px; font-style: italic; }
 
-/* ESTILOS DEL LOGO */
-.logo-area {
-    text-align: center;
-    margin-bottom: 30px;
+/* BADGE */
+.badge {
+    background: var(--bg-dark);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
 }
-
-.logo-img-login {
-    max-width: 180px; /* Tamaño grande para login */
-    height: auto;
-    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.3)); /* Brillo rojo sutil */
-}
-
-.logo-img-sidebar {
-    max-width: 140px; /* Tamaño ajustado para la barra lateral */
-    height: auto;
-    display: block;
-    margin: 0 auto;
-}
-
-.sidebar-header {
-    padding: 20px;
-    border-bottom: 1px solid var(--border);
-    text-align: center;
-    background: rgba(0,0,0,0.2); /* Un poco más oscuro para el logo */
-}
-
-/* ... código anterior ... */
 
 /* ESTILOS DEL FORMULARIO */
 .form-card {
@@ -217,7 +212,6 @@ tr:hover { background: rgba(255,255,255,0.02); }
     margin-bottom: 15px;
 }
 
-/* En móvil, que se pongan uno debajo de otro */
 @media (max-width: 768px) {
     .form-row { flex-direction: column; gap: 15px; }
 }
@@ -268,11 +262,43 @@ tr:hover { background: rgba(255,255,255,0.02); }
     background: #2563eb;
     transform: translateY(-2px);
 }
+.action-btn.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+.action-btn.secondary:hover {
+    background: rgba(255,255,255,0.05);
+    color: white;
+}
+
+/* BOTONES ICONO */
+.action-btn-icon {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-right: 5px;
+}
+.action-btn-icon:hover { background: rgba(255,255,255,0.1); }
+
+.action-btn-icon.delete { color: var(--text-muted); }
+.action-btn-icon.delete:hover {
+    color: #ef4444; border-color: #ef4444; background: rgba(239, 68, 68, 0.1);
+}
+
+.action-btn-icon.restore { color: var(--text-muted); }
+.action-btn-icon.restore:hover {
+    color: #10b981; border-color: #10b981; background: rgba(16, 185, 129, 0.1);
+}
 
 /* --- ESTILOS DE DOJOS (GRID) --- */
 .dojo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsivo automático */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 25px;
     margin-top: 20px;
 }
@@ -281,7 +307,7 @@ tr:hover { background: rgba(255,255,255,0.02); }
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 0; /* Padding controlado dentro */
+    padding: 0;
     overflow: hidden;
     transition: transform 0.2s, box-shadow 0.2s;
     position: relative;
@@ -308,7 +334,7 @@ tr:hover { background: rgba(255,255,255,0.02); }
     gap: 10px;
 }
 
-.dojo-header i { color: var(--accent); } /* Icono rojo */
+.dojo-header i { color: var(--accent); }
 
 .dojo-body {
     padding: 20px;
@@ -340,28 +366,6 @@ tr:hover { background: rgba(255,255,255,0.02); }
 }
 .dojo-link:hover { text-decoration: underline; }
 
-/* Etiqueta de cantidad de alumnos (opcional para el futuro) */
-.student-count {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(255,255,255,0.1);
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    color: white;
-}
-
-.action-btn.secondary {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-}
-.action-btn.secondary:hover {
-    background: rgba(255,255,255,0.05);
-    color: white;
-}
-
 /* --- MODAL PERSONALIZADO --- */
 .modal-overlay {
     position: fixed;
@@ -369,12 +373,12 @@ tr:hover { background: rgba(255,255,255,0.02); }
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); /* Fondo oscuro semitransparente */
+    background-color: rgba(0, 0, 0, 0.7);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    backdrop-filter: blur(3px); /* Efecto borroso de fondo */
+    backdrop-filter: blur(3px);
 }
 
 .modal-box {
@@ -390,26 +394,17 @@ tr:hover { background: rgba(255,255,255,0.02); }
     animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.modal-icon {
-    font-size: 3rem;
-    margin-bottom: 15px;
-}
+.modal-icon { font-size: 3rem; margin-bottom: 15px; }
+.modal-box h3 { margin-top: 0; color: white; font-weight: 600; }
+.modal-box p { color: var(--text-muted); margin-bottom: 25px; line-height: 1.5; }
+.modal-box button { width: 100%; }
 
-.modal-box h3 {
-    margin-top: 0;
-    color: white;
-    font-weight: 600;
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
 }
-
-.modal-box p {
-    color: var(--text-muted);
-    margin-bottom: 25px;
-    line-height: 1.5;
-}
-
-.modal-box button {
-    width: 100%;
-}
+.modal-actions button { flex: 1; }
 
 @keyframes popIn {
     from { transform: scale(0.8); opacity: 0; }
@@ -430,152 +425,23 @@ tr:hover { background: rgba(255,255,255,0.02); }
     font-size: 1.2rem;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-    display: none; /* Oculto por defecto */
+    display: none;
     align-items: center;
     justify-content: center;
     transition: transform 0.3s, background 0.3s;
     z-index: 999;
 }
 
-#btn-back-to-top:hover {
-    background: #dc2626;
-    transform: translateY(-3px);
-}
+#btn-back-to-top:hover { background: #dc2626; transform: translateY(-3px); }
+#btn-back-to-top.show { display: flex; animation: fadeIn 0.3s; }
 
-#btn-back-to-top.show {
-    display: flex;
-    animation: fadeIn 0.3s;
-}
-
-/* --- RESPONSIVE DESIGN (MÓVIL Y TABLET) --- */
-@media (max-width: 900px) {
-    /* 1. Cambiar Layout Principal */
-    .dashboard-container {
-        flex-direction: column; /* Apilar verticalmente */
-        height: 100vh; /* Mantener altura completa */
-        overflow: hidden;
-    }
-
-    /* 2. Sidebar se convierte en Header */
-    .sidebar {
-        width: 100%;
-        height: auto;
-        flex-shrink: 0; /* Que no se aplaste */
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        padding: 10px 0;
-    }
-
-    .sidebar-header {
-        padding: 5px;
-        border: none;
-    }
-    
-    .logo-img-sidebar {
-        max-width: 100px; /* Logo más pequeño */
-    }
-
-    /* 3. Menú Horizontal con Scroll */
-    .menu {
-        display: flex;
-        gap: 10px;
-        overflow-x: auto; /* Scroll lateral si no caben */
-        padding: 10px 15px;
-        white-space: nowrap; /* Que no salten de línea */
-        -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
-    }
-
-    .menu-btn {
-        margin-bottom: 0;
-        border: 1px solid var(--border);
-        padding: 8px 15px;
-        font-size: 0.85rem;
-    }
-    
-    .menu-btn.active {
-        border-color: var(--primary);
-    }
-
-    .sidebar-footer {
-        display: none; /* Ocultamos el botón salir abajo para ahorrar espacio */
-    }
-    
-    /* Añadimos botón salir al menú horizontal */
-    /* (Se gestionará visualmente si queremos o lo dejamos oculto) */
-
-    /* 4. Contenido Principal */
-    .content {
-        padding: 15px; /* Menos padding */
-        height: 100%;
-        overflow-y: auto; /* El scroll está AQUI, no en el body */
-    }
-
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-    }
-    
-    .section-header .actions {
-        width: 100%;
-    }
-
-    #search-alumno {
-        width: 100%; /* Buscador ancho completo */
-        box-sizing: border-box;
-    }
-
-    /* 5. Tablas Responsive */
-    .table-container {
-        overflow-x: auto; /* Scroll lateral */
-    }
-    
-    table {
-        min-width: 600px; /* Forzar ancho mínimo para que salte el scroll */
-    }
-
-    th, td {
-        padding: 10px;
-        font-size: 0.8rem; /* Letra más pequeña */
-    }
-
-    .action-btn-icon {
-        padding: 5px 10px;
-    }
-
-    /* 6. Formularios */
-    .form-row {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .form-card {
-        padding: 15px;
-    }
-    
-    .dojo-grid {
-        grid-template-columns: 1fr; /* Una sola columna para tarjetas */
-    }
-}
-
-/* Botón Reactivar (Verde) */
-.action-btn-icon.restore {
-    color: var(--text-muted);
-    border-color: var(--border);
-}
-.action-btn-icon.restore:hover {
-    color: #10b981; /* Verde */
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
-}
-
-/* --- ESTILO CONSOLA MONITORIZACIÓN --- */
+/* --- CONSOLA --- */
 .console-wrapper {
-    background-color: #000; /* Fondo negro puro */
+    background-color: #000;
     border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     border: 1px solid #334155;
-    height: 85vh; /* Ocupa casi toda la altura */
+    height: 85vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -597,12 +463,7 @@ tr:hover { background: rgba(255,255,255,0.02); }
     margin-left: 10px;
 }
 
-.dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-}
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 .dot.red { background-color: #ff5f56; }
 .dot.yellow { background-color: #ffbd2e; }
 .dot.green { background-color: #27c93f; }
@@ -610,30 +471,15 @@ tr:hover { background: rgba(255,255,255,0.02); }
 .console-body {
     flex: 1;
     background: #000;
-}
-
-.console-body iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-    display: block; /* Quita espacios extra */
-}
-
-/* --- AÑADIDOS TERMINAL --- */
-.console-body {
     padding: 20px;
     font-family: 'Courier New', Courier, monospace;
-    color: #33ff00; /* Verde Hacker */
+    color: #33ff00;
     font-size: 0.9rem;
     line-height: 1.6;
     overflow-y: auto;
 }
 
-.log-line {
-    display: block;
-    margin-bottom: 5px;
-}
-
+.log-line { display: block; margin-bottom: 5px; }
 .log-success { color: #33ff00; }
 .log-warning { color: #facc15; }
 .log-info { color: #60a5fa; }
@@ -648,10 +494,7 @@ tr:hover { background: rgba(255,255,255,0.02); }
     vertical-align: middle;
 }
 
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
 .btn-monitor-ext {
     display: inline-block;
@@ -668,4 +511,25 @@ tr:hover { background: rgba(255,255,255,0.02); }
 .btn-monitor-ext:hover {
     background: rgba(51, 255, 0, 0.1);
     box-shadow: 0 0 15px rgba(51, 255, 0, 0.4);
+}
+
+/* --- RESPONSIVE DESIGN --- */
+@media (max-width: 900px) {
+    .dashboard-container { flex-direction: column; height: 100vh; overflow: hidden; }
+    .sidebar { width: 100%; height: auto; flex-shrink: 0; border-right: none; border-bottom: 1px solid var(--border); padding: 10px 0; }
+    .sidebar-header { padding: 5px; border: none; }
+    .logo-img-sidebar { max-width: 100px; }
+    .menu { display: flex; gap: 10px; overflow-x: auto; padding: 10px 15px; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+    .menu-btn { margin-bottom: 0; border: 1px solid var(--border); padding: 8px 15px; font-size: 0.85rem; }
+    .sidebar-footer { display: none; }
+    .content { padding: 15px; height: 100%; overflow-y: auto; }
+    .section-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+    .section-header .actions { width: 100%; }
+    #search-alumno, #search-baja { width: 100%; box-sizing: border-box; }
+    .table-container { overflow-x: auto; }
+    table { min-width: 600px; }
+    th, td { padding: 10px; font-size: 0.8rem; }
+    .form-row { flex-direction: column; gap: 15px; }
+    .form-card { padding: 15px; }
+    .dojo-grid { grid-template-columns: 1fr; }
 }

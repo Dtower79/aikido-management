@@ -9,6 +9,7 @@ let userData = JSON.parse(localStorage.getItem('aikido_user'));
 document.addEventListener('DOMContentLoaded', () => {
     setupDniInput('dni-login');
     setupDniInput('new-dni');
+    setupNumericInput('new-cp');
 
     if (jwtToken) {
         showDashboard();
@@ -26,6 +27,15 @@ function setupDniInput(id) {
     }
 }
 
+function setupNumericInput(id) {
+    const input = document.getElementById(id);
+    if(input) {
+        input.addEventListener('input', function (e) {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+    }
+}
+
 // --- VISTAS ---
 function showLogin() {
     document.getElementById('login-screen').classList.remove('hidden');
@@ -35,7 +45,13 @@ function showLogin() {
 function showDashboard() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
+    
+    // Carga inicial de datos
     loadDojos();
+    loadCiudades();
+    
+    // Mostrar pantalla de bienvenida por defecto
+    showSection('welcome');
 }
 
 function showSection(sectionId) {
@@ -44,19 +60,16 @@ function showSection(sectionId) {
     
     document.getElementById(`sec-${sectionId}`).classList.remove('hidden');
     
-    const btn = document.querySelector(`button[onclick="showSection('${sectionId}')"]`);
-    if(btn) btn.classList.add('active');
+    // Si no es welcome, activamos botón
+    if(sectionId !== 'welcome') {
+        const btn = document.querySelector(`button[onclick="showSection('${sectionId}')"]`);
+        if(btn) btn.classList.add('active');
+    }
 
-    // CARGA DE DATOS
     if(sectionId === 'alumnos') loadAlumnosActivos();
     if(sectionId === 'bajas') loadAlumnosBaja();
     if(sectionId === 'dojos') loadDojosView();
-    if(sectionId === 'nuevo-alumno') loadDojos();
-
-    // CARGA DEL MONITOR (URL CORRECTA)
-    if(sectionId === 'status') {
-        runSystemDiagnostics();
-    }
+    if(sectionId === 'status') runSystemDiagnostics();
 }
 
 // --- LOGIN / LOGOUT ---
@@ -163,6 +176,26 @@ async function loadDojos() {
     } catch (e) { console.error("Error cargando dojos", e); }
 }
 
+async function loadCiudades() {
+    const datalist = document.getElementById('ciudades-list');
+    try {
+        const res = await fetch(`${API_URL}/api/alumnos?fields[0]=poblacion&pagination[limit]=500`, {
+            headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+        const data = await res.json();
+        const ciudades = new Set();
+        data.data.forEach(a => {
+            const p = a.attributes ? a.attributes.poblacion : a.poblacion;
+            if(p) ciudades.add(p);
+        });
+        
+        datalist.innerHTML = "";
+        Array.from(ciudades).sort().forEach(ciudad => {
+            datalist.innerHTML += `<option value="${ciudad}">`;
+        });
+    } catch (e) { console.error(e); }
+}
+
 document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('btn-submit-alumno');
@@ -175,7 +208,8 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
 
     const alumnoData = {
         nombre: document.getElementById('new-nombre').value,
-        apellidos: document.getElementById('new-apellidos').value,
+        primer_apellido: document.getElementById('new-apellido1').value,
+        segundo_apellido: document.getElementById('new-apellido2').value,
         dni: document.getElementById('new-dni').value,
         email: document.getElementById('new-email').value,
         telefono: document.getElementById('new-telefono').value,
@@ -209,6 +243,7 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
         if (res.ok) {
             showModal("Éxito", isEdit ? "Alumno actualizado" : "Alumno creado", "success");
             resetForm(); 
+            loadCiudades();
             showSection('alumnos'); 
             loadAlumnosActivos(); 
         } else {
@@ -247,7 +282,8 @@ async function editarAlumno(documentId) {
 
         document.getElementById('edit-id').value = data.documentId || data.id;
         document.getElementById('new-nombre').value = props.nombre || '';
-        document.getElementById('new-apellidos').value = props.apellidos || '';
+        document.getElementById('new-apellido1').value = props.primer_apellido || '';
+        document.getElementById('new-apellido2').value = props.segundo_apellido || '';
         document.getElementById('new-dni').value = props.dni || '';
         document.getElementById('new-email').value = props.email || '';
         document.getElementById('new-telefono').value = props.telefono || '';
@@ -256,7 +292,7 @@ async function editarAlumno(documentId) {
         document.getElementById('new-poblacion').value = props.poblacion || '';
         document.getElementById('new-cp').value = props.cp || '';
         document.getElementById('new-grado').value = props.grado || '';
-        document.getElementById('new-grupo').value = props.grupo || 'General';
+        document.getElementById('new-grupo').value = props.grupo || 'Full Time';
         
         if (props.dojo) {
             const dojoId = props.dojo.documentId || (props.dojo.data ? props.dojo.data.documentId : null) || props.dojo.id;
@@ -275,10 +311,10 @@ async function loadAlumnosActivos() {
     tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</td></tr>';
     
     const timeoutMsg = setTimeout(() => {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading" style="color:var(--primary)"><i class="fa-solid fa-server"></i> Despertando al servidor (puede tardar unos segundos)...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="loading" style="color:var(--primary)"><i class="fa-solid fa-server"></i> Despertando al servidor...</td></tr>';
     }, 2000);
 
-    const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=true&pagination[limit]=100`;
+    const url = `${API_URL}/api/alumnos?populate=dojo&sort=primer_apellido:asc&filters[activo][$eq]=true&pagination[limit]=100`;
     await fetchAlumnosGenerico(url, tbody, true, timeoutMsg); 
 }
 
@@ -290,7 +326,7 @@ async function loadAlumnosBaja() {
         tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-server"></i> Despertando al servidor...</td></tr>';
     }, 2000);
 
-    const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=false&pagination[limit]=100`;
+    const url = `${API_URL}/api/alumnos?populate=dojo&sort=primer_apellido:asc&filters[activo][$eq]=false&pagination[limit]=100`;
     await fetchAlumnosGenerico(url, tbody, false, timeoutMsg);
 }
 
@@ -321,7 +357,9 @@ function renderTablaAlumnos(alumnos, tbody, esActivo) {
     alumnos.forEach(alumno => {
         const props = alumno.attributes || alumno; 
         const docId = alumno.documentId || alumno.id; 
-        const nombreCompleto = `${props.apellidos || ''}, ${props.nombre || ''}`;
+        
+        // --- MOSTRAR APELLIDOS + NOMBRE ---
+        const nombreCompleto = `${props.primer_apellido || ''} ${props.segundo_apellido || ''}, ${props.nombre || ''}`;
 
         let dojoNombre = "-";
         if (props.dojo) {
@@ -456,32 +494,15 @@ function renderDojosCards(dojos) {
     });
 }
 
-const btnScroll = document.getElementById('btn-back-to-top');
-const contentContainer = document.querySelector('.content'); 
-if (contentContainer && btnScroll) {
-    contentContainer.addEventListener('scroll', () => {
-        if (contentContainer.scrollTop > 300) {
-            btnScroll.classList.add('show');
-            btnScroll.style.display = 'flex';
-        } else {
-            btnScroll.classList.remove('show');
-            btnScroll.style.display = 'none';
-        }
-    });
-    btnScroll.addEventListener('click', () => {
-        contentContainer.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-}
-
 // --- SIMULACIÓN DE DIAGNÓSTICO (TERMINAL) ---
 let diagRunning = false;
 
 async function runSystemDiagnostics() {
     const output = document.getElementById('console-output');
-    if (diagRunning || output.innerHTML.includes("DIAGNÒSTIC COMPLET")) return; // No repetir si ya está hecho
+    if (diagRunning || output.innerHTML.includes("DIAGNÒSTIC COMPLET")) return; 
     
     diagRunning = true;
-    output.innerHTML = ''; // Limpiar
+    output.innerHTML = ''; 
     
     const steps = [
         { text: "Iniciant protocols de seguretat...", delay: 500 },
@@ -502,7 +523,6 @@ async function runSystemDiagnostics() {
         await new Promise(r => setTimeout(r, step.delay));
     }
 
-    // Añadir botón final
     output.innerHTML += `
         <br>
         <a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="btn-monitor-ext">
@@ -517,10 +537,10 @@ function typeWriter(text, container, colorClass = "") {
     return new Promise(resolve => {
         const line = document.createElement('div');
         line.className = `log-line ${colorClass}`;
-        container.insertBefore(line, container.lastElementChild); // Insertar antes del cursor
+        container.insertBefore(line, container.lastElementChild); 
         
         let i = 0;
-        const speed = 20; // Velocidad de escritura
+        const speed = 20; 
 
         function type() {
             if (i < text.length) {
@@ -532,5 +552,23 @@ function typeWriter(text, container, colorClass = "") {
             }
         }
         type();
+    });
+}
+
+// --- SCROLL BUTTON ---
+const btnScroll = document.getElementById('btn-back-to-top');
+const contentContainer = document.querySelector('.content'); 
+if (contentContainer && btnScroll) {
+    contentContainer.addEventListener('scroll', () => {
+        if (contentContainer.scrollTop > 300) {
+            btnScroll.classList.add('show');
+            btnScroll.style.display = 'flex';
+        } else {
+            btnScroll.classList.remove('show');
+            btnScroll.style.display = 'none';
+        }
+    });
+    btnScroll.addEventListener('click', () => {
+        contentContainer.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
