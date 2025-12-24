@@ -268,3 +268,86 @@ tr:hover { background: rgba(255,255,255,0.02); }
     background: #2563eb;
     transform: translateY(-2px);
 }
+
+/* --- ESTILOS DE DOJOS (GRID) --- */
+.dojo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsivo automático */
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.dojo-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0; /* Padding controlado dentro */
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+
+.dojo-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    border-color: var(--primary);
+}
+
+.dojo-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.dojo-header h3 {
+    margin: 0;
+    color: white;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dojo-header i { color: var(--accent); } /* Icono rojo */
+
+.dojo-body {
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.dojo-info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.dojo-info-row i {
+    color: var(--primary);
+    margin-top: 3px;
+    width: 20px;
+    text-align: center;
+}
+
+.dojo-link {
+    display: inline-block;
+    margin-top: 10px;
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.dojo-link:hover { text-decoration: underline; }
+
+/* Etiqueta de cantidad de alumnos (opcional para el futuro) */
+.student-count {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: white;
+}

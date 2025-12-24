@@ -48,12 +48,13 @@ function showSection(sectionId) {
     
     document.getElementById(`sec-${sectionId}`).classList.remove('hidden');
     
-    // Buscar botón por onclick
     const btn = document.querySelector(`button[onclick="showSection('${sectionId}')"]`);
     if(btn) btn.classList.add('active');
 
-    // Si entramos en alumnos, recargar la lista
+    // --- LÓGICA DE CARGA SEGÚN SECCIÓN ---
     if(sectionId === 'alumnos') loadAlumnos();
+    if(sectionId === 'dojos') loadDojosView(); // <--- AÑADE ESTA LÍNEA
+    if(sectionId === 'nuevo-alumno') loadDojos(); // Para rellenar el select
 }
 
 // --- LOGIN / LOGOUT ---
@@ -229,4 +230,72 @@ function filtrarAlumnos() {
             tr[i].style.display = txt.indexOf(filter) > -1 ? "" : "none";
         }
     }
+}
+
+// --- GESTIÓN DE DOJOS ---
+
+async function loadDojosView() {
+    const container = document.getElementById('grid-dojos');
+    container.innerHTML = '<p class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando dojos...</p>';
+
+    try {
+        const response = await fetch(`${API_URL}/api/dojos?pagination[limit]=100`, {
+            headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderDojosCards(data.data);
+        } else {
+            container.innerHTML = '<p>Error cargando datos.</p>';
+        }
+    } catch (error) {
+        console.error(error);
+        container.innerHTML = '<p>Error de conexión.</p>';
+    }
+}
+
+function renderDojosCards(dojos) {
+    const container = document.getElementById('grid-dojos');
+    container.innerHTML = '';
+
+    if (!dojos || dojos.length === 0) {
+        container.innerHTML = '<p>No hay dojos registrados.</p>';
+        return;
+    }
+
+    dojos.forEach(dojo => {
+        // Compatibilidad v4/v5
+        const props = dojo.attributes || dojo;
+        
+        // Datos seguros (por si están vacíos en la BD)
+        const nombre = props.nombre || "Dojo Sin Nombre";
+        const direccion = props.direccion || "Dirección no disponible";
+        const poblacion = props.poblacion || "";
+        const web = props.web || "#";
+        const webText = props.web ? "Visitar Web" : "";
+
+        const card = `
+            <div class="dojo-card">
+                <div class="dojo-header">
+                    <h3><i class="fa-solid fa-torii-gate"></i> ${nombre}</h3>
+                    <!-- <span class="student-count"><i class="fa-solid fa-users"></i> ?</span> -->
+                </div>
+                <div class="dojo-body">
+                    <div class="dojo-info-row">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        <span>${direccion}<br><strong>${poblacion}</strong></span>
+                    </div>
+                    
+                    ${webText ? `
+                    <div class="dojo-info-row">
+                        <i class="fa-solid fa-globe"></i>
+                        <a href="${web}" target="_blank" class="dojo-link">${webText}</a>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        container.innerHTML += card;
+    });
 }
