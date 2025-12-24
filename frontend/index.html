@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aikido Management System</title>
-    <!-- FAVICON (Icono de pestaña) -->
+    <!-- FAVICON -->
     <link rel="icon" href="img/logo-arashi.png" type="image/png">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -17,7 +17,6 @@
     <div id="login-screen" class="login-container">
         <div class="login-box">
             <div class="logo-area">
-                <!-- LOGO PNG -->
                 <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login">
             </div>
             <form id="login-form">
@@ -41,7 +40,6 @@
         <!-- SIDEBAR -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <!-- LOGO PNG -->
                 <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar">
             </div>
             
@@ -56,17 +54,17 @@
                     <i class="fa-solid fa-users"></i> Alumnos Activos
                 </button>
                 <button class="menu-btn" onclick="showSection('bajas')">
-                    <i class="fa-solid fa-user-xmark"></i> Històric Baixes
+                    <i class="fa-solid fa-user-xmark"></i> Histórico Bajas
                 </button>
                 
                 <!-- SEPARADOR TÉCNICO -->
                 <div style="margin-top: 20px; border-top: 1px solid #334155; padding-top: 10px;">
-                    <small style="color: #64748b; padding-left: 15px; font-size: 0.7rem; text-transform: uppercase;">Àrea Tècnica</small>
+                    <small style="color: #64748b; padding-left: 15px; font-size: 0.7rem; text-transform: uppercase;">Área Técnica</small>
                 </div>
                 
-                <!-- NUEVO BOTÓN MONITOR -->
+                <!-- BOTÓN MONITOR -->
                 <button class="menu-btn" onclick="showSection('status')">
-                    <i class="fa-solid fa-heart-pulse"></i> Estat del Sistema
+                    <i class="fa-solid fa-heart-pulse"></i> Estado del Sistema
                 </button>
             </nav>
 
@@ -171,7 +169,7 @@
             <!-- SECCIÓN 2: DOJOS -->
             <div id="sec-dojos" class="section hidden">
                 <header class="section-header">
-                    <h2><i class="fa-solid fa-torii-gate"></i> Els nostres Dojos</h2>
+                    <h2><i class="fa-solid fa-torii-gate"></i> Nuestros Dojos</h2>
                 </header>
                 <div id="grid-dojos" class="dojo-grid">
                     <p class="loading">Cargando dojos...</p>
@@ -226,7 +224,7 @@
                 </div>
             </div>
 
-            <!-- NUEVA SECCIÓN: ESTAT DEL SISTEMA -->
+            <!-- NUEVA SECCIÓN: ESTADO DEL SISTEMA -->
             <div id="sec-status" class="section hidden">
                 <div class="console-wrapper">
                     <div class="console-header">
@@ -236,7 +234,6 @@
                         <span class="console-title">monitoring_system.exe - UptimeRobot</span>
                     </div>
                     <div class="console-body">
-                        <!-- El iframe cargará la web aquí dentro -->
                         <iframe id="uptime-frame" src="" title="Estado del Servidor"></iframe>
                     </div>
                 </div>

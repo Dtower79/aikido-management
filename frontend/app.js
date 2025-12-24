@@ -47,18 +47,16 @@ function showSection(sectionId) {
     const btn = document.querySelector(`button[onclick="showSection('${sectionId}')"]`);
     if(btn) btn.classList.add('active');
 
-    // LÓGICA DE CARGA SEGÚN SECCIÓN
+    // CARGA DE DATOS
     if(sectionId === 'alumnos') loadAlumnosActivos();
     if(sectionId === 'bajas') loadAlumnosBaja();
     if(sectionId === 'dojos') loadDojosView();
     if(sectionId === 'nuevo-alumno') loadDojos();
 
-    // --- NUEVO: CARGAR MONITOR SOLO SI SE PIDE ---
+    // CARGA DEL MONITOR (URL CORRECTA)
     if(sectionId === 'status') {
         const iframe = document.getElementById('uptime-frame');
-        // Solo cargamos la URL si está vacía (para no recargar cada vez)
         if (!iframe.src || iframe.src === 'about:blank') {
-            // Añadimos un timestamp para evitar caché agresiva
             iframe.src = "https://stats.uptimerobot.com/xWW61g5At6";
         }
     }
@@ -191,7 +189,7 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
         grado: document.getElementById('new-grado').value,
         grupo: document.getElementById('new-grupo').value,
         dojo: document.getElementById('new-dojo').value,
-        activo: true // Por defecto al crear o editar, aseguramos que esté activo
+        activo: true
     };
 
     try {
@@ -238,7 +236,7 @@ function resetForm() {
 
 async function editarAlumno(documentId) {
     showSection('nuevo-alumno');
-    document.querySelector('#sec-nuevo-alumno h2').innerHTML = '<i class="fa-solid fa-pen"></i> Editant Alumne';
+    document.querySelector('#sec-nuevo-alumno h2').innerHTML = '<i class="fa-solid fa-pen"></i> Editando Alumno';
     document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR DATOS";
     document.getElementById('btn-cancelar-edit').classList.remove('hidden');
     
@@ -275,46 +273,34 @@ async function editarAlumno(documentId) {
 
 // --- GESTIÓN DE BAJAS Y ACTIVOS ---
 
-// 1. Cargar ACTIVOS (activo = true)
 async function loadAlumnosActivos() {
     const tbody = document.getElementById('lista-alumnos-body');
-    // Feedback visual inmediato
     tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</td></tr>';
     
-    // Timer para avisar si tarda mucho (Cold Start)
     const timeoutMsg = setTimeout(() => {
         tbody.innerHTML = '<tr><td colspan="5" class="loading" style="color:var(--primary)"><i class="fa-solid fa-server"></i> Despertando al servidor (puede tardar unos segundos)...</td></tr>';
     }, 2000);
 
-    // OPTIMIZACIÓN: En lugar de populate=*, pedimos solo 'dojo'.
-    // Esto hace la petición mucho más ligera.
     const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=true&pagination[limit]=100`;
-    
     await fetchAlumnosGenerico(url, tbody, true, timeoutMsg); 
 }
 
-// 2. Cargar BAJAS (activo = false)
 async function loadAlumnosBaja() {
     const tbody = document.getElementById('lista-bajas-body');
     tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando histórico...</td></tr>';
 
     const timeoutMsg = setTimeout(() => {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-server"></i> Servidor despertando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-server"></i> Despertando al servidor...</td></tr>';
     }, 2000);
 
     const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=false&pagination[limit]=100`;
-    
     await fetchAlumnosGenerico(url, tbody, false, timeoutMsg);
 }
 
-// Función genérica para pintar tablas
 async function fetchAlumnosGenerico(url, tbodyElement, esActivo, timeoutId) {
     try {
         const response = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-        
-        // Si responde, cancelamos el mensaje de "Despertando servidor"
         clearTimeout(timeoutId);
-
         const data = await response.json();
         
         if (response.ok) {
@@ -330,7 +316,6 @@ async function fetchAlumnosGenerico(url, tbodyElement, esActivo, timeoutId) {
 
 function renderTablaAlumnos(alumnos, tbody, esActivo) {
     tbody.innerHTML = '';
-
     if (!alumnos || alumnos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No hay alumnos en esta lista.</td></tr>';
         return;
@@ -348,10 +333,8 @@ function renderTablaAlumnos(alumnos, tbody, esActivo) {
         }
         const grupo = props.grupo ? ` (${props.grupo})` : "";
 
-        // Definir botones según si es activo o baja
         let botones = '';
         if (esActivo) {
-            // Botón Editar y Botón Baja
             botones = `
                 <button class="action-btn-icon" onclick="editarAlumno('${docId}')" title="Editar">
                     <i class="fa-solid fa-pen"></i>
@@ -361,7 +344,6 @@ function renderTablaAlumnos(alumnos, tbody, esActivo) {
                 </button>
             `;
         } else {
-            // Botón Reactivar
             botones = `
                 <button class="action-btn-icon restore" onclick="confirmarReactivacion('${docId}', '${nombreCompleto}')" title="Reactivar Alumno">
                     <i class="fa-solid fa-rotate-left"></i>
@@ -382,14 +364,12 @@ function renderTablaAlumnos(alumnos, tbody, esActivo) {
     });
 }
 
-// 3. Acciones de Baja / Reactivación
-
 function confirmarBaja(documentId, nombre) {
     showModal(
         "Confirmar Baja", 
         `¿Estás seguro de que quieres dar de baja a ${nombre}? Pasará al histórico de bajas.`, 
         "warning", 
-        () => cambiarEstadoAlumno(documentId, false) // false = poner activo en false
+        () => cambiarEstadoAlumno(documentId, false)
     );
 }
 
@@ -398,7 +378,7 @@ function confirmarReactivacion(documentId, nombre) {
         "Reactivar Alumno", 
         `¿Quieres volver a dar de alta a ${nombre}? Aparecerá de nuevo en la lista principal.`, 
         "info", 
-        () => cambiarEstadoAlumno(documentId, true) // true = poner activo en true
+        () => cambiarEstadoAlumno(documentId, true)
     );
 }
 
@@ -415,9 +395,8 @@ async function cambiarEstadoAlumno(documentId, nuevoEstado) {
 
         if (res.ok) {
             showModal("Éxito", nuevoEstado ? "Alumno reactivado." : "Alumno dado de baja.", "success");
-            // Recargar la vista actual para ver que desaparece/aparece
-            if(nuevoEstado) showSection('bajas'); // Si reactivamos, estamos en bajas
-            else showSection('alumnos'); // Si damos de baja, estamos en activos
+            if(nuevoEstado) showSection('bajas'); 
+            else showSection('alumnos'); 
         } else {
             showModal("Error", "No se pudo cambiar el estado.", "error");
         }
@@ -426,7 +405,6 @@ async function cambiarEstadoAlumno(documentId, nuevoEstado) {
     }
 }
 
-// --- FILTRO BÚSQUEDA GENÉRICO ---
 function filtrarAlumnos(tablaId) {
     const inputId = tablaId === 'tabla-alumnos' ? 'search-alumno' : 'search-baja';
     const filter = document.getElementById(inputId).value.toUpperCase();
