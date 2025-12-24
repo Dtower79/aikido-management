@@ -53,6 +53,11 @@
     },
     "grupo": {
       "type": "string"
+    },
+    "activo": {
+      "type": "boolean",
+      "required": true,
+      "default": true
     }
   }
 }

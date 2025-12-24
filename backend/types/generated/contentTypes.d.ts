@@ -441,6 +441,9 @@ export interface ApiAlumnoAlumno extends Struct.CollectionTypeSchema {
     draftAndPublish: true;
   };
   attributes: {
+    activo: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<true>;
     apellidos: Schema.Attribute.String;
     cp: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
