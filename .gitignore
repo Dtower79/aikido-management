@@ -1,0 +1,20 @@
+# --- SISTEMA ---
+.DS_Store
+Thumbs.db
+
+# --- PYTHON (Scripts) ---
+__pycache__/
+*.py[cod]
+.env
+venv/
+scripts/.env
+
+# --- NODE/STRAPI (Backend) ---
+backend/node_modules/
+backend/build/
+backend/.tmp/
+backend/.cache/
+backend/public/uploads/
+backend/.env
+package-lock.json
+yarn.lock

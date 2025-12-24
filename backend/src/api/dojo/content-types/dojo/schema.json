@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "dojos",
+  "info": {
+    "singularName": "dojo",
+    "pluralName": "dojos",
+    "displayName": "Dojo"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "nombre": {
+      "type": "string"
+    },
+    "direccion": {
+      "type": "text"
+    },
+    "alumnos": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::alumno.alumno",
+      "mappedBy": "dojo"
+    },
+    "poblacion": {
+      "type": "string"
+    },
+    "web": {
+      "type": "string"
+    }
+  }
+}

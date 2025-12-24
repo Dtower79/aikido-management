@@ -1,0 +1,58 @@
+{
+  "kind": "collectionType",
+  "collectionName": "alumnos",
+  "info": {
+    "singularName": "alumno",
+    "pluralName": "alumnos",
+    "displayName": "Alumno"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "nombre": {
+      "type": "string"
+    },
+    "apellidos": {
+      "type": "string"
+    },
+    "dni": {
+      "type": "string",
+      "unique": true
+    },
+    "fecha_nacimiento": {
+      "type": "date"
+    },
+    "direccion": {
+      "type": "text"
+    },
+    "poblacion": {
+      "type": "string"
+    },
+    "cp": {
+      "type": "string"
+    },
+    "email": {
+      "type": "email"
+    },
+    "telefono": {
+      "type": "string"
+    },
+    "fecha_inicio": {
+      "type": "date"
+    },
+    "grado": {
+      "type": "string"
+    },
+    "dojo": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::dojo.dojo",
+      "inversedBy": "alumnos"
+    },
+    "grupo": {
+      "type": "string"
+    }
+  }
+}
