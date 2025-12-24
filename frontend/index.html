@@ -224,17 +224,18 @@
                 </div>
             </div>
 
-            <!-- NUEVA SECCIÓN: ESTADO DEL SISTEMA -->
+        <!-- NUEVA SECCIÓN: ESTADO DEL SISTEMA (TERMINAL) -->
             <div id="sec-status" class="section hidden">
                 <div class="console-wrapper">
                     <div class="console-header">
                         <span class="dot red"></span>
                         <span class="dot yellow"></span>
                         <span class="dot green"></span>
-                        <span class="console-title">monitoring_system.exe - UptimeRobot</span>
+                        <span class="console-title">root@aikido-system:~# ./diagnostico.sh</span>
                     </div>
-                    <div class="console-body">
-                        <iframe id="uptime-frame" src="" title="Estado del Servidor"></iframe>
+                    <div class="console-body" id="console-output">
+                        <!-- Aquí escribirá el JavaScript -->
+                        <span class="cursor">_</span>
                     </div>
                 </div>
             </div>

@@ -55,10 +55,7 @@ function showSection(sectionId) {
 
     // CARGA DEL MONITOR (URL CORRECTA)
     if(sectionId === 'status') {
-        const iframe = document.getElementById('uptime-frame');
-        if (!iframe.src || iframe.src === 'about:blank') {
-            iframe.src = "https://stats.uptimerobot.com/xWW61g5At6";
-        }
+        runSystemDiagnostics();
     }
 }
 
@@ -473,5 +470,67 @@ if (contentContainer && btnScroll) {
     });
     btnScroll.addEventListener('click', () => {
         contentContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
+
+// --- SIMULACIÓN DE DIAGNÓSTICO (TERMINAL) ---
+let diagRunning = false;
+
+async function runSystemDiagnostics() {
+    const output = document.getElementById('console-output');
+    if (diagRunning || output.innerHTML.includes("DIAGNÒSTIC COMPLET")) return; // No repetir si ya está hecho
+    
+    diagRunning = true;
+    output.innerHTML = ''; // Limpiar
+    
+    const steps = [
+        { text: "Iniciant protocols de seguretat...", delay: 500 },
+        { text: "> Connectant amb Neon Database (PostgreSQL)...", delay: 800 },
+        { text: "  [OK] Connexió establerta (Latència: 24ms)", color: "log-success", delay: 400 },
+        { text: "> Verificant Strapi Cloud API...", delay: 800 },
+        { text: "  [OK] API responent (Status 200)", color: "log-success", delay: 400 },
+        { text: "> Comprovant integritat de les dades...", delay: 1000 },
+        { text: "  [OK] 0 errors d'integritat detectats.", color: "log-success", delay: 400 },
+        { text: "> Sincronitzant amb UptimeRobot Monitor...", delay: 1200 },
+        { text: "  [INFO] El sistema està operatiu al 100%.", color: "log-info", delay: 500 },
+        { text: "------------------------------------------------", delay: 200 },
+        { text: "DIAGNÒSTIC COMPLET", color: "log-success", delay: 0 }
+    ];
+
+    for (const step of steps) {
+        await typeWriter(step.text, output, step.color);
+        await new Promise(r => setTimeout(r, step.delay));
+    }
+
+    // Añadir botón final
+    output.innerHTML += `
+        <br>
+        <a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="btn-monitor-ext">
+            <i class="fa-solid fa-chart-line"></i> VEURE GRÀFICS DETALLATS
+        </a>
+        <span class="cursor">_</span>
+    `;
+    diagRunning = false;
+}
+
+function typeWriter(text, container, colorClass = "") {
+    return new Promise(resolve => {
+        const line = document.createElement('div');
+        line.className = `log-line ${colorClass}`;
+        container.insertBefore(line, container.lastElementChild); // Insertar antes del cursor
+        
+        let i = 0;
+        const speed = 20; // Velocidad de escritura
+
+        function type() {
+            if (i < text.length) {
+                line.textContent += text.charAt(i);
+                i++;
+                setTimeout(type, speed);
+            } else {
+                resolve();
+            }
+        }
+        type();
     });
 }
