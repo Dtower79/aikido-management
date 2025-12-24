@@ -200,3 +200,71 @@ tr:hover { background: rgba(255,255,255,0.02); }
     background: rgba(0,0,0,0.2); /* Un poco más oscuro para el logo */
 }
 
+/* ... código anterior ... */
+
+/* ESTILOS DEL FORMULARIO */
+.form-card {
+    background: var(--bg-card);
+    padding: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    max-width: 800px;
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+/* En móvil, que se pongan uno debajo de otro */
+@media (max-width: 768px) {
+    .form-row { flex-direction: column; gap: 15px; }
+}
+
+.form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-group input, .form-group select {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.95rem;
+}
+
+.form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.form-actions {
+    margin-top: 25px;
+    text-align: right;
+}
+
+.action-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.action-btn:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+}
