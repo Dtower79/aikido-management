@@ -49,9 +49,19 @@ function showSection(sectionId) {
 
     // LÓGICA DE CARGA SEGÚN SECCIÓN
     if(sectionId === 'alumnos') loadAlumnosActivos();
-    if(sectionId === 'bajas') loadAlumnosBaja(); // Nueva función
+    if(sectionId === 'bajas') loadAlumnosBaja();
     if(sectionId === 'dojos') loadDojosView();
     if(sectionId === 'nuevo-alumno') loadDojos();
+
+    // --- NUEVO: CARGAR MONITOR SOLO SI SE PIDE ---
+    if(sectionId === 'status') {
+        const iframe = document.getElementById('uptime-frame');
+        // Solo cargamos la URL si está vacía (para no recargar cada vez)
+        if (!iframe.src || iframe.src === 'about:blank') {
+            // Añadimos un timestamp para evitar caché agresiva
+            iframe.src = "https://stats.uptimerobot.com/xWW61g5At6";
+        }
+    }
 }
 
 // --- LOGIN / LOGOUT ---
@@ -268,27 +278,43 @@ async function editarAlumno(documentId) {
 // 1. Cargar ACTIVOS (activo = true)
 async function loadAlumnosActivos() {
     const tbody = document.getElementById('lista-alumnos-body');
-    tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando activos...</td></tr>';
+    // Feedback visual inmediato
+    tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</td></tr>';
     
-    // FILTRO: filters[activo][$eq]=true
-    const url = `${API_URL}/api/alumnos?populate=*&sort=apellidos:asc&filters[activo][$eq]=true&pagination[limit]=100`;
-    fetchAlumnosGenerico(url, tbody, true); // true = modo activo (botón borrar)
+    // Timer para avisar si tarda mucho (Cold Start)
+    const timeoutMsg = setTimeout(() => {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading" style="color:var(--primary)"><i class="fa-solid fa-server"></i> Despertando al servidor (puede tardar unos segundos)...</td></tr>';
+    }, 2000);
+
+    // OPTIMIZACIÓN: En lugar de populate=*, pedimos solo 'dojo'.
+    // Esto hace la petición mucho más ligera.
+    const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=true&pagination[limit]=100`;
+    
+    await fetchAlumnosGenerico(url, tbody, true, timeoutMsg); 
 }
 
 // 2. Cargar BAJAS (activo = false)
 async function loadAlumnosBaja() {
     const tbody = document.getElementById('lista-bajas-body');
-    tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando bajas...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando histórico...</td></tr>';
 
-    // FILTRO: filters[activo][$eq]=false
-    const url = `${API_URL}/api/alumnos?populate=*&sort=apellidos:asc&filters[activo][$eq]=false&pagination[limit]=100`;
-    fetchAlumnosGenerico(url, tbody, false); // false = modo baja (botón restaurar)
+    const timeoutMsg = setTimeout(() => {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-server"></i> Servidor despertando...</td></tr>';
+    }, 2000);
+
+    const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=false&pagination[limit]=100`;
+    
+    await fetchAlumnosGenerico(url, tbody, false, timeoutMsg);
 }
 
 // Función genérica para pintar tablas
-async function fetchAlumnosGenerico(url, tbodyElement, esActivo) {
+async function fetchAlumnosGenerico(url, tbodyElement, esActivo, timeoutId) {
     try {
         const response = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        
+        // Si responde, cancelamos el mensaje de "Despertando servidor"
+        clearTimeout(timeoutId);
+
         const data = await response.json();
         
         if (response.ok) {
@@ -297,7 +323,8 @@ async function fetchAlumnosGenerico(url, tbodyElement, esActivo) {
             if(response.status === 401 || response.status === 403) logout();
         }
     } catch (error) {
-        tbodyElement.innerHTML = '<tr><td colspan="5">Error de conexión</td></tr>';
+        clearTimeout(timeoutId);
+        tbodyElement.innerHTML = '<tr><td colspan="5" style="color:var(--accent)">Error de conexión o servidor apagado.</td></tr>';
     }
 }
 

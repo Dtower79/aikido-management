@@ -568,3 +568,53 @@ tr:hover { background: rgba(255,255,255,0.02); }
     border-color: #10b981;
     background: rgba(16, 185, 129, 0.1);
 }
+
+/* --- ESTILO CONSOLA MONITORIZACIÓN --- */
+.console-wrapper {
+    background-color: #000; /* Fondo negro puro */
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border: 1px solid #334155;
+    height: 85vh; /* Ocupa casi toda la altura */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.console-header {
+    background-color: #1e293b;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #334155;
+}
+
+.console-title {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-family: monospace;
+    margin-left: 10px;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.dot.red { background-color: #ff5f56; }
+.dot.yellow { background-color: #ffbd2e; }
+.dot.green { background-color: #27c93f; }
+
+.console-body {
+    flex: 1;
+    background: #000;
+}
+
+.console-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block; /* Quita espacios extra */
+}
