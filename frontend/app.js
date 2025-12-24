@@ -46,11 +46,9 @@ function showDashboard() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
     
-    // Carga inicial de datos
+    // Carga inicial
     loadDojos();
     loadCiudades();
-    
-    // Mostrar pantalla de bienvenida por defecto
     showSection('welcome');
 }
 
@@ -60,7 +58,6 @@ function showSection(sectionId) {
     
     document.getElementById(`sec-${sectionId}`).classList.remove('hidden');
     
-    // Si no es welcome, activamos botón
     if(sectionId !== 'welcome') {
         const btn = document.querySelector(`button[onclick="showSection('${sectionId}')"]`);
         if(btn) btn.classList.add('active');
@@ -155,7 +152,7 @@ function closeModal() {
     document.getElementById('custom-modal').classList.add('hidden');
 }
 
-// --- GESTIÓN DE ALUMNOS ---
+// --- GESTIÓN DE DATOS ---
 
 async function loadDojos() {
     const select = document.getElementById('new-dojo');
@@ -173,7 +170,7 @@ async function loadDojos() {
             select.innerHTML += `<option value="${id}">${d.nombre}</option>`;
         });
         if(currentVal) select.value = currentVal;
-    } catch (e) { console.error("Error cargando dojos", e); }
+    } catch (e) { console.error(e); }
 }
 
 async function loadCiudades() {
@@ -200,16 +197,19 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
     e.preventDefault();
     const btn = document.getElementById('btn-submit-alumno');
     const originalText = btn.innerText;
-    btn.disabled = true;
-    btn.innerText = "Procesando...";
+    btn.disabled = true; btn.innerText = "Procesando...";
 
     const editId = document.getElementById('edit-id').value;
     const isEdit = !!editId;
 
+    // --- CORRECCIÓN: UNIR APELLIDOS ---
+    const ap1 = document.getElementById('new-apellido1').value.trim();
+    const ap2 = document.getElementById('new-apellido2').value.trim();
+    const apellidosCompletos = `${ap1} ${ap2}`.trim();
+
     const alumnoData = {
         nombre: document.getElementById('new-nombre').value,
-        primer_apellido: document.getElementById('new-apellido1').value,
-        segundo_apellido: document.getElementById('new-apellido2').value,
+        apellidos: apellidosCompletos, // Enviamos un solo campo a Strapi
         dni: document.getElementById('new-dni').value,
         email: document.getElementById('new-email').value,
         telefono: document.getElementById('new-telefono').value,
@@ -226,36 +226,24 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
     try {
         let url = `${API_URL}/api/alumnos`;
         let method = 'POST';
-        if (isEdit) {
-            url = `${API_URL}/api/alumnos/${editId}`;
-            method = 'PUT';
-        }
+        if (isEdit) { url = `${API_URL}/api/alumnos/${editId}`; method = 'PUT'; }
 
         const res = await fetch(url, {
             method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
             body: JSON.stringify({ data: alumnoData })
         });
 
         if (res.ok) {
-            showModal("Éxito", isEdit ? "Alumno actualizado" : "Alumno creado", "success");
-            resetForm(); 
-            loadCiudades();
-            showSection('alumnos'); 
-            loadAlumnosActivos(); 
+            showModal("Éxito", isEdit ? "Actualizado correctamente" : "Creado correctamente", "success");
+            resetForm(); loadCiudades(); 
+            showSection('alumnos'); loadAlumnosActivos();
         } else {
             const err = await res.json();
             showModal("Error", err.error?.message || "Revisa los datos", "error");
         }
-    } catch (error) {
-        showModal("Error de Conexión", "No se pudo contactar con el servidor", "error");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = originalText;
-    }
+    } catch { showModal("Error", "Error de conexión", "error"); }
+    finally { btn.disabled = false; btn.innerText = originalText; }
 });
 
 function resetForm() {
@@ -273,17 +261,22 @@ async function editarAlumno(documentId) {
     document.getElementById('btn-cancelar-edit').classList.remove('hidden');
     
     try {
-        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, {
-            headers: { 'Authorization': `Bearer ${jwtToken}` }
-        });
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        const data = json.data; 
-        const props = data.attributes || data; 
+        const data = json.data; const props = data.attributes || data; 
 
         document.getElementById('edit-id').value = data.documentId || data.id;
         document.getElementById('new-nombre').value = props.nombre || '';
-        document.getElementById('new-apellido1').value = props.primer_apellido || '';
-        document.getElementById('new-apellido2').value = props.segundo_apellido || '';
+        
+        // --- CORRECCIÓN: SEPARAR APELLIDOS PARA EL FORMULARIO ---
+        // Si en la BBDD es "Garcia Perez", lo partimos para rellenar los 2 inputs
+        const apellidosStr = props.apellidos || '';
+        const partes = apellidosStr.split(' ');
+        
+        // Estrategia simple: Primera palabra al input 1, el resto al input 2
+        document.getElementById('new-apellido1').value = partes[0] || '';
+        document.getElementById('new-apellido2').value = partes.slice(1).join(' ') || '';
+
         document.getElementById('new-dni').value = props.dni || '';
         document.getElementById('new-email').value = props.email || '';
         document.getElementById('new-telefono').value = props.telefono || '';
@@ -298,10 +291,7 @@ async function editarAlumno(documentId) {
             const dojoId = props.dojo.documentId || (props.dojo.data ? props.dojo.data.documentId : null) || props.dojo.id;
             if(dojoId) document.getElementById('new-dojo').value = dojoId;
         }
-    } catch (e) {
-        showModal("Error", "No se pudieron cargar los datos.", "error");
-        showSection('alumnos');
-    }
+    } catch { showModal("Error", "Error cargando datos", "error"); showSection('alumnos'); }
 }
 
 // --- GESTIÓN DE BAJAS Y ACTIVOS ---
@@ -311,10 +301,11 @@ async function loadAlumnosActivos() {
     tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</td></tr>';
     
     const timeoutMsg = setTimeout(() => {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading" style="color:var(--primary)"><i class="fa-solid fa-server"></i> Despertando al servidor...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="loading" style="color:var(--primary)"><i class="fa-solid fa-server"></i> Despertando al servidor (puede tardar unos segundos)...</td></tr>';
     }, 2000);
 
-    const url = `${API_URL}/api/alumnos?populate=dojo&sort=primer_apellido:asc&filters[activo][$eq]=true&pagination[limit]=100`;
+    // --- CORRECCIÓN: ORDENAR POR 'apellidos' (que sí existe) ---
+    const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=true&pagination[limit]=100`;
     await fetchAlumnosGenerico(url, tbody, true, timeoutMsg); 
 }
 
@@ -326,7 +317,8 @@ async function loadAlumnosBaja() {
         tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-server"></i> Despertando al servidor...</td></tr>';
     }, 2000);
 
-    const url = `${API_URL}/api/alumnos?populate=dojo&sort=primer_apellido:asc&filters[activo][$eq]=false&pagination[limit]=100`;
+    // --- CORRECCIÓN: ORDENAR POR 'apellidos' ---
+    const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=false&pagination[limit]=100`;
     await fetchAlumnosGenerico(url, tbody, false, timeoutMsg);
 }
 
@@ -341,7 +333,7 @@ async function fetchAlumnosGenerico(url, tbodyElement, esActivo, timeoutId) {
         } else {
             if(response.status === 401 || response.status === 403) logout();
         }
-    } catch (error) {
+    } catch {
         clearTimeout(timeoutId);
         tbodyElement.innerHTML = '<tr><td colspan="5" style="color:var(--accent)">Error de conexión o servidor apagado.</td></tr>';
     }
@@ -349,17 +341,14 @@ async function fetchAlumnosGenerico(url, tbodyElement, esActivo, timeoutId) {
 
 function renderTablaAlumnos(alumnos, tbody, esActivo) {
     tbody.innerHTML = '';
-    if (!alumnos || alumnos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No hay alumnos en esta lista.</td></tr>';
-        return;
-    }
+    if (!alumnos || alumnos.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No hay alumnos.</td></tr>'; return; }
 
     alumnos.forEach(alumno => {
         const props = alumno.attributes || alumno; 
         const docId = alumno.documentId || alumno.id; 
         
-        // --- MOSTRAR APELLIDOS + NOMBRE ---
-        const nombreCompleto = `${props.primer_apellido || ''} ${props.segundo_apellido || ''}, ${props.nombre || ''}`;
+        // --- CORRECCIÓN: MOSTRAR CAMPO 'apellidos' ---
+        const nombreCompleto = `${props.apellidos || ''}, ${props.nombre || ''}`;
 
         let dojoNombre = "-";
         if (props.dojo) {
@@ -367,208 +356,23 @@ function renderTablaAlumnos(alumnos, tbody, esActivo) {
              if(d && d.nombre) dojoNombre = d.nombre;
         }
         const grupo = props.grupo ? ` (${props.grupo})` : "";
+        let botones = esActivo ? 
+            `<button class="action-btn-icon" onclick="editarAlumno('${docId}')"><i class="fa-solid fa-pen"></i></button>
+             <button class="action-btn-icon delete" onclick="confirmarBaja('${docId}', '${nombreCompleto}')"><i class="fa-solid fa-user-xmark"></i></button>` :
+            `<button class="action-btn-icon restore" onclick="confirmarReactivacion('${docId}', '${nombreCompleto}')"><i class="fa-solid fa-rotate-left"></i></button>`;
 
-        let botones = '';
-        if (esActivo) {
-            botones = `
-                <button class="action-btn-icon" onclick="editarAlumno('${docId}')" title="Editar">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
-                <button class="action-btn-icon delete" onclick="confirmarBaja('${docId}', '${nombreCompleto}')" title="Dar de Baja">
-                    <i class="fa-solid fa-user-xmark"></i>
-                </button>
-            `;
-        } else {
-            botones = `
-                <button class="action-btn-icon restore" onclick="confirmarReactivacion('${docId}', '${nombreCompleto}')" title="Reactivar Alumno">
-                    <i class="fa-solid fa-rotate-left"></i>
-                </button>
-            `;
-        }
-
-        const row = `
+        tbody.innerHTML += `
             <tr>
                 <td><strong>${nombreCompleto}</strong></td>
                 <td style="font-family: monospace;">${props.dni || '-'}</td>
                 <td><span class="badge">${props.grado || 'S/G'}</span></td>
                 <td>${dojoNombre}${grupo}</td>
                 <td>${botones}</td>
-            </tr>
-        `;
-        tbody.innerHTML += row;
+            </tr>`;
     });
 }
 
-function confirmarBaja(documentId, nombre) {
-    showModal(
-        "Confirmar Baja", 
-        `¿Estás seguro de que quieres dar de baja a ${nombre}? Pasará al histórico de bajas.`, 
-        "warning", 
-        () => cambiarEstadoAlumno(documentId, false)
-    );
-}
-
-function confirmarReactivacion(documentId, nombre) {
-    showModal(
-        "Reactivar Alumno", 
-        `¿Quieres volver a dar de alta a ${nombre}? Aparecerá de nuevo en la lista principal.`, 
-        "info", 
-        () => cambiarEstadoAlumno(documentId, true)
-    );
-}
-
-async function cambiarEstadoAlumno(documentId, nuevoEstado) {
-    try {
-        const res = await fetch(`${API_URL}/api/alumnos/${documentId}`, {
-            method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${jwtToken}` 
-            },
-            body: JSON.stringify({ data: { activo: nuevoEstado } })
-        });
-
-        if (res.ok) {
-            showModal("Éxito", nuevoEstado ? "Alumno reactivado." : "Alumno dado de baja.", "success");
-            if(nuevoEstado) showSection('bajas'); 
-            else showSection('alumnos'); 
-        } else {
-            showModal("Error", "No se pudo cambiar el estado.", "error");
-        }
-    } catch (error) {
-        showModal("Error", "Error de conexión.", "error");
-    }
-}
-
-function filtrarAlumnos(tablaId) {
-    const inputId = tablaId === 'tabla-alumnos' ? 'search-alumno' : 'search-baja';
-    const filter = document.getElementById(inputId).value.toUpperCase();
-    const tr = document.getElementById(tablaId).getElementsByTagName('tr');
-
-    for (let i = 1; i < tr.length; i++) { 
-        const tdNombre = tr[i].getElementsByTagName('td')[0];
-        const tdDNI = tr[i].getElementsByTagName('td')[1];
-        if (tdNombre || tdDNI) {
-            const txt = (tdNombre.textContent + tdDNI.textContent).toUpperCase();
-            tr[i].style.display = txt.indexOf(filter) > -1 ? "" : "none";
-        }
-    }
-}
-
-// --- GESTIÓN DE DOJOS ---
-async function loadDojosView() {
-    const container = document.getElementById('grid-dojos');
-    container.innerHTML = '<p class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando dojos...</p>';
-    try {
-        const response = await fetch(`${API_URL}/api/dojos?pagination[limit]=100`, {
-            headers: { 'Authorization': `Bearer ${jwtToken}` }
-        });
-        const data = await response.json();
-        if (response.ok) renderDojosCards(data.data);
-    } catch (error) { container.innerHTML = '<p>Error.</p>'; }
-}
-
-function renderDojosCards(dojos) {
-    const container = document.getElementById('grid-dojos');
-    container.innerHTML = '';
-    if (!dojos || dojos.length === 0) { container.innerHTML = '<p>No hay dojos.</p>'; return; }
-
-    dojos.forEach(dojo => {
-        const props = dojo.attributes || dojo;
-        const nombre = props.nombre || "Dojo Sin Nombre";
-        const direccion = props.direccion || "Dirección no disponible";
-        const poblacion = props.poblacion || "";
-        const web = props.web || "#";
-        const webText = props.web ? "Visitar Web" : "";
-
-        const card = `
-            <div class="dojo-card">
-                <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${nombre}</h3></div>
-                <div class="dojo-body">
-                    <div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${direccion}<br><strong>${poblacion}</strong></span></div>
-                    ${webText ? `<div class="dojo-info-row"><i class="fa-solid fa-globe"></i><a href="${web}" target="_blank" class="dojo-link">${webText}</a></div>` : ''}
-                </div>
-            </div>
-        `;
-        container.innerHTML += card;
-    });
-}
-
-// --- SIMULACIÓN DE DIAGNÓSTICO (TERMINAL) ---
-let diagRunning = false;
-
-async function runSystemDiagnostics() {
-    const output = document.getElementById('console-output');
-    if (diagRunning || output.innerHTML.includes("DIAGNÒSTIC COMPLET")) return; 
-    
-    diagRunning = true;
-    output.innerHTML = ''; 
-    
-    const steps = [
-        { text: "Iniciant protocols de seguretat...", delay: 500 },
-        { text: "> Connectant amb Neon Database (PostgreSQL)...", delay: 800 },
-        { text: "  [OK] Connexió establerta (Latència: 24ms)", color: "log-success", delay: 400 },
-        { text: "> Verificant Strapi Cloud API...", delay: 800 },
-        { text: "  [OK] API responent (Status 200)", color: "log-success", delay: 400 },
-        { text: "> Comprovant integritat de les dades...", delay: 1000 },
-        { text: "  [OK] 0 errors d'integritat detectats.", color: "log-success", delay: 400 },
-        { text: "> Sincronitzant amb UptimeRobot Monitor...", delay: 1200 },
-        { text: "  [INFO] El sistema està operatiu al 100%.", color: "log-info", delay: 500 },
-        { text: "------------------------------------------------", delay: 200 },
-        { text: "DIAGNÒSTIC COMPLET", color: "log-success", delay: 0 }
-    ];
-
-    for (const step of steps) {
-        await typeWriter(step.text, output, step.color);
-        await new Promise(r => setTimeout(r, step.delay));
-    }
-
-    output.innerHTML += `
-        <br>
-        <a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="btn-monitor-ext">
-            <i class="fa-solid fa-chart-line"></i> VEURE GRÀFICS DETALLATS
-        </a>
-        <span class="cursor">_</span>
-    `;
-    diagRunning = false;
-}
-
-function typeWriter(text, container, colorClass = "") {
-    return new Promise(resolve => {
-        const line = document.createElement('div');
-        line.className = `log-line ${colorClass}`;
-        container.insertBefore(line, container.lastElementChild); 
-        
-        let i = 0;
-        const speed = 20; 
-
-        function type() {
-            if (i < text.length) {
-                line.textContent += text.charAt(i);
-                i++;
-                setTimeout(type, speed);
-            } else {
-                resolve();
-            }
-        }
-        type();
-    });
-}
-
-// --- SCROLL BUTTON ---
-const btnScroll = document.getElementById('btn-back-to-top');
-const contentContainer = document.querySelector('.content'); 
-if (contentContainer && btnScroll) {
-    contentContainer.addEventListener('scroll', () => {
-        if (contentContainer.scrollTop > 300) {
-            btnScroll.classList.add('show');
-            btnScroll.style.display = 'flex';
-        } else {
-            btnScroll.classList.remove('show');
-            btnScroll.style.display = 'none';
-        }
-    });
-    btnScroll.addEventListener('click', () => {
-        contentContainer.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-}
+// ... Resto de funciones (confirmarBaja, Reactivación, dojos, terminal, scroll)
+// COPIA A PARTIR DE AQUI LAS FUNCIONES QUE YA TENIAS EN EL ANTERIOR APP.JS
+// (confirmarBaja, confirmarReactivacion, cambiarEstadoAlumno, filtrarAlumnos, 
+// loadDojosView, renderDojosCards, runSystemDiagnostics...)
