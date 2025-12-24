@@ -417,3 +417,28 @@ function showModal(title, message, type = 'info') {
 function closeModal() {
     document.getElementById('custom-modal').classList.add('hidden');
 }
+
+// --- BOTÓN VOLVER ARRIBA ---
+const btnScroll = document.getElementById('btn-back-to-top');
+const contentContainer = document.querySelector('.content'); // El div que tiene el scroll
+
+if (contentContainer && btnScroll) {
+    // Escuchar el scroll del contenedor principal
+    contentContainer.addEventListener('scroll', () => {
+        if (contentContainer.scrollTop > 300) {
+            btnScroll.classList.add('show');
+            btnScroll.style.display = 'flex';
+        } else {
+            btnScroll.classList.remove('show');
+            btnScroll.style.display = 'none';
+        }
+    });
+
+    // Acción al pulsar
+    btnScroll.addEventListener('click', () => {
+        contentContainer.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+}

@@ -415,3 +415,145 @@ tr:hover { background: rgba(255,255,255,0.02); }
     from { transform: scale(0.8); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
+
+/* --- BOTÓN VOLVER ARRIBA --- */
+#btn-back-to-top {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+    display: none; /* Oculto por defecto */
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s, background 0.3s;
+    z-index: 999;
+}
+
+#btn-back-to-top:hover {
+    background: #dc2626;
+    transform: translateY(-3px);
+}
+
+#btn-back-to-top.show {
+    display: flex;
+    animation: fadeIn 0.3s;
+}
+
+/* --- RESPONSIVE DESIGN (MÓVIL Y TABLET) --- */
+@media (max-width: 900px) {
+    /* 1. Cambiar Layout Principal */
+    .dashboard-container {
+        flex-direction: column; /* Apilar verticalmente */
+        height: 100vh; /* Mantener altura completa */
+        overflow: hidden;
+    }
+
+    /* 2. Sidebar se convierte en Header */
+    .sidebar {
+        width: 100%;
+        height: auto;
+        flex-shrink: 0; /* Que no se aplaste */
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 10px 0;
+    }
+
+    .sidebar-header {
+        padding: 5px;
+        border: none;
+    }
+    
+    .logo-img-sidebar {
+        max-width: 100px; /* Logo más pequeño */
+    }
+
+    /* 3. Menú Horizontal con Scroll */
+    .menu {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto; /* Scroll lateral si no caben */
+        padding: 10px 15px;
+        white-space: nowrap; /* Que no salten de línea */
+        -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+    }
+
+    .menu-btn {
+        margin-bottom: 0;
+        border: 1px solid var(--border);
+        padding: 8px 15px;
+        font-size: 0.85rem;
+    }
+    
+    .menu-btn.active {
+        border-color: var(--primary);
+    }
+
+    .sidebar-footer {
+        display: none; /* Ocultamos el botón salir abajo para ahorrar espacio */
+    }
+    
+    /* Añadimos botón salir al menú horizontal */
+    /* (Se gestionará visualmente si queremos o lo dejamos oculto) */
+
+    /* 4. Contenido Principal */
+    .content {
+        padding: 15px; /* Menos padding */
+        height: 100%;
+        overflow-y: auto; /* El scroll está AQUI, no en el body */
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .section-header .actions {
+        width: 100%;
+    }
+
+    #search-alumno {
+        width: 100%; /* Buscador ancho completo */
+        box-sizing: border-box;
+    }
+
+    /* 5. Tablas Responsive */
+    .table-container {
+        overflow-x: auto; /* Scroll lateral */
+    }
+    
+    table {
+        min-width: 600px; /* Forzar ancho mínimo para que salte el scroll */
+    }
+
+    th, td {
+        padding: 10px;
+        font-size: 0.8rem; /* Letra más pequeña */
+    }
+
+    .action-btn-icon {
+        padding: 5px 10px;
+    }
+
+    /* 6. Formularios */
+    .form-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .form-card {
+        padding: 15px;
+    }
+    
+    .dojo-grid {
+        grid-template-columns: 1fr; /* Una sola columna para tarjetas */
+    }
+}
