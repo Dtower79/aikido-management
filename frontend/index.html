@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aikido Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <div class="logo-area">
+                <!-- LOGO EN LOGIN -->
+                <img src="img/ARASHI LOGO.jpeg" alt="Arashi Group" class="logo-img-login">
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="fa-solid fa-id-card"></i>
+                    <!-- CAMBIO: Input preparado para DNI -->
+                    <input type="text" id="dni-login" placeholder="DNI (12345678X)" required maxlength="9">
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="password" placeholder="Contraseña" required>
+                </div>
+                <button type="submit" class="login-btn">ENTRAR <i class="fa-solid fa-arrow-right"></i></button>
+                <p id="login-error" class="error-msg"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- PANTALLA PRINCIPAL (DASHBOARD) -->
+    <div id="dashboard" class="dashboard-container hidden">
+        
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <!-- LOGO EN SIDEBAR -->
+                <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar">
+            </div>
+            
+            <nav class="menu">
+                <button class="menu-btn active" onclick="showSection('alumnos')">
+                    <i class="fa-solid fa-users"></i> Alumnos
+                </button>
+                <button class="menu-btn" onclick="showSection('nuevo-alumno')">
+                    <i class="fa-solid fa-user-plus"></i> Nuevo Alumno
+                </button>
+                <button class="menu-btn" onclick="showSection('dojos')">
+                    <i class="fa-solid fa-torii-gate"></i> Dojos
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+                </button>
+            </div>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="content">
+            
+            <!-- SECCIÓN: LISTA ALUMNOS -->
+            <div id="sec-alumnos" class="section active">
+                <header class="section-header">
+                    <h2><i class="fa-solid fa-users"></i> Listado de Alumnos</h2>
+                    <div class="actions">
+                        <input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI..." onkeyup="filtrarAlumnos()">
+                    </div>
+                </header>
+                
+                <div class="table-container">
+                    <table id="tabla-alumnos">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Grado</th>
+                                <th>Dojo / Grupo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-alumnos-body">
+                            <tr><td colspan="5" class="loading">Cargando datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECCIÓN: NUEVO ALUMNO -->
+            <div id="sec-nuevo-alumno" class="section hidden">
+                <header class="section-header">
+                    <h2><i class="fa-solid fa-user-plus"></i> Alta de Alumno</h2>
+                </header>
+                <div class="card">
+                    <p>Formulario en construcción...</p>
+                </div>
+            </div>
+
+            <!-- SECCIÓN: DOJOS -->
+            <div id="sec-dojos" class="section hidden">
+                <header class="section-header">
+                    <h2><i class="fa-solid fa-torii-gate"></i> Gestión de Dojos</h2>
+                </header>
+                <div class="card">
+                    <p>Listado de dojos en construcción...</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
