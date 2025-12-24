@@ -72,6 +72,9 @@
                 
                 <div class="card form-card">
                     <form id="form-nuevo-alumno">
+                        <!-- CAMBIO 1: ID Oculto para saber a quién editamos -->
+                        <input type="hidden" id="edit-id" value="">
+
                         <!-- Fila 1 -->
                         <div class="form-row">
                             <div class="form-group">
@@ -148,8 +151,10 @@
                             </div>
                         </div>
 
-                        <div class="form-actions">
-                            <button type="submit" class="action-btn">GUARDAR ALUMNO</button>
+                        <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <!-- CAMBIO 2: Botón Cancelar (oculto por defecto) -->
+                            <button type="button" id="btn-cancelar-edit" class="action-btn secondary hidden" onclick="resetForm()">Cancelar</button>
+                            <button type="submit" id="btn-submit-alumno" class="action-btn">GUARDAR ALUMNO</button>
                         </div>
                     </form>
                 </div>

@@ -106,23 +106,32 @@ async function loadDojos() {
         });
         const data = await res.json();
         
+        // Guardamos la selección actual si estamos editando
+        const currentVal = select.value;
+
         select.innerHTML = '<option value="">Selecciona un Dojo...</option>';
         data.data.forEach(dojo => {
-            // Strapi v5 directo / v4 attributes
             const d = dojo.attributes || dojo;
-            const id = dojo.id || dojo.documentId; // Preferimos documentId en v5
-            select.innerHTML += `<option value="${dojo.documentId}">${d.nombre}</option>`;
+            const id = dojo.documentId || dojo.id; 
+            select.innerHTML += `<option value="${id}">${d.nombre}</option>`;
         });
+
+        if(currentVal) select.value = currentVal;
+
     } catch (e) { console.error("Error cargando dojos", e); }
 }
 
-// 2. Crear Nuevo Alumno
+// 2. Crear O Editar Alumno (Lógica Mixta)
 document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = e.target.querySelector('button');
+    const btn = document.getElementById('btn-submit-alumno');
     const originalText = btn.innerText;
     btn.disabled = true;
-    btn.innerText = "Guardando...";
+    btn.innerText = "Procesando...";
+
+    // Miramos si hay un ID oculto (Modo Edición)
+    const editId = document.getElementById('edit-id').value;
+    const isEdit = !!editId;
 
     // Recoger datos
     const alumnoData = {
@@ -131,18 +140,27 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
         dni: document.getElementById('new-dni').value,
         email: document.getElementById('new-email').value,
         telefono: document.getElementById('new-telefono').value,
-        fecha_nacimiento: document.getElementById('new-nacimiento').value,
+        fecha_nacimiento: document.getElementById('new-nacimiento').value || null, // null si está vacío para que no falle date
         direccion: document.getElementById('new-direccion').value,
         poblacion: document.getElementById('new-poblacion').value,
         cp: document.getElementById('new-cp').value,
         grado: document.getElementById('new-grado').value,
         grupo: document.getElementById('new-grupo').value,
-        dojo: document.getElementById('new-dojo').value // Esto envía el ID
+        dojo: document.getElementById('new-dojo').value 
     };
 
     try {
-        const res = await fetch(`${API_URL}/api/alumnos`, {
-            method: 'POST',
+        let url = `${API_URL}/api/alumnos`;
+        let method = 'POST';
+
+        // Si es edición, cambiamos URL y método
+        if (isEdit) {
+            url = `${API_URL}/api/alumnos/${editId}`;
+            method = 'PUT';
+        }
+
+        const res = await fetch(url, {
+            method: method,
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${jwtToken}`
@@ -151,22 +169,82 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
         });
 
         if (res.ok) {
-            alert("✅ Alumno creado correctamente");
-            e.target.reset(); // Limpiar formulario
-            showSection('alumnos'); // Ir a la lista
+            alert(isEdit ? "✅ Alumno actualizado" : "✅ Alumno creado");
+            resetForm(); // Limpiar y volver a modo creación
+            showSection('alumnos'); // Volver a la tabla
         } else {
             const err = await res.json();
             alert("❌ Error: " + (err.error?.message || "Revisa los datos"));
         }
     } catch (error) {
         alert("❌ Error de conexión");
+        console.error(error);
     } finally {
         btn.disabled = false;
         btn.innerText = originalText;
     }
 });
 
-// 3. Listar Alumnos
+// Función para limpiar el formulario y salir del modo edición
+function resetForm() {
+    document.getElementById('form-nuevo-alumno').reset();
+    document.getElementById('edit-id').value = ""; // Borrar ID
+    
+    // Restaurar textos y botones
+    document.querySelector('#sec-nuevo-alumno h2').innerHTML = '<i class="fa-solid fa-user-plus"></i> Alta de Alumno';
+    document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO";
+    document.getElementById('btn-cancelar-edit').classList.add('hidden');
+}
+
+// 3. Preparar Edición (Se llama al hacer clic en el lápiz)
+async function editarAlumno(documentId) {
+    // 1. Ir a la vista de formulario
+    showSection('nuevo-alumno');
+    
+    // 2. Cambiar títulos visuales
+    document.querySelector('#sec-nuevo-alumno h2').innerHTML = '<i class="fa-solid fa-pen"></i> Editant Alumne';
+    document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR DATOS";
+    document.getElementById('btn-cancelar-edit').classList.remove('hidden');
+    
+    // 3. Cargar datos del alumno desde la API (para tener todos los campos, no solo los de la tabla)
+    // Usamos el documentId que es el estándar de Strapi v5
+    try {
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, {
+            headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+        const json = await res.json();
+        const data = json.data; // En v5 data es el objeto directo, en v4 data.attributes
+        const props = data.attributes || data; // Compatibilidad
+
+        // 4. Rellenar campos
+        document.getElementById('edit-id').value = data.documentId || data.id;
+        document.getElementById('new-nombre').value = props.nombre || '';
+        document.getElementById('new-apellidos').value = props.apellidos || '';
+        document.getElementById('new-dni').value = props.dni || '';
+        document.getElementById('new-email').value = props.email || '';
+        document.getElementById('new-telefono').value = props.telefono || '';
+        document.getElementById('new-nacimiento').value = props.fecha_nacimiento || '';
+        document.getElementById('new-direccion').value = props.direccion || '';
+        document.getElementById('new-poblacion').value = props.poblacion || '';
+        document.getElementById('new-cp').value = props.cp || '';
+        document.getElementById('new-grado').value = props.grado || '';
+        document.getElementById('new-grupo').value = props.grupo || 'General';
+        
+        // El select de Dojo puede tardar en cargar, así que esperamos un poco o seteamos valor
+        if (props.dojo) {
+            // Strapi v5 devuelve el objeto relacionado directo o en data
+            const dojoId = props.dojo.documentId || (props.dojo.data ? props.dojo.data.documentId : null) || props.dojo.id;
+            if(dojoId) document.getElementById('new-dojo').value = dojoId;
+        }
+
+    } catch (e) {
+        console.error("Error cargando alumno", e);
+        alert("No se pudieron cargar los datos del alumno.");
+        showSection('alumnos');
+    }
+}
+
+// 4. Listar Alumnos (Tabla)
 async function loadAlumnos() {
     const tbody = document.getElementById('lista-alumnos-body');
     tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</td></tr>';
@@ -194,11 +272,14 @@ function renderTablaAlumnos(alumnos) {
 
     alumnos.forEach(alumno => {
         const props = alumno.attributes || alumno; 
-        
+        const docId = alumno.documentId || alumno.id; // Clave para editar
+
         let dojoNombre = "-";
         if (props.dojo) {
              const d = props.dojo.data ? props.dojo.data.attributes : props.dojo;
-             if(d) dojoNombre = d.nombre;
+             // Ajuste para Strapi v5 que a veces devuelve el objeto directo
+             if(d && d.nombre) dojoNombre = d.nombre;
+             else if (props.dojo.nombre) dojoNombre = props.dojo.nombre;
         }
         
         const grupo = props.grupo ? ` (${props.grupo})` : "";
@@ -210,7 +291,10 @@ function renderTablaAlumnos(alumnos) {
                 <td><span class="badge">${props.grado || 'S/G'}</span></td>
                 <td>${dojoNombre}${grupo}</td>
                 <td>
-                    <button class="action-btn-icon"><i class="fa-solid fa-pen"></i></button>
+                    <!-- AQUÍ LLAMAMOS A LA FUNCIÓN DE EDITAR -->
+                    <button class="action-btn-icon" onclick="editarAlumno('${docId}')" title="Editar">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
                 </td>
             </tr>
         `;
