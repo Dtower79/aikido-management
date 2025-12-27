@@ -131,11 +131,35 @@ function normalizeAddress(addr) {
 
 function normalizeCity(city) {
     if(!city) return '-';
-    // 1. Quitar contenido entre paréntesis
-    let c = city.replace(/\s*\(.*?\)\s*/g, '');
-    // 2. Quitar puntos, comas, guiones o espacios al FINAL de la cadena
-    c = c.replace(/[.,\-\s]+$/, '');
-    return c.trim().toUpperCase();
+    // 1. Limpieza básica (paréntesis, puntos finales)
+    let c = city.replace(/\s*\(.*?\)\s*/g, '').replace(/[.,\-\s]+$/, '').trim();
+    
+    // 2. CORRECCIÓN ESPECÍFICA: San Adrián del Besós
+    // Detecta variaciones con acentos mal codificados
+    if (c.match(/San Adria/i)) {
+        return 'SANT ADRIÀ DEL BESÒS';
+    }
+    
+    return c.toUpperCase();
+}
+
+function normalizePhone(tel) {
+    if (!tel) return '-';
+    let t = tel.toString().trim();
+    // Eliminar prefijo +34 o 34 al inicio
+    t = t.replace(/^(\+?34)/, '').trim();
+    return t;
+}
+
+function formatDatePDF(dateStr) {
+    if (!dateStr) return '-';
+    // Asume formato YYYY-MM-DD de la base de datos
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        // Retorna DD/MM/YYYY
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
 }
 
 function calculateAge(birthDateString) {
@@ -348,7 +372,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (DISEÑO PDF ROJO/NEGRITA) ---
+// --- INFORMES AVANZADOS (DISEÑO PDF MEJORADO) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -434,34 +458,34 @@ async function generateReport(type) {
                 p.nombre || '',
                 dniShow,
                 normalizeGrade(p.grado),
-                p.telefono || '-',
+                normalizePhone(p.telefono), // Teléfono limpio
                 p.email || '-',
-                p.fecha_nacimiento || '-'
+                formatDatePDF(p.fecha_nacimiento) // Fecha DD/MM/AAAA
             ];
             if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
             
             baseRow.push(
                 getDojoName(p.dojo),
                 normalizeAddress(p.direccion),
-                normalizeCity(p.poblacion),
+                normalizeCity(p.poblacion), // Población Limpia con corrección Sant Adrià
                 p.cp || '-'
             );
             return baseRow;
         });
         
-        // Estilos de Columna Ajustados (Negritas y Color Rojo)
+        // Estilos de Columna Ajustados
         let colStyles = {};
         
         if (type === 'age') { 
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' }, // Apellidos Negrita
-                1: { cellWidth: 15, fontStyle: 'bold' }, // Nombre Negrita
+                0: { cellWidth: 35, fontStyle: 'bold' },
+                1: { cellWidth: 15, fontStyle: 'bold' },
                 2: { cellWidth: 18, halign: 'center' }, 
-                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, // Grado Negrita
+                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
                 4: { cellWidth: 20, halign: 'center' }, 
-                5: { cellWidth: 38 }, // Ajustado para dar espacio a Edad
+                5: { cellWidth: 38 },
                 6: { cellWidth: 18, halign: 'center' }, 
-                7: { cellWidth: 10, halign: 'center' }, // Edad (10 para caber cabecera)
+                7: { cellWidth: 10, halign: 'center' },
                 8: { cellWidth: 28, halign: 'center' }, 
                 9: { cellWidth: 38 }, 
                 10: { cellWidth: 25, halign: 'center' }, // Pob Centrada
