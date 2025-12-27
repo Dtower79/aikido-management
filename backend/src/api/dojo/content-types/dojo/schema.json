@@ -28,6 +28,15 @@
     },
     "web": {
       "type": "string"
+    },
+    "telefono": {
+      "type": "string"
+    },
+    "email": {
+      "type": "email"
+    },
+    "cp": {
+      "type": "string"
     }
   }
 }

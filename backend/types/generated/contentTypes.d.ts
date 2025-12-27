@@ -453,6 +453,7 @@ export interface ApiAlumnoAlumno extends Struct.CollectionTypeSchema {
     dni: Schema.Attribute.String & Schema.Attribute.Unique;
     dojo: Schema.Attribute.Relation<'manyToOne', 'api::dojo.dojo'>;
     email: Schema.Attribute.Email;
+    fecha_baja: Schema.Attribute.Date;
     fecha_inicio: Schema.Attribute.Date;
     fecha_nacimiento: Schema.Attribute.Date;
     grado: Schema.Attribute.String;
@@ -485,16 +486,19 @@ export interface ApiDojoDojo extends Struct.CollectionTypeSchema {
   };
   attributes: {
     alumnos: Schema.Attribute.Relation<'oneToMany', 'api::alumno.alumno'>;
+    cp: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     direccion: Schema.Attribute.Text;
+    email: Schema.Attribute.Email;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::dojo.dojo'> &
       Schema.Attribute.Private;
     nombre: Schema.Attribute.String;
     poblacion: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
+    telefono: Schema.Attribute.String;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
