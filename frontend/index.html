@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <!-- Librerías PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -117,14 +116,14 @@
                 <header class="section-header">
                     <h2><i class="fa-solid fa-users"></i> Alumnos</h2>
                     <div class="toolbar">
-                        <button class="btn-pdf" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> GENERAR INFORME</button>
+                        <button class="btn-pdf" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                         <div class="font-tool">
                             <button onclick="changeFontSize('table-alumnos', -1)">A-</button>
                             <button onclick="changeFontSize('table-alumnos', 1)">A+</button>
                         </div>
                         <div class="search-box">
                             <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI...">
+                            <input type="text" id="search-alumno" placeholder="Buscar alumno...">
                         </div>
                     </div>
                 </header>
@@ -132,16 +131,17 @@
                     <table id="table-alumnos">
                         <thead>
                             <tr>
-                                <th>Nombre Completo</th>
+                                <th>Apellidos</th>
+                                <th>Nombre</th>
                                 <th>DNI</th>
                                 <th>Grado</th>
-                                <th>Dojo / Grupo</th>
                                 <th>Teléfono</th>
                                 <th>Email</th>
+                                <th>Nacimiento</th>
+                                <th>Dojo</th>
+                                <th>Dirección</th>
                                 <th>Población</th>
                                 <th>CP</th>
-                                <th>Nacimiento</th>
-                                <th>Dirección</th>
                                 <th class="sticky-col">Acciones</th>
                             </tr>
                         </thead>
@@ -165,7 +165,8 @@
                         <thead>
                             <tr>
                                 <th>Fecha Baja</th>
-                                <th>Nombre Completo</th>
+                                <th>Apellidos</th>
+                                <th>Nombre</th>
                                 <th>DNI</th>
                                 <th>Dojo</th>
                                 <th class="sticky-col">Acciones</th>
@@ -178,7 +179,10 @@
 
             <div id="sec-status" class="section hidden">
                 <div class="console-wrapper">
-                    <div class="console-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="console-title">root@aikido-system:~# ./diagnostico.sh</span></div>
+                    <div class="console-header">
+                        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                        <span class="console-title">root@aikido-system:~# ./diagnostico.sh</span>
+                    </div>
                     <div class="console-body" id="console-output"><span class="cursor">_</span></div>
                 </div>
             </div>

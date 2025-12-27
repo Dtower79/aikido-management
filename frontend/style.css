@@ -49,20 +49,22 @@ body { margin: 0; font-family: 'Inter', sans-serif; background-color: var(--bg-d
 .search-box i { color: var(--text-muted); margin-right: 10px; }
 .search-box input { background: transparent; border: none; color: white; outline: none; width: 100%; font-size: 0.9rem; }
 .btn-pdf { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
-.btn-pdf:hover { background: #dc2626; transform: translateY(-1px); }
 
 /* TABLES */
 .table-container { background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); overflow: auto; max-height: 75vh; }
-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1400px; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1600px; }
 th { position: sticky; top: 0; background: var(--bg-header); padding: 15px; text-align: left; z-index: 10; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; border-bottom: 2px solid var(--border); }
-td { padding: 12px 15px; border-bottom: 1px solid var(--border); white-space: nowrap; font-size: 0.9rem; background: var(--bg-card); }
-tr:hover td { background: rgba(255,255,255,0.03); }
+td { padding: 12px 15px; border-bottom: 1px solid var(--border); white-space: nowrap; font-size: 0.9rem; background: var(--bg-card); color: var(--text); }
+tr:hover td { background: rgba(255,255,255,0.03) !important; }
+
+/* SCROLLBAR */
+.table-container::-webkit-scrollbar { width: 8px; height: 8px; }
+.table-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
 /* STICKY COLUMN */
 .sticky-col { position: sticky; right: 0; background: var(--bg-header) !important; z-index: 11; border-left: 2px solid var(--border); text-align: center !important; }
 th.sticky-col { z-index: 20; }
 td.sticky-col { background: var(--bg-card) !important; z-index: 9; }
-tr:hover td.sticky-col { background: #262f3f !important; }
 
 /* CARDS & DOJOS */
 .dojo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
@@ -73,20 +75,32 @@ tr:hover td.sticky-col { background: #262f3f !important; }
 .dojo-body { padding: 20px; }
 .dojo-info-row { display: flex; gap: 12px; margin-bottom: 15px; align-items: flex-start; }
 .dojo-info-row i { color: var(--accent); width: 18px; text-align: center; margin-top: 3px; }
-.dojo-info-row span { line-height: 1.4; color: var(--text); }
-.dojo-link-btn { display: block; width: 100%; text-align: center; padding: 10px; background: var(--bg-header); border: 1px solid var(--border); border-radius: 8px; color: var(--primary); text-decoration: none; font-weight: bold; margin-top: 10px; transition: 0.2s; }
-.dojo-link-btn:hover { background: var(--primary); color: white; }
+.dojo-link-btn { display: block; width: fit-content; margin: 20px auto 0; padding: 10px 25px; background: var(--bg-header); border: 1px solid var(--primary); border-radius: 8px; color: var(--primary); text-decoration: none; font-weight: bold; transition: 0.2s; text-transform: uppercase; font-size: 0.85rem; }
+.dojo-link-btn:hover { background: var(--primary); color: white; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
 
-/* UTILS */
-.badge { background: #0f172a; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; border: 1px solid var(--border); }
+/* CONSOLE (TERMINAL) */
+.console-wrapper { background: #000; border-radius: 10px; border: 1px solid var(--border); height: 80vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.console-header { background: #1e293b; padding: 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.red { background: #ff5f56; } .dot.yellow { background: #ffbd2e; } .dot.green { background: #27c93f; }
+.console-title { color: #94a3b8; font-size: 0.8rem; font-family: monospace; margin-left: 10px; }
+.console-body { flex: 1; padding: 20px; font-family: 'Courier New', monospace; color: #33ff00; line-height: 1.6; overflow-y: auto; font-size: 0.95rem; }
+.btn-monitor-ext { display: inline-block; margin-top: 20px; padding: 10px 20px; border: 1px solid #33ff00; color: #33ff00; text-decoration: none; font-weight: bold; border-radius: 4px; transition: 0.3s; }
+.btn-monitor-ext:hover { background: rgba(51, 255, 0, 0.1); box-shadow: 0 0 15px rgba(51, 255, 0, 0.4); }
+.cursor { display: inline-block; width: 10px; height: 18px; background: #33ff00; animation: blink 1s infinite; vertical-align: middle; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* FONT TOOL */
 .font-tool { display: flex; background: var(--bg-header); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .font-tool button { background: none; border: none; color: white; padding: 8px 12px; cursor: pointer; border-right: 1px solid var(--border); font-weight: bold; }
-.font-tool button:hover { background: rgba(255,255,255,0.05); }
-.action-btn-icon { background: none; border: 1px solid var(--border); color: var(--text); width: 34px; height: 34px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-.action-btn-icon:hover { background: rgba(255,255,255,0.1); }
-.action-btn-icon.delete:hover { color: var(--accent); border-color: var(--accent); }
-.action-btn-icon.restore:hover { color: #10b981; border-color: #10b981; }
 
 /* MODAL */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
 .modal-box { background: var(--bg-card); padding: 35px; border-radius: 12px; width: 380px; text-align: center; border: 1px solid var(--border); }
+.modal-icon { font-size: 3.5rem; margin-bottom: 15px; }
+
+/* UTILS */
+.action-btn-icon { background: none; border: 1px solid var(--border); color: var(--text); width: 34px; height: 34px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+.action-btn-icon:hover { background: rgba(255,255,255,0.1); }
+.action-btn-icon.delete:hover { color: var(--accent); border-color: var(--accent); }
+.action-btn-icon.restore:hover { color: #10b981; border-color: #10b981; }
