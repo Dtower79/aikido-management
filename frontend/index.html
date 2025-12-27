@@ -159,11 +159,14 @@
                 </div>
             </div>
 
-            <!-- FOOTER CORREGIDO -->
+            <!-- FOOTER ANIMADO (Solo visible al acercar el mouse abajo) -->
+            <!-- Trigger invisible -->
+            <div class="footer-trigger"></div>
+            <!-- Footer real -->
             <footer class="main-footer">
                 <div class="footer-content">
                     <div class="footer-left">
-                        &copy; <span id="year"></span> <strong>Arashi Group Aikido</strong>. Todos los derechos reservados.
+                        &copy; <span id="year"></span> <strong>Arashi Group Aikido</strong>
                         <img src="img/logo-arashi.png" class="footer-logo-mini" alt="Logo">
                     </div>
                     <span class="version">Sistema de Gestión de Alumnos</span>
@@ -172,7 +175,7 @@
         </main>
     </div>
 
-    <!-- MODAL CONFIRMACIÓN / MENSAJES -->
+    <!-- MODALES -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <h3 id="modal-title">Título</h3>
@@ -184,11 +187,10 @@
         </div>
     </div>
 
-    <!-- MODAL SELECCIÓN DE INFORME -->
     <div id="report-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <h3><i class="fa-solid fa-file-pdf"></i> Generar Informe</h3>
-            <p>Selecciona el tipo de ordenación para el informe PDF:</p>
+            <p>Selecciona el tipo de ordenación:</p>
             <div style="margin: 20px 0; display:flex; flex-direction:column; gap:10px;">
                 <button class="menu-btn" onclick="generateReport('surname')"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos (A-Z)</button>
                 <button class="menu-btn" onclick="generateReport('grade')"><i class="fa-solid fa-medal"></i> Por Grado (Alto a Bajo)</button>

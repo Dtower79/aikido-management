@@ -40,26 +40,8 @@ body {
 .logo-img-login { max-width: 180px; margin-bottom: 30px; }
 .input-group { position: relative; margin-bottom: 15px; text-align: left; }
 .input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-.input-group input { 
-    width: 100%; 
-    padding: 12px 12px 12px 45px; 
-    background: #0f172a; 
-    border: 1px solid var(--border); 
-    border-radius: 6px; 
-    color: white; 
-    box-sizing: border-box; 
-}
-.login-btn { 
-    width: 100%; 
-    padding: 12px; 
-    background: var(--primary); 
-    color: white; 
-    border: none; 
-    border-radius: 6px; 
-    cursor: pointer; 
-    font-weight: 600; 
-    margin-top: 10px; 
-}
+.input-group input { width: 100%; padding: 12px 12px 12px 45px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; box-sizing: border-box; }
+.login-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; }
 
 /* --- DASHBOARD LAYOUT --- */
 .dashboard-container { display: flex; height: 100vh; }
@@ -92,7 +74,7 @@ body {
 
 /* Footer Sidebar */
 .sidebar-footer { 
-    height: 70px; /* ALTURA FIJA PARA ALINEACIÓN */
+    height: 70px;
     border-top: 1px solid var(--border); 
     display: flex; 
     align-items: center; 
@@ -110,6 +92,7 @@ body {
     display: flex; 
     flex-direction: column; 
     overflow: hidden; 
+    position: relative; /* Para el footer absoluto */
 }
 
 /* Scrollable Section Container */
@@ -117,6 +100,8 @@ body {
     flex: 1; 
     overflow-y: auto; 
     padding: 30px; 
+    /* Quitamos padding bottom para que no haya hueco */
+    padding-bottom: 30px; 
 }
 
 .welcome-flex { display: grid; place-items: center; height: 100%; width: 100%; }
@@ -135,7 +120,7 @@ body {
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
 /* TABLAS */
-.table-container { background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); overflow: auto; max-height: 70vh; cursor: grab; position: relative; }
+.table-container { background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); overflow: auto; max-height: 80vh; cursor: grab; position: relative; }
 .table-container.active { cursor: grabbing; }
 table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1200px; }
 th { position: sticky; top: 0; background: var(--bg-header); padding: 15px; text-align: left; z-index: 10; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; border-bottom: 2px solid var(--border); }
@@ -163,20 +148,43 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .dojo-info-row i { color: var(--accent); width: 20px; text-align: center; flex-shrink: 0; margin-top: 3px; }
 .dojo-link-btn { display: block; width: fit-content; margin: 20px auto 0; padding: 10px 25px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center; transition: 0.3s; text-transform: uppercase; }
 
-/* --- MAIN FOOTER --- */
+/* --- MAIN FOOTER (ESCONDIDO Y ANIMADO) --- */
+.footer-trigger {
+    position: fixed;
+    bottom: 0;
+    left: 250px; /* Ancho Sidebar */
+    right: 0;
+    height: 30px; /* Altura sensible */
+    z-index: 499;
+}
+
 .main-footer {
-    height: 70px; /* MISMA ALTURA */
+    position: fixed;
+    bottom: 0;
+    left: 250px; /* Ancho Sidebar */
+    right: 0;
+    height: 70px;
     border-top: 1px solid var(--border);
     padding: 0 30px; 
     background: var(--bg-header);
     color: var(--text-muted);
     font-size: 0.85rem;
-    width: 100%;
     box-sizing: border-box;
     display: flex;
     align-items: center; 
-    flex-shrink: 0; 
+    z-index: 500;
+    
+    /* Animación */
+    transform: translateY(100%);
+    transition: transform 0.3s ease-in-out;
 }
+
+/* Mostrar al pasar sobre el trigger o sobre el propio footer */
+.footer-trigger:hover ~ .main-footer,
+.main-footer:hover {
+    transform: translateY(0);
+}
+
 .footer-content {
     display: flex;
     justify-content: space-between;
@@ -221,15 +229,13 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 
     .section { padding: 15px; }
     
-    /* Card View para Tablas */
+    /* Card View */
     thead { display: none; }
     table, tbody, tr, td { display: block; width: 100%; }
     tr { margin-bottom: 15px; border: 1px solid var(--border); background: var(--bg-card); border-radius: 8px; padding: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    
     td { text-align: right; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
     td:last-child { border-bottom: none; }
     
-    /* Etiquetas automáticas */
     td:nth-of-type(1)::before { content: "Apellidos"; font-weight: bold; color: var(--text-muted); }
     td:nth-of-type(2)::before { content: "Nombre"; font-weight: bold; color: var(--text-muted); }
     td:nth-of-type(3)::before { content: "DNI"; font-weight: bold; color: var(--text-muted); }
@@ -242,12 +248,13 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     td:nth-of-type(10)::before { content: "Población"; font-weight: bold; color: var(--text-muted); }
     td:nth-of-type(11)::before { content: "CP"; font-weight: bold; color: var(--text-muted); }
     
-    /* El SPAN .cell-data se asegura que el contenido sea visible a la derecha */
     .cell-data { text-align: right; max-width: 65%; word-break: break-word; color: var(--text); }
 
     td.sticky-col { position: static; background: transparent !important; box-shadow: none; justify-content: center; gap: 20px; padding-top: 15px; margin-top: 10px; border-top: 1px solid var(--border); }
     .action-btn-icon { font-size: 1.4rem; background: var(--bg-dark); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); }
 
+    /* Footer Móvil */
+    .main-footer, .footer-trigger { left: 0; }
     .main-footer { height: auto; padding: 20px; text-align: center; }
     .footer-content { flex-direction: column; gap: 10px; }
 }

@@ -158,7 +158,7 @@ function calculateAge(birthDateString) {
     return isNaN(age) ? '-' : age;
 }
 
-// --- CARGA DE DATOS (MODIFICADO PARA MÓVIL) ---
+// --- CARGA DE DATOS ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
     const cols = activos ? 12 : 13; 
@@ -177,22 +177,21 @@ async function loadAlumnos(activos) {
         
         data.forEach(a => {
             const p = a.attributes || a;
-            const id = a.documentId;
+            const id = a.documentId; 
             const dojoNom = getDojoName(p.dojo); 
 
-            // ESTRUCTURA CON SPAN .cell-data PARA CSS MÓVIL
             const datosComunes = `
-                <td><span class="cell-data"><strong>${p.apellidos || "-"}</strong></span></td>
-                <td><span class="cell-data">${p.nombre || "-"}</span></td>
-                <td><span class="cell-data" style="font-family:monospace">${p.dni || "-"}</span></td>
-                <td><span class="cell-data"><span class="badge">${normalizeGrade(p.grado) || 'S/G'}</span></span></td>
-                <td><span class="cell-data">${p.telefono || '-'}</span></td>
-                <td><span class="cell-data">${p.email || '-'}</span></td>
-                <td><span class="cell-data">${p.fecha_nacimiento || '-'}</span></td>
-                <td><span class="cell-data">${dojoNom}</span></td>
-                <td><span class="cell-data">${p.direccion || '-'}</span></td>
-                <td><span class="cell-data">${p.poblacion || '-'}</span></td>
-                <td><span class="cell-data">${p.cp || '-'}</span></td>
+                <td><strong>${p.apellidos || "-"}</strong></td>
+                <td>${p.nombre || "-"}</td>
+                <td style="font-family:monospace">${p.dni || "-"}</td>
+                <td><span class="badge">${normalizeGrade(p.grado) || 'S/G'}</span></td>
+                <td>${p.telefono || '-'}</td>
+                <td>${p.email || '-'}</td>
+                <td>${p.fecha_nacimiento || '-'}</td>
+                <td>${dojoNom}</td>
+                <td>${p.direccion || '-'}</td>
+                <td>${p.poblacion || '-'}</td>
+                <td>${p.cp || '-'}</td>
             `;
 
             if (activos) {
@@ -204,7 +203,7 @@ async function loadAlumnos(activos) {
                     </td></tr>`;
             } else {
                 tbody.innerHTML += `<tr>
-                    <td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</span></td>
+                    <td class="txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</td>
                     ${datosComunes}
                     <td class="sticky-col">
                         <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
@@ -212,10 +211,10 @@ async function loadAlumnos(activos) {
                     </td></tr>`;
             }
         });
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos.</td></tr>`; }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos del servidor.</td></tr>`; }
 }
 
-// --- GUARDAR ---
+// --- GUARDAR / EDITAR ---
 const formAlumno = document.getElementById('form-nuevo-alumno');
 if(formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
@@ -256,7 +255,6 @@ if(formAlumno) {
     });
 }
 
-// --- EDITAR ---
 async function editarAlumno(documentId) {
     try {
         const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
@@ -356,7 +354,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES ---
+// --- INFORMES AVANZADOS (DISEÑO PDF MEJORADO) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -387,26 +385,24 @@ async function generateReport(type) {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-        doc.setFontSize(16); doc.setFont("helvetica", "bold");
-        
-        let title = "LISTADO DE AFILIADOS";
-        if(type === 'grade') title += " POR GRADO";
-        if(type === 'age') title += " POR EDAD";
-        if(type === 'dojo') title += " POR DOJO";
-        if(type === 'surname') title += " POR APELLIDOS";
+        // 1. Textos de Cabecera (En Castellano y Corrección "ALUMNOS")
+        let mainTitle = "LISTADO DE ALUMNOS";
+        if(type === 'grade') mainTitle += " POR GRADO";
+        if(type === 'age') mainTitle += " POR EDAD";
+        if(type === 'dojo') mainTitle += " POR DOJO";
+        if(type === 'surname') mainTitle += " POR APELLIDOS";
 
-        doc.text(title, pageWidth / 2, 12, { align: "center" });
-        doc.setFontSize(10); doc.setFont("helvetica", "normal");
-        doc.text(`Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`, pageWidth / 2, 18, { align: "center" });
+        const subtitleText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
         
         const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
 
+        // Ordenación
         list.sort((a, b) => {
             const pA = a.attributes || a;
             const pB = b.attributes || b;
+            
             if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
             if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
             if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
@@ -418,13 +414,17 @@ async function generateReport(type) {
             return 0;
         });
         
+        // Encabezados
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.'];
         if (type === 'age') headRow.push('Edad'); 
         headRow.push('Dojo', 'Dirección', 'Población', 'CP');
         
         const body = list.map(a => {
             const p = a.attributes || a;
-            let dniShow = (p.dni || '-').toUpperCase().replace('PENDIENTE', 'PEND');
+            
+            let dniShow = (p.dni || '-').toUpperCase();
+            if (dniShow.includes('PENDIENTE')) dniShow = dniShow.replace('PENDIENTE', 'PEND');
+
             const baseRow = [
                 (p.apellidos || '').toUpperCase(),
                 p.nombre || '',
@@ -435,6 +435,7 @@ async function generateReport(type) {
                 formatDatePDF(p.fecha_nacimiento) 
             ];
             if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
+            
             baseRow.push(
                 getDojoName(p.dojo),
                 normalizeAddress(p.direccion),
@@ -444,23 +445,35 @@ async function generateReport(type) {
             return baseRow;
         });
         
+        // Estilos
         let colStyles = {};
         if (type === 'age') { 
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' },
-                2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 38 },
-                6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' },
-                8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 
-                10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' }
+                0: { cellWidth: 35, fontStyle: 'bold' },
+                1: { cellWidth: 15, fontStyle: 'bold' },
+                2: { cellWidth: 18, halign: 'center' }, 
+                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 
+                5: { cellWidth: 38 },
+                6: { cellWidth: 18, halign: 'center' }, 
+                7: { cellWidth: 10, halign: 'center' },
+                8: { cellWidth: 28, halign: 'center' }, 
+                9: { cellWidth: 38 }, 
+                10: { cellWidth: 25, halign: 'center' },
+                11: { cellWidth: 10, halign: 'center' }
             };
         } else { 
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 18, fontStyle: 'bold' },
-                2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 45 },
-                6: { cellWidth: 20, halign: 'center' }, 7: { cellWidth: 30, halign: 'center' },
-                8: { cellWidth: 45 }, 9: { cellWidth: 25, halign: 'center' },
+                0: { cellWidth: 35, fontStyle: 'bold' },
+                1: { cellWidth: 18, fontStyle: 'bold' },
+                2: { cellWidth: 20, halign: 'center' },
+                3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' },
+                5: { cellWidth: 45 },
+                6: { cellWidth: 20, halign: 'center' },
+                7: { cellWidth: 30, halign: 'center' },
+                8: { cellWidth: 45 },
+                9: { cellWidth: 25, halign: 'center' },
                 10: { cellWidth: 12, halign: 'center' }
             };
         }
@@ -470,21 +483,35 @@ async function generateReport(type) {
             head: [headRow], 
             body: body, 
             theme: 'grid', 
-            margin: { left: 5, right: 5, bottom: 15 },
+            // Margen superior para que quepa el header repetido
+            margin: { top: 30, left: 5, right: 5, bottom: 15 },
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
+            
+            // --- HEADER Y FOOTER EN CADA PÁGINA ---
             didDrawPage: function (data) {
+                // Header (Repetido en cada página)
+                doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                doc.setFontSize(16); doc.setFont("helvetica", "bold");
+                doc.text(mainTitle, pageWidth / 2, 12, { align: "center" });
+                
+                doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                doc.text(subtitleText, pageWidth / 2, 18, { align: "center" });
+
+                // Footer
                 let footerStr = `Página ${doc.internal.getNumberOfPages()} | Total Registros: ${list.length} | Generado el ${new Date().toLocaleDateString()}`;
                 doc.setFontSize(8); doc.setFont("helvetica", "normal");
                 doc.text(footerStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
             }
         });
         
-        doc.save(`${fileNames[type] || 'Informe'}.pdf`);
+        const finalName = fileNames[type] || `Informe_Arashi_${type}`;
+        doc.save(`${finalName}.pdf`);
     };
 }
 
+// --- UTILS COMPACTACIÓN ---
 function changeFontSize(tableId, delta) {
     const table = document.getElementById(tableId);
     if (!table) return;
