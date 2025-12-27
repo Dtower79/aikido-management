@@ -68,14 +68,11 @@ function showSection(id) {
     if(id === 'nuevo-alumno') resetForm();
 }
 
-// --- UTILIDAD: OBTENER NOMBRE DOJO (Compatible v4/v5) ---
+// --- UTILIDAD: OBTENER NOMBRE DOJO ---
 function getDojoName(dojoObj) {
     if (!dojoObj) return "-";
-    // Intenta formato plano (Strapi v5)
     if (dojoObj.nombre) return dojoObj.nombre;
-    // Intenta formato anidado (Strapi v4 o populated standard)
     if (dojoObj.data && dojoObj.data.attributes && dojoObj.data.attributes.nombre) return dojoObj.data.attributes.nombre;
-    // Intenta formato atributos directos
     if (dojoObj.attributes && dojoObj.attributes.nombre) return dojoObj.attributes.nombre;
     return "-";
 }
@@ -99,7 +96,6 @@ async function loadAlumnos(activos) {
         data.forEach(a => {
             const p = a.attributes || a;
             const id = a.documentId || a.id;
-            // Corrección: Uso de la función robusta para obtener el Dojo
             const dojoNom = getDojoName(p.dojo);
 
             if (activos) {
@@ -178,11 +174,16 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
 
 async function editarAlumno(id) {
     try {
+        // Fetch con populate para traer datos del Dojo
         const res = await fetch(`${API_URL}/api/alumnos/${id}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        const p = json.data.attributes || json.data; 
+        
+        // CORRECCIÓN: Manejo robusto de Strapi v5 (si viene plano o anidado)
+        // json.data puede ser el objeto directo o contener attributes
+        const dataObj = json.data;
+        const p = dataObj.attributes || dataObj; 
 
-        document.getElementById('edit-id').value = json.data.documentId || json.data.id;
+        document.getElementById('edit-id').value = dataObj.documentId || dataObj.id;
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
         document.getElementById('new-dni').value = p.dni || '';
@@ -195,15 +196,26 @@ async function editarAlumno(id) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // Manejo del select de Dojo
-        const dojoId = p.dojo?.data?.documentId || p.dojo?.data?.id || p.dojo?.documentId || p.dojo?.id;
+        // CORRECCIÓN: Extracción segura del ID del Dojo para el Select
+        let dojoId = "";
+        if (p.dojo) {
+            if (p.dojo.documentId) dojoId = p.dojo.documentId;
+            else if (p.dojo.id) dojoId = p.dojo.id;
+            else if (p.dojo.data) {
+                dojoId = p.dojo.data.documentId || p.dojo.data.id;
+            }
+        }
+        
         const selectDojo = document.getElementById('new-dojo');
         if (dojoId) selectDojo.value = dojoId;
 
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
         document.getElementById('btn-cancelar-edit').classList.remove('hidden');
         showSection('nuevo-alumno');
-    } catch(e) { console.error(e); }
+    } catch(e) { 
+        console.error("Error al cargar datos para editar:", e); 
+        showModal("Error", "No se pudieron cargar los datos del alumno.");
+    }
 }
 
 function resetForm() {
@@ -258,46 +270,86 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- PDF PROFESIONAL ---
+// --- PDF PROFESIONAL (CORREGIDO: 11 COLUMNAS EXACTAS) ---
 async function exportarPDF() {
-    const { jsPDF } = window.jspdf; const doc = new jsPDF('l', 'mm', 'a4'); 
-    const logoImg = new Image(); logoImg.src = 'img/logo-arashi-informe.png';
+    const { jsPDF } = window.jspdf; 
+    const doc = new jsPDF('l', 'mm', 'a4'); // Horizontal
+    const logoImg = new Image(); 
+    logoImg.src = 'img/logo-arashi-informe.png';
+    
     logoImg.onload = async function() {
         doc.addImage(logoImg, 'PNG', 10, 10, 45, 20);
-        doc.setFontSize(18); doc.text("LLISTAT D'AFILIATS PER COGNOMS", 148, 18, { align: "center" });
+        doc.setFontSize(18); 
+        doc.text("LLISTAT D'AFILIATS PER COGNOMS", 148, 18, { align: "center" });
         
         const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&sort=apellidos:asc&populate=dojo&pagination[limit]=500`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         
+        // Mapeo EXACTO a las columnas de la web
         const body = (json.data || []).map(a => {
             const p = a.attributes || a;
-            const ap = (p.apellidos || '').toUpperCase();
-            // Corrección: Usamos getDojoName y cambiamos "BARCELONA" por p.cp (Dato real)
             return [
-                new Date(p.createdAt).toLocaleDateString(), 
-                `${ap}, ${p.nombre || ''}`, 
-                p.dni || '-', 
-                p.email || '-', 
-                p.poblacion || '-', 
-                p.cp || '-', // Usamos CP en vez de Provincia inventada
-                getDojoName(p.dojo)
+                (p.apellidos || '').toUpperCase(),
+                p.nombre || '',
+                p.dni || '-',
+                p.grado || '-',
+                p.telefono || '-',
+                p.email || '-',
+                p.fecha_nacimiento || '-',
+                getDojoName(p.dojo),
+                p.direccion || '-',
+                p.poblacion || '-',
+                p.cp || '-'
             ];
         });
         
-        // Encabezado actualizado a columnas reales
+        // Configuración tabla ajustada para 11 columnas
         doc.autoTable({ 
             startY: 35, 
-            head: [['Alta', 'Cognoms i Nom', 'DNI', 'Email', 'Població', 'CP', 'Centre Treball']], 
+            head: [['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.', 'Dojo', 'Dirección', 'Población', 'CP']], 
             body: body, 
             theme: 'grid', 
-            headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0] }, 
-            styles: { fontSize: 8 } 
+            headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0], fontSize: 7 }, 
+            styles: { fontSize: 6, cellPadding: 1, overflow: 'linebreak' },
+            columnStyles: {
+                0: { cellWidth: 25 }, // Apellidos
+                1: { cellWidth: 20 }, // Nombre
+                2: { cellWidth: 18 }, // DNI
+                3: { cellWidth: 12 }, // Grado
+                4: { cellWidth: 18 }, // Tlf
+                5: { cellWidth: 35 }, // Email
+                6: { cellWidth: 18 }, // Nac
+                7: { cellWidth: 25 }, // Dojo
+                8: { cellWidth: 35 }, // Direccion
+                9: { cellWidth: 20 }, // Pob
+                10: { cellWidth: 10 } // CP
+            }
         });
         doc.save("Informe_Alumnos_Arashi.pdf");
     };
 }
 
 // --- UTILS ---
+// CORRECCIÓN: Cambio de tamaño de letra iterando celdas
+function changeFontSize(tableId, delta) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    // Seleccionamos todas las celdas (th y td)
+    const cells = table.querySelectorAll('th, td');
+    
+    if (cells.length > 0) {
+        // Obtenemos el tamaño actual de la primera celda para calcular
+        const currentSize = parseFloat(window.getComputedStyle(cells[0]).fontSize);
+        const newSize = currentSize + delta;
+        
+        // Aplicamos el nuevo tamaño a todas
+        cells.forEach(cell => {
+            cell.style.fontSize = newSize + "px";
+        });
+    }
+}
+
 function setupDragScroll() {
     const s = document.querySelector('.drag-scroll');
     if(!s) return;
@@ -323,8 +375,6 @@ function showModal(title, msg, onOk) {
     document.getElementById('modal-btn-ok').onclick = () => { if(onOk) onOk(); m.classList.add('hidden'); };
     m.classList.remove('hidden');
 }
-
-function changeFontSize(id, delta) { const t = document.getElementById(id); const s = parseFloat(window.getComputedStyle(t).fontSize); t.style.fontSize = (s + delta) + "px"; }
 
 async function loadDojosSelect() {
     const sel = document.getElementById('new-dojo');
