@@ -480,6 +480,8 @@ function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
 
+// ... (TODO EL CÓDIGO ANTERIOR SE MANTIENE, SOLO CAMBIA generateReport y al final se añade lógica scroll)
+
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     
@@ -533,13 +535,22 @@ async function generateReport(type) {
         const json = await res.json();
         let list = json.data || [];
 
+        // LÓGICA DE ORDENACIÓN ACTUALIZADA
         list.sort((a, b) => {
             const pA = a.attributes || a;
             const pB = b.attributes || b;
+            
             if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
             if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
             if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
-            if (type === 'group') return (pA.grupo || '').localeCompare(pB.grupo || '');
+            
+            // NUEVO: Orden por Grupo -> Luego por Apellidos
+            if (type === 'group') {
+                const groupCompare = (pA.grupo || '').localeCompare(pB.grupo || '');
+                if (groupCompare !== 0) return groupCompare;
+                return (pA.apellidos || '').localeCompare(pB.apellidos || '');
+            }
+            
             if (type === 'age') {
                 const dateA = new Date(pA.fecha_nacimiento || '2000-01-01');
                 const dateB = new Date(pB.fecha_nacimiento || '2000-01-01');
@@ -550,26 +561,45 @@ async function generateReport(type) {
         
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.'];
         if (type === 'age') headRow.push('Edad'); 
-        if (type === 'group') headRow.push('Grupo');
-        headRow.push('Dojo', 'Dirección', 'Población', 'CP');
+        
+        // CAMBIO: Dojo antes que Grupo
+        if (type === 'group') {
+            headRow.push('Dojo');
+            headRow.push('Grupo');
+        } else {
+            headRow.push('Dojo');
+        }
+        
+        headRow.push('Dirección', 'Población', 'CP');
         
         const body = list.map(a => {
             const p = a.attributes || a;
+            
             let dniShow = (p.dni || '-').toUpperCase().replace('PENDIENTE', 'PEND');
+            
+            // NUEVO: Limpieza de email 'pendi...'
+            let emailShow = (p.email || '-');
+            if (emailShow.toLowerCase().startsWith('pendi')) {
+                emailShow = 'NO DISPONIBLE';
+            }
+
             const baseRow = [
                 (p.apellidos || '').toUpperCase(),
                 p.nombre || '',
                 dniShow,
                 normalizeGrade(p.grado),
                 normalizePhone(p.telefono), 
-                p.email || '-',
+                emailShow, // Email limpio
                 formatDatePDF(p.fecha_nacimiento) 
             ];
+            
             if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
+            
+            // CAMBIO: Inserción Dojo antes que Grupo
+            baseRow.push(getDojoName(p.dojo));
             if (type === 'group') baseRow.push(p.grupo || '-');
             
             baseRow.push(
-                getDojoName(p.dojo),
                 normalizeAddress(p.direccion),
                 normalizeCity(p.poblacion),
                 p.cp || '-'
@@ -586,6 +616,22 @@ async function generateReport(type) {
                 6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' },
                 8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 
                 10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' }
+            };
+        } else if (type === 'group') {
+            // ANCHOS PARA INFORME GRUPO (Dojo antes que Grupo)
+            colStyles = {
+                0: { cellWidth: 32, fontStyle: 'bold' }, 
+                1: { cellWidth: 15, fontStyle: 'bold' },
+                2: { cellWidth: 18, halign: 'center' }, 
+                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 
+                5: { cellWidth: 35 }, 
+                6: { cellWidth: 18, halign: 'center' }, 
+                7: { cellWidth: 25, halign: 'center' }, // Dojo
+                8: { cellWidth: 18, halign: 'center' }, // Grupo
+                9: { cellWidth: 35 }, // Dirección
+                10: { cellWidth: 25, halign: 'center' }, // Pob
+                11: { cellWidth: 10, halign: 'center' }  // CP
             };
         } else { 
             colStyles = {
@@ -625,6 +671,32 @@ async function generateReport(type) {
         
         doc.save(`${fileNames[type] || 'Informe'}.pdf`);
     };
+}
+
+// ... (RESTO DE UTILS IGUAL)
+
+// NUEVO: LÓGICA SCROLL TOP
+function scrollToTop() {
+    // Busca el contenedor con scroll (en este caso .content o window)
+    const content = document.querySelector('.content');
+    if(content) {
+        content.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+// Detectar Scroll
+const contentArea = document.querySelector('.content');
+if(contentArea) {
+    contentArea.addEventListener('scroll', () => {
+        const btn = document.getElementById('btn-scroll-top');
+        if (contentArea.scrollTop > 300) {
+            btn.classList.remove('hidden');
+        } else {
+            btn.classList.add('hidden');
+        }
+    });
 }
 
 function changeFontSize(tableId, delta) {
