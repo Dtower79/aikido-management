@@ -88,7 +88,11 @@ function showSection(id) {
     if(id === 'bajas') loadAlumnos(false);
     if(id === 'dojos') loadDojosCards();
     if(id === 'status') runDiagnostics();
-    if(id === 'nuevo-alumno') resetForm();
+    
+    // IMPORTANTE: Solo resetea si NO venimos de editar (lógica inversa manejada por editarAlumno)
+    if(id === 'nuevo-alumno' && !document.getElementById('edit-id').value) {
+        resetForm();
+    }
 }
 
 // --- UTILS DE LIMPIEZA DE DATOS ---
@@ -131,32 +135,22 @@ function normalizeAddress(addr) {
 
 function normalizeCity(city) {
     if(!city) return '-';
-    // 1. Limpieza básica (paréntesis, puntos finales)
     let c = city.replace(/\s*\(.*?\)\s*/g, '').replace(/[.,\-\s]+$/, '').trim();
-    
-    // 2. CORRECCIÓN ESPECÍFICA: San Adrián del Besós
-    // Detecta variaciones con acentos mal codificados
-    if (c.match(/San Adria/i)) {
-        return 'SANT ADRIÀ DEL BESÒS';
-    }
-    
+    if (c.match(/San Adria/i)) { return 'SANT ADRIÀ DEL BESÒS'; }
     return c.toUpperCase();
 }
 
 function normalizePhone(tel) {
     if (!tel) return '-';
     let t = tel.toString().trim();
-    // Eliminar prefijo +34 o 34 al inicio
     t = t.replace(/^(\+?34)/, '').trim();
     return t;
 }
 
 function formatDatePDF(dateStr) {
     if (!dateStr) return '-';
-    // Asume formato YYYY-MM-DD de la base de datos
     const parts = dateStr.split('-');
     if (parts.length === 3) {
-        // Retorna DD/MM/YYYY
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
     return dateStr;
@@ -192,8 +186,9 @@ async function loadAlumnos(activos) {
         tbody.innerHTML = '';
         
         data.forEach(a => {
+            // Extracción robusta de atributos
             const p = a.attributes || a;
-            const id = a.documentId; 
+            const id = a.documentId || a.id; 
             const dojoNom = getDojoName(p.dojo); 
 
             const datosComunes = `
@@ -254,6 +249,7 @@ if(formAlumno) {
         };
 
         const method = id ? 'PUT' : 'POST';
+        // URL Correcta para Strapi v5
         const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
 
         try {
@@ -265,7 +261,7 @@ if(formAlumno) {
             if(res.ok) {
                 showModal("Éxito", "Alumno guardado correctamente.", () => {
                     showSection('alumnos');
-                    resetForm();
+                    resetForm(); // Limpiar después de guardar éxito
                 });
             } else {
                 showModal("Error", "No se pudo guardar. Revisa el DNI.");
@@ -274,16 +270,27 @@ if(formAlumno) {
     });
 }
 
+// FIX: Función de edición robusta para Strapi v5
 async function editarAlumno(documentId) {
     try {
-        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        console.log("Intentando editar alumno con ID:", documentId);
+        
+        // Petición con populate para traer el dojo
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { 
+            headers: { 'Authorization': `Bearer ${jwtToken}` } 
+        });
+        
+        if (!res.ok) throw new Error("Error al obtener datos del alumno");
+        
         const json = await res.json();
-        
-        const data = json.data;
-        const p = data.attributes || data; 
+        console.log("Datos recibidos:", json);
 
+        // Extracción segura de datos (Strapi v5 puede devolver data plano o anidado)
+        const data = json.data;
+        const p = data.attributes || data; // Intenta attributes, si no existe, usa data directo
+
+        // Rellenar formulario
         document.getElementById('edit-id').value = data.documentId || documentId;
-        
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
         document.getElementById('new-dni').value = p.dni || '';
@@ -296,24 +303,34 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
+        // Lógica segura para recuperar ID del Dojo
         let dojoId = "";
         if (p.dojo) {
+            // Caso 1: Dojo es un objeto plano con documentId
             if (p.dojo.documentId) dojoId = p.dojo.documentId;
-            else if (p.dojo.data) dojoId = p.dojo.data.documentId || p.dojo.data.id;
+            // Caso 2: Dojo anidado en data (Strapi v4 style o v5 populated)
+            else if (p.dojo.data && p.dojo.data.documentId) dojoId = p.dojo.data.documentId;
+            // Caso 3: Fallback ID numérico
+            else if (p.dojo.id) dojoId = p.dojo.id;
         }
         
+        // Asignar Dojo al select
         const selectDojo = document.getElementById('new-dojo');
-        if (dojoId && selectDojo.querySelector(`option[value="${dojoId}"]`)) {
+        if (dojoId) {
             selectDojo.value = dojoId;
         }
 
+        // Cambiar UI a modo edición
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
         document.getElementById('btn-cancelar-edit').classList.remove('hidden');
-        showSection('nuevo-alumno');
+        
+        // Mostrar sección manualmente sin resetear form
+        document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+        document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
         
     } catch(e) { 
-        console.error(e);
-        showModal("Error", "No se pudieron cargar los datos.");
+        console.error("Error crítico en editarAlumno:", e);
+        showModal("Error", "No se pudieron cargar los datos del alumno. Ver consola.");
     }
 }
 
@@ -458,16 +475,16 @@ async function generateReport(type) {
                 p.nombre || '',
                 dniShow,
                 normalizeGrade(p.grado),
-                normalizePhone(p.telefono), // Teléfono limpio
+                normalizePhone(p.telefono), 
                 p.email || '-',
-                formatDatePDF(p.fecha_nacimiento) // Fecha DD/MM/AAAA
+                formatDatePDF(p.fecha_nacimiento) 
             ];
             if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
             
             baseRow.push(
                 getDojoName(p.dojo),
                 normalizeAddress(p.direccion),
-                normalizeCity(p.poblacion), // Población Limpia con corrección Sant Adrià
+                normalizeCity(p.poblacion),
                 p.cp || '-'
             );
             return baseRow;
@@ -488,7 +505,7 @@ async function generateReport(type) {
                 7: { cellWidth: 10, halign: 'center' },
                 8: { cellWidth: 28, halign: 'center' }, 
                 9: { cellWidth: 38 }, 
-                10: { cellWidth: 25, halign: 'center' }, // Pob Centrada
+                10: { cellWidth: 25, halign: 'center' },
                 11: { cellWidth: 10, halign: 'center' }
             };
         } else { 
@@ -514,7 +531,6 @@ async function generateReport(type) {
             theme: 'grid', 
             margin: { left: 5, right: 5, bottom: 15 },
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
-            // Estilo Rojo Arashi para Cabecera
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
             didDrawPage: function (data) {
