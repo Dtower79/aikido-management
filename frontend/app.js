@@ -68,13 +68,24 @@ function showSection(id) {
     if(id === 'nuevo-alumno') resetForm();
 }
 
+// --- UTILIDAD: OBTENER NOMBRE DOJO (Compatible v4/v5) ---
+function getDojoName(dojoObj) {
+    if (!dojoObj) return "-";
+    // Intenta formato plano (Strapi v5)
+    if (dojoObj.nombre) return dojoObj.nombre;
+    // Intenta formato anidado (Strapi v4 o populated standard)
+    if (dojoObj.data && dojoObj.data.attributes && dojoObj.data.attributes.nombre) return dojoObj.data.attributes.nombre;
+    // Intenta formato atributos directos
+    if (dojoObj.attributes && dojoObj.attributes.nombre) return dojoObj.attributes.nombre;
+    return "-";
+}
+
 // --- CARGA DE DATOS ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
     tbody.innerHTML = `<tr><td colspan="${activos?12:6}">Cargando datos...</td></tr>`;
     
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
-    // CORRECCIÓN: Usamos 'apellidos' porque es el campo real en Strapi
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
     
     try {
@@ -88,14 +99,22 @@ async function loadAlumnos(activos) {
         data.forEach(a => {
             const p = a.attributes || a;
             const id = a.documentId || a.id;
-            const dojoNom = p.dojo?.data?.attributes?.nombre || "-";
+            // Corrección: Uso de la función robusta para obtener el Dojo
+            const dojoNom = getDojoName(p.dojo);
 
             if (activos) {
                 tbody.innerHTML += `<tr>
-                    <td><strong>${p.apellidos || "-"}</strong></td><td>${p.nombre || "-"}</td><td style="font-family:monospace">${p.dni || "-"}</td>
-                    <td><span class="badge">${p.grado || 'S/G'}</span></td><td>${p.telefono || '-'}</td><td>${p.email || '-'}</td>
-                    <td>${p.fecha_nacimiento || '-'}</td><td>${dojoNom}</td><td>${p.direccion || '-'}</td>
-                    <td>${p.poblacion || '-'}</td><td>${p.cp || '-'}</td>
+                    <td><strong>${p.apellidos || "-"}</strong></td>
+                    <td>${p.nombre || "-"}</td>
+                    <td style="font-family:monospace">${p.dni || "-"}</td>
+                    <td><span class="badge">${p.grado || 'S/G'}</span></td>
+                    <td>${p.telefono || '-'}</td>
+                    <td>${p.email || '-'}</td>
+                    <td>${p.fecha_nacimiento || '-'}</td>
+                    <td>${dojoNom}</td>
+                    <td>${p.direccion || '-'}</td>
+                    <td>${p.poblacion || '-'}</td>
+                    <td>${p.cp || '-'}</td>
                     <td class="sticky-col">
                         <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
                         <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
@@ -103,7 +122,10 @@ async function loadAlumnos(activos) {
             } else {
                 tbody.innerHTML += `<tr>
                     <td class="txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</td>
-                    <td><strong>${p.apellidos || "-"}</strong></td><td>${p.nombre || "-"}</td><td>${p.dni || "-"}</td><td>${dojoNom}</td>
+                    <td><strong>${p.apellidos || "-"}</strong></td>
+                    <td>${p.nombre || "-"}</td>
+                    <td>${p.dni || "-"}</td>
+                    <td>${dojoNom}</td>
                     <td class="sticky-col">
                         <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
                         <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button>
@@ -120,7 +142,7 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
     
     const alumnoData = {
         nombre: document.getElementById('new-nombre').value,
-        apellidos: document.getElementById('new-apellidos').value, // Solo 1 campo ahora
+        apellidos: document.getElementById('new-apellidos').value,
         dni: document.getElementById('new-dni').value,
         fecha_nacimiento: document.getElementById('new-nacimiento').value || null,
         email: document.getElementById('new-email').value,
@@ -158,11 +180,11 @@ async function editarAlumno(id) {
     try {
         const res = await fetch(`${API_URL}/api/alumnos/${id}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        const p = json.data.attributes || json.data; // Strapi v5 flat check
+        const p = json.data.attributes || json.data; 
 
         document.getElementById('edit-id').value = json.data.documentId || json.data.id;
         document.getElementById('new-nombre').value = p.nombre || '';
-        document.getElementById('new-apellidos').value = p.apellidos || ''; // Mapeo simple
+        document.getElementById('new-apellidos').value = p.apellidos || '';
         document.getElementById('new-dni').value = p.dni || '';
         document.getElementById('new-nacimiento').value = p.fecha_nacimiento || '';
         document.getElementById('new-email').value = p.email || '';
@@ -174,7 +196,7 @@ async function editarAlumno(id) {
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
         // Manejo del select de Dojo
-        const dojoId = p.dojo?.data?.documentId || p.dojo?.data?.id;
+        const dojoId = p.dojo?.data?.documentId || p.dojo?.data?.id || p.dojo?.documentId || p.dojo?.id;
         const selectDojo = document.getElementById('new-dojo');
         if (dojoId) selectDojo.value = dojoId;
 
@@ -243,15 +265,34 @@ async function exportarPDF() {
     logoImg.onload = async function() {
         doc.addImage(logoImg, 'PNG', 10, 10, 45, 20);
         doc.setFontSize(18); doc.text("LLISTAT D'AFILIATS PER COGNOMS", 148, 18, { align: "center" });
-        // CORRECCIÓN: sort=apellidos:asc
+        
         const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&sort=apellidos:asc&populate=dojo&pagination[limit]=500`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
+        
         const body = (json.data || []).map(a => {
             const p = a.attributes || a;
             const ap = (p.apellidos || '').toUpperCase();
-            return [new Date(p.createdAt).toLocaleDateString(), `${ap}, ${p.nombre || ''}`, p.dni || '-', p.email || '-', p.poblacion || '-', "BARCELONA", (p.dojo?.data?.attributes?.nombre || '-')];
+            // Corrección: Usamos getDojoName y cambiamos "BARCELONA" por p.cp (Dato real)
+            return [
+                new Date(p.createdAt).toLocaleDateString(), 
+                `${ap}, ${p.nombre || ''}`, 
+                p.dni || '-', 
+                p.email || '-', 
+                p.poblacion || '-', 
+                p.cp || '-', // Usamos CP en vez de Provincia inventada
+                getDojoName(p.dojo)
+            ];
         });
-        doc.autoTable({ startY: 35, head: [['Alta', 'Cognoms i Nom', 'DNI', 'Email', 'Població', 'Província', 'Centre Treball']], body: body, theme: 'grid', headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0] }, styles: { fontSize: 8 } });
+        
+        // Encabezado actualizado a columnas reales
+        doc.autoTable({ 
+            startY: 35, 
+            head: [['Alta', 'Cognoms i Nom', 'DNI', 'Email', 'Població', 'CP', 'Centre Treball']], 
+            body: body, 
+            theme: 'grid', 
+            headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0] }, 
+            styles: { fontSize: 8 } 
+        });
         doc.save("Informe_Alumnos_Arashi.pdf");
     };
 }
