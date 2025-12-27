@@ -40,8 +40,26 @@ body {
 .logo-img-login { max-width: 180px; margin-bottom: 30px; }
 .input-group { position: relative; margin-bottom: 15px; text-align: left; }
 .input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-.input-group input { width: 100%; padding: 12px 12px 12px 45px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; box-sizing: border-box; }
-.login-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; }
+.input-group input { 
+    width: 100%; 
+    padding: 12px 12px 12px 45px; 
+    background: #0f172a; 
+    border: 1px solid var(--border); 
+    border-radius: 6px; 
+    color: white; 
+    box-sizing: border-box; 
+}
+.login-btn { 
+    width: 100%; 
+    padding: 12px; 
+    background: var(--primary); 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    margin-top: 10px; 
+}
 
 /* --- DASHBOARD LAYOUT --- */
 .dashboard-container { display: flex; height: 100vh; }
@@ -92,7 +110,7 @@ body {
     display: flex; 
     flex-direction: column; 
     overflow: hidden; 
-    position: relative; /* Para el footer absoluto */
+    position: relative; 
 }
 
 /* Scrollable Section Container */
@@ -100,7 +118,6 @@ body {
     flex: 1; 
     overflow-y: auto; 
     padding: 30px; 
-    /* Quitamos padding bottom para que no haya hueco */
     padding-bottom: 30px; 
 }
 
@@ -119,9 +136,48 @@ body {
 .form-hr { border: 0; border-top: 1px solid var(--border); margin: 25px 0; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
-/* TABLAS */
-.table-container { background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); overflow: auto; max-height: 80vh; cursor: grab; position: relative; }
-.table-container.active { cursor: grabbing; }
+/* --- TABLAS (MEJORADA UX) --- */
+.table-container { 
+    background: var(--bg-card); 
+    border-radius: 8px; 
+    border: 1px solid var(--border); 
+    overflow: auto; 
+    max-height: 70vh; 
+    cursor: grab; /* Cursor de mano abierta por defecto */
+    position: relative; 
+    
+    /* Scrollbar Personalizado (Webkit) */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) var(--bg-header);
+}
+
+/* Scrollbar Style Chrome/Safari/Edge */
+.table-container::-webkit-scrollbar {
+    height: 10px; /* Altura de la barra horizontal */
+    width: 10px;
+}
+.table-container::-webkit-scrollbar-track {
+    background: var(--bg-header);
+    border-radius: 0 0 8px 8px;
+}
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+    border: 2px solid var(--bg-header); /* Espacio alrededor */
+}
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #60a5fa;
+}
+
+/* Estado ACTIVO (Arrastrando) - Evita selección de texto */
+.table-container.active { 
+    cursor: grabbing; 
+    user-select: none; /* CLAVE: Evita que el texto se ponga azul al arrastrar */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
 table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1200px; }
 th { position: sticky; top: 0; background: var(--bg-header); padding: 15px; text-align: left; z-index: 10; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; border-bottom: 2px solid var(--border); }
 td { padding: 12px 15px; border-bottom: 1px solid var(--border); white-space: nowrap; font-size: 0.9rem; background: var(--bg-card); color: var(--text); }
@@ -148,20 +204,20 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .dojo-info-row i { color: var(--accent); width: 20px; text-align: center; flex-shrink: 0; margin-top: 3px; }
 .dojo-link-btn { display: block; width: fit-content; margin: 20px auto 0; padding: 10px 25px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center; transition: 0.3s; text-transform: uppercase; }
 
-/* --- MAIN FOOTER (ESCONDIDO Y ANIMADO) --- */
+/* --- MAIN FOOTER --- */
 .footer-trigger {
     position: fixed;
     bottom: 0;
-    left: 250px; /* Ancho Sidebar */
+    left: 250px;
     right: 0;
-    height: 30px; /* Altura sensible */
+    height: 30px;
     z-index: 499;
 }
 
 .main-footer {
     position: fixed;
     bottom: 0;
-    left: 250px; /* Ancho Sidebar */
+    left: 250px; 
     right: 0;
     height: 70px;
     border-top: 1px solid var(--border);
@@ -173,13 +229,10 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     display: flex;
     align-items: center; 
     z-index: 500;
-    
-    /* Animación */
     transform: translateY(100%);
     transition: transform 0.3s ease-in-out;
 }
 
-/* Mostrar al pasar sobre el trigger o sobre el propio footer */
 .footer-trigger:hover ~ .main-footer,
 .main-footer:hover {
     transform: translateY(0);
@@ -213,7 +266,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .action-btn { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: 700; cursor: pointer; }
 .action-btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
 
-/* RESPONSIVE */
+/* --- RESPONSIVE MOBILE FIX --- */
 @media (max-width: 900px) {
     .dashboard-container { flex-direction: column; }
     
@@ -229,29 +282,28 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 
     .section { padding: 15px; }
     
-    /* Card View */
-    thead { display: none; }
-    table, tbody, tr, td { display: block; width: 100%; }
-    tr { margin-bottom: 15px; border: 1px solid var(--border); background: var(--bg-card); border-radius: 8px; padding: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    td { text-align: right; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
-    td:last-child { border-bottom: none; }
+    /* VUELTA A TABLA REAL CON SCROLL EN MÓVIL */
+    /* Eliminamos cualquier intento de "card view" para usar la misma tabla */
+    thead { display: table-header-group; } 
+    table, tbody, tr, td { display: table-row; width: auto; } /* Reset a comportamiento tabla por defecto */
     
-    td:nth-of-type(1)::before { content: "Apellidos"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(2)::before { content: "Nombre"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(3)::before { content: "DNI"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(4)::before { content: "Grado"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(5)::before { content: "Teléfono"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(6)::before { content: "Email"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(7)::before { content: "Nacimiento"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(8)::before { content: "Dojo"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(9)::before { content: "Dirección"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(10)::before { content: "Población"; font-weight: bold; color: var(--text-muted); }
-    td:nth-of-type(11)::before { content: "CP"; font-weight: bold; color: var(--text-muted); }
+    /* Forzamos el contenedor a tener scroll horizontal nativo */
+    .table-container { 
+        overflow-x: auto; 
+        -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+        max-width: 100vw; /* Asegura que no rompa el ancho */
+    }
     
-    .cell-data { text-align: right; max-width: 65%; word-break: break-word; color: var(--text); }
-
-    td.sticky-col { position: static; background: transparent !important; box-shadow: none; justify-content: center; gap: 20px; padding-top: 15px; margin-top: 10px; border-top: 1px solid var(--border); }
-    .action-btn-icon { font-size: 1.4rem; background: var(--bg-dark); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); }
+    table { min-width: 1000px; } /* Fuerza el ancho para que salga scroll */
+    
+    td { text-align: left; padding: 12px 15px; display: table-cell; border-bottom: 1px solid var(--border); }
+    
+    /* La columna sticky sigue funcionando gracias al diseño desktop */
+    .sticky-col { 
+        position: sticky; 
+        right: 0; 
+        box-shadow: -4px 0 10px rgba(0,0,0,0.5); /* Sombra para indicar scroll */
+    }
 
     /* Footer Móvil */
     .main-footer, .footer-trigger { left: 0; }

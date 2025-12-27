@@ -69,6 +69,7 @@ function showDashboard() {
     document.getElementById('dashboard').classList.remove('hidden');
     loadDojosSelect(); 
     loadCiudades(); 
+    loadReportDojos(); // Cargar filtro para el modal
     showSection('welcome'); 
 }
 
@@ -181,17 +182,17 @@ async function loadAlumnos(activos) {
             const dojoNom = getDojoName(p.dojo); 
 
             const datosComunes = `
-                <td><strong>${p.apellidos || "-"}</strong></td>
-                <td>${p.nombre || "-"}</td>
-                <td style="font-family:monospace">${p.dni || "-"}</td>
-                <td><span class="badge">${normalizeGrade(p.grado) || 'S/G'}</span></td>
-                <td>${p.telefono || '-'}</td>
-                <td>${p.email || '-'}</td>
-                <td>${p.fecha_nacimiento || '-'}</td>
-                <td>${dojoNom}</td>
-                <td>${p.direccion || '-'}</td>
-                <td>${p.poblacion || '-'}</td>
-                <td>${p.cp || '-'}</td>
+                <td><span class="cell-data"><strong>${p.apellidos || "-"}</strong></span></td>
+                <td><span class="cell-data">${p.nombre || "-"}</span></td>
+                <td><span class="cell-data" style="font-family:monospace">${p.dni || "-"}</span></td>
+                <td><span class="cell-data"><span class="badge">${normalizeGrade(p.grado) || 'S/G'}</span></span></td>
+                <td><span class="cell-data">${p.telefono || '-'}</span></td>
+                <td><span class="cell-data">${p.email || '-'}</span></td>
+                <td><span class="cell-data">${p.fecha_nacimiento || '-'}</span></td>
+                <td><span class="cell-data">${dojoNom}</span></td>
+                <td><span class="cell-data">${p.direccion || '-'}</span></td>
+                <td><span class="cell-data">${p.poblacion || '-'}</span></td>
+                <td><span class="cell-data">${p.cp || '-'}</span></td>
             `;
 
             if (activos) {
@@ -203,7 +204,7 @@ async function loadAlumnos(activos) {
                     </td></tr>`;
             } else {
                 tbody.innerHTML += `<tr>
-                    <td class="txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</td>
+                    <td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</span></td>
                     ${datosComunes}
                     <td class="sticky-col">
                         <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
@@ -211,10 +212,10 @@ async function loadAlumnos(activos) {
                     </td></tr>`;
             }
         });
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos del servidor.</td></tr>`; }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos.</td></tr>`; }
 }
 
-// --- GUARDAR / EDITAR ---
+// --- GUARDAR ---
 const formAlumno = document.getElementById('form-nuevo-alumno');
 if(formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
@@ -354,13 +355,16 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (DISEÑO PDF MEJORADO) ---
+// --- INFORMES AVANZADOS (Filtro por Dojo y Grupo) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
 
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
+    
+    // Obtener filtro de Dojo del modal
+    const dojoFilterId = document.getElementById('report-dojo-filter').value;
     
     const { jsPDF } = window.jspdf; 
     const doc = new jsPDF('l', 'mm', 'a4'); 
@@ -371,41 +375,58 @@ async function generateReport(type) {
         'surname': 'ARASHI - Alumnos por Apellidos',
         'age': 'ARASHI - Alumnos por Edad',
         'grade': 'ARASHI - Alumnos por Grado',
-        'dojo': 'ARASHI - Alumnos por Dojo'
+        'dojo': 'ARASHI - Alumnos por Dojo',
+        'group': 'ARASHI - Alumnos por Grupo'
     };
 
     const subtitleMap = {
         'surname': 'Apellidos',
         'age': 'Edad',
         'grade': 'Grado',
-        'dojo': 'Dojo'
+        'dojo': 'Dojo',
+        'group': 'Grupo'
     };
     
     logoImg.onload = async function() {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // 1. Textos de Cabecera (En Castellano y Corrección "ALUMNOS")
-        let mainTitle = "LISTADO DE ALUMNOS";
-        if(type === 'grade') mainTitle += " POR GRADO";
-        if(type === 'age') mainTitle += " POR EDAD";
-        if(type === 'dojo') mainTitle += " POR DOJO";
-        if(type === 'surname') mainTitle += " POR APELLIDOS";
-
-        const subtitleText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
+        doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+        doc.setFontSize(16); doc.setFont("helvetica", "bold");
         
-        const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        let title = "LISTADO DE ALUMNOS";
+        if(type === 'grade') title += " POR GRADO";
+        if(type === 'age') title += " POR EDAD";
+        if(type === 'dojo') title += " POR DOJO";
+        if(type === 'surname') title += " POR APELLIDOS";
+        if(type === 'group') title += " POR GRUPO";
+
+        doc.text(title, pageWidth / 2, 12, { align: "center" });
+        doc.setFontSize(10); doc.setFont("helvetica", "normal");
+        
+        let subText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
+        if(dojoFilterId) subText += " (Filtrado por Dojo)";
+        
+        doc.text(subText, pageWidth / 2, 18, { align: "center" });
+        
+        // Construir URL con filtro de Dojo
+        let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`;
+        if(dojoFilterId) {
+            // Strapi v5 filter for relation ID
+            apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+        }
+        
+        const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
 
-        // Ordenación
         list.sort((a, b) => {
             const pA = a.attributes || a;
             const pB = b.attributes || b;
-            
             if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
             if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
             if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
+            if (type === 'group') return (pA.grupo || '').localeCompare(pB.grupo || '');
             if (type === 'age') {
                 const dateA = new Date(pA.fecha_nacimiento || '2000-01-01');
                 const dateB = new Date(pB.fecha_nacimiento || '2000-01-01');
@@ -414,17 +435,14 @@ async function generateReport(type) {
             return 0;
         });
         
-        // Encabezados
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.'];
         if (type === 'age') headRow.push('Edad'); 
+        if (type === 'group') headRow.push('Grupo');
         headRow.push('Dojo', 'Dirección', 'Población', 'CP');
         
         const body = list.map(a => {
             const p = a.attributes || a;
-            
-            let dniShow = (p.dni || '-').toUpperCase();
-            if (dniShow.includes('PENDIENTE')) dniShow = dniShow.replace('PENDIENTE', 'PEND');
-
+            let dniShow = (p.dni || '-').toUpperCase().replace('PENDIENTE', 'PEND');
             const baseRow = [
                 (p.apellidos || '').toUpperCase(),
                 p.nombre || '',
@@ -435,6 +453,7 @@ async function generateReport(type) {
                 formatDatePDF(p.fecha_nacimiento) 
             ];
             if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
+            if (type === 'group') baseRow.push(p.grupo || '-');
             
             baseRow.push(
                 getDojoName(p.dojo),
@@ -445,35 +464,23 @@ async function generateReport(type) {
             return baseRow;
         });
         
-        // Estilos
         let colStyles = {};
         if (type === 'age') { 
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' },
-                1: { cellWidth: 15, fontStyle: 'bold' },
-                2: { cellWidth: 18, halign: 'center' }, 
-                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' }, 
-                5: { cellWidth: 38 },
-                6: { cellWidth: 18, halign: 'center' }, 
-                7: { cellWidth: 10, halign: 'center' },
-                8: { cellWidth: 28, halign: 'center' }, 
-                9: { cellWidth: 38 }, 
-                10: { cellWidth: 25, halign: 'center' },
-                11: { cellWidth: 10, halign: 'center' }
+                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' },
+                2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 38 },
+                6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' },
+                8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 
+                10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' }
             };
         } else { 
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' },
-                1: { cellWidth: 18, fontStyle: 'bold' },
-                2: { cellWidth: 20, halign: 'center' },
-                3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' },
-                5: { cellWidth: 45 },
-                6: { cellWidth: 20, halign: 'center' },
-                7: { cellWidth: 30, halign: 'center' },
-                8: { cellWidth: 45 },
-                9: { cellWidth: 25, halign: 'center' },
+                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 18, fontStyle: 'bold' },
+                2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 45 },
+                6: { cellWidth: 20, halign: 'center' }, 7: { cellWidth: 30, halign: 'center' },
+                8: { cellWidth: 45 }, 9: { cellWidth: 25, halign: 'center' },
                 10: { cellWidth: 12, halign: 'center' }
             };
         }
@@ -483,35 +490,21 @@ async function generateReport(type) {
             head: [headRow], 
             body: body, 
             theme: 'grid', 
-            // Margen superior para que quepa el header repetido
-            margin: { top: 30, left: 5, right: 5, bottom: 15 },
+            margin: { left: 5, right: 5, bottom: 15 },
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
-            
-            // --- HEADER Y FOOTER EN CADA PÁGINA ---
             didDrawPage: function (data) {
-                // Header (Repetido en cada página)
-                doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-                doc.setFontSize(16); doc.setFont("helvetica", "bold");
-                doc.text(mainTitle, pageWidth / 2, 12, { align: "center" });
-                
-                doc.setFontSize(10); doc.setFont("helvetica", "normal");
-                doc.text(subtitleText, pageWidth / 2, 18, { align: "center" });
-
-                // Footer
                 let footerStr = `Página ${doc.internal.getNumberOfPages()} | Total Registros: ${list.length} | Generado el ${new Date().toLocaleDateString()}`;
                 doc.setFontSize(8); doc.setFont("helvetica", "normal");
                 doc.text(footerStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
             }
         });
         
-        const finalName = fileNames[type] || `Informe_Arashi_${type}`;
-        doc.save(`${finalName}.pdf`);
+        doc.save(`${fileNames[type] || 'Informe'}.pdf`);
     };
 }
 
-// --- UTILS COMPACTACIÓN ---
 function changeFontSize(tableId, delta) {
     const table = document.getElementById(tableId);
     if (!table) return;
@@ -532,10 +525,35 @@ function setupDragScroll() {
     const s = document.querySelector('.drag-scroll');
     if(!s) return;
     let isDown = false, startX, scrollLeft;
-    s.addEventListener('mousedown', (e) => { isDown = true; s.classList.add('active'); startX = e.pageX - s.offsetLeft; scrollLeft = s.scrollLeft; });
-    s.addEventListener('mouseleave', () => isDown = false);
-    s.addEventListener('mouseup', () => isDown = false);
-    s.addEventListener('mousemove', (e) => { if(!isDown) return; e.preventDefault(); const x = e.pageX - s.offsetLeft; s.scrollLeft = scrollLeft - (x - startX) * 2; });
+    
+    // Mouse
+    s.addEventListener('mousedown', (e) => { 
+        isDown = true; 
+        s.classList.add('active'); 
+        startX = e.pageX - s.offsetLeft; 
+        scrollLeft = s.scrollLeft; 
+    });
+    s.addEventListener('mouseleave', () => { isDown = false; s.classList.remove('active'); });
+    s.addEventListener('mouseup', () => { isDown = false; s.classList.remove('active'); });
+    s.addEventListener('mousemove', (e) => { 
+        if(!isDown) return; 
+        e.preventDefault(); 
+        const x = e.pageX - s.offsetLeft; 
+        s.scrollLeft = scrollLeft - (x - startX) * 2; 
+    });
+
+    // Touch (Móvil) - Opcional, el scroll nativo ya va bien
+    s.addEventListener('touchstart', (e) => {
+        isDown = true;
+        startX = e.touches[0].pageX - s.offsetLeft;
+        scrollLeft = s.scrollLeft;
+    });
+    s.addEventListener('touchmove', (e) => {
+        if(!isDown) return;
+        const x = e.touches[0].pageX - s.offsetLeft;
+        s.scrollLeft = scrollLeft - (x - startX) * 2;
+    });
+    s.addEventListener('touchend', () => { isDown = false; });
 }
 
 async function runDiagnostics() {
@@ -566,6 +584,18 @@ async function loadDojosSelect() {
         const json = await res.json();
         sel.innerHTML = '<option value="">Selecciona Dojo...</option>';
         (json.data || []).forEach(d => { sel.innerHTML += `<option value="${d.documentId || d.id}">${(d.attributes || d).nombre}</option>`; });
+    } catch {}
+}
+
+// Nueva función para cargar Dojos en el filtro del modal
+async function loadReportDojos() {
+    const sel = document.getElementById('report-dojo-filter');
+    if(!sel) return;
+    try {
+        const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const json = await res.json();
+        sel.innerHTML = '<option value="">-- Todos los Dojos --</option>';
+        (json.data || []).forEach(d => { sel.innerHTML += `<option value="${d.documentId}">${(d.attributes || d).nombre}</option>`; });
     } catch {}
 }
 

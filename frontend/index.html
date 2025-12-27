@@ -159,10 +159,7 @@
                 </div>
             </div>
 
-            <!-- FOOTER ANIMADO (Solo visible al acercar el mouse abajo) -->
-            <!-- Trigger invisible -->
             <div class="footer-trigger"></div>
-            <!-- Footer real -->
             <footer class="main-footer">
                 <div class="footer-content">
                     <div class="footer-left">
@@ -190,12 +187,20 @@
     <div id="report-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <h3><i class="fa-solid fa-file-pdf"></i> Generar Informe</h3>
+            
+            <div style="margin: 15px 0; text-align:left;">
+                <label style="color: var(--text-muted); font-size:0.9rem; display:block; margin-bottom:5px;">Filtrar por Dojo (Opcional):</label>
+                <select id="report-dojo-filter" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;">
+                    <option value="">-- Todos los Dojos --</option>
+                </select>
+            </div>
+
             <p>Selecciona el tipo de ordenación:</p>
             <div style="margin: 20px 0; display:flex; flex-direction:column; gap:10px;">
-                <button class="menu-btn" onclick="generateReport('surname')"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos (A-Z)</button>
-                <button class="menu-btn" onclick="generateReport('grade')"><i class="fa-solid fa-medal"></i> Por Grado (Alto a Bajo)</button>
-                <button class="menu-btn" onclick="generateReport('dojo')"><i class="fa-solid fa-torii-gate"></i> Por Dojo</button>
-                <button class="menu-btn" onclick="generateReport('age')"><i class="fa-solid fa-cake-candles"></i> Por Edad (Mayor a Menor)</button>
+                <button class="menu-btn" onclick="generateReport('surname')"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos</button>
+                <button class="menu-btn" onclick="generateReport('grade')"><i class="fa-solid fa-medal"></i> Por Grado</button>
+                <button class="menu-btn" onclick="generateReport('age')"><i class="fa-solid fa-cake-candles"></i> Por Edad</button>
+                <button class="menu-btn" onclick="generateReport('group')"><i class="fa-solid fa-users-line"></i> Por Grupo</button>
             </div>
             <div class="modal-actions">
                 <button class="action-btn secondary" onclick="document.getElementById('report-modal').classList.add('hidden')">Cerrar</button>
