@@ -5,23 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aikido Management System</title>
     <link rel="icon" href="img/logo-arashi.png" type="image/png">
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-
     <!-- Librerías PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
-    <!-- PANTALLA DE LOGIN -->
     <div id="login-screen" class="login-container">
         <div class="login-box">
-            <div class="logo-area">
-                <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login">
-            </div>
+            <div class="logo-area"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login"></div>
             <form id="login-form">
                 <div class="input-group">
                     <i class="fa-solid fa-id-card"></i>
@@ -37,44 +32,21 @@
         </div>
     </div>
 
-    <!-- PANTALLA PRINCIPAL (DASHBOARD) -->
     <div id="dashboard" class="dashboard-container hidden">
-        
-        <!-- SIDEBAR -->
         <div class="sidebar">
-            <div class="sidebar-header">
-                <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar">
-            </div>
-            
+            <div class="sidebar-header"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar"></div>
             <nav class="menu">
-                <button class="menu-btn" onclick="showSection('nuevo-alumno')">
-                    <i class="fa-solid fa-user-plus"></i> Nuevo Alumno
-                </button>
-                <button class="menu-btn" onclick="showSection('dojos')">
-                    <i class="fa-solid fa-torii-gate"></i> Dojos
-                </button>
-                <button class="menu-btn" onclick="showSection('alumnos')">
-                    <i class="fa-solid fa-users"></i> Alumnos Activos
-                </button>
-                <button class="menu-btn" onclick="showSection('bajas')">
-                    <i class="fa-solid fa-user-xmark"></i> Histórico Bajas
-                </button>
+                <button class="menu-btn" onclick="showSection('nuevo-alumno')"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
+                <button class="menu-btn" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
+                <button class="menu-btn" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos Activos</button>
+                <button class="menu-btn" onclick="showSection('bajas')"><i class="fa-solid fa-user-xmark"></i> Histórico Bajas</button>
                 <div class="sidebar-sep">Área Técnica</div>
-                <button class="menu-btn" onclick="showSection('status')">
-                    <i class="fa-solid fa-heart-pulse"></i> Estado del Sistema
-                </button>
+                <button class="menu-btn" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
             </nav>
-
-            <div class="sidebar-footer">
-                <button class="logout-btn" onclick="logout()">
-                    <i class="fa-solid fa-right-from-bracket"></i> Salir
-                </button>
-            </div>
+            <div class="sidebar-footer"><button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button></div>
         </div>
 
-        <!-- CONTENIDO PRINCIPAL -->
         <main class="content">
-            
             <div id="sec-welcome" class="section active welcome-flex">
                 <div class="welcome-content">
                     <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-welcome">
@@ -83,67 +55,31 @@
             </div>
 
             <div id="sec-nuevo-alumno" class="section hidden">
-                <header class="section-header">
-                    <h2><i class="fa-solid fa-user-plus"></i> Alta de Alumno</h2>
-                </header>
+                <header class="section-header"><h2><i class="fa-solid fa-user-plus"></i> Alta de Alumno</h2></header>
                 <div class="card form-card">
                     <form id="form-nuevo-alumno">
                         <input type="hidden" id="edit-id" value="">
                         <div class="form-row">
-                            <div class="form-group" style="flex:1">
-                                <label>Nombre</label>
-                                <input type="text" id="new-nombre" required>
-                            </div>
-                            <div class="form-group" style="flex:1">
-                                <label>Primer Apellido</label>
-                                <input type="text" id="new-apellido1" required>
-                            </div>
-                            <div class="form-group" style="flex:1">
-                                <label>Segundo Apellido</label>
-                                <input type="text" id="new-apellido2">
-                            </div>
+                            <div class="form-group"><label>Nombre</label><input type="text" id="new-nombre" required></div>
+                            <div class="form-group"><label>Primer Apellido</label><input type="text" id="new-apellido1" required></div>
+                            <div class="form-group"><label>Segundo Apellido</label><input type="text" id="new-apellido2"></div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group">
-                                <label>DNI</label>
-                                <input type="text" id="new-dni" maxlength="9" placeholder="12345678X" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Fecha Nacimiento</label>
-                                <input type="date" id="new-nacimiento">
-                            </div>
+                            <div class="form-group"><label>DNI</label><input type="text" id="new-dni" maxlength="9" placeholder="12345678X" required></div>
+                            <div class="form-group"><label>Fecha Nacimiento</label><input type="date" id="new-nacimiento"></div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" id="new-email">
-                            </div>
-                            <div class="form-group">
-                                <label>Teléfono</label>
-                                <input type="tel" id="new-telefono">
-                            </div>
+                            <div class="form-group"><label>Email</label><input type="email" id="new-email"></div>
+                            <div class="form-group"><label>Teléfono</label><input type="tel" id="new-telefono"></div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group" style="flex: 2;">
-                                <label>Dirección</label>
-                                <input type="text" id="new-direccion">
-                            </div>
-                            <div class="form-group" style="flex: 1;">
-                                <label>Población</label>
-                                <input type="text" id="new-poblacion" list="ciudades-list">
-                                <datalist id="ciudades-list"></datalist>
-                            </div>
-                            <div class="form-group" style="flex: 0.5;">
-                                <label>CP</label>
-                                <input type="text" id="new-cp" maxlength="5">
-                            </div>
+                            <div class="form-group" style="flex:2"><label>Dirección</label><input type="text" id="new-direccion"></div>
+                            <div class="form-group" style="flex:1"><label>Población</label><input type="text" id="new-poblacion" list="ciudades-list"><datalist id="ciudades-list"></datalist></div>
+                            <div class="form-group" style="flex:0.5"><label>CP</label><input type="text" id="new-cp" maxlength="5"></div>
                         </div>
                         <hr class="form-hr">
                         <div class="form-row">
-                            <div class="form-group">
-                                <label>Dojo</label>
-                                <select id="new-dojo" required><option value="">Cargando...</option></select>
-                            </div>
+                            <div class="form-group"><label>Dojo</label><select id="new-dojo" required><option value="">Cargando...</option></select></div>
                             <div class="form-group">
                                 <label>Grupo</label>
                                 <select id="new-grupo">
@@ -155,17 +91,12 @@
                             <div class="form-group">
                                 <label>Grado Actual</label>
                                 <select id="new-grado">
-                                    <option value="">Selecciona...</option>
-                                    <option value="5º Kyu">5º Kyu</option>
-                                    <option value="4º Kyu">4º Kyu</option>
-                                    <option value="3º Kyu">3º Kyu</option>
-                                    <option value="2º Kyu">2º Kyu</option>
-                                    <option value="1º Kyu">1º Kyu</option>
-                                    <option value="1º Dan">1º Dan</option>
-                                    <option value="2º Dan">2º Dan</option>
-                                    <option value="3º Dan">3º Dan</option>
-                                    <option value="4º Dan">4º Dan</option>
-                                    <option value="5º Dan">5º Dan</option>
+                                    <option value="">Selecciona grado...</option>
+                                    <option value="5º Kyu">5º Kyu</option><option value="4º Kyu">4º Kyu</option>
+                                    <option value="3º Kyu">3º Kyu</option><option value="2º Kyu">2º Kyu</option>
+                                    <option value="1º Kyu">1º Kyu</option><option value="1º Dan">1º Dan</option>
+                                    <option value="2º Dan">2º Dan</option><option value="3º Dan">3º Dan</option>
+                                    <option value="4º Dan">4º Dan</option><option value="5º Dan">5º Dan</option>
                                 </select>
                             </div>
                         </div>
@@ -178,9 +109,7 @@
             </div>
 
             <div id="sec-dojos" class="section hidden">
-                <header class="section-header">
-                    <h2><i class="fa-solid fa-torii-gate"></i> Nuestros Dojos</h2>
-                </header>
+                <header class="section-header"><h2><i class="fa-solid fa-torii-gate"></i> Nuestros Dojos</h2></header>
                 <div id="grid-dojos" class="dojo-grid"></div>
             </div>
 
@@ -188,64 +117,28 @@
                 <header class="section-header">
                     <h2><i class="fa-solid fa-users"></i> Alumnos Activos</h2>
                     <div class="actions">
-                        <button class="action-btn secondary" onclick="exportarPDF()">
-                            <i class="fa-solid fa-file-pdf"></i> PDF
-                        </button>
+                        <button class="action-btn secondary" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                         <div class="font-controls">
                             <button onclick="changeFontSize('table-alumnos', -1)">A-</button>
                             <button onclick="changeFontSize('table-alumnos', 1)">A+</button>
                         </div>
-                        <input type="text" id="search-alumno" placeholder="Buscar...">
+                        <input type="text" id="search-alumno" placeholder="Buscar alumno...">
                     </div>
                 </header>
-                <div class="table-container drag-scroll">
-                    <table id="table-alumnos">
-                        <thead>
-                            <tr>
-                                <th>Nombre Completo</th>
-                                <th>DNI</th>
-                                <th>Grado</th>
-                                <th>Dojo / Grupo</th>
-                                <th>Teléfono</th>
-                                <th>Email</th>
-                                <th>Población</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lista-alumnos-body"></tbody>
-                    </table>
-                </div>
+                <div class="table-container drag-scroll"><table id="table-alumnos"><thead><tr><th>Nombre Completo</th><th>DNI</th><th>Grado</th><th>Dojo / Grupo</th><th>Teléfono</th><th>Email</th><th>Población</th><th>Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table></div>
             </div>
 
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header">
                     <h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2>
-                    <div class="actions">
-                        <input type="text" id="search-baja" placeholder="Buscar en bajas...">
-                    </div>
+                    <div class="actions"><input type="text" id="search-baja" placeholder="Buscar en bajas..."></div>
                 </header>
-                <div class="table-container drag-scroll">
-                    <table id="table-bajas">
-                        <thead>
-                            <tr>
-                                <th>Fecha Baja</th>
-                                <th>Nombre Completo</th>
-                                <th>DNI</th>
-                                <th>Dojo</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lista-bajas-body"></tbody>
-                    </table>
-                </div>
+                <div class="table-container drag-scroll"><table id="table-bajas"><thead><tr><th>Fecha Baja</th><th>Nombre Completo</th><th>DNI</th><th>Dojo</th><th>Acciones</th></tr></thead><tbody id="lista-bajas-body"></tbody></table></div>
             </div>
 
             <div id="sec-status" class="section hidden">
                 <div class="console-wrapper">
-                    <div class="console-header">
-                        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
-                        <span class="console-title">root@aikido-system:~# ./diagnostico.sh</span>
-                    </div>
+                    <div class="console-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="console-title">root@aikido-system:~# ./diagnostico.sh</span></div>
                     <div class="console-body" id="console-output"><span class="cursor">_</span></div>
                 </div>
             </div>
@@ -263,7 +156,6 @@
             </div>
         </div>
     </div>
-    
     <script src="app.js"></script>
 </body>
 </html>
