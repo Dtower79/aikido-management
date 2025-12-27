@@ -80,22 +80,23 @@ async function loadAlumnos(activos) {
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
     
     try {
-        const res = await fetch(`${API_URL}/api/alumnos?populate=dojo&${filter}&${sort}`, {
+        const res = await fetch(`${API_URL}/api/alumnos?populate=dojo&${filter}&${sort}&pagination[limit]=200`, {
             headers: { 'Authorization': `Bearer ${jwtToken}` }
         });
         const json = await res.json();
         if(!res.ok) throw new Error();
         renderTabla(json.data, tbody, activos);
-    } catch { tbody.innerHTML = '<tr><td colspan="8">Error cargando datos del servidor.</td></tr>'; }
+    } catch { tbody.innerHTML = '<tr><td colspan="8" style="color:red">Error cargando datos del servidor. Verifica la API.</td></tr>'; }
 }
 
 function renderTabla(data, tbody, activos) {
     tbody.innerHTML = '';
     data.forEach(a => {
-        const p = a.attributes;
+        const p = a.attributes || a; // Soporte v5 y v4
         const id = a.documentId || a.id;
         const nombre = `${p.primer_apellido || ''} ${p.segundo_apellido || ''}, ${p.nombre || ''}`;
-        const dojo = (p.dojo && p.dojo.data) ? p.dojo.data.attributes.nombre : '-';
+        const dojoData = p.dojo && p.dojo.data ? p.dojo.data.attributes : p.dojo;
+        const dojo = dojoData ? dojoData.nombre : '-';
 
         if (activos) {
             tbody.innerHTML += `<tr><td><strong>${nombre}</strong></td><td style="font-family:monospace">${p.dni || '-'}</td><td><span class="badge">${p.grado || 'S/G'}</span></td><td>${dojo} (${p.grupo || 'Full Time'})</td><td>${p.telefono || '-'}</td><td>${p.email || '-'}</td><td>${p.poblacion || '-'}</td><td><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button> <button class="action-btn-icon delete" onclick="cambiarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
@@ -135,7 +136,7 @@ async function editarAlumno(id) {
     try {
         const res = await fetch(`${API_URL}/api/alumnos/${id}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        const p = json.data.attributes;
+        const p = json.data.attributes || json.data;
         document.getElementById('edit-id').value = id;
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellido1').value = p.primer_apellido || '';
@@ -166,7 +167,10 @@ async function loadDojosSelect() {
         const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         sel.innerHTML = '<option value="">Selecciona un Dojo...</option>';
-        json.data.forEach(d => { sel.innerHTML += `<option value="${d.documentId}">${d.attributes.nombre}</option>`; });
+        json.data.forEach(d => { 
+            const p = d.attributes || d;
+            sel.innerHTML += `<option value="${d.documentId || d.id}">${p.nombre}</option>`; 
+        });
     } catch { sel.innerHTML = '<option>Error</option>'; }
 }
 
@@ -178,18 +182,18 @@ async function loadDojosCards() {
         const json = await res.json();
         grid.innerHTML = '';
         json.data.forEach(d => {
-            const p = d.attributes;
+            const p = d.attributes || d;
             grid.innerHTML += `<div class="dojo-card"><div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${p.nombre}</h3></div><div class="dojo-body"><div class="dojo-info-row"><i class="fa-solid fa-location-dot"></i><span>${p.direccion}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span></div><div class="dojo-info-row"><i class="fa-solid fa-phone"></i><span>${p.telefono || '627 555 228'}</span></div><div class="dojo-info-row"><i class="fa-solid fa-envelope"></i><span>${p.email || 'aikidobadalona@gmail.com'}</span></div></div></div>`;
         });
-    } catch { grid.innerHTML = 'Error.'; }
+    } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
 // --- ACCIONES ---
 async function cambiarEstado(id, activo, nombre) {
     showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, activo ? "info" : "warning", async () => {
         const fecha = activo ? null : new Date().toISOString().split('T')[0];
-        await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) });
-        loadAlumnos(!activo); showSection(activo ? 'alumnos' : 'bajas');
+        const res = await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) });
+        if(res.ok) { loadAlumnos(!activo); showSection(activo ? 'alumnos' : 'bajas'); }
     });
 }
 
@@ -202,14 +206,17 @@ function eliminarDefinitivo(id, nombre) {
 async function exportarPDF() {
     const { jsPDF } = window.jspdf; const doc = new jsPDF('l', 'mm', 'a4'); const logo = new Image(); logo.src = 'img/logo-arashi.png';
     doc.addImage(logo, 'PNG', 15, 10, 25, 25); doc.setFontSize(18); doc.text("LLISTAT D'ALUMNES PER COGNOMS", 100, 20); doc.setFontSize(10); doc.text("Arashi Group - Aikido Management System", 100, 26);
-    const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&sort=apellidos:asc`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+    const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&sort=apellidos:asc&pagination[limit]=200`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
     const json = await res.json();
-    const rows = json.data.map(a => [`${a.attributes.primer_apellido || ''} ${a.attributes.segundo_apellido || ''}, ${a.attributes.nombre || ''}`, a.attributes.dni || '', a.attributes.email || '', a.attributes.poblacion || '', a.attributes.grado || '']);
+    const rows = json.data.map(a => {
+        const p = a.attributes || a;
+        return [`${p.primer_apellido || ''} ${p.segundo_apellido || ''}, ${p.nombre || ''}`, p.dni || '', p.email || '', p.poblacion || '', p.grado || ''];
+    });
     doc.autoTable({ startY: 40, head: [['Cognoms i Nom', 'DNI', 'Email', 'Població', 'Grau']], body: rows, theme: 'striped', headStyles: { fillColor: [239, 68, 68] } });
     doc.save("Alumnes_Arashi.pdf");
 }
 
-// --- OTROS ---
+// --- UI HELPERS ---
 function setupDragScroll() {
     const sliders = document.querySelectorAll('.drag-scroll');
     sliders.forEach(s => {
@@ -224,10 +231,12 @@ function changeFontSize(id, delta) { const t = document.getElementById(id); cons
 function setupDniInput(id) { document.getElementById(id)?.addEventListener('input', e => e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '')); }
 function setupNumericInput(id) { document.getElementById(id)?.addEventListener('input', e => e.target.value = e.target.value.replace(/[^0-9]/g, '')); }
 async function loadCiudades() {
-    const res = await fetch(`${API_URL}/api/alumnos?fields[0]=poblacion`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-    const json = await res.json(); const datalist = document.getElementById('ciudades-list'); datalist.innerHTML = '';
-    const ciu = [...new Set(json.data.map(a => a.attributes.poblacion).filter(p => p))];
-    ciu.forEach(c => { datalist.innerHTML += `<option value="${c}">`; });
+    try {
+        const res = await fetch(`${API_URL}/api/alumnos?fields[0]=poblacion&pagination[limit]=500`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const json = await res.json(); const datalist = document.getElementById('ciudades-list'); datalist.innerHTML = '';
+        const ciu = [...new Set(json.data.map(a => (a.attributes ? a.attributes.poblacion : a.poblacion)).filter(p => p))];
+        ciu.sort().forEach(c => { datalist.innerHTML += `<option value="${c}">`; });
+    } catch(e) {}
 }
 function showModal(title, msg, type, onOk) {
     const m = document.getElementById('custom-modal'); document.getElementById('modal-title').innerText = title; document.getElementById('modal-message').innerText = msg;

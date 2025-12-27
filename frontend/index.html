@@ -117,12 +117,15 @@
                 <header class="section-header">
                     <h2><i class="fa-solid fa-users"></i> Alumnos Activos</h2>
                     <div class="actions">
-                        <button class="action-btn secondary" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                        <button class="action-btn-pdf" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                         <div class="font-controls">
                             <button onclick="changeFontSize('table-alumnos', -1)">A-</button>
                             <button onclick="changeFontSize('table-alumnos', 1)">A+</button>
                         </div>
-                        <input type="text" id="search-alumno" placeholder="Buscar alumno...">
+                        <div class="search-container">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="search-alumno" placeholder="Buscar alumno...">
+                        </div>
                     </div>
                 </header>
                 <div class="table-container drag-scroll"><table id="table-alumnos"><thead><tr><th>Nombre Completo</th><th>DNI</th><th>Grado</th><th>Dojo / Grupo</th><th>Teléfono</th><th>Email</th><th>Población</th><th>Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table></div>
@@ -131,7 +134,12 @@
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header">
                     <h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2>
-                    <div class="actions"><input type="text" id="search-baja" placeholder="Buscar en bajas..."></div>
+                    <div class="actions">
+                        <div class="search-container">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="search-baja" placeholder="Buscar en bajas...">
+                        </div>
+                    </div>
                 </header>
                 <div class="table-container drag-scroll"><table id="table-bajas"><thead><tr><th>Fecha Baja</th><th>Nombre Completo</th><th>DNI</th><th>Dojo</th><th>Acciones</th></tr></thead><tbody id="lista-bajas-body"></tbody></table></div>
             </div>
