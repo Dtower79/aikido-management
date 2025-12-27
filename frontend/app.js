@@ -348,7 +348,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (DISEÑO PDF MEJORADO) ---
+// --- INFORMES AVANZADOS (DISEÑO PDF ROJO/NEGRITA) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -379,8 +379,8 @@ async function generateReport(type) {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // 1. Cabecera (Logo ajustado a 25x15)
-        doc.addImage(logoImg, 'PNG', 10, 5, 25, 15);
+        // 1. Cabecera (Logo ajustado a 22x15)
+        doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
         
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
@@ -443,43 +443,43 @@ async function generateReport(type) {
             baseRow.push(
                 getDojoName(p.dojo),
                 normalizeAddress(p.direccion),
-                normalizeCity(p.poblacion), // Población Limpia
+                normalizeCity(p.poblacion),
                 p.cp || '-'
             );
             return baseRow;
         });
         
-        // Estilos de Columna Ajustados (DNI y Dojo centrados y ajustados)
+        // Estilos de Columna Ajustados (Negritas y Color Rojo)
         let colStyles = {};
         
-        if (type === 'age') { // 12 columnas
+        if (type === 'age') { 
             colStyles = {
-                0: { cellWidth: 35 }, // Apellidos
-                1: { cellWidth: 15 }, // Nombre
-                2: { cellWidth: 18, halign: 'center' }, // DNI (Más estrecho y centrado)
-                3: { cellWidth: 12, halign: 'center' }, // Grado
-                4: { cellWidth: 20, halign: 'center' }, // Telf
-                5: { cellWidth: 42 }, // Email
-                6: { cellWidth: 18, halign: 'center' }, // Nac
-                7: { cellWidth: 8, halign: 'center' },  // Edad
-                8: { cellWidth: 28, halign: 'center' }, // Dojo (Centrado)
-                9: { cellWidth: 40 }, // Direccion
-                10: { cellWidth: 25 }, // Pob
-                11: { cellWidth: 10, halign: 'center' } // CP
+                0: { cellWidth: 35, fontStyle: 'bold' }, // Apellidos Negrita
+                1: { cellWidth: 15, fontStyle: 'bold' }, // Nombre Negrita
+                2: { cellWidth: 18, halign: 'center' }, 
+                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, // Grado Negrita
+                4: { cellWidth: 20, halign: 'center' }, 
+                5: { cellWidth: 38 }, // Ajustado para dar espacio a Edad
+                6: { cellWidth: 18, halign: 'center' }, 
+                7: { cellWidth: 10, halign: 'center' }, // Edad (10 para caber cabecera)
+                8: { cellWidth: 28, halign: 'center' }, 
+                9: { cellWidth: 38 }, 
+                10: { cellWidth: 25, halign: 'center' }, // Pob Centrada
+                11: { cellWidth: 10, halign: 'center' }
             };
-        } else { // 11 columnas
+        } else { 
             colStyles = {
-                0: { cellWidth: 35 }, // Apellidos
-                1: { cellWidth: 18 }, // Nombre
-                2: { cellWidth: 20, halign: 'center' }, // DNI (Más estrecho y centrado)
-                3: { cellWidth: 15, halign: 'center' }, // Grado
-                4: { cellWidth: 20, halign: 'center' }, // Telf
-                5: { cellWidth: 45 }, // Email
-                6: { cellWidth: 20, halign: 'center' }, // Nac
-                7: { cellWidth: 30, halign: 'center' }, // Dojo (Centrado)
-                8: { cellWidth: 45 }, // Direccion
-                9: { cellWidth: 25 }, // Pob
-                10: { cellWidth: 12, halign: 'center' } // CP
+                0: { cellWidth: 35, fontStyle: 'bold' },
+                1: { cellWidth: 18, fontStyle: 'bold' },
+                2: { cellWidth: 20, halign: 'center' },
+                3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' },
+                5: { cellWidth: 45 },
+                6: { cellWidth: 20, halign: 'center' },
+                7: { cellWidth: 30, halign: 'center' },
+                8: { cellWidth: 45 },
+                9: { cellWidth: 25, halign: 'center' },
+                10: { cellWidth: 12, halign: 'center' }
             };
         }
 
@@ -490,7 +490,8 @@ async function generateReport(type) {
             theme: 'grid', 
             margin: { left: 5, right: 5, bottom: 15 },
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
-            headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0], fontSize: 8, fontStyle: 'bold', halign: 'center' },
+            // Estilo Rojo Arashi para Cabecera
+            headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
             didDrawPage: function (data) {
                 let footerStr = `Página ${doc.internal.getNumberOfPages()} | Total Registros: ${list.length} | Generado el ${new Date().toLocaleDateString()}`;
