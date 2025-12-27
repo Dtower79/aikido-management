@@ -4,7 +4,7 @@ import os
 import re
 from datetime import datetime
 from dotenv import load_dotenv
-from concurrent.futures import ThreadPoolExecutor # <--- LA MAGIA DE LA VELOCIDAD
+from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 
@@ -18,7 +18,7 @@ HEADERS = {
 
 NOMBRE_DOJO_PRINCIPAL = "Aikido Arashi Badalona"
 
-# --- FUNCIONES DE LIMPIEZA (Iguales que antes) ---
+# --- FUNCIONES DE LIMPIEZA ---
 def limpiar_dni(dato, contador_ficticio):
     if pd.notna(dato):
         texto = str(dato).strip().upper().replace('-', '').replace('.', '').replace(' ', '')
@@ -29,13 +29,28 @@ def limpiar_telefono(dato):
     if pd.isna(dato): return ""
     return re.sub(r'[^0-9]', '', str(dato))
 
-def separar_nombre(nombre_completo):
+def separar_nombre_completo(nombre_completo):
+    """
+    Separa 'Nombre Apellido1 Apellido2' en (Nombre, ApellidosString).
+    """
     if pd.isna(nombre_completo): return "Desconocido", ""
     texto = str(nombre_completo).strip()
     partes = texto.split(" ", 1)
     nombre = partes[0].title()
-    apellidos = partes[1].title() if len(partes) > 1 else ""
-    return nombre, apellidos
+    apellidos_str = partes[1].title() if len(partes) > 1 else ""
+    return nombre, apellidos_str
+
+def separar_apellidos(apellidos_str):
+    """
+    DIVISIÓN CRÍTICA PARA FRONTEND:
+    Separa el string de apellidos en primer_apellido y segundo_apellido.
+    Ej: "Garcia Lopez" -> "Garcia", "Lopez"
+    """
+    if not apellidos_str: return "", ""
+    partes = apellidos_str.split(" ", 1)
+    primer = partes[0].strip()
+    segundo = partes[1].strip() if len(partes) > 1 else ""
+    return primer, segundo
 
 def separar_poblacion_cp(texto):
     if pd.isna(texto): return "", ""
@@ -67,7 +82,6 @@ def limpiar_fecha(dato):
 
 # --- FUNCIONES STRAPI ---
 def obtener_id_dojo_badalona():
-    # Esta función NO la paralelizamos para no crear duplicados por error
     url = f"{API_URL}/api/dojos?filters[nombre][$eq]={NOMBRE_DOJO_PRINCIPAL}"
     try:
         resp = requests.get(url, headers=HEADERS)
@@ -82,44 +96,40 @@ def obtener_id_dojo_badalona():
     return None
 
 def tarea_crear_alumno(datos):
-    """ Función aislada para que ejecute cada hilo """
+    """ Función aislada para ThreadPoolExecutor """
     try:
-        # Check duplicado rápido
+        # Check duplicado por DNI
         url_check = f"{API_URL}/api/alumnos?filters[dni][$eq]={datos['dni']}"
         check = requests.get(url_check, headers=HEADERS).json().get('data', [])
         
         if check:
-            print(f"⚠️ Existe: {datos['nombre']}")
+            print(f"⚠️ Existe: {datos['nombre']} {datos['primer_apellido']}")
             return
 
         payload = {"data": datos}
         resp = requests.post(f"{API_URL}/api/alumnos", json=payload, headers=HEADERS)
         
         if resp.status_code == 201:
-            print(f"🚀 OK: {datos['nombre']} ({datos['grupo']})")
+            print(f"🚀 OK: {datos['nombre']} {datos['primer_apellido']}")
         else:
             print(f"❌ Error {datos['nombre']}: {resp.text}")
     except Exception as e:
         print(f"❌ Excepción con {datos['nombre']}: {e}")
 
-# --- PROCESO PRINCIPAL OPTIMIZADO ---
-
+# --- PROCESO PRINCIPAL ---
 def procesar_excel(ruta_archivo):
-    print(f"📊 Leyendo Excel y preparando datos en memoria...")
+    print(f"📊 Leyendo Excel y preparando datos...")
     dojo_id = obtener_id_dojo_badalona()
-    if not dojo_id: return print("❌ Error Dojo")
+    if not dojo_id: return print("❌ Error Dojo Principal")
 
     try: df = pd.read_excel(ruta_archivo, header=None)
     except Exception as e: return print(f"❌ Error Excel: {e}")
 
     grupo_actual = "General"
     contador_sin_dni = 1
-    
     lista_para_enviar = []
 
-    # FASE 1: PREPARACIÓN (Rápida, en local)
     for index, row in df.iterrows():
-        # Detección de Grupo (usando .values para buscar en toda la fila)
         fila_texto = str(row.values).upper()
         if "FULL TIME" in fila_texto: grupo_actual = "Full Time"; continue
         elif "MAÑANAS" in fila_texto or "MANANAS" in fila_texto: grupo_actual = "Mañanas"; continue
@@ -137,7 +147,11 @@ def procesar_excel(ruta_archivo):
         dni_final = limpiar_dni(c_dni, contador_sin_dni)
         if "PENDIENTE" in dni_final: contador_sin_dni += 1
 
-        nombre, apellidos = separar_nombre(nombre_str)
+        # Separación Nombre vs Apellidos
+        nombre, apellidos_full = separar_nombre_completo(nombre_str)
+        # Separación Apellido1 vs Apellido2 (NECESARIO PARA FRONTEND SORT)
+        ap1, ap2 = separar_apellidos(apellidos_full)
+        
         poblacion, cp = separar_poblacion_cp(c_pob_cp)
         
         email_final = str(c_email).strip() if pd.notna(c_email) else ""
@@ -145,24 +159,29 @@ def procesar_excel(ruta_archivo):
             email_final = f"{dni_final.lower()}@sin-email.com"
 
         alumno = {
-            "nombre": nombre, "apellidos": apellidos, "dni": dni_final,
-            "email": email_final, "telefono": limpiar_telefono(c_telf),
+            "nombre": nombre, 
+            "primer_apellido": ap1, # Campo crítico
+            "segundo_apellido": ap2, # Campo crítico
+            "apellidos": apellidos_full, # Legacy / Fallback
+            "dni": dni_final,
+            "email": email_final, 
+            "telefono": limpiar_telefono(c_telf),
             "direccion": str(c_direc).strip() if pd.notna(c_direc) else "",
-            "poblacion": poblacion, "cp": cp,
+            "poblacion": poblacion, 
+            "cp": cp,
             "fecha_nacimiento": limpiar_fecha(c_nacim),
             "fecha_inicio": limpiar_fecha(c_inicio),
             "grado": str(c_grado).strip() if pd.notna(c_grado) else "",
             "dojo": dojo_id,
-            "grupo": grupo_actual
+            "grupo": grupo_actual,
+            "activo": True
         }
         
         lista_para_enviar.append(alumno)
 
-    # FASE 2: EJECUCIÓN PARALELA (Turbo)
     total = len(lista_para_enviar)
     print(f"🔥 Iniciando carga masiva de {total} alumnos (10 hilos simultáneos)...")
     
-    # Usamos ThreadPoolExecutor para lanzar 10 peticiones a la vez
     with ThreadPoolExecutor(max_workers=10) as executor:
         executor.map(tarea_crear_alumno, lista_para_enviar)
     
