@@ -37,20 +37,9 @@ def separar_nombre_completo(nombre_completo):
     texto = str(nombre_completo).strip()
     partes = texto.split(" ", 1)
     nombre = partes[0].title()
+    # Si hay apellidos, los guardamos tal cual en un solo string
     apellidos_str = partes[1].title() if len(partes) > 1 else ""
     return nombre, apellidos_str
-
-def separar_apellidos(apellidos_str):
-    """
-    DIVISIÓN CRÍTICA PARA FRONTEND:
-    Separa el string de apellidos en primer_apellido y segundo_apellido.
-    Ej: "Garcia Lopez" -> "Garcia", "Lopez"
-    """
-    if not apellidos_str: return "", ""
-    partes = apellidos_str.split(" ", 1)
-    primer = partes[0].strip()
-    segundo = partes[1].strip() if len(partes) > 1 else ""
-    return primer, segundo
 
 def separar_poblacion_cp(texto):
     if pd.isna(texto): return "", ""
@@ -103,14 +92,14 @@ def tarea_crear_alumno(datos):
         check = requests.get(url_check, headers=HEADERS).json().get('data', [])
         
         if check:
-            print(f"⚠️ Existe: {datos['nombre']} {datos['primer_apellido']}")
+            print(f"⚠️ Existe: {datos['nombre']} {datos['apellidos']}")
             return
 
         payload = {"data": datos}
         resp = requests.post(f"{API_URL}/api/alumnos", json=payload, headers=HEADERS)
         
         if resp.status_code == 201:
-            print(f"🚀 OK: {datos['nombre']} {datos['primer_apellido']}")
+            print(f"🚀 OK: {datos['nombre']} {datos['apellidos']}")
         else:
             print(f"❌ Error {datos['nombre']}: {resp.text}")
     except Exception as e:
@@ -149,8 +138,6 @@ def procesar_excel(ruta_archivo):
 
         # Separación Nombre vs Apellidos
         nombre, apellidos_full = separar_nombre_completo(nombre_str)
-        # Separación Apellido1 vs Apellido2 (NECESARIO PARA FRONTEND SORT)
-        ap1, ap2 = separar_apellidos(apellidos_full)
         
         poblacion, cp = separar_poblacion_cp(c_pob_cp)
         
@@ -158,11 +145,10 @@ def procesar_excel(ruta_archivo):
         if not email_final or "@" not in email_final:
             email_final = f"{dni_final.lower()}@sin-email.com"
 
+        # ESTRUCTURA EXACTA SEGÚN TU SCREENSHOT DE STRAPI
         alumno = {
             "nombre": nombre, 
-            "primer_apellido": ap1, # Campo crítico
-            "segundo_apellido": ap2, # Campo crítico
-            "apellidos": apellidos_full, # Legacy / Fallback
+            "apellidos": apellidos_full, # Único campo de apellidos
             "dni": dni_final,
             "email": email_final, 
             "telefono": limpiar_telefono(c_telf),
