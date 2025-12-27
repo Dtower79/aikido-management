@@ -9,6 +9,16 @@ const GRADE_WEIGHTS = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if we are in RESET PASSWORD mode (URL Params)
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetCode = urlParams.get('code');
+
+    if (resetCode) {
+        showResetScreen(resetCode);
+        return; // Stop normal flow
+    }
+
+    // Normal Flow
     const loginTimeStr = localStorage.getItem('aikido_login_time');
     const ahora = Date.now();
     
@@ -31,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupDragScroll();
 });
 
-// --- SESIÓN ---
+// --- SESIÓN & AUTH ---
 const loginForm = document.getElementById('login-form');
 if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
@@ -57,11 +67,120 @@ if (loginForm) {
 
 function logout() {
     localStorage.clear();
-    const dash = document.getElementById('dashboard');
-    const login = document.getElementById('login-screen');
-    if(dash) dash.classList.add('hidden');
-    if(login) login.classList.remove('hidden');
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('reset-screen').classList.add('hidden');
+    
+    // Clean URL params if any
+    if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 }
+
+// --- GESTIÓN DE CONTRASEÑAS ---
+
+// 1. Recuperar (Forgot Password) - Paso 1: Pedir Email
+function openRecoverModal() {
+    document.getElementById('recover-modal').classList.remove('hidden');
+}
+
+async function sendRecoveryEmail() {
+    const email = document.getElementById('recover-email').value;
+    if(!email) return alert("Introduce tu email");
+
+    try {
+        const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+        });
+        
+        if (res.ok) {
+            document.getElementById('recover-modal').classList.add('hidden');
+            showModal("Email Enviado", "Revisa tu correo. Si no llega, verifica Spam.");
+        } else {
+            alert("Error: Email no encontrado o servicio no disponible.");
+        }
+    } catch(e) { alert("Error de conexión"); }
+}
+
+// 2. Resetear (Reset Password) - Paso 2: Nueva Contraseña (URL con ?code=...)
+function showResetScreen(code) {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('reset-screen').classList.remove('hidden');
+    document.getElementById('reset-code').value = code;
+}
+
+document.getElementById('reset-password-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const code = document.getElementById('reset-code').value;
+    const password = document.getElementById('new-password-reset').value;
+    const passwordConfirmation = document.getElementById('confirm-password-reset').value;
+
+    if(password !== passwordConfirmation) {
+        document.getElementById('reset-error').innerText = "Las contraseñas no coinciden";
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/api/auth/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, password, passwordConfirmation })
+        });
+
+        if (res.ok) {
+            showModal("Éxito", "Contraseña restablecida. Inicia sesión.", () => {
+                window.location.href = window.location.pathname; // Recargar limpia la URL
+            });
+        } else {
+            const err = await res.json();
+            document.getElementById('reset-error').innerText = "Error: " + (err.error?.message || "Token inválido");
+        }
+    } catch { document.getElementById('reset-error').innerText = "Error de conexión"; }
+});
+
+// 3. Cambiar (Change Password) - Estando logueado
+function openChangePasswordModal() {
+    document.getElementById('change-pass-modal').classList.remove('hidden');
+}
+
+document.getElementById('change-pass-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = document.getElementById('cp-current').value;
+    const password = document.getElementById('cp-new').value;
+    const passwordConfirmation = document.getElementById('cp-confirm').value;
+
+    if (password !== passwordConfirmation) {
+        return alert("La nueva contraseña no coincide con la confirmación");
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/api/auth/change-password`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify({ currentPassword, password, passwordConfirmation })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            document.getElementById('change-pass-modal').classList.add('hidden');
+            showModal("Éxito", "Contraseña actualizada correctamente.");
+            // Opcional: Relogin forzado
+            // logout();
+        } else {
+            alert("Error: " + (data.error?.message || "Contraseña actual incorrecta"));
+        }
+    } catch (e) {
+        alert("Error de conexión");
+    }
+});
+
 
 // --- NAVEGACIÓN ---
 function showDashboard() {
@@ -356,7 +475,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (DISEÑO PDF PERFECTO) ---
+// --- INFORMES AVANZADOS ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -364,7 +483,6 @@ function openReportModal() {
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     
-    // Filtro de Dojo
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
     const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
@@ -459,57 +577,24 @@ async function generateReport(type) {
             return baseRow;
         });
         
-        // --- ESTILOS DE COLUMNAS ---
         let colStyles = {};
-        
-        // Configuración 1: POR EDAD (12 columnas)
         if (type === 'age') { 
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' }, // Apellidos
-                1: { cellWidth: 15, fontStyle: 'bold' }, // Nombre
-                2: { cellWidth: 18, halign: 'center' }, // DNI
-                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, // Grado
-                4: { cellWidth: 20, halign: 'center' }, // Tlf
-                5: { cellWidth: 38 }, // Email
-                6: { cellWidth: 18, halign: 'center' }, // Nac
-                7: { cellWidth: 10, halign: 'center' }, // Edad
-                8: { cellWidth: 28, halign: 'center' }, // Dojo
-                9: { cellWidth: 38 }, // Dirección
-                10: { cellWidth: 25, halign: 'center' }, // Pob
-                11: { cellWidth: 10, halign: 'center' } // CP
+                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' },
+                2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 38 },
+                6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' },
+                8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 
+                10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' }
             };
-        } 
-        // Configuración 2: POR GRUPO (12 columnas) - ANCHOS AJUSTADOS
-        else if (type === 'group') {
+        } else { 
             colStyles = {
-                0: { cellWidth: 32, fontStyle: 'bold' }, // Apellidos (reducido un poco)
-                1: { cellWidth: 15, fontStyle: 'bold' }, // Nombre
-                2: { cellWidth: 18, halign: 'center' }, // DNI
-                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, // Grado
-                4: { cellWidth: 20, halign: 'center' }, // Tlf
-                5: { cellWidth: 35 }, // Email (reducido)
-                6: { cellWidth: 18, halign: 'center' }, // Nac
-                7: { cellWidth: 18, halign: 'center' }, // Grupo (Nuevo hueco)
-                8: { cellWidth: 25, halign: 'center' }, // Dojo
-                9: { cellWidth: 35 }, // Dirección
-                10: { cellWidth: 25, halign: 'center' }, // Pob
-                11: { cellWidth: 10, halign: 'center' } // CP
-            };
-        } 
-        // Configuración 3: ESTÁNDAR (11 columnas)
-        else { 
-            colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' }, 
-                1: { cellWidth: 18, fontStyle: 'bold' },
-                2: { cellWidth: 20, halign: 'center' }, 
-                3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' }, 
-                5: { cellWidth: 45 },
-                6: { cellWidth: 20, halign: 'center' }, 
-                7: { cellWidth: 30, halign: 'center' }, 
-                8: { cellWidth: 45 }, 
-                9: { cellWidth: 25, halign: 'center' },
-                10: { cellWidth: 12, halign: 'center' } 
+                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 18, fontStyle: 'bold' },
+                2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 45 },
+                6: { cellWidth: 20, halign: 'center' }, 7: { cellWidth: 30, halign: 'center' },
+                8: { cellWidth: 45 }, 9: { cellWidth: 25, halign: 'center' },
+                10: { cellWidth: 12, halign: 'center' }
             };
         }
 
@@ -525,7 +610,6 @@ async function generateReport(type) {
             columnStyles: colStyles,
             
             didDrawPage: function (data) {
-                // Header (Se repite siempre)
                 doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                 doc.setFontSize(16); doc.setFont("helvetica", "bold");
                 doc.text(title, pageWidth / 2, 12, { align: "center" });
@@ -533,7 +617,6 @@ async function generateReport(type) {
                 doc.setFontSize(10); doc.setFont("helvetica", "normal");
                 doc.text(subText, pageWidth / 2, 18, { align: "center" });
 
-                // Footer
                 let footerStr = `Página ${doc.internal.getNumberOfPages()} | Total Registros: ${list.length} | Generado el ${new Date().toLocaleDateString()}`;
                 doc.setFontSize(8); doc.setFont("helvetica", "normal");
                 doc.text(footerStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
