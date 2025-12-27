@@ -9,18 +9,57 @@
     --border: #334155;
 }
 
-body { margin: 0; font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: var(--text); height: 100vh; overflow: hidden; }
+body { 
+    margin: 0; 
+    font-family: 'Inter', sans-serif; 
+    background-color: var(--bg-dark); 
+    color: var(--text); 
+    height: 100vh; 
+    overflow: hidden; 
+}
 .hidden { display: none !important; }
 .txt-accent { color: var(--accent); }
 
 /* --- LOGIN --- */
-.login-container { height: 100vh; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle at top, #1e293b, #0f172a); }
-.login-box { background: var(--bg-card); padding: 40px; border-radius: 12px; width: 350px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; }
+.login-container { 
+    height: 100vh; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    background: radial-gradient(circle at top, #1e293b, #0f172a); 
+}
+.login-box { 
+    background: var(--bg-card); 
+    padding: 40px; 
+    border-radius: 12px; 
+    width: 350px; 
+    border: 1px solid var(--border); 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+    text-align: center; 
+}
 .logo-img-login { max-width: 180px; margin-bottom: 30px; }
 .input-group { position: relative; margin-bottom: 15px; text-align: left; }
 .input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-.input-group input { width: 100%; padding: 12px 12px 12px 45px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; box-sizing: border-box; }
-.login-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; }
+.input-group input { 
+    width: 100%; 
+    padding: 12px 12px 12px 45px; 
+    background: #0f172a; 
+    border: 1px solid var(--border); 
+    border-radius: 6px; 
+    color: white; 
+    box-sizing: border-box; 
+}
+.login-btn { 
+    width: 100%; 
+    padding: 12px; 
+    background: var(--primary); 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    margin-top: 10px; 
+}
 
 /* --- DASHBOARD LAYOUT --- */
 .dashboard-container { display: flex; height: 100vh; }
@@ -51,7 +90,7 @@ body { margin: 0; font-family: 'Inter', sans-serif; background-color: var(--bg-d
 .menu-btn:hover, .menu-btn.active { background: var(--primary); color: white; }
 .sidebar-sep { padding: 15px 15px 5px; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
 
-/* Footer Sidebar (Botón Salir) */
+/* Footer Sidebar */
 .sidebar-footer { 
     height: 70px; /* ALTURA FIJA PARA ALINEACIÓN */
     border-top: 1px solid var(--border); 
@@ -70,7 +109,7 @@ body { margin: 0; font-family: 'Inter', sans-serif; background-color: var(--bg-d
     background: radial-gradient(circle at top left, #1e293b, #0f172a); 
     display: flex; 
     flex-direction: column; 
-    overflow: hidden; /* El scroll lo tendrá la sección interna */
+    overflow: hidden; 
 }
 
 /* Scrollable Section Container */
@@ -124,25 +163,28 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .dojo-info-row i { color: var(--accent); width: 20px; text-align: center; flex-shrink: 0; margin-top: 3px; }
 .dojo-link-btn { display: block; width: fit-content; margin: 20px auto 0; padding: 10px 25px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center; transition: 0.3s; text-transform: uppercase; }
 
-/* --- MAIN FOOTER (ALINEACIÓN PERFECTA) --- */
+/* --- MAIN FOOTER --- */
 .main-footer {
-    height: 70px; /* MISMA ALTURA QUE SIDEBAR-FOOTER */
+    height: 70px; /* MISMA ALTURA */
     border-top: 1px solid var(--border);
-    padding: 0 30px; /* Padding horizontal igualado */
+    padding: 0 30px; 
     background: var(--bg-header);
     color: var(--text-muted);
     font-size: 0.85rem;
     width: 100%;
     box-sizing: border-box;
     display: flex;
-    align-items: center; /* Centrado vertical */
-    flex-shrink: 0; /* Evita que se encoja */
+    align-items: center; 
+    flex-shrink: 0; 
 }
 .footer-content {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     width: 100%;
 }
+.footer-left { display: flex; align-items: center; gap: 10px; }
+.footer-logo-mini { height: 20px; vertical-align: middle; }
 
 /* UTILS */
 .toolbar { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; width: 100%; }
@@ -170,7 +212,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); position: relative; }
     .sidebar-header { justify-content: space-between; padding: 10px 20px; }
     .logo-img-sidebar { max-width: 100px; }
-    .sidebar-footer { display: none; } /* Ocultar footer desktop en móvil */
+    .sidebar-footer { display: none; } 
     .sidebar-footer-mobile { display: block; padding: 15px; border-top: 1px solid var(--border); }
 
     .mobile-menu-toggle { display: block; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; margin-left: auto; }
@@ -200,6 +242,9 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     td:nth-of-type(10)::before { content: "Población"; font-weight: bold; color: var(--text-muted); }
     td:nth-of-type(11)::before { content: "CP"; font-weight: bold; color: var(--text-muted); }
     
+    /* El SPAN .cell-data se asegura que el contenido sea visible a la derecha */
+    .cell-data { text-align: right; max-width: 65%; word-break: break-word; color: var(--text); }
+
     td.sticky-col { position: static; background: transparent !important; box-shadow: none; justify-content: center; gap: 20px; padding-top: 15px; margin-top: 10px; border-top: 1px solid var(--border); }
     .action-btn-icon { font-size: 1.4rem; background: var(--bg-dark); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); }
 

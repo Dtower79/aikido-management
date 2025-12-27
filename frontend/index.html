@@ -52,7 +52,7 @@
                 </div>
             </nav>
             
-            <div class="sidebar-footer">
+            <div class="sidebar-footer desktop-only">
                 <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
             </div>
         </div>
@@ -159,17 +159,20 @@
                 </div>
             </div>
 
-            <!-- FOOTER -->
+            <!-- FOOTER CORREGIDO -->
             <footer class="main-footer">
                 <div class="footer-content">
-                    <span>&copy; <span id="year"></span> <strong>Arashi Group Aikido</strong>. Todos los derechos reservados.</span>
+                    <div class="footer-left">
+                        &copy; <span id="year"></span> <strong>Arashi Group Aikido</strong>. Todos los derechos reservados.
+                        <img src="img/logo-arashi.png" class="footer-logo-mini" alt="Logo">
+                    </div>
                     <span class="version">Sistema de Gestión de Alumnos</span>
                 </div>
             </footer>
         </main>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODAL CONFIRMACIÓN / MENSAJES -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <h3 id="modal-title">Título</h3>
@@ -181,10 +184,11 @@
         </div>
     </div>
 
+    <!-- MODAL SELECCIÓN DE INFORME -->
     <div id="report-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <h3><i class="fa-solid fa-file-pdf"></i> Generar Informe</h3>
-            <p>Selecciona el tipo de ordenación:</p>
+            <p>Selecciona el tipo de ordenación para el informe PDF:</p>
             <div style="margin: 20px 0; display:flex; flex-direction:column; gap:10px;">
                 <button class="menu-btn" onclick="generateReport('surname')"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos (A-Z)</button>
                 <button class="menu-btn" onclick="generateReport('grade')"><i class="fa-solid fa-medal"></i> Por Grado (Alto a Bajo)</button>

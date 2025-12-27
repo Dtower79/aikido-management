@@ -87,7 +87,6 @@ function showSection(id) {
     if(id === 'dojos') loadDojosCards();
     if(id === 'status') runDiagnostics();
     
-    // FIX: Solo resetear si es un ALTA NUEVA (no edición)
     if(id === 'nuevo-alumno') {
         const isEditing = document.getElementById('edit-id').value !== "";
         if(!isEditing) resetForm();
@@ -159,7 +158,7 @@ function calculateAge(birthDateString) {
     return isNaN(age) ? '-' : age;
 }
 
-// --- CARGA DE DATOS ---
+// --- CARGA DE DATOS (MODIFICADO PARA MÓVIL) ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
     const cols = activos ? 12 : 13; 
@@ -178,21 +177,22 @@ async function loadAlumnos(activos) {
         
         data.forEach(a => {
             const p = a.attributes || a;
-            const id = a.documentId; // Strapi v5 ID
+            const id = a.documentId;
             const dojoNom = getDojoName(p.dojo); 
 
+            // ESTRUCTURA CON SPAN .cell-data PARA CSS MÓVIL
             const datosComunes = `
-                <td><strong>${p.apellidos || "-"}</strong></td>
-                <td>${p.nombre || "-"}</td>
-                <td style="font-family:monospace">${p.dni || "-"}</td>
-                <td><span class="badge">${normalizeGrade(p.grado) || 'S/G'}</span></td>
-                <td>${p.telefono || '-'}</td>
-                <td>${p.email || '-'}</td>
-                <td>${p.fecha_nacimiento || '-'}</td>
-                <td>${dojoNom}</td>
-                <td>${p.direccion || '-'}</td>
-                <td>${p.poblacion || '-'}</td>
-                <td>${p.cp || '-'}</td>
+                <td><span class="cell-data"><strong>${p.apellidos || "-"}</strong></span></td>
+                <td><span class="cell-data">${p.nombre || "-"}</span></td>
+                <td><span class="cell-data" style="font-family:monospace">${p.dni || "-"}</span></td>
+                <td><span class="cell-data"><span class="badge">${normalizeGrade(p.grado) || 'S/G'}</span></span></td>
+                <td><span class="cell-data">${p.telefono || '-'}</span></td>
+                <td><span class="cell-data">${p.email || '-'}</span></td>
+                <td><span class="cell-data">${p.fecha_nacimiento || '-'}</span></td>
+                <td><span class="cell-data">${dojoNom}</span></td>
+                <td><span class="cell-data">${p.direccion || '-'}</span></td>
+                <td><span class="cell-data">${p.poblacion || '-'}</span></td>
+                <td><span class="cell-data">${p.cp || '-'}</span></td>
             `;
 
             if (activos) {
@@ -204,7 +204,7 @@ async function loadAlumnos(activos) {
                     </td></tr>`;
             } else {
                 tbody.innerHTML += `<tr>
-                    <td class="txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</td>
+                    <td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</span></td>
                     ${datosComunes}
                     <td class="sticky-col">
                         <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
@@ -256,7 +256,7 @@ if(formAlumno) {
     });
 }
 
-// --- EDITAR (BLINDADA) ---
+// --- EDITAR ---
 async function editarAlumno(documentId) {
     try {
         const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
@@ -292,7 +292,6 @@ async function editarAlumno(documentId) {
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
         document.getElementById('btn-cancelar-edit').classList.remove('hidden');
         
-        // Cambio manual de sección evitando el reset de showSection
         document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
         document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
         
