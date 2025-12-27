@@ -205,3 +205,30 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     .footer-content { flex-direction: column; gap: 10px; }
     .scroll-top-btn { bottom: 20px; right: 20px; width: 45px; height: 45px; font-size: 1.2rem; }
 }
+
+/* ... (MANTENER TODO EL CSS ANTERIOR, SOLO REEMPLAZAR O AÑADIR LO SIGUIENTE) ... */
+
+/* --- AJUSTE CARDS ÁREA TÉCNICA (ALINEACIÓN BOTONES) --- */
+/* Asegura que todas las tarjetas del grid tengan la misma altura y el botón abajo */
+.card { 
+    background: var(--bg-card); 
+    border: 1px solid var(--border); 
+    border-radius: 12px; 
+    padding: 25px; /* Más espacio interno */
+    box-shadow: 0 10px 15px rgba(0,0,0,0.2); 
+    
+    /* Flex para alinear contenido */
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ocupar toda la altura de la celda del grid */
+    box-sizing: border-box;
+}
+
+.card h3 { margin-top: 0; }
+.card p { flex: 1; } /* El texto empuja el botón hacia abajo */
+.card button { margin-top: 20px; } /* Espacio fijo antes del botón */
+
+/* Estilo específico para la consola */
+.console-wrapper {
+    margin-top: 20px; /* Separación con las tarjetas */
+}
