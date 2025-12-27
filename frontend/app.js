@@ -356,7 +356,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (CORREGIDOS) ---
+// --- INFORMES AVANZADOS (DISEÑO PDF PERFECTO) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -364,10 +364,9 @@ function openReportModal() {
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     
-    // Obtener filtro de Dojo
+    // Filtro de Dojo
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
-    // CORRECCION: Obtener nombre del Dojo para subtítulo
     const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
     
     const { jsPDF } = window.jspdf; 
@@ -395,7 +394,6 @@ async function generateReport(type) {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // TITULO y SUBTITULO
         let title = "LISTADO DE ALUMNOS";
         if(type === 'grade') title += " POR GRADO";
         if(type === 'age') title += " POR EDAD";
@@ -403,10 +401,9 @@ async function generateReport(type) {
         if(type === 'surname') title += " POR APELLIDOS";
         if(type === 'group') title += " POR GRUPO";
 
-        // CORRECCION: Subtítulo con nombre de Dojo si está filtrado
         let subText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
         if(dojoFilterId) {
-            subText += ` (${dojoFilterName})`; // Añade nombre del Dojo
+            subText += ` (${dojoFilterName})`; 
         }
         
         let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`;
@@ -462,25 +459,57 @@ async function generateReport(type) {
             return baseRow;
         });
         
+        // --- ESTILOS DE COLUMNAS ---
         let colStyles = {};
-        // Ajustes de columnas según tipo
+        
+        // Configuración 1: POR EDAD (12 columnas)
         if (type === 'age') { 
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' },
-                2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 38 },
-                6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' },
-                8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 
-                10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' }
+                0: { cellWidth: 35, fontStyle: 'bold' }, // Apellidos
+                1: { cellWidth: 15, fontStyle: 'bold' }, // Nombre
+                2: { cellWidth: 18, halign: 'center' }, // DNI
+                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, // Grado
+                4: { cellWidth: 20, halign: 'center' }, // Tlf
+                5: { cellWidth: 38 }, // Email
+                6: { cellWidth: 18, halign: 'center' }, // Nac
+                7: { cellWidth: 10, halign: 'center' }, // Edad
+                8: { cellWidth: 28, halign: 'center' }, // Dojo
+                9: { cellWidth: 38 }, // Dirección
+                10: { cellWidth: 25, halign: 'center' }, // Pob
+                11: { cellWidth: 10, halign: 'center' } // CP
             };
-        } else { 
+        } 
+        // Configuración 2: POR GRUPO (12 columnas) - ANCHOS AJUSTADOS
+        else if (type === 'group') {
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 18, fontStyle: 'bold' },
-                2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 45 },
-                6: { cellWidth: 20, halign: 'center' }, 7: { cellWidth: 30, halign: 'center' },
-                8: { cellWidth: 45 }, 9: { cellWidth: 25, halign: 'center' },
-                10: { cellWidth: 12, halign: 'center' }
+                0: { cellWidth: 32, fontStyle: 'bold' }, // Apellidos (reducido un poco)
+                1: { cellWidth: 15, fontStyle: 'bold' }, // Nombre
+                2: { cellWidth: 18, halign: 'center' }, // DNI
+                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, // Grado
+                4: { cellWidth: 20, halign: 'center' }, // Tlf
+                5: { cellWidth: 35 }, // Email (reducido)
+                6: { cellWidth: 18, halign: 'center' }, // Nac
+                7: { cellWidth: 18, halign: 'center' }, // Grupo (Nuevo hueco)
+                8: { cellWidth: 25, halign: 'center' }, // Dojo
+                9: { cellWidth: 35 }, // Dirección
+                10: { cellWidth: 25, halign: 'center' }, // Pob
+                11: { cellWidth: 10, halign: 'center' } // CP
+            };
+        } 
+        // Configuración 3: ESTÁNDAR (11 columnas)
+        else { 
+            colStyles = {
+                0: { cellWidth: 35, fontStyle: 'bold' }, 
+                1: { cellWidth: 18, fontStyle: 'bold' },
+                2: { cellWidth: 20, halign: 'center' }, 
+                3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 
+                5: { cellWidth: 45 },
+                6: { cellWidth: 20, halign: 'center' }, 
+                7: { cellWidth: 30, halign: 'center' }, 
+                8: { cellWidth: 45 }, 
+                9: { cellWidth: 25, halign: 'center' },
+                10: { cellWidth: 12, halign: 'center' } 
             };
         }
 
@@ -489,16 +518,14 @@ async function generateReport(type) {
             head: [headRow], 
             body: body, 
             theme: 'grid', 
-            // CORRECCION: showHead 'everyPage' asegura que salga en todas las hojas
-            showHead: 'everyPage',
+            showHead: 'everyPage', 
             margin: { top: 30, left: 5, right: 5, bottom: 15 },
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
             
-            // CABECERA Y PIE EN CADA PAGINA
             didDrawPage: function (data) {
-                // Cabecera (Logo y Títulos)
+                // Header (Se repite siempre)
                 doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                 doc.setFontSize(16); doc.setFont("helvetica", "bold");
                 doc.text(title, pageWidth / 2, 12, { align: "center" });
@@ -581,7 +608,7 @@ async function loadReportDojos() {
         const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         sel.innerHTML = '<option value="">-- Todos los Dojos --</option>';
-        (json.data || []).forEach(d => { sel.innerHTML += `<option value="${d.documentId || d.id}">${(d.attributes || d).nombre}</option>`; });
+        (json.data || []).forEach(d => { sel.innerHTML += `<option value="${d.documentId}">${(d.attributes || d).nombre}</option>`; });
     } catch {}
 }
 
