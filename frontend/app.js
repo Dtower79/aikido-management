@@ -3,7 +3,6 @@ const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
 let jwtToken = localStorage.getItem('aikido_jwt');
 let userData = JSON.parse(localStorage.getItem('aikido_user'));
 
-// MAPA DE PESO DE GRADOS (Mayor peso = Más rango)
 const GRADE_WEIGHTS = {
     '8º DAN': 108, '7º DAN': 107, '6º DAN': 106, '5º DAN': 105, '4º DAN': 104, '3º DAN': 103, '2º DAN': 102, '1º DAN': 101,
     '1º KYU': 5, '2º KYU': 4, '3º KYU': 3, '4º KYU': 2, '5º KYU': 1, 'S/G': 0
@@ -13,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginTimeStr = localStorage.getItem('aikido_login_time');
     const ahora = Date.now();
     
-    // Comprobar sesión (20 min)
     if (jwtToken && loginTimeStr && (ahora - parseInt(loginTimeStr) < 20 * 60 * 1000)) {
         localStorage.setItem('aikido_login_time', Date.now().toString());
         showDashboard();
@@ -89,14 +87,14 @@ function showSection(id) {
     if(id === 'dojos') loadDojosCards();
     if(id === 'status') runDiagnostics();
     
-    // IMPORTANTE: Solo resetea si NO venimos de editar (lógica inversa manejada por editarAlumno)
-    if(id === 'nuevo-alumno' && !document.getElementById('edit-id').value) {
-        resetForm();
+    // FIX: Solo resetear si es un ALTA NUEVA (no edición)
+    if(id === 'nuevo-alumno') {
+        const isEditing = document.getElementById('edit-id').value !== "";
+        if(!isEditing) resetForm();
     }
 }
 
-// --- UTILS DE LIMPIEZA DE DATOS ---
-
+// --- UTILS ---
 function getDojoName(dojoObj) {
     let name = "-";
     if (dojoObj) {
@@ -127,16 +125,13 @@ function getGradeWeight(gradeStr) {
 
 function normalizeAddress(addr) {
     if(!addr) return '-';
-    return addr
-        .replace(/\b(Carrer|Calle)\b/gi, 'C/')
-        .replace(/\b(Avinguda|Avenida)\b/gi, 'Avda')
-        .trim();
+    return addr.replace(/\b(Carrer|Calle)\b/gi, 'C/').replace(/\b(Avinguda|Avenida)\b/gi, 'Avda').trim();
 }
 
 function normalizeCity(city) {
     if(!city) return '-';
     let c = city.replace(/\s*\(.*?\)\s*/g, '').replace(/[.,\-\s]+$/, '').trim();
-    if (c.match(/San Adria/i)) { return 'SANT ADRIÀ DEL BESÒS'; }
+    if (c.match(/San Adria/i)) return 'SANT ADRIÀ DEL BESÒS';
     return c.toUpperCase();
 }
 
@@ -150,9 +145,7 @@ function normalizePhone(tel) {
 function formatDatePDF(dateStr) {
     if (!dateStr) return '-';
     const parts = dateStr.split('-');
-    if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
 }
 
@@ -162,9 +155,7 @@ function calculateAge(birthDateString) {
     const birthDate = new Date(birthDateString);
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-    }
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
     return isNaN(age) ? '-' : age;
 }
 
@@ -186,9 +177,8 @@ async function loadAlumnos(activos) {
         tbody.innerHTML = '';
         
         data.forEach(a => {
-            // Extracción robusta de atributos
             const p = a.attributes || a;
-            const id = a.documentId || a.id; 
+            const id = a.documentId; // Strapi v5 ID
             const dojoNom = getDojoName(p.dojo); 
 
             const datosComunes = `
@@ -222,16 +212,15 @@ async function loadAlumnos(activos) {
                     </td></tr>`;
             }
         });
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos del servidor.</td></tr>`; }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos.</td></tr>`; }
 }
 
-// --- GUARDAR / EDITAR ---
+// --- GUARDAR ---
 const formAlumno = document.getElementById('form-nuevo-alumno');
 if(formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
-        
         const alumnoData = {
             nombre: document.getElementById('new-nombre').value,
             apellidos: document.getElementById('new-apellidos').value,
@@ -249,7 +238,6 @@ if(formAlumno) {
         };
 
         const method = id ? 'PUT' : 'POST';
-        // URL Correcta para Strapi v5
         const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
 
         try {
@@ -259,38 +247,25 @@ if(formAlumno) {
                 body: JSON.stringify({ data: alumnoData })
             });
             if(res.ok) {
-                showModal("Éxito", "Alumno guardado correctamente.", () => {
+                showModal("Éxito", "Guardado correctamente.", () => {
                     showSection('alumnos');
-                    resetForm(); // Limpiar después de guardar éxito
+                    resetForm();
                 });
-            } else {
-                showModal("Error", "No se pudo guardar. Revisa el DNI.");
-            }
+            } else { showModal("Error", "No se pudo guardar."); }
         } catch { showModal("Error", "Fallo de conexión."); }
     });
 }
 
-// FIX: Función de edición robusta para Strapi v5
+// --- EDITAR (BLINDADA) ---
 async function editarAlumno(documentId) {
     try {
-        console.log("Intentando editar alumno con ID:", documentId);
-        
-        // Petición con populate para traer el dojo
-        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { 
-            headers: { 'Authorization': `Bearer ${jwtToken}` } 
-        });
-        
-        if (!res.ok) throw new Error("Error al obtener datos del alumno");
-        
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        console.log("Datos recibidos:", json);
-
-        // Extracción segura de datos (Strapi v5 puede devolver data plano o anidado)
         const data = json.data;
-        const p = data.attributes || data; // Intenta attributes, si no existe, usa data directo
+        const p = data.attributes || data; 
 
-        // Rellenar formulario
         document.getElementById('edit-id').value = data.documentId || documentId;
+        
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
         document.getElementById('new-dni').value = p.dni || '';
@@ -303,34 +278,27 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // Lógica segura para recuperar ID del Dojo
         let dojoId = "";
         if (p.dojo) {
-            // Caso 1: Dojo es un objeto plano con documentId
             if (p.dojo.documentId) dojoId = p.dojo.documentId;
-            // Caso 2: Dojo anidado en data (Strapi v4 style o v5 populated)
-            else if (p.dojo.data && p.dojo.data.documentId) dojoId = p.dojo.data.documentId;
-            // Caso 3: Fallback ID numérico
-            else if (p.dojo.id) dojoId = p.dojo.id;
+            else if (p.dojo.data) dojoId = p.dojo.data.documentId || p.dojo.data.id;
         }
         
-        // Asignar Dojo al select
         const selectDojo = document.getElementById('new-dojo');
-        if (dojoId) {
+        if (dojoId && selectDojo.querySelector(`option[value="${dojoId}"]`)) {
             selectDojo.value = dojoId;
         }
 
-        // Cambiar UI a modo edición
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
         document.getElementById('btn-cancelar-edit').classList.remove('hidden');
         
-        // Mostrar sección manualmente sin resetear form
+        // Cambio manual de sección evitando el reset de showSection
         document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
         document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
         
     } catch(e) { 
-        console.error("Error crítico en editarAlumno:", e);
-        showModal("Error", "No se pudieron cargar los datos del alumno. Ver consola.");
+        console.error(e);
+        showModal("Error", "No se pudieron cargar los datos.");
     }
 }
 
@@ -389,7 +357,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (DISEÑO PDF MEJORADO) ---
+// --- INFORMES ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -398,7 +366,7 @@ async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     
     const { jsPDF } = window.jspdf; 
-    const doc = new jsPDF('l', 'mm', 'a4'); // Horizontal
+    const doc = new jsPDF('l', 'mm', 'a4'); 
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
@@ -420,11 +388,8 @@ async function generateReport(type) {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // 1. Cabecera (Logo ajustado a 22x15)
         doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-        
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16); doc.setFont("helvetica", "bold");
         
         let title = "LISTADO DE AFILIADOS";
         if(type === 'grade') title += " POR GRADO";
@@ -433,21 +398,16 @@ async function generateReport(type) {
         if(type === 'surname') title += " POR APELLIDOS";
 
         doc.text(title, pageWidth / 2, 12, { align: "center" });
-
-        const subtitleText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text(subtitleText, pageWidth / 2, 18, { align: "center" });
+        doc.setFontSize(10); doc.setFont("helvetica", "normal");
+        doc.text(`Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`, pageWidth / 2, 18, { align: "center" });
         
         const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
 
-        // Ordenación
         list.sort((a, b) => {
             const pA = a.attributes || a;
             const pB = b.attributes || b;
-            
             if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
             if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
             if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
@@ -459,17 +419,13 @@ async function generateReport(type) {
             return 0;
         });
         
-        // Encabezados
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.'];
         if (type === 'age') headRow.push('Edad'); 
         headRow.push('Dojo', 'Dirección', 'Población', 'CP');
         
         const body = list.map(a => {
             const p = a.attributes || a;
-            
-            let dniShow = (p.dni || '-').toUpperCase();
-            if (dniShow.includes('PENDIENTE')) dniShow = dniShow.replace('PENDIENTE', 'PEND');
-
+            let dniShow = (p.dni || '-').toUpperCase().replace('PENDIENTE', 'PEND');
             const baseRow = [
                 (p.apellidos || '').toUpperCase(),
                 p.nombre || '',
@@ -480,7 +436,6 @@ async function generateReport(type) {
                 formatDatePDF(p.fecha_nacimiento) 
             ];
             if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
-            
             baseRow.push(
                 getDojoName(p.dojo),
                 normalizeAddress(p.direccion),
@@ -490,36 +445,23 @@ async function generateReport(type) {
             return baseRow;
         });
         
-        // Estilos de Columna Ajustados
         let colStyles = {};
-        
         if (type === 'age') { 
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' },
-                1: { cellWidth: 15, fontStyle: 'bold' },
-                2: { cellWidth: 18, halign: 'center' }, 
-                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' }, 
-                5: { cellWidth: 38 },
-                6: { cellWidth: 18, halign: 'center' }, 
-                7: { cellWidth: 10, halign: 'center' },
-                8: { cellWidth: 28, halign: 'center' }, 
-                9: { cellWidth: 38 }, 
-                10: { cellWidth: 25, halign: 'center' },
-                11: { cellWidth: 10, halign: 'center' }
+                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' },
+                2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 38 },
+                6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' },
+                8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 
+                10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' }
             };
         } else { 
             colStyles = {
-                0: { cellWidth: 35, fontStyle: 'bold' },
-                1: { cellWidth: 18, fontStyle: 'bold' },
-                2: { cellWidth: 20, halign: 'center' },
-                3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' },
-                5: { cellWidth: 45 },
-                6: { cellWidth: 20, halign: 'center' },
-                7: { cellWidth: 30, halign: 'center' },
-                8: { cellWidth: 45 },
-                9: { cellWidth: 25, halign: 'center' },
+                0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 18, fontStyle: 'bold' },
+                2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 45 },
+                6: { cellWidth: 20, halign: 'center' }, 7: { cellWidth: 30, halign: 'center' },
+                8: { cellWidth: 45 }, 9: { cellWidth: 25, halign: 'center' },
                 10: { cellWidth: 12, halign: 'center' }
             };
         }
@@ -535,18 +477,15 @@ async function generateReport(type) {
             columnStyles: colStyles,
             didDrawPage: function (data) {
                 let footerStr = `Página ${doc.internal.getNumberOfPages()} | Total Registros: ${list.length} | Generado el ${new Date().toLocaleDateString()}`;
-                doc.setFontSize(8);
-                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8); doc.setFont("helvetica", "normal");
                 doc.text(footerStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
             }
         });
         
-        const finalName = fileNames[type] || `Informe_Arashi_${type}`;
-        doc.save(`${finalName}.pdf`);
+        doc.save(`${fileNames[type] || 'Informe'}.pdf`);
     };
 }
 
-// --- UTILS COMPACTACIÓN ---
 function changeFontSize(tableId, delta) {
     const table = document.getElementById(tableId);
     if (!table) return;
@@ -631,7 +570,6 @@ function filtrarTabla(tid, iid) {
     for (let i = 1; i < rows.length; i++) rows[i].style.display = rows[i].textContent.toUpperCase().includes(f) ? "" : "none";
 }
 
-// --- FUNCIONALIDAD MENÚ MÓVIL ---
 function toggleMobileMenu() {
     const sidebar = document.querySelector('.sidebar');
     sidebar.classList.toggle('open');
