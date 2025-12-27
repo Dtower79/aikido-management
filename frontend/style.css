@@ -73,8 +73,23 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 /* DOJOS (GRID 3 COLUMNAS) */
 .dojo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
 .dojo-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
-.dojo-header { background: var(--bg-header); padding: 15px 20px; border-bottom: 1px solid var(--border); }
-.dojo-header h3 { margin: 0; font-size: 1.1rem; color: white; display: flex; align-items: center; gap: 10px; }
+.dojo-header { 
+    background: var(--bg-header); 
+    padding: 15px 20px; 
+    border-bottom: 1px solid var(--border); 
+}
+/* CORRECCIÓN: Título Dojo Centrado */
+.dojo-header h3 { 
+    margin: 0; 
+    font-size: 1.1rem; 
+    color: white; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; /* Centrado horizontal Flex */
+    text-align: center; /* Asegura centrado texto */
+    width: 100%;
+    gap: 10px; 
+}
 .dojo-body { padding: 20px; flex: 1; }
 .dojo-info-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
 .dojo-info-row i { color: var(--accent); width: 20px; text-align: center; flex-shrink: 0; margin-top: 3px; }
@@ -94,7 +109,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .action-btn { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: 700; cursor: pointer; }
 .action-btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
 
-/* TOOLBAR MEJORADO (RESPONSIVE) */
+/* TOOLBAR */
 .toolbar { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
 .search-box { background: var(--bg-header); border: 1px solid var(--border); border-radius: 8px; padding: 8px 15px; display: flex; align-items: center; min-width: 250px; flex: 1; }
 .search-box input { background: transparent; border: none; color: white; outline: none; width: 100%; margin-left: 10px; }

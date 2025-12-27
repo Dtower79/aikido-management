@@ -3,7 +3,7 @@ const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
 let jwtToken = localStorage.getItem('aikido_jwt');
 let userData = JSON.parse(localStorage.getItem('aikido_user'));
 
-// MAPA DE PESO DE GRADOS (Para ordenación en Informes: Mayor peso = Más alto rango)
+// MAPA DE PESO DE GRADOS (Mayor peso = Más rango)
 const GRADE_WEIGHTS = {
     '8º Dan': 108, '7º Dan': 107, '6º Dan': 106, '5º Dan': 105, '4º Dan': 104, '3º Dan': 103, '2º Dan': 102, '1º Dan': 101,
     '1º Kyu': 5, '2º Kyu': 4, '3º Kyu': 3, '4º Kyu': 2, '5º Kyu': 1, 'S/G': 0
@@ -87,10 +87,23 @@ function getGradeWeight(gradeStr) {
     return GRADE_WEIGHTS[gradeStr.trim()] || 0;
 }
 
+// NUEVA FUNCIÓN: Calcular Edad
+function calculateAge(birthDateString) {
+    if (!birthDateString) return '-';
+    const today = new Date();
+    const birthDate = new Date(birthDateString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return isNaN(age) ? '-' : age;
+}
+
 // --- CARGA DE DATOS ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    const cols = activos ? 12 : 13; // Bajas tiene una columna más al inicio
+    const cols = activos ? 12 : 13; 
     tbody.innerHTML = `<tr><td colspan="${cols}">Cargando datos...</td></tr>`;
     
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
@@ -106,11 +119,9 @@ async function loadAlumnos(activos) {
         
         data.forEach(a => {
             const p = a.attributes || a;
-            // IMPORTANTE: Usamos documentId para Strapi v5
             const id = a.documentId; 
             const dojoNom = getDojoName(p.dojo);
 
-            // Plantilla de fila común para los datos personales
             const datosComunes = `
                 <td><strong>${p.apellidos || "-"}</strong></td>
                 <td>${p.nombre || "-"}</td>
@@ -145,7 +156,7 @@ async function loadAlumnos(activos) {
     } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos del servidor.</td></tr>`; }
 }
 
-// --- GUARDAR / EDITAR (FIXED) ---
+// --- GUARDAR / EDITAR ---
 document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = document.getElementById('edit-id').value;
@@ -167,7 +178,6 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
     };
 
     const method = id ? 'PUT' : 'POST';
-    // IMPORTANTE: En Strapi v5, para editar usamos el documentId en la URL
     const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
 
     try {
@@ -189,17 +199,14 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
 
 async function editarAlumno(documentId) {
     try {
-        // En Strapi v5, al hacer GET by documentId, devuelve el objeto.
         const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         
-        // Manejo robusto de la respuesta
         const data = json.data;
-        const p = data.attributes || data; // Flat or nested
+        const p = data.attributes || data; 
 
         document.getElementById('edit-id').value = data.documentId || documentId;
         
-        // Mapeo seguro de campos
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
         document.getElementById('new-dni').value = p.dni || '';
@@ -212,7 +219,6 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // Extracción ID Dojo
         let dojoId = "";
         if (p.dojo) {
             if (p.dojo.documentId) dojoId = p.dojo.documentId;
@@ -222,8 +228,6 @@ async function editarAlumno(documentId) {
         const selectDojo = document.getElementById('new-dojo');
         if (dojoId && selectDojo.querySelector(`option[value="${dojoId}"]`)) {
             selectDojo.value = dojoId;
-        } else {
-             // Fallback si no encuentra por documentId, intentar por ID numérico si fuera necesario
         }
 
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
@@ -232,7 +236,7 @@ async function editarAlumno(documentId) {
         
     } catch(e) { 
         console.error(e);
-        showModal("Error", "No se pudieron cargar los datos. Revisa la consola.");
+        showModal("Error", "No se pudieron cargar los datos.");
     }
 }
 
@@ -288,7 +292,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS ---
+// --- INFORMES AVANZADOS (CORREGIDO: Nombres de fichero y Columnas) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -297,83 +301,122 @@ async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     
     const { jsPDF } = window.jspdf; 
-    const doc = new jsPDF('l', 'mm', 'a4'); 
+    const doc = new jsPDF('l', 'mm', 'a4'); // Horizontal
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
+    // Diccionario de Nombres de Archivo
+    const fileNames = {
+        'surname': 'ARASHI - Alumnos por apellidos',
+        'age': 'ARASHI - Alumnos por Edad',
+        'grade': 'ARASHI - Alumnos por Grado',
+        'dojo': 'ARASHI - Alumnos por Dojos'
+    };
+    
     logoImg.onload = async function() {
+        // Cabecera
         doc.addImage(logoImg, 'PNG', 10, 10, 45, 20);
         doc.setFontSize(18); 
         
         let title = "LLISTAT D'AFILIATS";
-        if(type === 'grade') title += " PER GRAU (ALT-BAIX)";
+        if(type === 'grade') title += " PER GRAU";
         if(type === 'age') title += " PER EDAT";
         if(type === 'dojo') title += " PER DOJO";
         
         doc.text(title, 148, 18, { align: "center" });
         
-        // Recuperamos todos los activos
+        // Datos
         const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
 
-        // LÓGICA DE ORDENACIÓN EN CLIENTE
+        // Ordenación
         list.sort((a, b) => {
             const pA = a.attributes || a;
             const pB = b.attributes || b;
             
-            if (type === 'surname') {
-                return (pA.apellidos || '').localeCompare(pB.apellidos || '');
-            }
-            if (type === 'grade') {
-                // Orden inverso: de mayor rango (8 Dan) a menor rango (5 Kyu)
-                return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
-            }
-            if (type === 'dojo') {
-                const dA = getDojoName(pA.dojo);
-                const dB = getDojoName(pB.dojo);
-                return dA.localeCompare(dB);
-            }
+            if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
+            if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
+            if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
             if (type === 'age') {
-                // Ordenar por fecha de nacimiento ascendente (más viejo primero) o descendente
                 const dateA = new Date(pA.fecha_nacimiento || '2000-01-01');
                 const dateB = new Date(pB.fecha_nacimiento || '2000-01-01');
-                return dateA - dateB; // Más viejos (menor año) primero
+                return dateA - dateB; 
             }
             return 0;
         });
         
+        // Definición de Columnas Dinámica
+        let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.'];
+        // Si es informe de EDAD, añadimos columna
+        if (type === 'age') headRow.push('Edad'); 
+        
+        headRow.push('Dojo', 'Dirección', 'Población', 'CP');
+        
+        // Generación del Cuerpo
         const body = list.map(a => {
             const p = a.attributes || a;
-            return [
+            const baseRow = [
                 (p.apellidos || '').toUpperCase(),
                 p.nombre || '',
                 p.dni || '-',
                 p.grado || '-',
                 p.telefono || '-',
                 p.email || '-',
-                p.fecha_nacimiento || '-',
+                p.fecha_nacimiento || '-'
+            ];
+            
+            // Inyectar edad si corresponde
+            if (type === 'age') {
+                baseRow.push(calculateAge(p.fecha_nacimiento));
+            }
+            
+            baseRow.push(
                 getDojoName(p.dojo),
                 p.direccion || '-',
                 p.poblacion || '-',
                 p.cp || '-'
-            ];
+            );
+            return baseRow;
         });
         
+        // Estilos de Columna Dinámicos
+        let colStyles = {
+            0: { cellWidth: 25 }, 1: { cellWidth: 20 }, 2: { cellWidth: 18 }, 3: { cellWidth: 12 }, 
+            4: { cellWidth: 18 }, 5: { cellWidth: 35 }, 6: { cellWidth: 18 }
+        };
+
+        // Ajuste de índices para estilos según si hay edad o no
+        if (type === 'age') {
+            colStyles[7] = { cellWidth: 10 }; // Edad estrecha
+            colStyles[8] = { cellWidth: 25 }; // Dojo
+            colStyles[9] = { cellWidth: 35 }; // Direccion
+            colStyles[10] = { cellWidth: 20 }; // Pob
+            colStyles[11] = { cellWidth: 10 }; // CP
+        } else {
+            colStyles[7] = { cellWidth: 25 }; // Dojo
+            colStyles[8] = { cellWidth: 35 }; // Direccion
+            colStyles[9] = { cellWidth: 20 }; // Pob
+            colStyles[10] = { cellWidth: 10 }; // CP
+        }
+
+        // Generar Tabla con Configuración Optimizada
         doc.autoTable({ 
             startY: 35, 
-            head: [['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.', 'Dojo', 'Dirección', 'Población', 'CP']], 
+            head: [headRow], 
             body: body, 
             theme: 'grid', 
-            headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0], fontSize: 7 }, 
-            styles: { fontSize: 6, cellPadding: 1, overflow: 'linebreak' },
-            columnStyles: {
-                0: { cellWidth: 25 }, 1: { cellWidth: 20 }, 2: { cellWidth: 18 }, 3: { cellWidth: 12 }, 
-                4: { cellWidth: 18 }, 5: { cellWidth: 35 }, 6: { cellWidth: 18 }, 7: { cellWidth: 25 }, 
-                8: { cellWidth: 35 }, 9: { cellWidth: 20 }, 10: { cellWidth: 10 }
-            }
+            // Márgenes pequeños para aprovechar el ancho (5mm)
+            margin: { left: 5, right: 5 },
+            // Tamaño de letra aumentado a 8 para máxima legibilidad
+            styles: { fontSize: 8, cellPadding: 1, overflow: 'linebreak' },
+            headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0], fontSize: 8, fontStyle: 'bold' }, 
+            columnStyles: colStyles
         });
-        doc.save(`Informe_Arashi_${type.toUpperCase()}.pdf`);
+        
+        // Guardar con Nombre Correcto
+        const finalName = fileNames[type] || `Informe_Arashi_${type}`;
+        doc.save(`${finalName}.pdf`);
     };
 }
 
@@ -385,13 +428,11 @@ function changeFontSize(tableId, delta) {
     if (cells.length > 0) {
         const currentSize = parseFloat(window.getComputedStyle(cells[0]).fontSize);
         const currentPad = parseFloat(window.getComputedStyle(cells[0]).paddingTop);
-        
-        const newSize = Math.max(8, currentSize + delta); // Mínimo 8px
-        const newPad = Math.max(2, currentPad + (delta * 0.5)); // Ajuste proporcional de padding
-        
+        const newSize = Math.max(8, currentSize + delta); 
+        const newPad = Math.max(2, currentPad + (delta * 0.5)); 
         cells.forEach(cell => {
             cell.style.fontSize = newSize + "px";
-            cell.style.padding = `${newPad}px 5px`; // Reducimos padding vertical
+            cell.style.padding = `${newPad}px 5px`; 
         });
     }
 }
