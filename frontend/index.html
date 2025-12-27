@@ -43,15 +43,18 @@
                 <div class="sidebar-sep">Área Técnica</div>
                 <button class="menu-btn" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
             </nav>
-            <div class="sidebar-footer"><button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button></div>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+            </div>
         </div>
 
         <main class="content">
-            <!-- BIENVENIDA CENTRADA SIN TEXTO -->
+            <!-- BIENVENIDA CENTRADA -->
             <div id="sec-welcome" class="section active welcome-flex">
                 <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-welcome">
             </div>
 
+            <!-- NUEVO ALUMNO -->
             <div id="sec-nuevo-alumno" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-user-plus"></i> Gestión de Alumno</h2></header>
                 <div class="card form-card">
@@ -106,23 +109,25 @@
                 </div>
             </div>
 
+            <!-- DOJOS -->
             <div id="sec-dojos" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-torii-gate"></i> Nuestros Dojos</h2></header>
                 <div id="grid-dojos" class="dojo-grid"></div>
             </div>
 
+            <!-- ALUMNOS -->
             <div id="sec-alumnos" class="section hidden">
                 <header class="section-header">
                     <h2><i class="fa-solid fa-users"></i> Alumnos</h2>
                     <div class="toolbar">
-                        <button class="btn-pdf" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                        <button class="btn-pdf" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> GENERAR INFORME</button>
                         <div class="font-tool">
                             <button onclick="changeFontSize('table-alumnos', -1)">A-</button>
                             <button onclick="changeFontSize('table-alumnos', 1)">A+</button>
                         </div>
                         <div class="search-box">
                             <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="search-alumno" placeholder="Buscar alumno...">
+                            <input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI...">
                         </div>
                     </div>
                 </header>
@@ -130,7 +135,18 @@
                     <table id="table-alumnos">
                         <thead>
                             <tr>
-                                <th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th>
+                                <th>Apellidos</th>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Grado</th>
+                                <th>Teléfono</th>
+                                <th>Email</th>
+                                <th>Nacimiento</th>
+                                <th>Dojo</th>
+                                <th>Dirección</th>
+                                <th>Población</th>
+                                <th>CP</th>
+                                <th class="sticky-col">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="lista-alumnos-body"></tbody>
@@ -138,6 +154,7 @@
                 </div>
             </div>
 
+            <!-- BAJAS -->
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header"><h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2></header>
                 <div class="table-container drag-scroll">
@@ -148,6 +165,7 @@
                 </div>
             </div>
 
+            <!-- ESTADO -->
             <div id="sec-status" class="section hidden">
                 <div class="console-wrapper">
                     <div class="console-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="console-title">root@aikido-system:~# ./diagnostico.sh</span></div>
@@ -157,7 +175,7 @@
         </main>
     </div>
 
-    <!-- MODAL PERSONALIZADO -->
+    <!-- MODAL -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <div id="modal-icon" class="modal-icon"></div>
