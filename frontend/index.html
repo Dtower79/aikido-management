@@ -33,16 +33,28 @@
 
     <div id="dashboard" class="dashboard-container hidden">
         <div class="sidebar">
-            <div class="sidebar-header"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar"></div>
-            <nav class="menu">
-                <button class="menu-btn" onclick="showSection('nuevo-alumno')"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
+            <div class="sidebar-header">
+                <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar">
+                <!-- Botón Hamburguesa para Móvil -->
+                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+            
+            <nav class="menu" id="main-menu">
+                <!-- Se pasa 'true' para indicar que es clic manual y debe limpiar form -->
+                <button class="menu-btn" onclick="showSection('nuevo-alumno', true)"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
                 <button class="menu-btn" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
                 <button class="menu-btn" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos</button>
                 <button class="menu-btn" onclick="showSection('bajas')"><i class="fa-solid fa-user-xmark"></i> Histórico Bajas</button>
                 <div class="sidebar-sep">Área Técnica</div>
                 <button class="menu-btn" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
+                <div class="sidebar-footer-mobile">
+                    <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+                </div>
             </nav>
-            <div class="sidebar-footer">
+            
+            <div class="sidebar-footer desktop-only">
                 <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
             </div>
         </div>
@@ -81,20 +93,9 @@
                             <div class="form-group"><label>Grado Actual</label>
                                 <select id="new-grado">
                                     <option value="">Selecciona grado...</option>
-                                    <!-- ORDEN DE PROGRESIÓN (Menor a Mayor) para el formulario -->
-                                    <option value="5º Kyu">5º Kyu</option>
-                                    <option value="4º Kyu">4º Kyu</option>
-                                    <option value="3º Kyu">3º Kyu</option>
-                                    <option value="2º Kyu">2º Kyu</option>
-                                    <option value="1º Kyu">1º Kyu</option>
-                                    <option value="1º Dan">1º Dan</option>
-                                    <option value="2º Dan">2º Dan</option>
-                                    <option value="3º Dan">3º Dan</option>
-                                    <option value="4º Dan">4º Dan</option>
-                                    <option value="5º Dan">5º Dan</option>
-                                    <option value="6º Dan">6º Dan</option>
-                                    <option value="7º Dan">7º Dan</option>
-                                    <option value="8º Dan">8º Dan</option>
+                                    <option value="5º Kyu">5º Kyu</option><option value="4º Kyu">4º Kyu</option><option value="3º Kyu">3º Kyu</option><option value="2º Kyu">2º Kyu</option><option value="1º Kyu">1º Kyu</option>
+                                    <option value="1º Dan">1º Dan</option><option value="2º Dan">2º Dan</option><option value="3º Dan">3º Dan</option><option value="4º Dan">4º Dan</option><option value="5º Dan">5º Dan</option>
+                                    <option value="6º Dan">6º Dan</option><option value="7º Dan">7º Dan</option><option value="8º Dan">8º Dan</option>
                                 </select>
                             </div>
                         </div>
@@ -143,7 +144,6 @@
                 </div>
                 <div class="table-container drag-scroll">
                     <table id="table-bajas">
-                        <!-- Estructura completa solicitada + Fecha Baja al principio -->
                         <thead>
                             <tr>
                                 <th class="txt-accent">Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th>
@@ -160,6 +160,14 @@
                     <div class="console-body" id="console-output"></div>
                 </div>
             </div>
+
+            <!-- FOOTER PROFESIONAL -->
+            <footer class="main-footer">
+                <div class="footer-content">
+                    <span>&copy; <span id="year"></span> <strong>Arashi Group Aikido</strong>. Todos los derechos reservados.</span>
+                    <span class="version">Sistema de Gestión Integral v1.2</span>
+                </div>
+            </footer>
         </main>
     </div>
 
@@ -193,5 +201,6 @@
     </div>
 
     <script src="app.js"></script>
+    <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 </body>
 </html>

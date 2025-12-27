@@ -614,3 +614,9 @@ function filtrarTabla(tid, iid) {
     const rows = table.getElementsByTagName('tr');
     for (let i = 1; i < rows.length; i++) rows[i].style.display = rows[i].textContent.toUpperCase().includes(f) ? "" : "none";
 }
+
+// --- FUNCIONALIDAD MENÚ MÓVIL ---
+function toggleMobileMenu() {
+    const sidebar = document.querySelector('.sidebar');
+    sidebar.classList.toggle('open');
+}
