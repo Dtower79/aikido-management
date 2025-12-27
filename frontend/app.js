@@ -11,6 +11,13 @@ document.addEventListener('DOMContentLoaded', () => {
     setupDniInput('new-dni');
     setupNumericInput('new-cp');
 
+    // Activar buscadores manualmente
+    const searchInput = document.getElementById('search-alumno');
+    if(searchInput) searchInput.addEventListener('keyup', () => filtrarAlumnos('tabla-alumnos'));
+    
+    const searchBaja = document.getElementById('search-baja');
+    if(searchBaja) searchBaja.addEventListener('keyup', () => filtrarAlumnos('tabla-bajas'));
+
     if (jwtToken) {
         showDashboard();
     } else {
@@ -18,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// --- HELPERS INPUTS ---
 function setupDniInput(id) {
     const input = document.getElementById(id);
     if(input) {
@@ -46,27 +54,37 @@ function showDashboard() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
     
-    // Carga inicial
-    loadDojos();
-    loadCiudades();
-    showSection('welcome');
+    // Carga inicial de datos auxiliares
+    loadDojos(); 
+    loadCiudades(); 
+    showSection('welcome'); 
 }
 
 function showSection(sectionId) {
+    // Ocultar todo
     document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     
-    document.getElementById(`sec-${sectionId}`).classList.remove('hidden');
+    // Mostrar sección
+    const section = document.getElementById(`sec-${sectionId}`);
+    if (section) section.classList.remove('hidden');
     
-    if(sectionId !== 'welcome') {
+    // Activar botón del menú (excepto welcome)
+    if (sectionId !== 'welcome') {
         const btn = document.querySelector(`button[onclick="showSection('${sectionId}')"]`);
         if(btn) btn.classList.add('active');
     }
 
+    // Lógica específica de carga
     if(sectionId === 'alumnos') loadAlumnosActivos();
     if(sectionId === 'bajas') loadAlumnosBaja();
     if(sectionId === 'dojos') loadDojosView();
-    if(sectionId === 'status') runSystemDiagnostics();
+    
+    // Reiniciar terminal si entramos en status
+    if(sectionId === 'status') {
+        document.getElementById('console-output').innerHTML = '<span class="cursor">_</span>';
+        runSystemDiagnostics();
+    }
 }
 
 // --- LOGIN / LOGOUT ---
@@ -152,7 +170,7 @@ function closeModal() {
     document.getElementById('custom-modal').classList.add('hidden');
 }
 
-// --- GESTIÓN DE DATOS ---
+// --- GESTIÓN DE DATOS AUXILIARES ---
 
 async function loadDojos() {
     const select = document.getElementById('new-dojo');
@@ -162,15 +180,17 @@ async function loadDojos() {
         });
         const data = await res.json();
         
-        const currentVal = select.value;
-        select.innerHTML = '<option value="">Selecciona un Dojo...</option>';
-        data.data.forEach(dojo => {
-            const d = dojo.attributes || dojo;
-            const id = dojo.documentId || dojo.id; 
-            select.innerHTML += `<option value="${id}">${d.nombre}</option>`;
-        });
-        if(currentVal) select.value = currentVal;
-    } catch (e) { console.error(e); }
+        if (res.ok) {
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">Selecciona un Dojo...</option>';
+            data.data.forEach(dojo => {
+                const d = dojo.attributes || dojo;
+                const id = dojo.documentId || dojo.id; 
+                select.innerHTML += `<option value="${id}">${d.nombre}</option>`;
+            });
+            if(currentVal) select.value = currentVal;
+        }
+    } catch (e) { console.error("Error loadDojos", e); }
 }
 
 async function loadCiudades() {
@@ -180,18 +200,22 @@ async function loadCiudades() {
             headers: { 'Authorization': `Bearer ${jwtToken}` }
         });
         const data = await res.json();
-        const ciudades = new Set();
-        data.data.forEach(a => {
-            const p = a.attributes ? a.attributes.poblacion : a.poblacion;
-            if(p) ciudades.add(p);
-        });
-        
-        datalist.innerHTML = "";
-        Array.from(ciudades).sort().forEach(ciudad => {
-            datalist.innerHTML += `<option value="${ciudad}">`;
-        });
+        if(res.ok) {
+            const ciudades = new Set();
+            data.data.forEach(a => {
+                const p = a.attributes ? a.attributes.poblacion : a.poblacion;
+                if(p) ciudades.add(p);
+            });
+            
+            datalist.innerHTML = "";
+            Array.from(ciudades).sort().forEach(ciudad => {
+                datalist.innerHTML += `<option value="${ciudad}">`;
+            });
+        }
     } catch (e) { console.error(e); }
 }
+
+// --- CREAR / EDITAR ALUMNO ---
 
 document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -202,14 +226,16 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
     const editId = document.getElementById('edit-id').value;
     const isEdit = !!editId;
 
-    // --- CORRECCIÓN: UNIR APELLIDOS ---
+    // Unir apellidos para compatibilidad
     const ap1 = document.getElementById('new-apellido1').value.trim();
     const ap2 = document.getElementById('new-apellido2').value.trim();
     const apellidosCompletos = `${ap1} ${ap2}`.trim();
 
     const alumnoData = {
         nombre: document.getElementById('new-nombre').value,
-        apellidos: apellidosCompletos, // Enviamos un solo campo a Strapi
+        primer_apellido: ap1,
+        segundo_apellido: ap2,
+        apellidos: apellidosCompletos, // Campo legado/unificado
         dni: document.getElementById('new-dni').value,
         email: document.getElementById('new-email').value,
         telefono: document.getElementById('new-telefono').value,
@@ -220,13 +246,16 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
         grado: document.getElementById('new-grado').value,
         grupo: document.getElementById('new-grupo').value,
         dojo: document.getElementById('new-dojo').value,
-        activo: true
+        activo: true // Siempre activo al crear/editar
     };
 
     try {
         let url = `${API_URL}/api/alumnos`;
         let method = 'POST';
-        if (isEdit) { url = `${API_URL}/api/alumnos/${editId}`; method = 'PUT'; }
+        if (isEdit) {
+            url = `${API_URL}/api/alumnos/${editId}`;
+            method = 'PUT';
+        }
 
         const res = await fetch(url, {
             method: method,
@@ -235,9 +264,11 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
         });
 
         if (res.ok) {
-            showModal("Éxito", isEdit ? "Actualizado correctamente" : "Creado correctamente", "success");
-            resetForm(); loadCiudades(); 
-            showSection('alumnos'); loadAlumnosActivos();
+            showModal("Éxito", isEdit ? "Alumno actualizado" : "Alumno creado", "success");
+            resetForm(); 
+            loadCiudades(); 
+            showSection('alumnos'); 
+            loadAlumnosActivos();
         } else {
             const err = await res.json();
             showModal("Error", err.error?.message || "Revisa los datos", "error");
@@ -261,21 +292,26 @@ async function editarAlumno(documentId) {
     document.getElementById('btn-cancelar-edit').classList.remove('hidden');
     
     try {
-        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, {
+            headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
         const json = await res.json();
-        const data = json.data; const props = data.attributes || data; 
+        const data = json.data; 
+        const props = data.attributes || data; 
 
         document.getElementById('edit-id').value = data.documentId || data.id;
         document.getElementById('new-nombre').value = props.nombre || '';
         
-        // --- CORRECCIÓN: SEPARAR APELLIDOS PARA EL FORMULARIO ---
-        // Si en la BBDD es "Garcia Perez", lo partimos para rellenar los 2 inputs
-        const apellidosStr = props.apellidos || '';
-        const partes = apellidosStr.split(' ');
-        
-        // Estrategia simple: Primera palabra al input 1, el resto al input 2
-        document.getElementById('new-apellido1').value = partes[0] || '';
-        document.getElementById('new-apellido2').value = partes.slice(1).join(' ') || '';
+        // RECUPERAR APELLIDOS (Nuevos o Viejos)
+        if (props.primer_apellido) {
+            document.getElementById('new-apellido1').value = props.primer_apellido || '';
+            document.getElementById('new-apellido2').value = props.segundo_apellido || '';
+        } else {
+            // Intento de separar el campo viejo 'apellidos'
+            const partes = (props.apellidos || '').split(' ');
+            document.getElementById('new-apellido1').value = partes[0] || '';
+            document.getElementById('new-apellido2').value = partes.slice(1).join(' ') || '';
+        }
 
         document.getElementById('new-dni').value = props.dni || '';
         document.getElementById('new-email').value = props.email || '';
@@ -300,55 +336,54 @@ async function loadAlumnosActivos() {
     const tbody = document.getElementById('lista-alumnos-body');
     tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</td></tr>';
     
-    const timeoutMsg = setTimeout(() => {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading" style="color:var(--primary)"><i class="fa-solid fa-server"></i> Despertando al servidor (puede tardar unos segundos)...</td></tr>';
-    }, 2000);
-
-    // --- CORRECCIÓN: ORDENAR POR 'apellidos' (que sí existe) ---
+    // Ordenamos por apellidos (campo unificado o nuevos)
     const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=true&pagination[limit]=100`;
-    await fetchAlumnosGenerico(url, tbody, true, timeoutMsg); 
+    await fetchAlumnosGenerico(url, tbody, true); 
 }
 
 async function loadAlumnosBaja() {
     const tbody = document.getElementById('lista-bajas-body');
     tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando histórico...</td></tr>';
 
-    const timeoutMsg = setTimeout(() => {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading"><i class="fa-solid fa-server"></i> Despertando al servidor...</td></tr>';
-    }, 2000);
-
-    // --- CORRECCIÓN: ORDENAR POR 'apellidos' ---
     const url = `${API_URL}/api/alumnos?populate=dojo&sort=apellidos:asc&filters[activo][$eq]=false&pagination[limit]=100`;
-    await fetchAlumnosGenerico(url, tbody, false, timeoutMsg);
+    await fetchAlumnosGenerico(url, tbody, false);
 }
 
-async function fetchAlumnosGenerico(url, tbodyElement, esActivo, timeoutId) {
+async function fetchAlumnosGenerico(url, tbodyElement, esActivo) {
     try {
         const response = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-        clearTimeout(timeoutId);
         const data = await response.json();
         
         if (response.ok) {
             renderTablaAlumnos(data.data, tbodyElement, esActivo);
         } else {
+            // Error de permisos o sesión
             if(response.status === 401 || response.status === 403) logout();
+            else tbodyElement.innerHTML = '<tr><td colspan="5">Error de permisos.</td></tr>';
         }
     } catch {
-        clearTimeout(timeoutId);
         tbodyElement.innerHTML = '<tr><td colspan="5" style="color:var(--accent)">Error de conexión o servidor apagado.</td></tr>';
     }
 }
 
 function renderTablaAlumnos(alumnos, tbody, esActivo) {
     tbody.innerHTML = '';
-    if (!alumnos || alumnos.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No hay alumnos.</td></tr>'; return; }
+    if (!alumnos || alumnos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No hay alumnos en esta lista.</td></tr>';
+        return;
+    }
 
     alumnos.forEach(alumno => {
         const props = alumno.attributes || alumno; 
         const docId = alumno.documentId || alumno.id; 
         
-        // --- CORRECCIÓN: MOSTRAR CAMPO 'apellidos' ---
-        const nombreCompleto = `${props.apellidos || ''}, ${props.nombre || ''}`;
+        // Prioridad visual: Apellidos separados > Apellido conjunto
+        let nombreCompleto = "";
+        if (props.primer_apellido) {
+            nombreCompleto = `${props.primer_apellido} ${props.segundo_apellido || ''}, ${props.nombre || ''}`;
+        } else {
+            nombreCompleto = `${props.apellidos || ''}, ${props.nombre || ''}`;
+        }
 
         let dojoNombre = "-";
         if (props.dojo) {
@@ -356,23 +391,181 @@ function renderTablaAlumnos(alumnos, tbody, esActivo) {
              if(d && d.nombre) dojoNombre = d.nombre;
         }
         const grupo = props.grupo ? ` (${props.grupo})` : "";
-        let botones = esActivo ? 
-            `<button class="action-btn-icon" onclick="editarAlumno('${docId}')"><i class="fa-solid fa-pen"></i></button>
-             <button class="action-btn-icon delete" onclick="confirmarBaja('${docId}', '${nombreCompleto}')"><i class="fa-solid fa-user-xmark"></i></button>` :
-            `<button class="action-btn-icon restore" onclick="confirmarReactivacion('${docId}', '${nombreCompleto}')"><i class="fa-solid fa-rotate-left"></i></button>`;
 
-        tbody.innerHTML += `
+        let botones = '';
+        if (esActivo) {
+            botones = `
+                <button class="action-btn-icon" onclick="editarAlumno('${docId}')" title="Editar">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="action-btn-icon delete" onclick="confirmarBaja('${docId}', '${nombreCompleto}')" title="Baja">
+                    <i class="fa-solid fa-user-xmark"></i>
+                </button>
+            `;
+        } else {
+            botones = `
+                <button class="action-btn-icon restore" onclick="confirmarReactivacion('${docId}', '${nombreCompleto}')" title="Reactivar">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+            `;
+        }
+
+        const row = `
             <tr>
                 <td><strong>${nombreCompleto}</strong></td>
                 <td style="font-family: monospace;">${props.dni || '-'}</td>
                 <td><span class="badge">${props.grado || 'S/G'}</span></td>
                 <td>${dojoNombre}${grupo}</td>
                 <td>${botones}</td>
-            </tr>`;
+            </tr>
+        `;
+        tbody.innerHTML += row;
     });
 }
 
-// ... Resto de funciones (confirmarBaja, Reactivación, dojos, terminal, scroll)
-// COPIA A PARTIR DE AQUI LAS FUNCIONES QUE YA TENIAS EN EL ANTERIOR APP.JS
-// (confirmarBaja, confirmarReactivacion, cambiarEstadoAlumno, filtrarAlumnos, 
-// loadDojosView, renderDojosCards, runSystemDiagnostics...)
+// --- ACCIONES (BAJA/REACTIVAR) ---
+
+function confirmarBaja(documentId, nombre) {
+    showModal(
+        "Confirmar Baja", 
+        `¿Estás seguro de que quieres dar de baja a ${nombre}? Pasará al histórico de bajas.`, 
+        "warning", 
+        () => cambiarEstadoAlumno(documentId, false)
+    );
+}
+
+function confirmarReactivacion(documentId, nombre) {
+    showModal(
+        "Reactivar Alumno", 
+        `¿Quieres volver a dar de alta a ${nombre}? Aparecerá de nuevo en la lista principal.`, 
+        "info", 
+        () => cambiarEstadoAlumno(documentId, true)
+    );
+}
+
+async function cambiarEstadoAlumno(documentId, nuevoEstado) {
+    try {
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}` 
+            },
+            body: JSON.stringify({ data: { activo: nuevoEstado } })
+        });
+
+        if (res.ok) {
+            showModal("Éxito", nuevoEstado ? "Alumno reactivado." : "Alumno dado de baja.", "success");
+            if(nuevoEstado) showSection('bajas'); 
+            else showSection('alumnos'); 
+        } else {
+            showModal("Error", "No se pudo cambiar el estado.", "error");
+        }
+    } catch {
+        showModal("Error", "Error de conexión.", "error");
+    }
+}
+
+function filtrarAlumnos(tablaId) {
+    const inputId = tablaId === 'tabla-alumnos' ? 'search-alumno' : 'search-baja';
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    const filter = input.value.toUpperCase();
+    const table = document.getElementById(tablaId);
+    if (!table) return;
+
+    const tr = table.getElementsByTagName('tr');
+
+    for (let i = 1; i < tr.length; i++) { 
+        const tdNombre = tr[i].getElementsByTagName('td')[0];
+        const tdDNI = tr[i].getElementsByTagName('td')[1];
+        if (tdNombre || tdDNI) {
+            const txt = (tdNombre.textContent + tdDNI.textContent).toUpperCase();
+            tr[i].style.display = txt.indexOf(filter) > -1 ? "" : "none";
+        }
+    }
+}
+
+// --- DOJOS ---
+async function loadDojosView() {
+    const container = document.getElementById('grid-dojos');
+    container.innerHTML = '<p class="loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando dojos...</p>';
+    try {
+        const response = await fetch(`${API_URL}/api/dojos?pagination[limit]=100`, {
+            headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+        const data = await response.json();
+        if (response.ok) renderDojosCards(data.data);
+    } catch { container.innerHTML = '<p>Error.</p>'; }
+}
+
+function renderDojosCards(dojos) {
+    const container = document.getElementById('grid-dojos');
+    container.innerHTML = '';
+    if (!dojos || dojos.length === 0) { container.innerHTML = '<p>No hay dojos.</p>'; return; }
+
+    dojos.forEach(dojo => {
+        const props = dojo.attributes || dojo;
+        const nombre = props.nombre || "Dojo Sin Nombre";
+        const direccion = props.direccion || "Dirección no disponible";
+        const poblacion = props.poblacion || "";
+        const web = props.web || "#";
+        const webText = props.web ? "Visitar Web" : "";
+
+        const card = `
+            <div class="dojo-card">
+                <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${nombre}</h3></div>
+                <div class="dojo-body">
+                    <div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${direccion}<br><strong>${poblacion}</strong></span></div>
+                    ${webText ? `<div class="dojo-info-row"><i class="fa-solid fa-globe"></i><a href="${web}" target="_blank" class="dojo-link">${webText}</a></div>` : ''}
+                </div>
+            </div>
+        `;
+        container.innerHTML += card;
+    });
+}
+
+// --- TERMINAL ---
+let diagRunning = false;
+async function runSystemDiagnostics() {
+    const output = document.getElementById('console-output');
+    if (diagRunning) return;
+    diagRunning = true;
+    
+    // Mensajes para simular carga
+    const lines = [
+        "Iniciando protocolos...",
+        "> Conectando a Neon DB... [OK]",
+        "> Verificando API Strapi... [OK]",
+        "> Comprobando integridad... [OK]",
+        "SISTEMA OPERATIVO AL 100%"
+    ];
+
+    for (const line of lines) {
+        output.innerHTML += `<div>${line}</div>`;
+        await new Promise(r => setTimeout(r, 600));
+    }
+    
+    // URL PÚBLICA DE UPTIMEROBOT
+    output.innerHTML += '<br><a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="btn-monitor-ext">VEURE GRÀFICS DETALLATS</a>';
+    diagRunning = false;
+}
+
+// --- SCROLL BTN ---
+const btnScroll = document.getElementById('btn-back-to-top');
+const contentContainer = document.querySelector('.content'); 
+if (contentContainer && btnScroll) {
+    contentContainer.addEventListener('scroll', () => {
+        if (contentContainer.scrollTop > 300) {
+            btnScroll.classList.add('show');
+            btnScroll.style.display = 'flex';
+        } else {
+            btnScroll.classList.remove('show');
+            btnScroll.style.display = 'none';
+        }
+    });
+    btnScroll.addEventListener('click', () => {
+        contentContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
