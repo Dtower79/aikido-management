@@ -316,7 +316,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (DISEÑO PDF) ---
+// --- INFORMES AVANZADOS (DISEÑO PROFESIONAL PDF EN CASTELLANO) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -329,11 +329,20 @@ async function generateReport(type) {
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
+    // Diccionario de Nombres de Archivo
     const fileNames = {
-        'surname': 'ARASHI - Alumnos por apellidos',
+        'surname': 'ARASHI - Alumnos por Apellidos',
         'age': 'ARASHI - Alumnos por Edad',
         'grade': 'ARASHI - Alumnos por Grado',
-        'dojo': 'ARASHI - Alumnos por Dojos'
+        'dojo': 'ARASHI - Alumnos por Dojo'
+    };
+
+    // Diccionario de Subtítulos
+    const subtitleMap = {
+        'surname': 'Apellidos',
+        'age': 'Edad',
+        'grade': 'Grado',
+        'dojo': 'Dojo'
     };
     
     logoImg.onload = async function() {
@@ -341,28 +350,33 @@ async function generateReport(type) {
         const pageHeight = doc.internal.pageSize.getHeight();
 
         // 1. Cabecera
-        doc.addImage(logoImg, 'PNG', 10, 5, 30, 15);
+        // Logo más alargado (50x15)
+        doc.addImage(logoImg, 'PNG', 10, 5, 20, 15);
         
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
         
-        let title = "LLISTAT D'AFILIATS";
-        if(type === 'grade') title += " PER GRAU";
-        if(type === 'age') title += " PER EDAT";
-        if(type === 'dojo') title += " PER DOJO";
-        if(type === 'surname') title += " PER COGNOMS";
+        // Título Principal en Castellano
+        let title = "LISTADO DE AFILIADOS";
+        if(type === 'grade') title += " POR GRADO";
+        if(type === 'age') title += " POR EDAD";
+        if(type === 'dojo') title += " POR DOJO";
+        if(type === 'surname') title += " POR APELLIDOS";
 
         doc.text(title, pageWidth / 2, 12, { align: "center" });
 
-        doc.setFontSize(9);
+        // Subtítulo con tipo de informe dinámico
+        const subtitleText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
+        doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
-        doc.text("Arashi Group Aikido | Sistema de Gestión", pageWidth / 2, 18, { align: "center" });
+        doc.text(subtitleText, pageWidth / 2, 18, { align: "center" });
         
         // 2. Datos
         const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
 
+        // Ordenación
         list.sort((a, b) => {
             const pA = a.attributes || a;
             const pB = b.attributes || b;
@@ -378,6 +392,7 @@ async function generateReport(type) {
             return 0;
         });
         
+        // Encabezados en Castellano
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.'];
         if (type === 'age') headRow.push('Edad'); 
         headRow.push('Dojo', 'Dirección', 'Población', 'CP');
@@ -398,19 +413,39 @@ async function generateReport(type) {
             return baseRow;
         });
         
-        // Estilos
+        // Estilos de Columna Optimizados (Milimétricos para A4 Horizontal ~287mm útiles)
+        // overflow: 'linebreak' permite que la dirección baje a 2 líneas si es larga
+        // halign: 'center' centra los campos cortos (Grado, Tlf, CP, Edad...)
         let colStyles = {};
+        
         if (type === 'age') {
             colStyles = {
-                0: { cellWidth: 35 }, 1: { cellWidth: 25 }, 2: { cellWidth: 20 }, 3: { cellWidth: 15 },
-                4: { cellWidth: 20 }, 5: { cellWidth: 40 }, 6: { cellWidth: 18 }, 7: { cellWidth: 10 },
-                8: { cellWidth: 35 }, 9: { cellWidth: 35 }, 10: { cellWidth: 20 }, 11: { cellWidth: 10 }
+                0: { cellWidth: 35 }, // Apellidos
+                1: { cellWidth: 20 }, // Nombre (reducido)
+                2: { cellWidth: 20 }, // DNI
+                3: { cellWidth: 12, halign: 'center' }, // Grado
+                4: { cellWidth: 20, halign: 'center' }, // Telf
+                5: { cellWidth: 42 }, // Email
+                6: { cellWidth: 18, halign: 'center' }, // Nac
+                7: { cellWidth: 10, halign: 'center' }, // Edad
+                8: { cellWidth: 28 }, // Dojo
+                9: { cellWidth: 40 }, // Direccion (wrap)
+                10: { cellWidth: 20 }, // Pob
+                11: { cellWidth: 10, halign: 'center' } // CP
             };
         } else {
             colStyles = {
-                0: { cellWidth: 35 }, 1: { cellWidth: 25 }, 2: { cellWidth: 22 }, 3: { cellWidth: 15 },
-                4: { cellWidth: 22 }, 5: { cellWidth: 45 }, 6: { cellWidth: 20 }, 7: { cellWidth: 35 },
-                8: { cellWidth: 35 }, 9: { cellWidth: 25 }, 10: { cellWidth: 10 }
+                0: { cellWidth: 35 }, // Apellidos
+                1: { cellWidth: 20 }, // Nombre (reducido)
+                2: { cellWidth: 20 }, // DNI
+                3: { cellWidth: 12, halign: 'center' }, // Grado
+                4: { cellWidth: 20, halign: 'center' }, // Telf
+                5: { cellWidth: 45 }, // Email
+                6: { cellWidth: 20, halign: 'center' }, // Nac
+                7: { cellWidth: 30 }, // Dojo
+                8: { cellWidth: 50 }, // Direccion (wrap para aprovechar espacio extra)
+                9: { cellWidth: 25 }, // Pob
+                10: { cellWidth: 12, halign: 'center' } // CP
             };
         }
 
@@ -419,12 +454,15 @@ async function generateReport(type) {
             head: [headRow], 
             body: body, 
             theme: 'grid', 
+            // Márgenes de 5mm para aprovechar la hoja
             margin: { left: 5, right: 5, bottom: 15 },
-            styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle', overflow: 'ellipsize' },
+            // Styles: fontSize 7.5 para que quepa bien, linebreak para direcciones largas
+            styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
             headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0], fontSize: 8, fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
             didDrawPage: function (data) {
-                let footerStr = `Pàgina ${doc.internal.getNumberOfPages()} | Total Registres: ${list.length} | Generat el ${new Date().toLocaleDateString()}`;
+                // Pie de página en Castellano
+                let footerStr = `Página ${doc.internal.getNumberOfPages()} | Total Registros: ${list.length} | Generado el ${new Date().toLocaleDateString()}`;
                 doc.setFontSize(8);
                 doc.setFont("helvetica", "normal");
                 doc.text(footerStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
