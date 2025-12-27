@@ -61,6 +61,10 @@
     },
     "fecha_baja": {
       "type": "date"
+    },
+    "seguro_pagado": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

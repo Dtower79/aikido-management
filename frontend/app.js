@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginTimeStr = localStorage.getItem('aikido_login_time');
     const ahora = Date.now();
     
+    // Comprobar sesión (20 min)
     if (jwtToken && loginTimeStr && (ahora - parseInt(loginTimeStr) < 20 * 60 * 1000)) {
         localStorage.setItem('aikido_login_time', Date.now().toString());
         showDashboard();
@@ -29,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logout();
     }
 
+    // Inicializadores
     setupDniInput('dni-login'); 
     setupDniInput('new-dni');
     
@@ -39,6 +41,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if(searchBaja) searchBaja.addEventListener('keyup', () => filtrarTabla('table-bajas', 'search-baja'));
     
     setupDragScroll();
+
+    // Año actual en el label del formulario
+    const yearLabel = document.getElementById('current-year-lbl');
+    if(yearLabel) yearLabel.textContent = new Date().getFullYear();
+
+    // Event Listener para el Switch de Seguro (Cambiar texto visual)
+    const seguroSwitch = document.getElementById('new-seguro');
+    if(seguroSwitch) {
+        seguroSwitch.addEventListener('change', (e) => {
+            const txt = document.getElementById('seguro-status-text');
+            if(e.target.checked) {
+                txt.innerText = "PAGADO";
+                txt.style.color = "#22c55e";
+            } else {
+                txt.innerText = "NO PAGADO";
+                txt.style.color = "#ef4444";
+            }
+        });
+    }
 });
 
 // --- SESIÓN & AUTH ---
@@ -171,8 +192,6 @@ document.getElementById('change-pass-form')?.addEventListener('submit', async (e
         if (res.ok) {
             document.getElementById('change-pass-modal').classList.add('hidden');
             showModal("Éxito", "Contraseña actualizada correctamente.");
-            // Opcional: Relogin forzado
-            // logout();
         } else {
             alert("Error: " + (data.error?.message || "Contraseña actual incorrecta"));
         }
@@ -207,6 +226,7 @@ function showSection(id) {
     if(id === 'dojos') loadDojosCards();
     if(id === 'status') runDiagnostics();
     
+    // FIX: Solo resetear si es un ALTA NUEVA (no edición)
     if(id === 'nuevo-alumno') {
         const isEditing = document.getElementById('edit-id').value !== "";
         if(!isEditing) resetForm();
@@ -278,10 +298,16 @@ function calculateAge(birthDateString) {
     return isNaN(age) ? '-' : age;
 }
 
+function togglePassword(inputId, icon) {
+    const input = document.getElementById(inputId);
+    if (input.type === "password") { input.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } 
+    else { input.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+}
+
 // --- CARGA DE DATOS ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    const cols = activos ? 12 : 13; 
+    const cols = activos ? 13 : 14; 
     tbody.innerHTML = `<tr><td colspan="${cols}">Cargando datos...</td></tr>`;
     
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
@@ -299,12 +325,15 @@ async function loadAlumnos(activos) {
             const p = a.attributes || a;
             const id = a.documentId; 
             const dojoNom = getDojoName(p.dojo); 
+            
+            const seguroBadge = p.seguro_pagado ? `<span class="badge-ok">PAGADO</span>` : `<span class="badge-no">PENDIENTE</span>`;
 
             const datosComunes = `
                 <td><span class="cell-data"><strong>${p.apellidos || "-"}</strong></span></td>
                 <td><span class="cell-data">${p.nombre || "-"}</span></td>
                 <td><span class="cell-data" style="font-family:monospace">${p.dni || "-"}</span></td>
                 <td><span class="cell-data"><span class="badge">${normalizeGrade(p.grado) || 'S/G'}</span></span></td>
+                <td><span class="cell-data">${seguroBadge}</span></td>
                 <td><span class="cell-data">${p.telefono || '-'}</span></td>
                 <td><span class="cell-data">${p.email || '-'}</span></td>
                 <td><span class="cell-data">${p.fecha_nacimiento || '-'}</span></td>
@@ -353,6 +382,7 @@ if(formAlumno) {
             dojo: document.getElementById('new-dojo').value,
             grupo: document.getElementById('new-grupo').value,
             grado: document.getElementById('new-grado').value,
+            seguro_pagado: document.getElementById('new-seguro').checked,
             activo: true
         };
 
@@ -397,6 +427,12 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
+        const chk = document.getElementById('new-seguro');
+        const txt = document.getElementById('seguro-status-text');
+        chk.checked = p.seguro_pagado === true;
+        if(chk.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; }
+        else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
+        
         let dojoId = "";
         if (p.dojo) {
             if (p.dojo.documentId) dojoId = p.dojo.documentId;
@@ -423,64 +459,80 @@ async function editarAlumno(documentId) {
 function resetForm() {
     const f = document.getElementById('form-nuevo-alumno');
     if(f) f.reset();
+    document.getElementById('seguro-status-text').innerText = "NO PAGADO";
+    document.getElementById('seguro-status-text').style.color = "#ef4444";
     document.getElementById('edit-id').value = "";
     document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO";
     document.getElementById('btn-cancelar-edit').classList.add('hidden');
 }
 
-// --- ACCIONES ---
-function confirmarEstado(id, activo, nombre) {
-    showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => {
-        const fecha = activo ? null : new Date().toISOString().split('T')[0];
-        await fetch(`${API_URL}/api/alumnos/${id}`, { 
-            method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, 
-            body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) 
-        });
-        showSection(activo ? 'alumnos' : 'bajas');
-    });
-}
+// --- EXPORTAR EXCEL ---
+async function exportBackupExcel() {
+    const dojoFilter = document.getElementById('export-dojo-filter').value;
+    const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO...';
 
-function eliminarDefinitivo(id, nombre) {
-    showModal("¡PELIGRO!", `¿Borrar físicamente a ${nombre}?`, () => {
-        setTimeout(() => {
-            showModal("ÚLTIMO AVISO", "Esta acción es irreversible.", async () => {
-                await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } });
-                loadAlumnos(false);
-            });
-        }, 500);
-    });
-}
-
-// --- DOJOS ---
-async function loadDojosCards() {
-    const grid = document.getElementById('grid-dojos'); 
-    if(!grid) return;
-    grid.innerHTML = 'Cargando...';
     try {
-        const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        let url = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
+        if(dojoFilter) url += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
+
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        grid.innerHTML = '';
-        (json.data || []).forEach(d => {
-            const p = d.attributes || d;
-            const addr = p.direccion ? p.direccion.replace(/\n/g, '<br>') : '-';
-            grid.innerHTML += `<div class="dojo-card">
-                <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${getDojoName(p)}</h3></div>
-                <div class="dojo-body">
-                    <div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${addr}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span></div>
-                    <div class="dojo-info-row"><i class="fa-solid fa-phone"></i><span>${p.telefono || '-'}</span></div>
-                    <div class="dojo-info-row"><i class="fa-solid fa-envelope"></i><span>${p.email || '-'}</span></div>
-                    <a href="${p.web || '#'}" target="_blank" class="dojo-link-btn">WEB OFICIAL</a>
-                </div></div>`;
+        const data = json.data || [];
+
+        const rows = data.map(item => {
+            const p = item.attributes || item;
+            const nombreCompleto = `${p.nombre || ''} ${p.apellidos || ''}`.trim();
+            const pobCp = `${p.poblacion || ''} ${p.cp || ''}`.trim();
+            return ["", p.grupo || "Full Time", nombreCompleto, p.dni || "", p.fecha_nacimiento || "", p.direccion || "", pobCp, p.email || "", p.telefono || "", p.fecha_inicio || "", p.grado || ""];
         });
-    } catch { grid.innerHTML = 'Error cargando Dojos.'; }
+
+        const wsData = [
+            ["BACKUP SISTEMA ARASHI", new Date().toLocaleString()],
+            ["ID", "GRUPO", "NOM I COGNOMS", "DNI", "DATA NAIXEMENT", "ADREÇA", "POBLACIO", "EMAIL", "TELEFON", "DATA ALTA", "GRAU"],
+            ...rows
+        ];
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "Alumnos");
+        
+        const fileName = dojoFilter ? `Backup_Dojo_${dojoFilter}.xlsx` : `Backup_Global_Arashi_${new Date().getFullYear()}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        showModal("Backup Generado", "Archivo descargado.");
+    } catch(e) { console.error(e); showModal("Error", "Falló la exportación."); } 
+    finally { btn.innerHTML = originalText; }
 }
 
-// --- INFORMES AVANZADOS ---
+// --- RESET SEGUROS ---
+function confirmResetInsurance() {
+    showModal("⚠️ ATENCIÓN", "¿Seguro que quieres resetear TODOS los seguros a NO PAGADO?", () => runResetProcess());
+}
+
+async function runResetProcess() {
+    const consoleOut = document.getElementById('console-output');
+    consoleOut.innerHTML = "<div>Iniciando reseteo...</div>";
+    try {
+        const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const json = await res.json();
+        const toReset = json.data || [];
+        if(toReset.length === 0) { consoleOut.innerHTML += "<div>Nada que resetear.</div>"; return; }
+        
+        let count = 0;
+        for (const item of toReset) {
+            await fetch(`${API_URL}/api/alumnos/${item.documentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { seguro_pagado: false } }) });
+            count++;
+            if(count % 5 === 0) consoleOut.innerHTML += `<div>> Reseteados: ${count}...</div>`;
+        }
+        consoleOut.innerHTML += "<div>COMPLETADO.</div>";
+    } catch(e) { consoleOut.innerHTML += `<div>ERROR: ${e.message}</div>`; }
+}
+
+// --- INFORMES AVANZADOS (DISEÑO PDF MEJORADO) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
-
-// ... (TODO EL CÓDIGO ANTERIOR SE MANTIENE, SOLO CAMBIA generateReport y al final se añade lógica scroll)
 
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
@@ -544,7 +596,7 @@ async function generateReport(type) {
             if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
             if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
             
-            // NUEVO: Orden por Grupo -> Luego por Apellidos
+            // Orden por Grupo -> Luego por Apellidos
             if (type === 'group') {
                 const groupCompare = (pA.grupo || '').localeCompare(pB.grupo || '');
                 if (groupCompare !== 0) return groupCompare;
@@ -562,7 +614,6 @@ async function generateReport(type) {
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.'];
         if (type === 'age') headRow.push('Edad'); 
         
-        // CAMBIO: Dojo antes que Grupo
         if (type === 'group') {
             headRow.push('Dojo');
             headRow.push('Grupo');
@@ -577,7 +628,7 @@ async function generateReport(type) {
             
             let dniShow = (p.dni || '-').toUpperCase().replace('PENDIENTE', 'PEND');
             
-            // NUEVO: Limpieza de email 'pendi...'
+            // Limpieza de email 'pendi...'
             let emailShow = (p.email || '-');
             if (emailShow.toLowerCase().startsWith('pendi')) {
                 emailShow = 'NO DISPONIBLE';
@@ -595,7 +646,6 @@ async function generateReport(type) {
             
             if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
             
-            // CAMBIO: Inserción Dojo antes que Grupo
             baseRow.push(getDojoName(p.dojo));
             if (type === 'group') baseRow.push(p.grupo || '-');
             
@@ -618,20 +668,13 @@ async function generateReport(type) {
                 10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' }
             };
         } else if (type === 'group') {
-            // ANCHOS PARA INFORME GRUPO (Dojo antes que Grupo)
             colStyles = {
-                0: { cellWidth: 32, fontStyle: 'bold' }, 
-                1: { cellWidth: 15, fontStyle: 'bold' },
-                2: { cellWidth: 18, halign: 'center' }, 
-                3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' }, 
-                5: { cellWidth: 35 }, 
-                6: { cellWidth: 18, halign: 'center' }, 
-                7: { cellWidth: 25, halign: 'center' }, // Dojo
-                8: { cellWidth: 18, halign: 'center' }, // Grupo
-                9: { cellWidth: 35 }, // Dirección
-                10: { cellWidth: 25, halign: 'center' }, // Pob
-                11: { cellWidth: 10, halign: 'center' }  // CP
+                0: { cellWidth: 32, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' },
+                2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 35 }, 
+                6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 25, halign: 'center' }, 
+                8: { cellWidth: 18, halign: 'center' }, 9: { cellWidth: 35 }, 
+                10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' }
             };
         } else { 
             colStyles = {
@@ -671,32 +714,6 @@ async function generateReport(type) {
         
         doc.save(`${fileNames[type] || 'Informe'}.pdf`);
     };
-}
-
-// ... (RESTO DE UTILS IGUAL)
-
-// NUEVO: LÓGICA SCROLL TOP
-function scrollToTop() {
-    // Busca el contenedor con scroll (en este caso .content o window)
-    const content = document.querySelector('.content');
-    if(content) {
-        content.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-}
-
-// Detectar Scroll
-const contentArea = document.querySelector('.content');
-if(contentArea) {
-    contentArea.addEventListener('scroll', () => {
-        const btn = document.getElementById('btn-scroll-top');
-        if (contentArea.scrollTop > 300) {
-            btn.classList.remove('hidden');
-        } else {
-            btn.classList.add('hidden');
-        }
-    });
 }
 
 function changeFontSize(tableId, delta) {
@@ -758,12 +775,13 @@ async function loadDojosSelect() {
 
 async function loadReportDojos() {
     const sel = document.getElementById('report-dojo-filter');
-    if(!sel) return;
+    const exportSel = document.getElementById('export-dojo-filter');
     try {
         const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        sel.innerHTML = '<option value="">-- Todos los Dojos --</option>';
-        (json.data || []).forEach(d => { sel.innerHTML += `<option value="${d.documentId}">${(d.attributes || d).nombre}</option>`; });
+        const opts = '<option value="">-- Todos los Dojos --</option>' + (json.data || []).map(d => `<option value="${d.documentId}">${(d.attributes || d).nombre}</option>`).join('');
+        if(sel) sel.innerHTML = opts;
+        if(exportSel) exportSel.innerHTML = opts;
     } catch {}
 }
 
@@ -799,18 +817,15 @@ function toggleMobileMenu() {
     sidebar.classList.toggle('open');
 }
 
-// ... (MANTENER TODO EL CÓDIGO ANTERIOR) ...
-
-// --- UTILIDAD: VER/OCULTAR CONTRASEÑA ---
-function togglePassword(inputId, icon) {
-    const input = document.getElementById(inputId);
-    if (input.type === "password") {
-        input.type = "text";
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        input.type = "password";
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-    }
+// SCROLL TOP
+function scrollToTop() {
+    const content = document.querySelector('.content');
+    if(content) content.scrollTo({ top: 0, behavior: 'smooth' }); else window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+const contentArea = document.querySelector('.content');
+if(contentArea) {
+    contentArea.addEventListener('scroll', () => {
+        const btn = document.getElementById('btn-scroll-top');
+        if (contentArea.scrollTop > 300) btn.classList.remove('hidden'); else btn.classList.add('hidden');
+    });
 }

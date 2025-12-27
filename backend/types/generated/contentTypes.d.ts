@@ -467,6 +467,7 @@ export interface ApiAlumnoAlumno extends Struct.CollectionTypeSchema {
     nombre: Schema.Attribute.String;
     poblacion: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
+    seguro_pagado: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     telefono: Schema.Attribute.String;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
