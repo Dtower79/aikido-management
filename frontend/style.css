@@ -265,3 +265,26 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 @media (max-width: 900px) {
     .scroll-top-btn { bottom: 20px; right: 20px; width: 45px; height: 45px; font-size: 1.2rem; }
 }
+
+/* ... (MANTENER TODO EL CSS ANTERIOR) ... */
+
+/* AGREGAR ESTO AL FINAL DEL ARCHIVO O EN LA SECCIÓN DE INPUTS */
+
+/* Icono Ver Contraseña */
+.toggle-password {
+    left: auto !important; /* Anula la posición izquierda del icono del candado */
+    right: 15px;           /* Lo pega a la derecha */
+    cursor: pointer;
+    z-index: 10;
+    color: var(--text-muted);
+    transition: color 0.3s;
+}
+
+.toggle-password:hover {
+    color: var(--primary);
+}
+
+/* Aseguramos que el input tenga espacio a la derecha para el ojo */
+.input-group input {
+    padding-right: 40px; 
+}

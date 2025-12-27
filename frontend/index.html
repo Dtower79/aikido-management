@@ -13,6 +13,7 @@
 </head>
 <body>
 
+    <!-- 1. LOGIN SCREEN -->
     <div id="login-screen" class="login-container">
         <div class="login-box">
             <div class="logo-area"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login"></div>
@@ -24,6 +25,8 @@
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
                     <input type="password" id="password" placeholder="Contraseña" required>
+                    <!-- BOTÓN OJO AÑADIDO -->
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('password', this)"></i>
                 </div>
                 <button type="submit" class="login-btn">ENTRAR <i class="fa-solid fa-arrow-right"></i></button>
                 <div class="login-footer">
@@ -34,14 +37,23 @@
         </div>
     </div>
 
+    <!-- 2. RESET SCREEN -->
     <div id="reset-screen" class="login-container hidden">
         <div class="login-box">
             <div class="logo-area"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login"></div>
             <h3 style="margin-bottom: 20px;">Restablecer Contraseña</h3>
             <form id="reset-password-form">
                 <input type="hidden" id="reset-code">
-                <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="new-password-reset" placeholder="Nueva Contraseña" required></div>
-                <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="confirm-password-reset" placeholder="Confirmar Contraseña" required></div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="new-password-reset" placeholder="Nueva Contraseña" required>
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('new-password-reset', this)"></i>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="confirm-password-reset" placeholder="Confirmar Contraseña" required>
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('confirm-password-reset', this)"></i>
+                </div>
                 <button type="submit" class="login-btn">GUARDAR NUEVA CONTRASEÑA</button>
                 <p id="reset-error" class="error-msg"></p>
             </form>
@@ -49,6 +61,7 @@
     </div>
 
     <div id="dashboard" class="dashboard-container hidden">
+        <!-- ... (SIDEBAR SIN CAMBIOS) ... -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar">
@@ -56,7 +69,6 @@
                     <i class="fa-solid fa-bars"></i>
                 </button>
             </div>
-            
             <nav class="menu" id="main-menu">
                 <button class="menu-btn" onclick="showSection('nuevo-alumno', true)"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
                 <button class="menu-btn" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
@@ -69,7 +81,6 @@
                     <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
                 </div>
             </nav>
-            
             <div class="sidebar-footer desktop-only" style="flex-direction: column; gap: 10px; height: auto; padding: 15px;">
                 <button class="logout-btn" onclick="openChangePasswordModal()" style="border-color:var(--text-muted); color:var(--text); font-size:0.8rem;"><i class="fa-solid fa-key"></i> Cambiar Clave</button>
                 <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
@@ -77,10 +88,12 @@
         </div>
 
         <main class="content">
+            <!-- ... (CONTENIDO SIN CAMBIOS) ... -->
             <div id="sec-welcome" class="section active welcome-flex">
                 <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-welcome">
             </div>
-
+            
+            <!-- (Mantener resto de secciones: nuevo-alumno, dojos, alumnos, bajas, status) -->
             <div id="sec-nuevo-alumno" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-user-plus"></i> Gestión de Alumno</h2></header>
                 <div class="card form-card">
@@ -178,7 +191,6 @@
                 </div>
             </div>
 
-            <!-- BOTÓN SUBIR (NUEVO) -->
             <button id="btn-scroll-top" class="scroll-top-btn hidden" onclick="scrollToTop()">
                 <i class="fa-solid fa-arrow-up"></i>
             </button>
@@ -196,7 +208,35 @@
         </main>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODAL CAMBIO PASSWORD -->
+    <div id="change-pass-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3><i class="fa-solid fa-key"></i> Cambiar Contraseña</h3>
+            <form id="change-pass-form">
+                <div class="input-group" style="margin-bottom:15px;">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="cp-current" placeholder="Contraseña Actual" required style="width:100%;">
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-current', this)"></i>
+                </div>
+                <div class="input-group" style="margin-bottom:15px;">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="cp-new" placeholder="Nueva Contraseña" required style="width:100%;">
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-new', this)"></i>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="cp-confirm" placeholder="Repetir Nueva Contraseña" required style="width:100%;">
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-confirm', this)"></i>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="action-btn secondary" onclick="document.getElementById('change-pass-modal').classList.add('hidden')">Cancelar</button>
+                    <button type="submit" class="action-btn">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALES GENERALES (RECOVER, REPORT, MSG) -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <h3 id="modal-title">Título</h3>
@@ -235,21 +275,6 @@
                 <button class="action-btn secondary" onclick="document.getElementById('recover-modal').classList.add('hidden')">Cancelar</button>
                 <button class="action-btn" onclick="sendRecoveryEmail()">Enviar</button>
             </div>
-        </div>
-    </div>
-
-    <div id="change-pass-modal" class="modal-overlay hidden">
-        <div class="modal-box">
-            <h3><i class="fa-solid fa-key"></i> Cambiar Contraseña</h3>
-            <form id="change-pass-form">
-                <div class="input-group" style="margin-bottom:15px;"><i class="fa-solid fa-lock"></i><input type="password" id="cp-current" placeholder="Contraseña Actual" required style="width:100%;"></div>
-                <div class="input-group" style="margin-bottom:15px;"><i class="fa-solid fa-lock"></i><input type="password" id="cp-new" placeholder="Nueva Contraseña" required style="width:100%;"></div>
-                <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="cp-confirm" placeholder="Repetir Nueva Contraseña" required style="width:100%;"></div>
-                <div class="modal-actions">
-                    <button type="button" class="action-btn secondary" onclick="document.getElementById('change-pass-modal').classList.add('hidden')">Cancelar</button>
-                    <button type="submit" class="action-btn">Actualizar</button>
-                </div>
-            </form>
         </div>
     </div>
 
