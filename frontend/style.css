@@ -70,7 +70,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .action-btn-icon.restore:hover { color: #22c55e; }
 .badge { background: #334155; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; }
 
-/* DOJOS (GRID 3 COLUMNAS) */
+/* DOJOS (GRID 3 COLUMNAS Y TEXTO CENTRADO) */
 .dojo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
 .dojo-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
 .dojo-header { 
@@ -78,14 +78,13 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     padding: 15px 20px; 
     border-bottom: 1px solid var(--border); 
 }
-/* CORRECCIÓN: Título Dojo Centrado */
 .dojo-header h3 { 
     margin: 0; 
     font-size: 1.1rem; 
     color: white; 
     display: flex; 
     align-items: center; 
-    justify-content: center; /* Centrado horizontal Flex */
+    justify-content: center; /* Centrado Horizontal */
     text-align: center; /* Asegura centrado texto */
     width: 100%;
     gap: 10px; 

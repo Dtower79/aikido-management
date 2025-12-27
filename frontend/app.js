@@ -3,7 +3,6 @@ const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
 let jwtToken = localStorage.getItem('aikido_jwt');
 let userData = JSON.parse(localStorage.getItem('aikido_user'));
 
-// MAPA DE PESO DE GRADOS (Mayor peso = Más rango)
 const GRADE_WEIGHTS = {
     '8º Dan': 108, '7º Dan': 107, '6º Dan': 106, '5º Dan': 105, '4º Dan': 104, '3º Dan': 103, '2º Dan': 102, '1º Dan': 101,
     '1º Kyu': 5, '2º Kyu': 4, '3º Kyu': 3, '4º Kyu': 2, '5º Kyu': 1, 'S/G': 0
@@ -87,7 +86,6 @@ function getGradeWeight(gradeStr) {
     return GRADE_WEIGHTS[gradeStr.trim()] || 0;
 }
 
-// NUEVA FUNCIÓN: Calcular Edad
 function calculateAge(birthDateString) {
     if (!birthDateString) return '-';
     const today = new Date();
@@ -292,7 +290,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (CORREGIDO: Nombres de fichero y Columnas) ---
+// --- INFORMES AVANZADOS (DISEÑO PROFESIONAL PDF) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -305,7 +303,6 @@ async function generateReport(type) {
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
-    // Diccionario de Nombres de Archivo
     const fileNames = {
         'surname': 'ARASHI - Alumnos por apellidos',
         'age': 'ARASHI - Alumnos por Edad',
@@ -314,18 +311,31 @@ async function generateReport(type) {
     };
     
     logoImg.onload = async function() {
-        // Cabecera
-        doc.addImage(logoImg, 'PNG', 10, 10, 45, 20);
-        doc.setFontSize(18); 
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        // --- CABECERA ESTILO SICAP ---
+        // 1. Logo a la izquierda
+        doc.addImage(logoImg, 'PNG', 10, 5, 30, 15);
+        
+        // 2. Título centrado (Sin saltos de línea)
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
         
         let title = "LLISTAT D'AFILIATS";
         if(type === 'grade') title += " PER GRAU";
         if(type === 'age') title += " PER EDAT";
         if(type === 'dojo') title += " PER DOJO";
+        if(type === 'surname') title += " PER COGNOMS";
+
+        doc.text(title, pageWidth / 2, 12, { align: "center" });
+
+        // 3. Subtítulo (Dirección o Info)
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text("Arashi Group Aikido | Sistema de Gestión", pageWidth / 2, 18, { align: "center" });
         
-        doc.text(title, 148, 18, { align: "center" });
-        
-        // Datos
+        // --- DATOS ---
         const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
@@ -346,14 +356,11 @@ async function generateReport(type) {
             return 0;
         });
         
-        // Definición de Columnas Dinámica
+        // Definición de Columnas
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.'];
-        // Si es informe de EDAD, añadimos columna
         if (type === 'age') headRow.push('Edad'); 
-        
         headRow.push('Dojo', 'Dirección', 'Población', 'CP');
         
-        // Generación del Cuerpo
         const body = list.map(a => {
             const p = a.attributes || a;
             const baseRow = [
@@ -365,56 +372,67 @@ async function generateReport(type) {
                 p.email || '-',
                 p.fecha_nacimiento || '-'
             ];
-            
-            // Inyectar edad si corresponde
-            if (type === 'age') {
-                baseRow.push(calculateAge(p.fecha_nacimiento));
-            }
-            
-            baseRow.push(
-                getDojoName(p.dojo),
-                p.direccion || '-',
-                p.poblacion || '-',
-                p.cp || '-'
-            );
+            if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
+            baseRow.push(getDojoName(p.dojo), p.direccion || '-', p.poblacion || '-', p.cp || '-');
             return baseRow;
         });
         
-        // Estilos de Columna Dinámicos
-        let colStyles = {
-            0: { cellWidth: 25 }, 1: { cellWidth: 20 }, 2: { cellWidth: 18 }, 3: { cellWidth: 12 }, 
-            4: { cellWidth: 18 }, 5: { cellWidth: 35 }, 6: { cellWidth: 18 }
-        };
-
-        // Ajuste de índices para estilos según si hay edad o no
+        // Estilos de Columna Optimizado para caber en una línea
+        let colStyles = {};
+        // Distribución porcentual aproximada para A4 Horizontal (~280mm útiles)
         if (type === 'age') {
-            colStyles[7] = { cellWidth: 10 }; // Edad estrecha
-            colStyles[8] = { cellWidth: 25 }; // Dojo
-            colStyles[9] = { cellWidth: 35 }; // Direccion
-            colStyles[10] = { cellWidth: 20 }; // Pob
-            colStyles[11] = { cellWidth: 10 }; // CP
+            colStyles = {
+                0: { cellWidth: 35 }, // Apellidos
+                1: { cellWidth: 25 }, // Nombre
+                2: { cellWidth: 20 }, // DNI
+                3: { cellWidth: 15 }, // Grado
+                4: { cellWidth: 20 }, // Telf
+                5: { cellWidth: 40 }, // Email
+                6: { cellWidth: 18 }, // Nac
+                7: { cellWidth: 10 }, // Edad
+                8: { cellWidth: 35 }, // Dojo
+                9: { cellWidth: 35 }, // Direccion
+                10: { cellWidth: 20 }, // Pob
+                11: { cellWidth: 10 } // CP
+            };
         } else {
-            colStyles[7] = { cellWidth: 25 }; // Dojo
-            colStyles[8] = { cellWidth: 35 }; // Direccion
-            colStyles[9] = { cellWidth: 20 }; // Pob
-            colStyles[10] = { cellWidth: 10 }; // CP
+            colStyles = {
+                0: { cellWidth: 35 }, // Apellidos
+                1: { cellWidth: 25 }, // Nombre
+                2: { cellWidth: 22 }, // DNI
+                3: { cellWidth: 15 }, // Grado
+                4: { cellWidth: 22 }, // Telf
+                5: { cellWidth: 45 }, // Email
+                6: { cellWidth: 20 }, // Nac
+                7: { cellWidth: 35 }, // Dojo
+                8: { cellWidth: 35 }, // Direccion
+                9: { cellWidth: 25 }, // Pob
+                10: { cellWidth: 10 } // CP
+            };
         }
 
-        // Generar Tabla con Configuración Optimizada
         doc.autoTable({ 
-            startY: 35, 
+            startY: 25, 
             head: [headRow], 
             body: body, 
             theme: 'grid', 
-            // Márgenes pequeños para aprovechar el ancho (5mm)
-            margin: { left: 5, right: 5 },
-            // Tamaño de letra aumentado a 8 para máxima legibilidad
-            styles: { fontSize: 8, cellPadding: 1, overflow: 'linebreak' },
-            headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0], fontSize: 8, fontStyle: 'bold' }, 
-            columnStyles: colStyles
+            // Márgenes para centrar la tabla (Utiliza todo el ancho disponible menos 5mm a cada lado)
+            margin: { left: 5, right: 5, bottom: 15 },
+            // Estilos para maximizar espacio
+            styles: { fontSize: 8, cellPadding: 1.5, valign: 'middle', overflow: 'ellipsize' },
+            // Cabecera Azul Claro estilo SICAP
+            headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0], fontSize: 8, fontStyle: 'bold', halign: 'center' },
+            columnStyles: colStyles,
+            
+            // --- PIE DE PÁGINA ---
+            didDrawPage: function (data) {
+                let footerStr = `Pàgina ${doc.internal.getNumberOfPages()} | Total Registres: ${list.length} | Generat el ${new Date().toLocaleDateString()}`;
+                doc.setFontSize(8);
+                doc.setFont("helvetica", "normal");
+                doc.text(footerStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
+            }
         });
         
-        // Guardar con Nombre Correcto
         const finalName = fileNames[type] || `Informe_Arashi_${type}`;
         doc.save(`${finalName}.pdf`);
     };
@@ -472,16 +490,4 @@ async function loadDojosSelect() {
 }
 
 async function loadCiudades() {
-    const res = await fetch(`${API_URL}/api/alumnos?fields[0]=poblacion`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-    const json = await res.json();
-    const ciu = [...new Set((json.data || []).map(a => (a.attributes?.poblacion || a.poblacion)).filter(Boolean))];
-    const dl = document.getElementById('ciudades-list'); if(dl) { dl.innerHTML = ''; ciu.sort().forEach(c => dl.innerHTML += `<option value="${c}">`); }
-}
-
-function setupDniInput(id) { document.getElementById(id)?.addEventListener('input', e => e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '')); }
-
-function filtrarTabla(tid, iid) {
-    const f = document.getElementById(iid).value.toUpperCase();
-    const rows = document.getElementById(tid).getElementsByTagName('tr');
-    for (let i = 1; i < rows.length; i++) rows[i].style.display = rows[i].textContent.toUpperCase().includes(f) ? "" : "none";
-}
+    const res = await fetch(`${API_URL}/api/alumnos?fields[
