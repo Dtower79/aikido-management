@@ -69,7 +69,7 @@ function showDashboard() {
     document.getElementById('dashboard').classList.remove('hidden');
     loadDojosSelect(); 
     loadCiudades(); 
-    loadReportDojos(); // Cargar filtro para el modal
+    loadReportDojos();
     showSection('welcome'); 
 }
 
@@ -256,6 +256,7 @@ if(formAlumno) {
     });
 }
 
+// --- EDITAR ---
 async function editarAlumno(documentId) {
     try {
         const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
@@ -355,7 +356,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (Filtro por Dojo y Grupo) ---
+// --- INFORMES AVANZADOS (CORREGIDOS) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -363,8 +364,11 @@ function openReportModal() {
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     
-    // Obtener filtro de Dojo del modal
-    const dojoFilterId = document.getElementById('report-dojo-filter').value;
+    // Obtener filtro de Dojo
+    const dojoSelect = document.getElementById('report-dojo-filter');
+    const dojoFilterId = dojoSelect.value;
+    // CORRECCION: Obtener nombre del Dojo para subtítulo
+    const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
     
     const { jsPDF } = window.jspdf; 
     const doc = new jsPDF('l', 'mm', 'a4'); 
@@ -391,9 +395,7 @@ async function generateReport(type) {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-        doc.setFontSize(16); doc.setFont("helvetica", "bold");
-        
+        // TITULO y SUBTITULO
         let title = "LISTADO DE ALUMNOS";
         if(type === 'grade') title += " POR GRADO";
         if(type === 'age') title += " POR EDAD";
@@ -401,18 +403,14 @@ async function generateReport(type) {
         if(type === 'surname') title += " POR APELLIDOS";
         if(type === 'group') title += " POR GRUPO";
 
-        doc.text(title, pageWidth / 2, 12, { align: "center" });
-        doc.setFontSize(10); doc.setFont("helvetica", "normal");
-        
+        // CORRECCION: Subtítulo con nombre de Dojo si está filtrado
         let subText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
-        if(dojoFilterId) subText += " (Filtrado por Dojo)";
+        if(dojoFilterId) {
+            subText += ` (${dojoFilterName})`; // Añade nombre del Dojo
+        }
         
-        doc.text(subText, pageWidth / 2, 18, { align: "center" });
-        
-        // Construir URL con filtro de Dojo
         let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`;
         if(dojoFilterId) {
-            // Strapi v5 filter for relation ID
             apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
         }
         
@@ -465,6 +463,7 @@ async function generateReport(type) {
         });
         
         let colStyles = {};
+        // Ajustes de columnas según tipo
         if (type === 'age') { 
             colStyles = {
                 0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' },
@@ -490,11 +489,24 @@ async function generateReport(type) {
             head: [headRow], 
             body: body, 
             theme: 'grid', 
-            margin: { left: 5, right: 5, bottom: 15 },
+            // CORRECCION: showHead 'everyPage' asegura que salga en todas las hojas
+            showHead: 'everyPage',
+            margin: { top: 30, left: 5, right: 5, bottom: 15 },
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
+            
+            // CABECERA Y PIE EN CADA PAGINA
             didDrawPage: function (data) {
+                // Cabecera (Logo y Títulos)
+                doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                doc.setFontSize(16); doc.setFont("helvetica", "bold");
+                doc.text(title, pageWidth / 2, 12, { align: "center" });
+                
+                doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                doc.text(subText, pageWidth / 2, 18, { align: "center" });
+
+                // Footer
                 let footerStr = `Página ${doc.internal.getNumberOfPages()} | Total Registros: ${list.length} | Generado el ${new Date().toLocaleDateString()}`;
                 doc.setFontSize(8); doc.setFont("helvetica", "normal");
                 doc.text(footerStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
@@ -525,35 +537,10 @@ function setupDragScroll() {
     const s = document.querySelector('.drag-scroll');
     if(!s) return;
     let isDown = false, startX, scrollLeft;
-    
-    // Mouse
-    s.addEventListener('mousedown', (e) => { 
-        isDown = true; 
-        s.classList.add('active'); 
-        startX = e.pageX - s.offsetLeft; 
-        scrollLeft = s.scrollLeft; 
-    });
-    s.addEventListener('mouseleave', () => { isDown = false; s.classList.remove('active'); });
-    s.addEventListener('mouseup', () => { isDown = false; s.classList.remove('active'); });
-    s.addEventListener('mousemove', (e) => { 
-        if(!isDown) return; 
-        e.preventDefault(); 
-        const x = e.pageX - s.offsetLeft; 
-        s.scrollLeft = scrollLeft - (x - startX) * 2; 
-    });
-
-    // Touch (Móvil) - Opcional, el scroll nativo ya va bien
-    s.addEventListener('touchstart', (e) => {
-        isDown = true;
-        startX = e.touches[0].pageX - s.offsetLeft;
-        scrollLeft = s.scrollLeft;
-    });
-    s.addEventListener('touchmove', (e) => {
-        if(!isDown) return;
-        const x = e.touches[0].pageX - s.offsetLeft;
-        s.scrollLeft = scrollLeft - (x - startX) * 2;
-    });
-    s.addEventListener('touchend', () => { isDown = false; });
+    s.addEventListener('mousedown', (e) => { isDown = true; s.classList.add('active'); startX = e.pageX - s.offsetLeft; scrollLeft = s.scrollLeft; });
+    s.addEventListener('mouseleave', () => isDown = false);
+    s.addEventListener('mouseup', () => isDown = false);
+    s.addEventListener('mousemove', (e) => { if(!isDown) return; e.preventDefault(); const x = e.pageX - s.offsetLeft; s.scrollLeft = scrollLeft - (x - startX) * 2; });
 }
 
 async function runDiagnostics() {
@@ -587,7 +574,6 @@ async function loadDojosSelect() {
     } catch {}
 }
 
-// Nueva función para cargar Dojos en el filtro del modal
 async function loadReportDojos() {
     const sel = document.getElementById('report-dojo-filter');
     if(!sel) return;
@@ -595,7 +581,7 @@ async function loadReportDojos() {
         const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         sel.innerHTML = '<option value="">-- Todos los Dojos --</option>';
-        (json.data || []).forEach(d => { sel.innerHTML += `<option value="${d.documentId}">${(d.attributes || d).nombre}</option>`; });
+        (json.data || []).forEach(d => { sel.innerHTML += `<option value="${d.documentId || d.id}">${(d.attributes || d).nombre}</option>`; });
     } catch {}
 }
 
