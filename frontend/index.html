@@ -14,6 +14,7 @@
 </head>
 <body>
 
+    <!-- PANTALLA LOGIN -->
     <div id="login-screen" class="login-container">
         <div class="login-box">
             <div class="logo-area"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login"></div>
@@ -32,7 +33,9 @@
         </div>
     </div>
 
+    <!-- PANTALLA PRINCIPAL -->
     <div id="dashboard" class="dashboard-container hidden">
+        <!-- SIDEBAR -->
         <div class="sidebar">
             <div class="sidebar-header"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar"></div>
             <nav class="menu">
@@ -48,6 +51,7 @@
             </div>
         </div>
 
+        <!-- CONTENIDO -->
         <main class="content">
             <!-- BIENVENIDA CENTRADA -->
             <div id="sec-welcome" class="section active welcome-flex">
@@ -127,7 +131,7 @@
                         </div>
                         <div class="search-box">
                             <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI...">
+                            <input type="text" id="search-alumno" placeholder="Buscar alumno...">
                         </div>
                     </div>
                 </header>
@@ -135,18 +139,7 @@
                     <table id="table-alumnos">
                         <thead>
                             <tr>
-                                <th>Apellidos</th>
-                                <th>Nombre</th>
-                                <th>DNI</th>
-                                <th>Grado</th>
-                                <th>Teléfono</th>
-                                <th>Email</th>
-                                <th>Nacimiento</th>
-                                <th>Dojo</th>
-                                <th>Dirección</th>
-                                <th>Población</th>
-                                <th>CP</th>
-                                <th class="sticky-col">Acciones</th>
+                                <th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="lista-alumnos-body"></tbody>
@@ -154,7 +147,7 @@
                 </div>
             </div>
 
-            <!-- BAJAS -->
+            <!-- HISTÓRICO BAJAS -->
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header"><h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2></header>
                 <div class="table-container drag-scroll">
@@ -165,17 +158,20 @@
                 </div>
             </div>
 
-            <!-- ESTADO -->
+            <!-- ESTADO DEL SISTEMA -->
             <div id="sec-status" class="section hidden">
                 <div class="console-wrapper">
-                    <div class="console-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="console-title">root@aikido-system:~# ./diagnostico.sh</span></div>
+                    <div class="console-header">
+                        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                        <span class="console-title">root@aikido-system:~# ./diagnostico.sh</span>
+                    </div>
                     <div class="console-body" id="console-output"></div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- MODAL -->
+    <!-- MODAL PERSONALIZADO -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <div id="modal-icon" class="modal-icon"></div>
@@ -187,6 +183,7 @@
             </div>
         </div>
     </div>
+
     <script src="app.js"></script>
 </body>
 </html>
