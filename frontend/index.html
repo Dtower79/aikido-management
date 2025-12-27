@@ -14,6 +14,7 @@
 </head>
 <body>
 
+    <!-- LOGIN -->
     <div id="login-screen" class="login-container">
         <div class="login-box">
             <div class="logo-area"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login"></div>
@@ -32,6 +33,7 @@
         </div>
     </div>
 
+    <!-- MAIN DASHBOARD -->
     <div id="dashboard" class="dashboard-container hidden">
         <div class="sidebar">
             <div class="sidebar-header"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar"></div>
@@ -43,10 +45,13 @@
                 <div class="sidebar-sep">Área Técnica</div>
                 <button class="menu-btn" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
             </nav>
-            <div class="sidebar-footer"><button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button></div>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+            </div>
         </div>
 
         <main class="content">
+            <!-- BIENVENIDA -->
             <div id="sec-welcome" class="section active welcome-flex">
                 <div class="welcome-content">
                     <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-welcome">
@@ -54,7 +59,7 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN NUEVO ALUMNO -->
+            <!-- FORMULARIO NUEVO ALUMNO -->
             <div id="sec-nuevo-alumno" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-user-plus"></i> Gestión de Alumno</h2></header>
                 <div class="card form-card">
@@ -68,15 +73,15 @@
                         <div class="form-row">
                             <div class="form-group"><label>DNI</label><input type="text" id="new-dni" maxlength="9" placeholder="12345678X" required></div>
                             <div class="form-group"><label>Fecha Nacimiento</label><input type="date" id="new-nacimiento"></div>
-                        </div>
-                        <div class="form-row">
                             <div class="form-group"><label>Email</label><input type="email" id="new-email"></div>
-                            <div class="form-group"><label>Teléfono</label><input type="tel" id="new-telefono"></div>
                         </div>
                         <div class="form-row">
+                            <div class="form-group"><label>Teléfono</label><input type="tel" id="new-telefono"></div>
                             <div class="form-group" style="flex:2"><label>Dirección</label><input type="text" id="new-direccion"></div>
-                            <div class="form-group" style="flex:1"><label>Población</label><input type="text" id="new-poblacion" list="ciudades-list"><datalist id="ciudades-list"></datalist></div>
-                            <div class="form-group" style="flex:0.5"><label>CP</label><input type="text" id="new-cp" maxlength="5"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Población</label><input type="text" id="new-poblacion" list="ciudades-list"><datalist id="ciudades-list"></datalist></div>
+                            <div class="form-group"><label>CP</label><input type="text" id="new-cp" maxlength="5"></div>
                         </div>
                         <hr class="form-hr">
                         <div class="form-row">
@@ -109,44 +114,27 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN DOJOS -->
+            <!-- DOJOS -->
             <div id="sec-dojos" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-torii-gate"></i> Nuestros Dojos</h2></header>
                 <div id="grid-dojos" class="dojo-grid"></div>
             </div>
 
-            <!-- SECCIÓN ALUMNOS -->
+            <!-- LISTA ALUMNOS -->
             <div id="sec-alumnos" class="section hidden">
                 <header class="section-header">
                     <h2><i class="fa-solid fa-users"></i> Alumnos</h2>
                     <div class="toolbar">
                         <button class="btn-pdf" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
-                        <div class="font-tool">
-                            <button onclick="changeFontSize('table-alumnos', -1)">A-</button>
-                            <button onclick="changeFontSize('table-alumnos', 1)">A+</button>
-                        </div>
-                        <div class="search-box">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="search-alumno" placeholder="Buscar alumno...">
-                        </div>
+                        <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
+                        <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-alumno" placeholder="Buscar..."></div>
                     </div>
                 </header>
                 <div class="table-container drag-scroll">
                     <table id="table-alumnos">
                         <thead>
                             <tr>
-                                <th>Apellidos</th>
-                                <th>Nombre</th>
-                                <th>DNI</th>
-                                <th>Grado</th>
-                                <th>Teléfono</th>
-                                <th>Email</th>
-                                <th>Nacimiento</th>
-                                <th>Dojo</th>
-                                <th>Dirección</th>
-                                <th>Población</th>
-                                <th>CP</th>
-                                <th class="sticky-col">Acciones</th>
+                                <th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="lista-alumnos-body"></tbody>
@@ -154,48 +142,28 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN BAJAS -->
+            <!-- BAJAS -->
             <div id="sec-bajas" class="section hidden">
-                <header class="section-header">
-                    <h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2>
-                    <div class="toolbar">
-                        <div class="search-box">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="search-baja" placeholder="Buscar en bajas...">
-                        </div>
-                    </div>
-                </header>
+                <header class="section-header"><h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2></header>
                 <div class="table-container drag-scroll">
                     <table id="table-bajas">
-                        <thead>
-                            <tr>
-                                <th>Fecha Baja</th>
-                                <th>Apellidos</th>
-                                <th>Nombre</th>
-                                <th>DNI</th>
-                                <th>Dojo</th>
-                                <th class="sticky-col">Acciones</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Dojo</th><th class="sticky-col">Acciones</th></tr></thead>
                         <tbody id="lista-bajas-body"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- SECCIÓN STATUS -->
+            <!-- STATUS -->
             <div id="sec-status" class="section hidden">
                 <div class="console-wrapper">
-                    <div class="console-header">
-                        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
-                        <span class="console-title">root@aikido-system:~# ./diagnostico.sh</span>
-                    </div>
-                    <div class="console-body" id="console-output"><span class="cursor">_</span></div>
+                    <div class="console-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="console-title">root@aikido-system:~# ./diagnostico.sh</span></div>
+                    <div class="console-body" id="console-output"></div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- MODAL PERSONALIZADO -->
+    <!-- MODAL -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <div id="modal-icon" class="modal-icon"></div>
@@ -207,7 +175,6 @@
             </div>
         </div>
     </div>
-    
     <script src="app.js"></script>
 </body>
 </html>
