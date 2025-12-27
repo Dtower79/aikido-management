@@ -490,4 +490,16 @@ async function loadDojosSelect() {
 }
 
 async function loadCiudades() {
-    const res = await fetch(`${API_URL}/api/alumnos?fields[
+    const res = await fetch(`${API_URL}/api/alumnos?fields[0]=poblacion`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+    const json = await res.json();
+    const ciu = [...new Set((json.data || []).map(a => (a.attributes?.poblacion || a.poblacion)).filter(Boolean))];
+    const dl = document.getElementById('ciudades-list'); if(dl) { dl.innerHTML = ''; ciu.sort().forEach(c => dl.innerHTML += `<option value="${c}">`); }
+}
+
+function setupDniInput(id) { document.getElementById(id)?.addEventListener('input', e => e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '')); }
+
+function filtrarTabla(tid, iid) {
+    const f = document.getElementById(iid).value.toUpperCase();
+    const rows = document.getElementById(tid).getElementsByTagName('tr');
+    for (let i = 1; i < rows.length; i++) rows[i].style.display = rows[i].textContent.toUpperCase().includes(f) ? "" : "none";
+}
