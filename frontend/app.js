@@ -100,15 +100,13 @@ function getDojoName(dojoObj) {
         else if (dojoObj.data && dojoObj.data.attributes && dojoObj.data.attributes.nombre) name = dojoObj.data.attributes.nombre;
         else if (dojoObj.attributes && dojoObj.attributes.nombre) name = dojoObj.attributes.nombre;
     }
-    // FIX 3: Quitar palabra 'Aikido' del nombre
     return name.replace(/Aikido\s+/gi, '').trim();
 }
 
 function normalizeGrade(g) {
     if(!g) return '-';
     let s = g.toUpperCase().trim();
-    // FIX 2: Unificar Criterios (1º DAN)
-    const match = s.match(/(\d+)/); // Extraer número
+    const match = s.match(/(\d+)/); 
     if (match) {
         const num = match[1];
         const type = s.includes('DAN') ? 'DAN' : (s.includes('KYU') ? 'KYU' : '');
@@ -125,7 +123,6 @@ function getGradeWeight(gradeStr) {
 
 function normalizeAddress(addr) {
     if(!addr) return '-';
-    // FIX 4: Normalizar C/ y Avda
     return addr
         .replace(/\b(Carrer|Calle)\b/gi, 'C/')
         .replace(/\b(Avinguda|Avenida)\b/gi, 'Avda')
@@ -134,8 +131,11 @@ function normalizeAddress(addr) {
 
 function normalizeCity(city) {
     if(!city) return '-';
-    // FIX Población: Mayúsculas y quitar paréntesis
-    return city.replace(/\s*\(.*?\)\s*/g, '').trim().toUpperCase();
+    // 1. Quitar contenido entre paréntesis
+    let c = city.replace(/\s*\(.*?\)\s*/g, '');
+    // 2. Quitar puntos, comas, guiones o espacios al FINAL de la cadena
+    c = c.replace(/[.,\-\s]+$/, '');
+    return c.trim().toUpperCase();
 }
 
 function calculateAge(birthDateString) {
@@ -170,7 +170,7 @@ async function loadAlumnos(activos) {
         data.forEach(a => {
             const p = a.attributes || a;
             const id = a.documentId; 
-            const dojoNom = getDojoName(p.dojo); // Usa el nuevo limpiador
+            const dojoNom = getDojoName(p.dojo); 
 
             const datosComunes = `
                 <td><strong>${p.apellidos || "-"}</strong></td>
@@ -335,8 +335,7 @@ async function loadDojosCards() {
         grid.innerHTML = '';
         (json.data || []).forEach(d => {
             const p = d.attributes || d;
-            // FIX: Limpieza de dirección para tarjeta visual
-            const addr = (p.direccion || '-').replace(/\n/g, '<br>');
+            const addr = p.direccion ? p.direccion.replace(/\n/g, '<br>') : '-';
             grid.innerHTML += `<div class="dojo-card">
                 <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${getDojoName(p)}</h3></div>
                 <div class="dojo-body">
@@ -349,7 +348,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (PDF MEJORADO) ---
+// --- INFORMES AVANZADOS (DISEÑO PDF MEJORADO) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -380,8 +379,8 @@ async function generateReport(type) {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // Cabecera
-        doc.addImage(logoImg, 'PNG', 10, 5, 50, 15);
+        // 1. Cabecera (Logo ajustado a 25x15)
+        doc.addImage(logoImg, 'PNG', 10, 5, 25, 15);
         
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
@@ -424,11 +423,9 @@ async function generateReport(type) {
         if (type === 'age') headRow.push('Edad'); 
         headRow.push('Dojo', 'Dirección', 'Población', 'CP');
         
-        // Cuerpo del PDF con Normalización
         const body = list.map(a => {
             const p = a.attributes || a;
             
-            // FIX 1: PENDIENTE -> PEND
             let dniShow = (p.dni || '-').toUpperCase();
             if (dniShow.includes('PENDIENTE')) dniShow = dniShow.replace('PENDIENTE', 'PEND');
 
@@ -436,7 +433,7 @@ async function generateReport(type) {
                 (p.apellidos || '').toUpperCase(),
                 p.nombre || '',
                 dniShow,
-                normalizeGrade(p.grado), // Grado Normalizado
+                normalizeGrade(p.grado),
                 p.telefono || '-',
                 p.email || '-',
                 p.fecha_nacimiento || '-'
@@ -444,43 +441,42 @@ async function generateReport(type) {
             if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
             
             baseRow.push(
-                getDojoName(p.dojo), // Dojo Limpio
-                normalizeAddress(p.direccion), // Dirección Normalizada
-                normalizeCity(p.poblacion), // Población Normalizada
+                getDojoName(p.dojo),
+                normalizeAddress(p.direccion),
+                normalizeCity(p.poblacion), // Población Limpia
                 p.cp || '-'
             );
             return baseRow;
         });
         
-        // Estilos de Columna Ajustados
-        // Reducimos Nombre, Aumentamos DNI
+        // Estilos de Columna Ajustados (DNI y Dojo centrados y ajustados)
         let colStyles = {};
         
-        if (type === 'age') {
+        if (type === 'age') { // 12 columnas
             colStyles = {
                 0: { cellWidth: 35 }, // Apellidos
-                1: { cellWidth: 15 }, // Nombre (reducido)
-                2: { cellWidth: 22 }, // DNI (ampliado)
-                3: { cellWidth: 15, halign: 'center' }, // Grado
+                1: { cellWidth: 15 }, // Nombre
+                2: { cellWidth: 18, halign: 'center' }, // DNI (Más estrecho y centrado)
+                3: { cellWidth: 12, halign: 'center' }, // Grado
                 4: { cellWidth: 20, halign: 'center' }, // Telf
                 5: { cellWidth: 42 }, // Email
                 6: { cellWidth: 18, halign: 'center' }, // Nac
-                7: { cellWidth: 8, halign: 'center' }, // Edad
-                8: { cellWidth: 28 }, // Dojo
+                7: { cellWidth: 8, halign: 'center' },  // Edad
+                8: { cellWidth: 28, halign: 'center' }, // Dojo (Centrado)
                 9: { cellWidth: 40 }, // Direccion
                 10: { cellWidth: 25 }, // Pob
                 11: { cellWidth: 10, halign: 'center' } // CP
             };
-        } else {
+        } else { // 11 columnas
             colStyles = {
                 0: { cellWidth: 35 }, // Apellidos
-                1: { cellWidth: 18 }, // Nombre (reducido)
-                2: { cellWidth: 25 }, // DNI (ampliado)
+                1: { cellWidth: 18 }, // Nombre
+                2: { cellWidth: 20, halign: 'center' }, // DNI (Más estrecho y centrado)
                 3: { cellWidth: 15, halign: 'center' }, // Grado
                 4: { cellWidth: 20, halign: 'center' }, // Telf
                 5: { cellWidth: 45 }, // Email
                 6: { cellWidth: 20, halign: 'center' }, // Nac
-                7: { cellWidth: 30 }, // Dojo
+                7: { cellWidth: 30, halign: 'center' }, // Dojo (Centrado)
                 8: { cellWidth: 45 }, // Direccion
                 9: { cellWidth: 25 }, // Pob
                 10: { cellWidth: 12, halign: 'center' } // CP
