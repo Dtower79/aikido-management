@@ -3,8 +3,13 @@ const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
 let jwtToken = localStorage.getItem('aikido_jwt');
 let userData = JSON.parse(localStorage.getItem('aikido_user'));
 
+// MAPA DE PESO DE GRADOS (Para ordenación en Informes: Mayor peso = Más alto rango)
+const GRADE_WEIGHTS = {
+    '8º Dan': 108, '7º Dan': 107, '6º Dan': 106, '5º Dan': 105, '4º Dan': 104, '3º Dan': 103, '2º Dan': 102, '1º Dan': 101,
+    '1º Kyu': 5, '2º Kyu': 4, '3º Kyu': 3, '4º Kyu': 2, '5º Kyu': 1, 'S/G': 0
+};
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Control de Sesión (20 min)
     const loginTimeStr = localStorage.getItem('aikido_login_time');
     const ahora = Date.now();
     if (jwtToken && loginTimeStr && (ahora - parseInt(loginTimeStr) < 20 * 60 * 1000)) {
@@ -68,7 +73,7 @@ function showSection(id) {
     if(id === 'nuevo-alumno') resetForm();
 }
 
-// --- UTILIDAD: OBTENER NOMBRE DOJO ---
+// --- UTILS ---
 function getDojoName(dojoObj) {
     if (!dojoObj) return "-";
     if (dojoObj.nombre) return dojoObj.nombre;
@@ -77,10 +82,16 @@ function getDojoName(dojoObj) {
     return "-";
 }
 
+function getGradeWeight(gradeStr) {
+    if(!gradeStr) return 0;
+    return GRADE_WEIGHTS[gradeStr.trim()] || 0;
+}
+
 // --- CARGA DE DATOS ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    tbody.innerHTML = `<tr><td colspan="${activos?12:6}">Cargando datos...</td></tr>`;
+    const cols = activos ? 12 : 13; // Bajas tiene una columna más al inicio
+    tbody.innerHTML = `<tr><td colspan="${cols}">Cargando datos...</td></tr>`;
     
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
@@ -95,22 +106,28 @@ async function loadAlumnos(activos) {
         
         data.forEach(a => {
             const p = a.attributes || a;
-            const id = a.documentId || a.id;
+            // IMPORTANTE: Usamos documentId para Strapi v5
+            const id = a.documentId; 
             const dojoNom = getDojoName(p.dojo);
+
+            // Plantilla de fila común para los datos personales
+            const datosComunes = `
+                <td><strong>${p.apellidos || "-"}</strong></td>
+                <td>${p.nombre || "-"}</td>
+                <td style="font-family:monospace">${p.dni || "-"}</td>
+                <td><span class="badge">${p.grado || 'S/G'}</span></td>
+                <td>${p.telefono || '-'}</td>
+                <td>${p.email || '-'}</td>
+                <td>${p.fecha_nacimiento || '-'}</td>
+                <td>${dojoNom}</td>
+                <td>${p.direccion || '-'}</td>
+                <td>${p.poblacion || '-'}</td>
+                <td>${p.cp || '-'}</td>
+            `;
 
             if (activos) {
                 tbody.innerHTML += `<tr>
-                    <td><strong>${p.apellidos || "-"}</strong></td>
-                    <td>${p.nombre || "-"}</td>
-                    <td style="font-family:monospace">${p.dni || "-"}</td>
-                    <td><span class="badge">${p.grado || 'S/G'}</span></td>
-                    <td>${p.telefono || '-'}</td>
-                    <td>${p.email || '-'}</td>
-                    <td>${p.fecha_nacimiento || '-'}</td>
-                    <td>${dojoNom}</td>
-                    <td>${p.direccion || '-'}</td>
-                    <td>${p.poblacion || '-'}</td>
-                    <td>${p.cp || '-'}</td>
+                    ${datosComunes}
                     <td class="sticky-col">
                         <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
                         <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
@@ -118,20 +135,17 @@ async function loadAlumnos(activos) {
             } else {
                 tbody.innerHTML += `<tr>
                     <td class="txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</td>
-                    <td><strong>${p.apellidos || "-"}</strong></td>
-                    <td>${p.nombre || "-"}</td>
-                    <td>${p.dni || "-"}</td>
-                    <td>${dojoNom}</td>
+                    ${datosComunes}
                     <td class="sticky-col">
                         <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
                         <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button>
                     </td></tr>`;
             }
         });
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="12">Error cargando alumnos del servidor.</td></tr>`; }
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos del servidor.</td></tr>`; }
 }
 
-// --- GUARDAR / EDITAR ---
+// --- GUARDAR / EDITAR (FIXED) ---
 document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = document.getElementById('edit-id').value;
@@ -153,6 +167,7 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
     };
 
     const method = id ? 'PUT' : 'POST';
+    // IMPORTANTE: En Strapi v5, para editar usamos el documentId en la URL
     const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
 
     try {
@@ -172,18 +187,19 @@ document.getElementById('form-nuevo-alumno').addEventListener('submit', async (e
     } catch { showModal("Error", "Fallo de conexión."); }
 });
 
-async function editarAlumno(id) {
+async function editarAlumno(documentId) {
     try {
-        // Fetch con populate para traer datos del Dojo
-        const res = await fetch(`${API_URL}/api/alumnos/${id}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        // En Strapi v5, al hacer GET by documentId, devuelve el objeto.
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         
-        // CORRECCIÓN: Manejo robusto de Strapi v5 (si viene plano o anidado)
-        // json.data puede ser el objeto directo o contener attributes
-        const dataObj = json.data;
-        const p = dataObj.attributes || dataObj; 
+        // Manejo robusto de la respuesta
+        const data = json.data;
+        const p = data.attributes || data; // Flat or nested
 
-        document.getElementById('edit-id').value = dataObj.documentId || dataObj.id;
+        document.getElementById('edit-id').value = data.documentId || documentId;
+        
+        // Mapeo seguro de campos
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
         document.getElementById('new-dni').value = p.dni || '';
@@ -196,25 +212,27 @@ async function editarAlumno(id) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // CORRECCIÓN: Extracción segura del ID del Dojo para el Select
+        // Extracción ID Dojo
         let dojoId = "";
         if (p.dojo) {
             if (p.dojo.documentId) dojoId = p.dojo.documentId;
-            else if (p.dojo.id) dojoId = p.dojo.id;
-            else if (p.dojo.data) {
-                dojoId = p.dojo.data.documentId || p.dojo.data.id;
-            }
+            else if (p.dojo.data) dojoId = p.dojo.data.documentId || p.dojo.data.id;
         }
         
         const selectDojo = document.getElementById('new-dojo');
-        if (dojoId) selectDojo.value = dojoId;
+        if (dojoId && selectDojo.querySelector(`option[value="${dojoId}"]`)) {
+            selectDojo.value = dojoId;
+        } else {
+             // Fallback si no encuentra por documentId, intentar por ID numérico si fuera necesario
+        }
 
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
         document.getElementById('btn-cancelar-edit').classList.remove('hidden');
         showSection('nuevo-alumno');
+        
     } catch(e) { 
-        console.error("Error al cargar datos para editar:", e); 
-        showModal("Error", "No se pudieron cargar los datos del alumno.");
+        console.error(e);
+        showModal("Error", "No se pudieron cargar los datos. Revisa la consola.");
     }
 }
 
@@ -270,23 +288,62 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- PDF PROFESIONAL (CORREGIDO: 11 COLUMNAS EXACTAS) ---
-async function exportarPDF() {
+// --- INFORMES AVANZADOS ---
+function openReportModal() {
+    document.getElementById('report-modal').classList.remove('hidden');
+}
+
+async function generateReport(type) {
+    document.getElementById('report-modal').classList.add('hidden');
+    
     const { jsPDF } = window.jspdf; 
-    const doc = new jsPDF('l', 'mm', 'a4'); // Horizontal
+    const doc = new jsPDF('l', 'mm', 'a4'); 
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
     logoImg.onload = async function() {
         doc.addImage(logoImg, 'PNG', 10, 10, 45, 20);
         doc.setFontSize(18); 
-        doc.text("LLISTAT D'AFILIATS PER COGNOMS", 148, 18, { align: "center" });
         
-        const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&sort=apellidos:asc&populate=dojo&pagination[limit]=500`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        let title = "LLISTAT D'AFILIATS";
+        if(type === 'grade') title += " PER GRAU (ALT-BAIX)";
+        if(type === 'age') title += " PER EDAT";
+        if(type === 'dojo') title += " PER DOJO";
+        
+        doc.text(title, 148, 18, { align: "center" });
+        
+        // Recuperamos todos los activos
+        const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
+        let list = json.data || [];
+
+        // LÓGICA DE ORDENACIÓN EN CLIENTE
+        list.sort((a, b) => {
+            const pA = a.attributes || a;
+            const pB = b.attributes || b;
+            
+            if (type === 'surname') {
+                return (pA.apellidos || '').localeCompare(pB.apellidos || '');
+            }
+            if (type === 'grade') {
+                // Orden inverso: de mayor rango (8 Dan) a menor rango (5 Kyu)
+                return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
+            }
+            if (type === 'dojo') {
+                const dA = getDojoName(pA.dojo);
+                const dB = getDojoName(pB.dojo);
+                return dA.localeCompare(dB);
+            }
+            if (type === 'age') {
+                // Ordenar por fecha de nacimiento ascendente (más viejo primero) o descendente
+                const dateA = new Date(pA.fecha_nacimiento || '2000-01-01');
+                const dateB = new Date(pB.fecha_nacimiento || '2000-01-01');
+                return dateA - dateB; // Más viejos (menor año) primero
+            }
+            return 0;
+        });
         
-        // Mapeo EXACTO a las columnas de la web
-        const body = (json.data || []).map(a => {
+        const body = list.map(a => {
             const p = a.attributes || a;
             return [
                 (p.apellidos || '').toUpperCase(),
@@ -303,7 +360,6 @@ async function exportarPDF() {
             ];
         });
         
-        // Configuración tabla ajustada para 11 columnas
         doc.autoTable({ 
             startY: 35, 
             head: [['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.', 'Dojo', 'Dirección', 'Población', 'CP']], 
@@ -312,40 +368,30 @@ async function exportarPDF() {
             headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0], fontSize: 7 }, 
             styles: { fontSize: 6, cellPadding: 1, overflow: 'linebreak' },
             columnStyles: {
-                0: { cellWidth: 25 }, // Apellidos
-                1: { cellWidth: 20 }, // Nombre
-                2: { cellWidth: 18 }, // DNI
-                3: { cellWidth: 12 }, // Grado
-                4: { cellWidth: 18 }, // Tlf
-                5: { cellWidth: 35 }, // Email
-                6: { cellWidth: 18 }, // Nac
-                7: { cellWidth: 25 }, // Dojo
-                8: { cellWidth: 35 }, // Direccion
-                9: { cellWidth: 20 }, // Pob
-                10: { cellWidth: 10 } // CP
+                0: { cellWidth: 25 }, 1: { cellWidth: 20 }, 2: { cellWidth: 18 }, 3: { cellWidth: 12 }, 
+                4: { cellWidth: 18 }, 5: { cellWidth: 35 }, 6: { cellWidth: 18 }, 7: { cellWidth: 25 }, 
+                8: { cellWidth: 35 }, 9: { cellWidth: 20 }, 10: { cellWidth: 10 }
             }
         });
-        doc.save("Informe_Alumnos_Arashi.pdf");
+        doc.save(`Informe_Arashi_${type.toUpperCase()}.pdf`);
     };
 }
 
-// --- UTILS ---
-// CORRECCIÓN: Cambio de tamaño de letra iterando celdas
+// --- UTILS COMPACTACIÓN ---
 function changeFontSize(tableId, delta) {
     const table = document.getElementById(tableId);
     if (!table) return;
-    
-    // Seleccionamos todas las celdas (th y td)
     const cells = table.querySelectorAll('th, td');
-    
     if (cells.length > 0) {
-        // Obtenemos el tamaño actual de la primera celda para calcular
         const currentSize = parseFloat(window.getComputedStyle(cells[0]).fontSize);
-        const newSize = currentSize + delta;
+        const currentPad = parseFloat(window.getComputedStyle(cells[0]).paddingTop);
         
-        // Aplicamos el nuevo tamaño a todas
+        const newSize = Math.max(8, currentSize + delta); // Mínimo 8px
+        const newPad = Math.max(2, currentPad + (delta * 0.5)); // Ajuste proporcional de padding
+        
         cells.forEach(cell => {
             cell.style.fontSize = newSize + "px";
+            cell.style.padding = `${newPad}px 5px`; // Reducimos padding vertical
         });
     }
 }
