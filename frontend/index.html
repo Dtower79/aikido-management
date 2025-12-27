@@ -38,7 +38,7 @@
             <nav class="menu">
                 <button class="menu-btn" onclick="showSection('nuevo-alumno')"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
                 <button class="menu-btn" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
-                <button class="menu-btn" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos Activos</button>
+                <button class="menu-btn" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos</button>
                 <button class="menu-btn" onclick="showSection('bajas')"><i class="fa-solid fa-user-xmark"></i> Histórico Bajas</button>
                 <div class="sidebar-sep">Área Técnica</div>
                 <button class="menu-btn" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
@@ -55,7 +55,7 @@
             </div>
 
             <div id="sec-nuevo-alumno" class="section hidden">
-                <header class="section-header"><h2><i class="fa-solid fa-user-plus"></i> Alta de Alumno</h2></header>
+                <header class="section-header"><h2><i class="fa-solid fa-user-plus"></i> Gestión de Alumno</h2></header>
                 <div class="card form-card">
                     <form id="form-nuevo-alumno">
                         <input type="hidden" id="edit-id" value="">
@@ -115,33 +115,65 @@
 
             <div id="sec-alumnos" class="section hidden">
                 <header class="section-header">
-                    <h2><i class="fa-solid fa-users"></i> Alumnos Activos</h2>
-                    <div class="actions">
-                        <button class="action-btn-pdf" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
-                        <div class="font-controls">
+                    <h2><i class="fa-solid fa-users"></i> Alumnos</h2>
+                    <div class="toolbar">
+                        <button class="btn-pdf" onclick="exportarPDF()"><i class="fa-solid fa-file-pdf"></i> GENERAR INFORME</button>
+                        <div class="font-tool">
                             <button onclick="changeFontSize('table-alumnos', -1)">A-</button>
                             <button onclick="changeFontSize('table-alumnos', 1)">A+</button>
                         </div>
-                        <div class="search-container">
+                        <div class="search-box">
                             <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="search-alumno" placeholder="Buscar alumno...">
+                            <input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI...">
                         </div>
                     </div>
                 </header>
-                <div class="table-container drag-scroll"><table id="table-alumnos"><thead><tr><th>Nombre Completo</th><th>DNI</th><th>Grado</th><th>Dojo / Grupo</th><th>Teléfono</th><th>Email</th><th>Población</th><th>Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table></div>
+                <div class="table-container drag-scroll">
+                    <table id="table-alumnos">
+                        <thead>
+                            <tr>
+                                <th>Nombre Completo</th>
+                                <th>DNI</th>
+                                <th>Grado</th>
+                                <th>Dojo / Grupo</th>
+                                <th>Teléfono</th>
+                                <th>Email</th>
+                                <th>Población</th>
+                                <th>CP</th>
+                                <th>Nacimiento</th>
+                                <th>Dirección</th>
+                                <th class="sticky-col">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-alumnos-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header">
                     <h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2>
-                    <div class="actions">
-                        <div class="search-container">
+                    <div class="toolbar">
+                        <div class="search-box">
                             <i class="fa-solid fa-magnifying-glass"></i>
                             <input type="text" id="search-baja" placeholder="Buscar en bajas...">
                         </div>
                     </div>
                 </header>
-                <div class="table-container drag-scroll"><table id="table-bajas"><thead><tr><th>Fecha Baja</th><th>Nombre Completo</th><th>DNI</th><th>Dojo</th><th>Acciones</th></tr></thead><tbody id="lista-bajas-body"></tbody></table></div>
+                <div class="table-container drag-scroll">
+                    <table id="table-bajas">
+                        <thead>
+                            <tr>
+                                <th>Fecha Baja</th>
+                                <th>Nombre Completo</th>
+                                <th>DNI</th>
+                                <th>Dojo</th>
+                                <th class="sticky-col">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-bajas-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="sec-status" class="section hidden">
