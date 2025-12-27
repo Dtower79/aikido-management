@@ -5,8 +5,8 @@ let userData = JSON.parse(localStorage.getItem('aikido_user'));
 
 // MAPA DE PESO DE GRADOS (Mayor peso = Más rango)
 const GRADE_WEIGHTS = {
-    '8º Dan': 108, '7º Dan': 107, '6º Dan': 106, '5º Dan': 105, '4º Dan': 104, '3º Dan': 103, '2º Dan': 102, '1º Dan': 101,
-    '1º Kyu': 5, '2º Kyu': 4, '3º Kyu': 3, '4º Kyu': 2, '5º Kyu': 1, 'S/G': 0
+    '8º DAN': 108, '7º DAN': 107, '6º DAN': 106, '5º DAN': 105, '4º DAN': 104, '3º DAN': 103, '2º DAN': 102, '1º DAN': 101,
+    '1º KYU': 5, '2º KYU': 4, '3º KYU': 3, '4º KYU': 2, '5º KYU': 1, 'S/G': 0
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
         logout();
     }
 
-    // Inicializadores
     setupDniInput('dni-login'); 
     setupDniInput('new-dni');
     
@@ -92,18 +91,51 @@ function showSection(id) {
     if(id === 'nuevo-alumno') resetForm();
 }
 
-// --- UTILS ---
+// --- UTILS DE LIMPIEZA DE DATOS ---
+
 function getDojoName(dojoObj) {
-    if (!dojoObj) return "-";
-    if (dojoObj.nombre) return dojoObj.nombre;
-    if (dojoObj.data && dojoObj.data.attributes && dojoObj.data.attributes.nombre) return dojoObj.data.attributes.nombre;
-    if (dojoObj.attributes && dojoObj.attributes.nombre) return dojoObj.attributes.nombre;
-    return "-";
+    let name = "-";
+    if (dojoObj) {
+        if (dojoObj.nombre) name = dojoObj.nombre;
+        else if (dojoObj.data && dojoObj.data.attributes && dojoObj.data.attributes.nombre) name = dojoObj.data.attributes.nombre;
+        else if (dojoObj.attributes && dojoObj.attributes.nombre) name = dojoObj.attributes.nombre;
+    }
+    // FIX 3: Quitar palabra 'Aikido' del nombre
+    return name.replace(/Aikido\s+/gi, '').trim();
+}
+
+function normalizeGrade(g) {
+    if(!g) return '-';
+    let s = g.toUpperCase().trim();
+    // FIX 2: Unificar Criterios (1º DAN)
+    const match = s.match(/(\d+)/); // Extraer número
+    if (match) {
+        const num = match[1];
+        const type = s.includes('DAN') ? 'DAN' : (s.includes('KYU') ? 'KYU' : '');
+        if (type) return `${num}º ${type}`;
+    }
+    return s;
 }
 
 function getGradeWeight(gradeStr) {
     if(!gradeStr) return 0;
-    return GRADE_WEIGHTS[gradeStr.trim()] || 0;
+    const normalized = normalizeGrade(gradeStr);
+    return GRADE_WEIGHTS[normalized] || 0;
+}
+
+function normalizeAddress(addr) {
+    if(!addr) return '-';
+    // FIX 4: Normalizar C/ y Avda
+    return addr
+        .replace(/\b(Carrer|Calle)\b/gi, 'C/')
+        .replace(/\b(Avinguda|Avenida)\b/gi, 'Avda')
+        .trim();
+}
+
+function normalizeCity(city) {
+    if(!city) return '-';
+    // FIX Población: Mayúsculas y quitar paréntesis
+    return city.replace(/\s*\(.*?\)\s*/g, '').trim().toUpperCase();
 }
 
 function calculateAge(birthDateString) {
@@ -138,13 +170,13 @@ async function loadAlumnos(activos) {
         data.forEach(a => {
             const p = a.attributes || a;
             const id = a.documentId; 
-            const dojoNom = getDojoName(p.dojo);
+            const dojoNom = getDojoName(p.dojo); // Usa el nuevo limpiador
 
             const datosComunes = `
                 <td><strong>${p.apellidos || "-"}</strong></td>
                 <td>${p.nombre || "-"}</td>
                 <td style="font-family:monospace">${p.dni || "-"}</td>
-                <td><span class="badge">${p.grado || 'S/G'}</span></td>
+                <td><span class="badge">${normalizeGrade(p.grado) || 'S/G'}</span></td>
                 <td>${p.telefono || '-'}</td>
                 <td>${p.email || '-'}</td>
                 <td>${p.fecha_nacimiento || '-'}</td>
@@ -303,9 +335,10 @@ async function loadDojosCards() {
         grid.innerHTML = '';
         (json.data || []).forEach(d => {
             const p = d.attributes || d;
-            const addr = p.direccion ? p.direccion.replace(/\n/g, '<br>') : '-';
+            // FIX: Limpieza de dirección para tarjeta visual
+            const addr = (p.direccion || '-').replace(/\n/g, '<br>');
             grid.innerHTML += `<div class="dojo-card">
-                <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${p.nombre}</h3></div>
+                <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${getDojoName(p)}</h3></div>
                 <div class="dojo-body">
                     <div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${addr}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span></div>
                     <div class="dojo-info-row"><i class="fa-solid fa-phone"></i><span>${p.telefono || '-'}</span></div>
@@ -316,7 +349,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- INFORMES AVANZADOS (DISEÑO PROFESIONAL PDF EN CASTELLANO) ---
+// --- INFORMES AVANZADOS (PDF MEJORADO) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -329,7 +362,6 @@ async function generateReport(type) {
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
-    // Diccionario de Nombres de Archivo
     const fileNames = {
         'surname': 'ARASHI - Alumnos por Apellidos',
         'age': 'ARASHI - Alumnos por Edad',
@@ -337,7 +369,6 @@ async function generateReport(type) {
         'dojo': 'ARASHI - Alumnos por Dojo'
     };
 
-    // Diccionario de Subtítulos
     const subtitleMap = {
         'surname': 'Apellidos',
         'age': 'Edad',
@@ -349,14 +380,12 @@ async function generateReport(type) {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // 1. Cabecera
-        // Logo más alargado (50x15)
-        doc.addImage(logoImg, 'PNG', 10, 5, 20, 15);
+        // Cabecera
+        doc.addImage(logoImg, 'PNG', 10, 5, 50, 15);
         
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
         
-        // Título Principal en Castellano
         let title = "LISTADO DE AFILIADOS";
         if(type === 'grade') title += " POR GRADO";
         if(type === 'age') title += " POR EDAD";
@@ -365,13 +394,11 @@ async function generateReport(type) {
 
         doc.text(title, pageWidth / 2, 12, { align: "center" });
 
-        // Subtítulo con tipo de informe dinámico
         const subtitleText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         doc.text(subtitleText, pageWidth / 2, 18, { align: "center" });
         
-        // 2. Datos
         const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
@@ -392,58 +419,69 @@ async function generateReport(type) {
             return 0;
         });
         
-        // Encabezados en Castellano
+        // Encabezados
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email', 'Nac.'];
         if (type === 'age') headRow.push('Edad'); 
         headRow.push('Dojo', 'Dirección', 'Población', 'CP');
         
+        // Cuerpo del PDF con Normalización
         const body = list.map(a => {
             const p = a.attributes || a;
+            
+            // FIX 1: PENDIENTE -> PEND
+            let dniShow = (p.dni || '-').toUpperCase();
+            if (dniShow.includes('PENDIENTE')) dniShow = dniShow.replace('PENDIENTE', 'PEND');
+
             const baseRow = [
                 (p.apellidos || '').toUpperCase(),
                 p.nombre || '',
-                p.dni || '-',
-                p.grado || '-',
+                dniShow,
+                normalizeGrade(p.grado), // Grado Normalizado
                 p.telefono || '-',
                 p.email || '-',
                 p.fecha_nacimiento || '-'
             ];
             if (type === 'age') baseRow.push(calculateAge(p.fecha_nacimiento));
-            baseRow.push(getDojoName(p.dojo), p.direccion || '-', p.poblacion || '-', p.cp || '-');
+            
+            baseRow.push(
+                getDojoName(p.dojo), // Dojo Limpio
+                normalizeAddress(p.direccion), // Dirección Normalizada
+                normalizeCity(p.poblacion), // Población Normalizada
+                p.cp || '-'
+            );
             return baseRow;
         });
         
-        // Estilos de Columna Optimizados (Milimétricos para A4 Horizontal ~287mm útiles)
-        // overflow: 'linebreak' permite que la dirección baje a 2 líneas si es larga
-        // halign: 'center' centra los campos cortos (Grado, Tlf, CP, Edad...)
+        // Estilos de Columna Ajustados
+        // Reducimos Nombre, Aumentamos DNI
         let colStyles = {};
         
         if (type === 'age') {
             colStyles = {
                 0: { cellWidth: 35 }, // Apellidos
-                1: { cellWidth: 20 }, // Nombre (reducido)
-                2: { cellWidth: 20 }, // DNI
-                3: { cellWidth: 12, halign: 'center' }, // Grado
+                1: { cellWidth: 15 }, // Nombre (reducido)
+                2: { cellWidth: 22 }, // DNI (ampliado)
+                3: { cellWidth: 15, halign: 'center' }, // Grado
                 4: { cellWidth: 20, halign: 'center' }, // Telf
                 5: { cellWidth: 42 }, // Email
                 6: { cellWidth: 18, halign: 'center' }, // Nac
-                7: { cellWidth: 10, halign: 'center' }, // Edad
+                7: { cellWidth: 8, halign: 'center' }, // Edad
                 8: { cellWidth: 28 }, // Dojo
-                9: { cellWidth: 40 }, // Direccion (wrap)
-                10: { cellWidth: 20 }, // Pob
+                9: { cellWidth: 40 }, // Direccion
+                10: { cellWidth: 25 }, // Pob
                 11: { cellWidth: 10, halign: 'center' } // CP
             };
         } else {
             colStyles = {
                 0: { cellWidth: 35 }, // Apellidos
-                1: { cellWidth: 20 }, // Nombre (reducido)
-                2: { cellWidth: 20 }, // DNI
-                3: { cellWidth: 12, halign: 'center' }, // Grado
+                1: { cellWidth: 18 }, // Nombre (reducido)
+                2: { cellWidth: 25 }, // DNI (ampliado)
+                3: { cellWidth: 15, halign: 'center' }, // Grado
                 4: { cellWidth: 20, halign: 'center' }, // Telf
                 5: { cellWidth: 45 }, // Email
                 6: { cellWidth: 20, halign: 'center' }, // Nac
                 7: { cellWidth: 30 }, // Dojo
-                8: { cellWidth: 50 }, // Direccion (wrap para aprovechar espacio extra)
+                8: { cellWidth: 45 }, // Direccion
                 9: { cellWidth: 25 }, // Pob
                 10: { cellWidth: 12, halign: 'center' } // CP
             };
@@ -454,14 +492,11 @@ async function generateReport(type) {
             head: [headRow], 
             body: body, 
             theme: 'grid', 
-            // Márgenes de 5mm para aprovechar la hoja
             margin: { left: 5, right: 5, bottom: 15 },
-            // Styles: fontSize 7.5 para que quepa bien, linebreak para direcciones largas
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
             headStyles: { fillColor: [214, 234, 248], textColor: [0,0,0], fontSize: 8, fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
             didDrawPage: function (data) {
-                // Pie de página en Castellano
                 let footerStr = `Página ${doc.internal.getNumberOfPages()} | Total Registros: ${list.length} | Generado el ${new Date().toLocaleDateString()}`;
                 doc.setFontSize(8);
                 doc.setFont("helvetica", "normal");
