@@ -170,7 +170,7 @@ function confirmarEstado(id, activo, nombre) { showModal(activo ? "Reactivar" : 
 function eliminarDefinitivo(id, nombre) { showModal("¡PELIGRO!", `¿Borrar físicamente a ${nombre}?`, () => { setTimeout(() => { showModal("ÚLTIMO AVISO", "Irreversible.", async () => { await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } }); loadAlumnos(false); }); }, 500); }); }
 async function loadDojosCards() { const grid = document.getElementById('grid-dojos'); if(!grid) return; grid.innerHTML = 'Cargando...'; try { const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const json = await res.json(); grid.innerHTML = ''; (json.data || []).forEach(d => { const p = d.attributes || d; const cleanName = (p.nombre || 'Dojo').replace(/Aikido\s+/gi, '').trim(); const addr = p.direccion ? p.direccion.replace(/\n/g, '<br>') : '-'; grid.innerHTML += `<div class="dojo-card"><div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${cleanName}</h3></div><div class="dojo-body"><div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${addr}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span></div><div class="dojo-info-row"><i class="fa-solid fa-phone"></i><span>${p.telefono || '-'}</span></div><div class="dojo-info-row"><i class="fa-solid fa-envelope"></i><span>${p.email || '-'}</span></div><a href="${p.web || '#'}" target="_blank" class="dojo-link-btn">WEB OFICIAL</a></div></div>`; }); } catch { grid.innerHTML = 'Error.'; } }
 
-// --- EXPORTAR EXCEL (MODIFICADO: LOGO IZQUIERDA, FECHAS DD/MM/YYYY, AJUSTE ESTRICTO DE ANCHOS) ---
+// --- EXPORTAR EXCEL ---
 async function exportBackupExcel() {
     const dojoFilter = document.getElementById('export-dojo-filter').value;
     const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
@@ -188,7 +188,7 @@ async function exportBackupExcel() {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Alumnos');
 
-        // 1. CARGAR LOGO (A la izquierda, centrado en franja negra)
+        // 1. CARGAR LOGO
         try {
             const logoRes = await fetch('img/logo-arashi.png');
             const logoBlob = await logoRes.blob();
@@ -214,16 +214,16 @@ async function exportBackupExcel() {
         titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; 
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-        // 4. CABECERAS DE COLUMNA (Fila 7)
-        const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA NACIMIENTO', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'FECHA ALTA', 'GRADO', 'SEGURO'];
+        // 4. CABECERAS DE COLUMNA (Fila 7) con salto de línea
+        const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA\nNACIMIENTO', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'FECHA\nALTA', 'GRADO', 'SEGURO'];
         const headerRow = sheet.getRow(7);
         headerRow.values = headers;
-        headerRow.height = 30;
+        headerRow.height = 45; // Altura aumentada para las dos líneas
         
         headerRow.eachCell((cell) => {
             cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } }; 
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; // Ajuste de texto activado
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
@@ -252,15 +252,12 @@ async function exportBackupExcel() {
             row.eachCell((cell, colNumber) => {
                 cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                // Alineación a la izquierda para campos de texto largo
                 if([1, 2, 5, 8].includes(colNumber)) cell.alignment = { vertical: 'middle', horizontal: 'left' };
 
-                // Calcular longitud
                 const len = cell.value ? cell.value.toString().length : 0;
                 if (len > maxLengths[colNumber - 1]) maxLengths[colNumber - 1] = len;
             });
 
-            // Colores texto seguro
             const segCell = row.getCell(13);
             if (p.seguro_pagado) {
                 segCell.font = { color: { argb: 'FF065F46' }, bold: true };
@@ -269,7 +266,6 @@ async function exportBackupExcel() {
             }
         });
 
-        // Aplicar anchos estrictos (el contenido + 2 para que no toque bordes)
         sheet.columns.forEach((col, index) => {
             col.width = maxLengths[index] + 2; 
         });
@@ -303,7 +299,9 @@ async function generateReport(type) {
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
+    // Mapeo para el título del PDF y nombre de archivo en castellano
     const subtitleMap = { 'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro' };
+    const filenameMap = { 'surname': 'apellidos', 'age': 'edad', 'grade': 'grado', 'dojo': 'dojo', 'group': 'grupo', 'insurance': 'seguros' };
     
     logoImg.onload = async function() {
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -353,7 +351,7 @@ async function generateReport(type) {
                 doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
             }
         });
-        doc.save(`Informe_Arashi_${type}.pdf`);
+        doc.save(`Informe_Arashi_${filenameMap[type]}.pdf`);
     };
 }
 
