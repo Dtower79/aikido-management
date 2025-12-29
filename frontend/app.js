@@ -198,16 +198,43 @@ async function exportBackupExcel() {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Alumnos');
 
-        // 1. CARGAR LOGO
+        // --- CABECERA NEGRA SUPERIOR (Filas 1-6) ---
+        for (let i = 1; i <= 6; i++) {
+            const row = sheet.getRow(i);
+            row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } };
+        }
+
+        // Título Principal
+        sheet.mergeCells('A2:M3');
+        const titleCell = sheet.getCell('A2');
+        titleCell.value = `            ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString('es-ES')})`;
+        titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
+        titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        // Información de Resumen (Debajo del título)
+        sheet.mergeCells('A4:M4');
+        const totalCell = sheet.getCell('A4');
+        totalCell.value = `TOTAL ALUMNOS: ${data.length}`;
+        totalCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+        totalCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        sheet.mergeCells('A5:M5');
+        const genCell = sheet.getCell('A5');
+        genCell.value = `GENERADO EL: ${new Date().toLocaleString('es-ES')}`;
+        genCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FFCCCCCC' } };
+        genCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        // Cargar Logo
         try {
             const logoRes = await fetch('img/logo-arashi.png');
             const logoBlob = await logoRes.blob();
             const logoBuffer = await logoBlob.arrayBuffer();
             const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
-            sheet.addImage(logoId, { tl: { col: 2.5, row: 0.6 }, ext: { width: 110, height: 60 } });
+            // Posicionamiento alineado con el título
+            sheet.addImage(logoId, { tl: { col: 2.2, row: 1.2 }, ext: { width: 110, height: 60 } });
         } catch(e) { console.warn("Logo no encontrado", e); }
 
-        // 2. COLUMNAS
+        // --- COLUMNAS Y CABECERAS DE DATOS ---
         const columns = [
             { key: 'apellidos' }, { key: 'nombre' }, { key: 'dni' },
             { key: 'nac' }, { key: 'dir' }, { key: 'pob' },
@@ -216,17 +243,8 @@ async function exportBackupExcel() {
         ];
         sheet.columns = columns;
 
-        // 3. CABECERA NEGRA
-        sheet.mergeCells('A1:M5');
-        const titleCell = sheet.getCell('A1');
-        titleCell.value = `            ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString('es-ES')})`;
-        titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } }; 
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; 
-        titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-
-        // 4. CABECERAS DE COLUMNA
         const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA\nNACIMIENTO', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'FECHA\nALTA', 'GRADO', 'SEGURO'];
-        const headerRow = sheet.getRow(7);
+        const headerRow = sheet.getRow(8); // Empezamos datos en fila 8 tras el bloque negro
         headerRow.values = headers;
         headerRow.height = 45; 
         
@@ -270,20 +288,6 @@ async function exportBackupExcel() {
             if (p.seguro_pagado) { segCell.font = { color: { argb: 'FF065F46' }, bold: true }; } 
             else { segCell.font = { color: { argb: 'FF991B1B' }, bold: true }; }
         });
-
-        // --- AÑADIR RESUMEN AL FINAL DEL EXCEL ---
-        sheet.addRow([]); // Espacio en blanco
-        const now = new Date().toLocaleString('es-ES');
-        
-        const totalRow = sheet.addRow(['', '', '', '', '', '', '', '', '', 'TOTAL ALUMNOS:', data.length]);
-        totalRow.getCell(10).font = { bold: true };
-        totalRow.getCell(11).font = { bold: true };
-        totalRow.getCell(11).alignment = { horizontal: 'left' };
-
-        const genRow = sheet.addRow(['', '', '', '', '', '', '', '', '', 'GENERADO EL:', now]);
-        genRow.getCell(10).font = { italic: true, size: 9, color: { argb: 'FF666666' } };
-        genRow.getCell(11).font = { italic: true, size: 9, color: { argb: 'FF666666' } };
-        genRow.getCell(11).alignment = { horizontal: 'left' };
 
         sheet.columns.forEach((col, index) => { col.width = maxLengths[index] + 2; });
 
@@ -333,7 +337,6 @@ async function generateReport(type) {
         const json = await res.json();
         let list = json.data || [];
         
-        // Ordenación
         list.sort((a, b) => { const pA = a.attributes || a; const pB = b.attributes || b; if (type === 'insurance') { if (pA.seguro_pagado !== pB.seguro_pagado) return (pA.seguro_pagado === true ? -1 : 1); return (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || ''); if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado); if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo)); if (type === 'group') { const cmp = (pA.grupo || '').localeCompare(pB.grupo || ''); return cmp !== 0 ? cmp : (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'age') { return new Date(pA.fecha_nacimiento||'2000-01-01') - new Date(pB.fecha_nacimiento||'2000-01-01'); } return 0; });
         
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email'];
@@ -363,22 +366,17 @@ async function generateReport(type) {
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontStyle: 'bold', halign: 'center' },
             didDrawPage: (data) => {
-                // Header
                 doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); doc.setFontSize(16); doc.setFont("helvetica", "bold");
                 doc.text(title, pageWidth / 2, 12, { align: "center" }); doc.setFontSize(10); doc.setFont("helvetica", "normal");
                 doc.text(subText, pageWidth / 2, 18, { align: "center" }); 
                 
-                // --- FOOTER COMPLETO ---
                 doc.setFontSize(8);
                 doc.setTextColor(150);
                 const footerY = pageHeight - 10;
                 const now = new Date().toLocaleString('es-ES');
                 
-                // Izquierda: Fecha de generación
                 doc.text(`Generado el: ${now}`, 10, footerY);
-                // Centro: Paginación
                 doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth / 2, footerY, { align: 'center' });
-                // Derecha: Contador total
                 doc.text(`Total Alumnos: ${list.length}`, pageWidth - 10, footerY, { align: 'right' });
             }
         });
