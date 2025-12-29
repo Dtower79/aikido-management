@@ -58,13 +58,17 @@ def separar_poblacion_cp(texto_pob, texto_cp=None):
     pob = ""
     cp = ""
 
-    # Caso 1: Vienen separados (Excel Nuevo)
+    # Caso 1: Vienen separados (Excel Nuevo de la Web)
     if texto_cp is not None and pd.notna(texto_cp):
-        cp = str(texto_cp).strip()
+        # Convertir a string y limpiar .0 si pandas lo leyó como float
+        cp = str(texto_cp).replace('.0', '').strip()
+        # Rellenar con ceros a la izquierda si tiene menos de 5 dígitos
+        if cp and cp.isdigit(): cp = cp.zfill(5)
+        
         pob = str(texto_pob).strip().upper() if pd.notna(texto_pob) else ""
         return pob, cp
 
-    # Caso 2: Vienen juntos (Excel Antiguo)
+    # Caso 2: Vienen juntos (Excel Antiguo / Legado)
     if pd.isna(texto_pob): return "", ""
     texto = str(texto_pob).strip()
     match = re.search(r'\b\d{5}\b', texto)

@@ -478,24 +478,28 @@ async function exportBackupExcel() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO...';
 
     try {
-        let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
-        if(dojoFilter) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
+        let url = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
+        if(dojoFilter) url += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
 
-        const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         const data = json.data || [];
 
         let tableRows = '';
         data.forEach(item => {
             const p = item.attributes || item;
-            const nombre = p.nombre || '';
-            const apellidos = p.apellidos || '';
+            const nombre = (p.nombre || '').trim();
+            const apellidos = (p.apellidos || '').trim();
             const nombreCompleto = `${nombre} ${apellidos}`.trim();
-            const pob = p.poblacion || '';
-            const cp = p.cp || '';
-            const pobCp = `${pob} ${cp}`.trim(); 
+            
+            // FIX 2: Separar Población y CP limpios
+            const pob = (p.poblacion || '').trim();
+            const cp = (p.cp || '').trim();
+            
+            // Lógica Seguro (Verde/Rojo)
             const seguro = p.seguro_pagado ? "SI" : "NO";
             const seguroColor = p.seguro_pagado ? "#d1fae5" : "#fee2e2"; 
+            const seguroText = p.seguro_pagado ? "#065f46" : "#991b1b";
 
             tableRows += `
                 <tr>
@@ -504,26 +508,27 @@ async function exportBackupExcel() {
                     <td>${nombreCompleto}</td>
                     <td>${nombre}</td>
                     <td>${apellidos}</td>
-                    <td>${p.dni || ""}</td>
+                    <td style="mso-number-format:'@'">${p.dni || ""}</td> <!-- Forzar texto DNI -->
                     <td>${p.fecha_nacimiento || ""}</td>
                     <td>${p.direccion || ""}</td>
-                    <td>${pobCp}</td>
-                    <td>${p.poblacion || ""}</td>
-                    <td>${p.cp || ""}</td>
+                    <td>${pob}</td>
+                    <td style="mso-number-format:'00000'">${cp}</td> <!-- Forzar ceros CP -->
                     <td>${p.email || ""}</td>
-                    <td>${p.telefono || ""}</td>
+                    <td style="mso-number-format:'@'">${p.telefono || ""}</td>
                     <td>${p.fecha_inicio || ""}</td>
                     <td>${p.grado || ""}</td>
                     <td>${getDojoName(p.dojo)}</td>
-                    <td style="background-color: ${seguroColor}; text-align: center; font-weight:bold;">${seguro}</td>
+                    <td style="background-color: ${seguroColor}; color: ${seguroText}; text-align: center; font-weight:bold;">${seguro}</td>
                 </tr>`;
         });
 
         const fechaExport = new Date().toLocaleString();
         
+        // FIX 3: Meta Charset UTF-8 para arreglar acentos
         const excelTemplate = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
+                <meta charset="UTF-8"> <!-- CLAVE PARA ACENTOS -->
                 <!--[if gte mso 9]>
                 <xml>
                     <x:ExcelWorkbook>
@@ -539,16 +544,26 @@ async function exportBackupExcel() {
                 </xml>
                 <![endif]-->
                 <style>
-                    body { font-family: Arial, sans-serif; }
-                    .header-title { font-size: 18px; font-weight: bold; color: white; background-color: #0b1120; text-align: center; height: 50px; vertical-align: middle; }
-                    .header-col { background-color: #ef4444; color: white; font-weight: bold; text-align: center; border: 1px solid #000; }
-                    td { border: 1px solid #ddd; padding: 5px; vertical-align: middle; }
+                    body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+                    .header-title { 
+                        font-size: 18px; font-weight: bold; color: white; 
+                        background-color: #0b1120; text-align: center; 
+                        height: 50px; vertical-align: middle; 
+                        border: 1px solid #000;
+                    }
+                    .header-col { 
+                        background-color: #ef4444; color: white; 
+                        font-weight: bold; text-align: center; 
+                        border: 1px solid #000; height: 30px; vertical-align: middle;
+                    }
+                    td { border: 1px solid #d1d5db; padding: 5px; vertical-align: middle; }
+                    tr:nth-child(even) { background-color: #f3f4f6; } /* Filas alternas */
                 </style>
             </head>
             <body>
                 <table>
                     <tr>
-                        <td colspan="17" class="header-title">ARASHI GROUP AIKIDO - LISTADO OFICIAL DE ALUMNOS (${fechaExport})</td>
+                        <td colspan="16" class="header-title">ARASHI GROUP AIKIDO - LISTADO OFICIAL (${fechaExport})</td>
                     </tr>
                     <tr></tr>
                     <tr>
@@ -560,7 +575,6 @@ async function exportBackupExcel() {
                         <th class="header-col">DNI</th>
                         <th class="header-col">DATA NAIXEMENT</th>
                         <th class="header-col">ADREÇA</th>
-                        <th class="header-col">POBLACIO + CP</th>
                         <th class="header-col">POBLACIO</th>
                         <th class="header-col">CP</th>
                         <th class="header-col">EMAIL</th>
@@ -576,18 +590,19 @@ async function exportBackupExcel() {
             </html>
         `;
 
-        const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel' });
-        const downloadUrl = window.URL.createObjectURL(blob);
+        // Generar Blob con tipo correcto
+        const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const fileName = `Arashi_Listado_${new Date().getFullYear()}_${new Date().getMonth()+1}.xls`;
+        const fileName = `Arashi_Backup_${new Date().getFullYear()}_${new Date().getMonth()+1}.xls`;
         
-        a.href = downloadUrl;
+        a.href = url;
         a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
 
-        showModal("Excel Exportado", "Archivo guardado correctamente. Revisa tu carpeta de Descargas.");
+        showModal("Excel Generado", "Archivo descargado correctamente.");
 
     } catch(e) {
         console.error(e);
