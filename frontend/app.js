@@ -64,7 +64,6 @@ function logout() {
     localStorage.clear();
     document.getElementById('dashboard').classList.add('hidden');
     document.getElementById('login-screen').classList.remove('hidden');
-    document.getElementById('reset-screen').classList.add('hidden');
     if (window.location.search) window.history.replaceState({}, document.title, window.location.pathname);
 }
 function showDashboard() {
@@ -107,6 +106,14 @@ function normalizeAddress(a) { return a ? a.replace(/\b(Carrer|Calle)\b/gi, 'C/'
 function normalizeCity(c) { if(!c) return '-'; let s = c.replace(/\s*\(.*?\)\s*/g, '').replace(/[.,\-\s]+$/, '').trim(); if (s.match(/San Adria/i)) return 'SANT ADRIÀ DEL BESÒS'; return s.toUpperCase(); }
 function normalizePhone(t) { return t ? t.toString().trim().replace(/^(\+?34)/, '').trim() : '-'; }
 function formatDatePDF(d) { if(!d) return '-'; const p = d.split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; }
+
+// Función específica para formato Excel DD/MM/YYYY
+function formatDateExcel(d) {
+    if(!d) return "";
+    const p = d.split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+}
+
 function calculateAge(d) { if(!d) return '-'; const t = new Date(), b = new Date(d); let a = t.getFullYear() - b.getFullYear(); if(t.getMonth() - b.getMonth() < 0 || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; return isNaN(a) ? '-' : a; }
 function togglePassword(i, icon) { const x = document.getElementById(i); if(x.type==="password"){x.type="text";icon.classList.remove('fa-eye');icon.classList.add('fa-eye-slash');}else{x.type="password";icon.classList.remove('fa-eye-slash');icon.classList.add('fa-eye');} }
 
@@ -163,7 +170,7 @@ function confirmarEstado(id, activo, nombre) { showModal(activo ? "Reactivar" : 
 function eliminarDefinitivo(id, nombre) { showModal("¡PELIGRO!", `¿Borrar físicamente a ${nombre}?`, () => { setTimeout(() => { showModal("ÚLTIMO AVISO", "Irreversible.", async () => { await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } }); loadAlumnos(false); }); }, 500); }); }
 async function loadDojosCards() { const grid = document.getElementById('grid-dojos'); if(!grid) return; grid.innerHTML = 'Cargando...'; try { const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const json = await res.json(); grid.innerHTML = ''; (json.data || []).forEach(d => { const p = d.attributes || d; const cleanName = (p.nombre || 'Dojo').replace(/Aikido\s+/gi, '').trim(); const addr = p.direccion ? p.direccion.replace(/\n/g, '<br>') : '-'; grid.innerHTML += `<div class="dojo-card"><div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${cleanName}</h3></div><div class="dojo-body"><div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${addr}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span></div><div class="dojo-info-row"><i class="fa-solid fa-phone"></i><span>${p.telefono || '-'}</span></div><div class="dojo-info-row"><i class="fa-solid fa-envelope"></i><span>${p.email || '-'}</span></div><a href="${p.web || '#'}" target="_blank" class="dojo-link-btn">WEB OFICIAL</a></div></div>`; }); } catch { grid.innerHTML = 'Error.'; } }
 
-// --- EXPORTAR EXCEL DE LUJO (CORREGIDO: CENTRADO, ANCHOS AUTO, LOGO) ---
+// --- EXPORTAR EXCEL (MODIFICADO: LOGO IZQUIERDA, FECHAS DD/MM/YYYY, AJUSTE ESTRICTO DE ANCHOS) ---
 async function exportBackupExcel() {
     const dojoFilter = document.getElementById('export-dojo-filter').value;
     const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
@@ -181,18 +188,16 @@ async function exportBackupExcel() {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Alumnos');
 
-        // 1. CARGAR LOGO
+        // 1. CARGAR LOGO (A la izquierda, centrado en franja negra)
         try {
             const logoRes = await fetch('img/logo-arashi.png');
             const logoBlob = await logoRes.blob();
             const logoBuffer = await logoBlob.arrayBuffer();
             const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
-            // Logo ajustado en fila 2 (no toca borde superior)
-            sheet.addImage(logoId, { tl: { col: 0.1, row: 1.1 }, ext: { width: 140, height: 70 } });
+            sheet.addImage(logoId, { tl: { col: 2.5, row: 0.6 }, ext: { width: 110, height: 60 } });
         } catch(e) { console.warn("Logo no encontrado", e); }
 
         // 2. COLUMNAS
-        // Definimos las claves para mapear datos
         const columns = [
             { key: 'apellidos' }, { key: 'nombre' }, { key: 'dni' },
             { key: 'nac' }, { key: 'dir' }, { key: 'pob' },
@@ -201,87 +206,74 @@ async function exportBackupExcel() {
         ];
         sheet.columns = columns;
 
-        // 3. CABECERA NEGRA (Fila 1-5 para dejar espacio al logo)
-        sheet.mergeCells('A1:M5'); // Cubre TODO el ancho
+        // 3. CABECERA NEGRA
+        sheet.mergeCells('A1:M5');
         const titleCell = sheet.getCell('A1');
-        titleCell.value = `ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString()})`;
+        titleCell.value = `            ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString('es-ES')})`;
         titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } }; 
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; // Negro
-        titleCell.alignment = { vertical: 'middle', horizontal: 'center' }; // Centrado
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; 
+        titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
         // 4. CABECERAS DE COLUMNA (Fila 7)
         const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA NACIMIENTO', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'FECHA ALTA', 'GRADO', 'SEGURO'];
         const headerRow = sheet.getRow(7);
         headerRow.values = headers;
-        headerRow.height = 35;
+        headerRow.height = 30;
         
         headerRow.eachCell((cell) => {
-            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } }; // Rojo
-            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } }; 
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
-        // 5. DATOS Y AUTO-AJUSTE DE ANCHO
-        // Primero mapeamos datos
-        let maxLengths = new Array(headers.length).fill(10); // Ancho mínimo
+        // 5. DATOS Y AUTO-AJUSTE ESTRICTO AL CONTENIDO
+        let maxLengths = new Array(headers.length).fill(8);
 
         data.forEach(item => {
             const p = item.attributes || item;
-            
-            // Datos limpios
             const rowValues = {
-                apellidos: (p.apellidos || '').trim(),
+                apellidos: (p.apellidos || '').toUpperCase().trim(),
                 nombre: (p.nombre || '').trim(),
                 dni: p.dni || "",
-                nac: p.fecha_nacimiento || "",
+                nac: formatDateExcel(p.fecha_nacimiento),
                 dir: p.direccion || "",
                 pob: (p.poblacion || "").trim(),
                 cp: (p.cp || "").trim(),
                 email: p.email || "",
                 dojo: getDojoName(p.dojo),
                 grupo: p.grupo || "Full Time",
-                alta: p.fecha_inicio || "",
+                alta: formatDateExcel(p.fecha_inicio),
                 grau: p.grado || "",
                 seguro: p.seguro_pagado ? "SI" : "NO"
             };
             
             const row = sheet.addRow(rowValues);
-            
-            // Estilos
             row.eachCell((cell, colNumber) => {
                 cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                cell.alignment = { vertical: 'middle', horizontal: 'center' }; // TODO CENTRADO
-                
-                // Excepciones a la izquierda: Apell(1), Nom(2), Dir(5), Email(8)
-                if([1, 2, 5, 8].includes(colNumber)) {
-                    cell.alignment = { vertical: 'middle', horizontal: 'left' };
-                }
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                // Alineación a la izquierda para campos de texto largo
+                if([1, 2, 5, 8].includes(colNumber)) cell.alignment = { vertical: 'middle', horizontal: 'left' };
 
-                // Calcular ancho máximo
+                // Calcular longitud
                 const len = cell.value ? cell.value.toString().length : 0;
                 if (len > maxLengths[colNumber - 1]) maxLengths[colNumber - 1] = len;
             });
 
-            // Color Seguro
+            // Colores texto seguro
             const segCell = row.getCell(13);
             if (p.seguro_pagado) {
-                segCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
                 segCell.font = { color: { argb: 'FF065F46' }, bold: true };
             } else {
-                segCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
                 segCell.font = { color: { argb: 'FF991B1B' }, bold: true };
             }
         });
 
-        // Aplicar anchos calculados + margen
+        // Aplicar anchos estrictos (el contenido + 2 para que no toque bordes)
         sheet.columns.forEach((col, index) => {
-            col.width = maxLengths[index] + 4; // Margen de seguridad
+            col.width = maxLengths[index] + 2; 
         });
 
-        // 6. FINALIZAR
-        sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 7 }];
-        
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = window.URL.createObjectURL(blob);
@@ -329,14 +321,15 @@ async function generateReport(type) {
         list.sort((a, b) => { const pA = a.attributes || a; const pB = b.attributes || b; if (type === 'insurance') { if (pA.seguro_pagado !== pB.seguro_pagado) return (pA.seguro_pagado === true ? -1 : 1); return (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || ''); if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado); if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo)); if (type === 'group') { const cmp = (pA.grupo || '').localeCompare(pB.grupo || ''); return cmp !== 0 ? cmp : (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'age') { return new Date(pA.fecha_nacimiento||'2000-01-01') - new Date(pB.fecha_nacimiento||'2000-01-01'); } return 0; });
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email'];
         if (type === 'insurance') headRow.push('Seguro'); else if (type === 'age') { headRow.push('Nac.'); headRow.push('Edad'); } else headRow.push('Nac.');
-        if (type === 'group') { headRow.push('Dojo'); headRow.push('Grupo'); } else headRow.push('Dojo');
+        headRow.push('Dojo');
+        if (type === 'group') headRow.push('Grupo');
         if (type !== 'insurance') headRow.push('Dirección');
         headRow.push('Población', 'CP');
         
         const body = list.map(a => {
             const p = a.attributes || a;
-            let dni = (p.dni || '-').toUpperCase().replace('PENDIENTE', 'PEND');
-            let email = (p.email || '-'); if(email.toLowerCase().startsWith('pendi')) email = 'NO DISPONIBLE';
+            let dni = (p.dni || '-').toUpperCase();
+            let email = (p.email || '-');
             const row = [(p.apellidos||'').toUpperCase(), p.nombre||'', dni, normalizeGrade(p.grado), normalizePhone(p.telefono), email];
             if (type === 'insurance') row.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE');
             else if (type === 'age') { row.push(formatDatePDF(p.fecha_nacimiento)); row.push(calculateAge(p.fecha_nacimiento)); }
@@ -348,57 +341,11 @@ async function generateReport(type) {
             return row;
         });
 
-        // ALINEACIÓN DE COLUMNAS DEL PDF PARA COINCIDIR CON EXCEL (Centrado excepto texto largo)
-        let styles = {};
-        // Indices base: 0:Apell, 1:Nom, 2:DNI, 3:Grado, 4:Tlf, 5:Email
-        // Centrados: DNI, Grado, Tlf, Nac, Edad, Grupo, Seguro, CP
-        // Izquierda: Apell, Nom, Email, Dir, Pob, Dojo
-        
-        // Configuración Base
-        styles = { 
-            0: { cellWidth: 35, fontStyle: 'bold' }, // Apell (Izq)
-            1: { cellWidth: 15, fontStyle: 'bold' }, // Nom (Izq)
-            2: { cellWidth: 20, halign: 'center' },  // DNI
-            3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, // Grado
-            4: { cellWidth: 20, halign: 'center' }, // Tlf
-            5: { cellWidth: 40 }, // Email (Izq)
-            // ... resto dinámico
-        };
-        
-        if(type==='age') { 
-            styles[6] = { cellWidth: 18, halign: 'center' }; // Nac
-            styles[7] = { cellWidth: 10, halign: 'center' }; // Edad
-            styles[8] = { cellWidth: 28 }; // Dojo (Izq)
-            styles[9] = { cellWidth: 35 }; // Dir (Izq)
-            styles[10] = { cellWidth: 20 }; // Pob (Izq)
-            styles[11] = { cellWidth: 10, halign: 'center' }; // CP
-        } else if(type==='insurance') {
-             styles[6] = { cellWidth: 20, halign: 'center', fontStyle: 'bold' }; // Seguro
-             styles[7] = { cellWidth: 35 }; // Dojo
-             styles[8] = { cellWidth: 35 }; // Pob
-             styles[9] = { cellWidth: 15, halign: 'center' }; // CP
-        } else if(type==='group') {
-             styles[6] = { cellWidth: 18, halign: 'center' }; // Nac
-             styles[7] = { cellWidth: 25 }; // Dojo
-             styles[8] = { cellWidth: 18, halign: 'center' }; // Grupo
-             styles[9] = { cellWidth: 35 }; // Dir
-             styles[10] = { cellWidth: 25 }; // Pob
-             styles[11] = { cellWidth: 10, halign: 'center' }; // CP
-        } else {
-             styles[6] = { cellWidth: 18, halign: 'center' }; // Nac
-             styles[7] = { cellWidth: 30 }; // Dojo
-             styles[8] = { cellWidth: 40 }; // Dir
-             styles[9] = { cellWidth: 25 }; // Pob
-             styles[10] = { cellWidth: 12, halign: 'center' }; // CP
-        }
-
         doc.autoTable({ 
             startY: 25, head: [headRow], body: body, theme: 'grid', showHead: 'everyPage', 
             margin: { top: 30, left: 5, right: 5, bottom: 15 },
-            styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
-            headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
-            columnStyles: styles,
-            willDrawCell: (data) => { if (type === 'insurance' && data.section === 'body' && data.column.index === 6) { if (data.cell.raw === 'PAGADO') { doc.setFillColor(200, 255, 200); doc.setTextColor(0, 100, 0); } else { doc.setFillColor(255, 200, 200); doc.setTextColor(150, 0, 0); } } },
+            styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle' },
+            headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontStyle: 'bold', halign: 'center' },
             didDrawPage: (data) => {
                 doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); doc.setFontSize(16); doc.setFont("helvetica", "bold");
                 doc.text(title, pageWidth / 2, 12, { align: "center" }); doc.setFontSize(10); doc.setFont("helvetica", "normal");
@@ -422,4 +369,3 @@ function filtrarTabla(t,i) { const input=document.getElementById(i); if(!input)r
 function toggleMobileMenu() { document.querySelector('.sidebar').classList.toggle('open'); }
 function scrollToTop() { const c=document.querySelector('.content'); if(c)c.scrollTo({top:0,behavior:'smooth'}); else window.scrollTo({top:0,behavior:'smooth'}); }
 const ca=document.querySelector('.content'); if(ca){ ca.addEventListener('scroll',()=>{ const b=document.getElementById('btn-scroll-top'); if(ca.scrollTop>300)b.classList.add('visible');else b.classList.remove('visible'); }); }
-function togglePassword(i,c) { const x=document.getElementById(i); if(x.type==="password"){x.type="text";c.classList.remove('fa-eye');c.classList.add('fa-eye-slash');}else{x.type="password";c.classList.remove('fa-eye-slash');c.classList.add('fa-eye');} }
