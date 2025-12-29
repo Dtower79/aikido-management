@@ -198,17 +198,20 @@ async function exportBackupExcel() {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Alumnos');
 
+        // Piezas negras superiores (Filas 1-6)
         for (let i = 1; i <= 6; i++) {
             const row = sheet.getRow(i);
             row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } };
         }
 
+        // Título
         sheet.mergeCells('A2:M3');
         const titleCell = sheet.getCell('A2');
         titleCell.value = `            ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString('es-ES')})`;
         titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
+        // Resumen
         sheet.mergeCells('A4:M4');
         const totalCell = sheet.getCell('A4');
         totalCell.value = `TOTAL ALUMNOS: ${data.length}`;
@@ -301,7 +304,7 @@ function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TOD
 async function runResetProcess() { const out=document.getElementById('console-output'); out.innerHTML="<div>Iniciando...</div>"; try{ const r=await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); const l=j.data||[]; if(l.length===0){out.innerHTML+="<div>Nada que resetear.</div>";return;} for(const i of l){ await fetch(`${API_URL}/api/alumnos/${i.documentId}`,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':`Bearer ${jwtToken}`},body:JSON.stringify({data:{seguro_pagado:false}})}); } out.innerHTML+="<div style='color:#33ff00'>COMPLETADO.</div>"; }catch(e){out.innerHTML+=`<div>ERROR: ${e.message}</div>`;} }
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
-// --- GENERACIÓN PDF (AJUSTE DE ANCHOS Y ALINEACIÓN INTELIGENTE) ---
+// --- GENERACIÓN PDF (RESTORED COLOR LOGIC) ---
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -353,24 +356,20 @@ async function generateReport(type) {
             return row;
         });
 
-        // LÓGICA DE ESTILOS POR COLUMNA: ANCHOS FIJOS PARA DATOS CORTOS, EL RESTO AUTO.
         const colStyles = {};
         headRow.forEach((h, i) => {
-            colStyles[i] = { halign: 'left', cellWidth: 'auto' }; // Por defecto auto e izquierda
-            
-            // Forzar centrado en columnas de datos atómicos
+            colStyles[i] = { halign: 'left', cellWidth: 'auto' };
             if (['DNI', 'Grado', 'Teléfono', 'Nac.', 'Edad', 'Seguro', 'CP', 'Grupo'].includes(h)) {
                 colStyles[i].halign = 'center';
             }
-
-            // Asignar anchos fijos mínimos para evitar rotura de palabras (como 2º KYU)
             if (h === 'Grado') colStyles[i].cellWidth = 15;
             if (h === 'DNI') colStyles[i].cellWidth = 22;
             if (h === 'Nac.') colStyles[i].cellWidth = 18;
             if (h === 'Edad') colStyles[i].cellWidth = 10;
             if (h === 'CP') colStyles[i].cellWidth = 12;
             if (h === 'Teléfono') colStyles[i].cellWidth = 22;
-            if (h === 'Población') colStyles[i].cellWidth = 25; // Población acotada para no desperdiciar
+            if (h === 'Población') colStyles[i].cellWidth = 25;
+            if (h === 'Seguro') colStyles[i].cellWidth = 20; // Ancho fijo para Seguro
         });
 
         doc.autoTable({ 
@@ -379,6 +378,19 @@ async function generateReport(type) {
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
+            // LOGICA DE COLOR RESTAURADA
+            willDrawCell: (data) => {
+                if (type === 'insurance' && data.section === 'body' && data.column.index === 6) {
+                    const status = data.cell.raw;
+                    if (status === 'PAGADO') {
+                        doc.setFillColor(200, 255, 200); // Verde suave
+                        doc.setTextColor(0, 100, 0);    // Verde oscuro
+                    } else if (status === 'PENDIENTE') {
+                        doc.setFillColor(255, 200, 200); // Rojo suave
+                        doc.setTextColor(150, 0, 0);    // Rojo oscuro
+                    }
+                }
+            },
             didDrawPage: (data) => {
                 doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); doc.setFontSize(16); doc.setFont("helvetica", "bold");
                 doc.text(title, pageWidth / 2, 12, { align: "center" }); doc.setFontSize(10); doc.setFont("helvetica", "normal");
