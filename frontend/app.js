@@ -490,7 +490,6 @@ async function exportBackupExcel() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO...';
 
     try {
-        // 1. Obtener datos
         let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
         if(dojoFilter) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
 
@@ -498,126 +497,120 @@ async function exportBackupExcel() {
         const json = await res.json();
         const data = json.data || [];
 
-        // 2. Crear Libro y Hoja
         const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet('Listado Alumnos');
+        const sheet = workbook.addWorksheet('Alumnos');
 
-        // 3. Definir Columnas y Anchos
+        // 1. CARGAR LOGO (Debe estar en img/logo-arashi.png)
+        try {
+            const logoRes = await fetch('img/logo-arashi.png');
+            const logoBlob = await logoRes.blob();
+            const logoBuffer = await logoBlob.arrayBuffer();
+            const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
+            // Posicionar Logo
+            sheet.addImage(logoId, { tl: { col: 0.1, row: 0.1 }, ext: { width: 120, height: 60 } });
+        } catch(e) { console.warn("Logo no encontrado", e); }
+
+        // 2. DEFINIR COLUMNAS (Orden Solicitado)
         sheet.columns = [
-            { header: 'ID', key: 'id', width: 25 },
-            { header: 'GRUPO', key: 'grupo', width: 15 },
-            { header: 'NOM I COGNOMS', key: 'full_name', width: 35 },
+            { header: 'APELLIDOS', key: 'apellidos', width: 30 },
             { header: 'NOMBRE', key: 'nombre', width: 20 },
-            { header: 'APELLIDOS', key: 'apellidos', width: 25 },
             { header: 'DNI', key: 'dni', width: 15 },
-            { header: 'DATA NAIXEMENT', key: 'nacimiento', width: 15 },
-            { header: 'ADREÇA', key: 'direccion', width: 40 },
-            { header: 'POBLACIO + CP', key: 'pob_cp', width: 25 },
-            { header: 'POBLACIO', key: 'poblacion', width: 20 },
+            { header: 'FECHA NACIMIENTO', key: 'nac', width: 20 },
+            { header: 'DIRECCIÓN', key: 'dir', width: 40 },
+            { header: 'POBLACIÓN', key: 'pob', width: 25 },
             { header: 'CP', key: 'cp', width: 10 },
             { header: 'EMAIL', key: 'email', width: 30 },
-            { header: 'TELEFON', key: 'telefono', width: 15 },
-            { header: 'DATA ALTA', key: 'alta', width: 15 },
-            { header: 'GRAU', key: 'grado', width: 12 },
             { header: 'DOJO', key: 'dojo', width: 25 },
+            { header: 'GRUPO', key: 'grupo', width: 15 },
+            { header: 'FECHA ALTA', key: 'alta', width: 15 },
+            { header: 'GRADO', key: 'grau', width: 12 },
             { header: 'SEGURO', key: 'seguro', width: 12 }
         ];
 
-        // 4. Estilo del Título Principal
-        sheet.mergeCells('A1:Q1'); // Fusionar celdas de la cabecera
-        const titleCell = sheet.getCell('A1');
+        // 3. CABECERA CON TÍTULO
+        sheet.mergeCells('D2:M3');
+        const titleCell = sheet.getCell('D2');
         titleCell.value = `ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString()})`;
-        titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } }; // Blanco
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; // Negro Azulado
+        titleCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } };
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-        sheet.getRow(1).height = 30;
 
-        // 5. Estilo de la Fila de Cabeceras (Fila 2)
-        const headerRow = sheet.getRow(2);
+        // Fila de encabezados en fila 5
+        const headerRow = sheet.getRow(5);
         headerRow.values = sheet.columns.map(col => col.header);
-        headerRow.height = 25;
+        headerRow.height = 30; // Altura para que quepa "FECHA NACIMIENTO"
+        
         headerRow.eachCell((cell) => {
-            cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } }; // Blanco
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } }; // Rojo Arashi
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; // wrapText evita corte
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
-        // 6. Añadir Datos
+        // 4. DATOS
         data.forEach(item => {
             const p = item.attributes || item;
-            const nombre = (p.nombre || '').trim();
-            const apellidos = (p.apellidos || '').trim();
-            const pob = (p.poblacion || '').trim();
-            const cp = (p.cp || '').trim();
             
-            // Fila de datos
+            // Preparar datos limpios
             const rowData = {
-                id: item.documentId,
-                grupo: p.grupo || "Full Time",
-                full_name: `${nombre} ${apellidos}`,
-                nombre: nombre,
-                apellidos: apellidos,
+                apellidos: (p.apellidos || '').trim(),
+                nombre: (p.nombre || '').trim(),
                 dni: p.dni || "",
-                nacimiento: p.fecha_nacimiento || "",
-                direccion: p.direccion || "",
-                pob_cp: `${pob} ${cp}`,
-                poblacion: pob,
-                cp: cp,
+                nac: p.fecha_nacimiento || "",
+                dir: p.direccion || "",
+                pob: (p.poblacion || "").trim(),
+                cp: (p.cp || "").trim(),
                 email: p.email || "",
-                telefono: p.telefono || "",
-                alta: p.fecha_inicio || "",
-                grado: p.grado || "",
                 dojo: getDojoName(p.dojo),
+                grupo: p.grupo || "Full Time",
+                alta: p.fecha_inicio || "",
+                grau: p.grado || "",
                 seguro: p.seguro_pagado ? "SI" : "NO"
             };
-
+            
             const row = sheet.addRow(rowData);
-
-            // Estilos por celda (Bordes y Alineación)
+            
+            // Estilos por celda
             row.eachCell((cell, colNumber) => {
                 cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                cell.alignment = { vertical: 'middle', horizontal: 'left' };
-                // Centrar columnas cortas
-                if([1, 6, 11, 15, 17].includes(colNumber)) {
-                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' }; // Centrar todo por defecto
+                
+                // Excepciones: Alinear Izquierda (Nombre, Apellidos, Dirección, Email)
+                // Indices (base 1): 1=Apell, 2=Nom, 5=Dir, 8=Email
+                if([1, 2, 5, 8].includes(colNumber)) {
+                    cell.alignment = { vertical: 'middle', horizontal: 'left' };
                 }
             });
 
-            // Color Condicional SEGURO (Columna Q = 17)
-            const seguroCell = row.getCell(17);
+            // Color Seguro (Columna 13 = M)
+            const segCell = row.getCell(13);
             if (p.seguro_pagado) {
-                seguroCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } }; // Verde claro
-                seguroCell.font = { color: { argb: 'FF065F46' }, bold: true }; // Verde oscuro texto
+                segCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
+                segCell.font = { color: { argb: 'FF065F46' }, bold: true };
             } else {
-                seguroCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; // Rojo claro
-                seguroCell.font = { color: { argb: 'FF991B1B' }, bold: true }; // Rojo oscuro texto
+                segCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+                segCell.font = { color: { argb: 'FF991B1B' }, bold: true };
             }
         });
 
-        // 7. Generar Buffer y Descargar
+        // Finalizar
+        sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 5 }];
+        sheet.autoFilter = 'A5:M5';
+        
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const fileName = `Arashi_Backup_${new Date().getFullYear()}_${new Date().getMonth()+1}.xlsx`;
+        a.href = url; a.download = `Arashi_Listado_${new Date().getFullYear()}.xlsx`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        showModal("Excel Generado", "Descarga completada.");
 
-        showModal("Excel Generado", `Archivo <b>${fileName}</b> descargado correctamente.`);
-
-    } catch(e) {
-        console.error(e);
-        showModal("Error", "Falló la exportación del Excel.");
-    } finally {
-        btn.innerHTML = originalText;
-    }
+    } catch(e) { console.error(e); showModal("Error", "Falló la exportación."); } 
+    finally { btn.innerHTML = originalText; }
 }
+
+
 
 // --- RESET DE SEGUROS ANUALES ---
 function confirmResetInsurance() {

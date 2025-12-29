@@ -13,8 +13,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
 <body>
-
-    <!-- ... (LOGIN, RESET SCREEN IGUAL QUE ANTES) ... -->
     <div id="login-screen" class="login-container">
         <div class="login-box">
             <div class="logo-area"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login"></div>
@@ -36,7 +34,6 @@
             </form>
         </div>
     </div>
-
     <div id="reset-screen" class="login-container hidden">
         <div class="login-box">
             <div class="logo-area"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login"></div>
@@ -50,10 +47,7 @@
             </form>
         </div>
     </div>
-
-    <!-- DASHBOARD -->
     <div id="dashboard" class="dashboard-container hidden">
-        <!-- ... (SIDEBAR IGUAL QUE ANTES) ... -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar">
@@ -78,14 +72,10 @@
                 <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
             </div>
         </div>
-
         <main class="content">
-            <!-- ... (SECCIONES HASTA AREA TÉCNICA IGUAL) ... -->
-            <div id="sec-welcome" class="section active welcome-flex"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-welcome"></div>
-            
-            <!-- COPIA EL RESTO DE SECCIONES DE TU VERSION ANTERIOR (NUEVO ALUMNO, ALUMNOS, BAJAS)... -->
-            <!-- ... -->
-            
+            <div id="sec-welcome" class="section active welcome-flex">
+                <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-welcome">
+            </div>
             <div id="sec-nuevo-alumno" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-user-plus"></i> Gestión de Alumno</h2></header>
                 <div class="card form-card">
@@ -108,7 +98,7 @@
                             <div class="form-group"><label>Población</label><input type="text" id="new-poblacion" list="ciudades-list"><datalist id="ciudades-list"></datalist></div>
                             <div class="form-group"><label>CP</label><input type="text" id="new-cp" maxlength="5"></div>
                         </div>
-                        <hr class="form-hr">
+                        
                         <div class="form-row">
                             <div class="form-group"><label>Dojo</label><select id="new-dojo" required><option value="">Cargando...</option></select></div>
                             <div class="form-group"><label>Grupo</label><select id="new-grupo"><option value="Full Time">Full Time</option><option value="Mañanas">Mañanas</option><option value="Kids">Kids</option></select></div>
@@ -119,6 +109,7 @@
                             <label class="switch"><input type="checkbox" id="new-seguro"><span class="slider round"></span></label>
                             <span id="seguro-status-text" style="margin-left:10px; font-size:0.9rem; color:#ef4444;">NO PAGADO</span>
                         </div>
+                        <!-- BOTONES DENTRO DE CARD SIN HR -->
                         <div class="form-actions"><button type="button" id="btn-cancelar-edit" class="action-btn secondary hidden" onclick="resetForm()">Cancelar</button><button type="submit" id="btn-submit-alumno" class="action-btn">GUARDAR ALUMNO</button></div>
                     </form>
                 </div>
@@ -130,8 +121,17 @@
             </div>
 
             <div id="sec-alumnos" class="section hidden">
-                <header class="section-header"><h2><i class="fa-solid fa-users"></i> Alumnos</h2><div class="toolbar"><button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES</button><div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-alumno" placeholder="Buscar..."></div></div></header>
-                <div class="table-container drag-scroll"><table id="table-alumnos"><thead><tr><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table></div>
+                <header class="section-header">
+                    <h2><i class="fa-solid fa-users"></i> Alumnos</h2>
+                    <div class="toolbar">
+                        <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES</button>
+                        <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
+                        <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-alumno" placeholder="Buscar..."></div>
+                    </div>
+                </header>
+                <div class="table-container drag-scroll">
+                    <table id="table-alumnos"><thead><tr><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table>
+                </div>
             </div>
 
             <div id="sec-bajas" class="section hidden">
@@ -140,15 +140,13 @@
                 <div class="table-container drag-scroll"><table id="table-bajas"><thead><tr><th class="txt-accent">Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-bajas-body"></tbody></table></div>
             </div>
 
-            <!-- AREA TÉCNICA (CAMBIOS AQUI: Botones alineados y texto cambiado) -->
             <div id="sec-status" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-heart-pulse"></i> Área Técnica y Backups</h2></header>
                 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:30px;">
-                    <!-- Backup -->
                     <div class="card">
                         <h3><i class="fa-solid fa-file-excel"></i> Copia de Seguridad Local</h3>
-                        <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Descarga la base de datos completa con formato profesional.</p>
+                        <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Descarga la base de datos completa.</p>
                         <div style="margin-bottom:10px;">
                             <label style="color:white; font-size:0.85rem;">Filtrar por Dojo (Opcional):</label>
                             <select id="export-dojo-filter" style="width:100%; padding:8px; margin-top:5px; background:#0f172a; color:white; border:1px solid #334155;">
@@ -158,7 +156,6 @@
                         <button onclick="exportBackupExcel()" class="action-btn" style="width:100%"><i class="fa-solid fa-download"></i> DESCARGAR EXCEL</button>
                     </div>
 
-                    <!-- Reset Seguro -->
                     <div class="card" style="border-color:#ef4444;">
                         <h3 class="txt-accent"><i class="fa-solid fa-calendar-xmark"></i> Cierre de Año (Seguros)</h3>
                         <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Esta acción pondrá el campo "Seguro" de <strong>TODOS</strong> los alumnos a "NO PAGADO". Usar solo al cambiar de año.</p>
@@ -166,21 +163,17 @@
                     </div>
                 </div>
 
+                <!-- CONSOLA SIN BOTÓN EXTRA -->
                 <div class="console-wrapper">
                     <div class="console-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="console-title">root@aikido-system:~# ./diagnostico.sh</span></div>
                     <div class="console-body" id="console-output"></div>
-                    <!-- TEXTO BOTÓN CORREGIDO -->
-                    <div style="padding:15px; border-top:1px solid #333;">
-                        <a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="action-btn secondary" style="text-decoration:none; display:inline-block; border-color:#33ff00; color:#33ff00;">Ver Estado de Strapi</a>
-                    </div>
                 </div>
             </div>
-            
-            <button id="btn-scroll-top" class="scroll-top-btn" onclick="scrollToTop()">
+
+            <button id="btn-scroll-top" class="scroll-top-btn hidden" onclick="scrollToTop()">
                 <i class="fa-solid fa-arrow-up"></i>
             </button>
-            
-            <!-- (FOOTER IGUAL) -->
+
             <div class="footer-trigger"></div>
             <footer class="main-footer">
                 <div class="footer-content">
@@ -193,37 +186,12 @@
             </footer>
         </main>
     </div>
-    
-    <!-- MODALES (IGUAL QUE ANTES + NUEVO BOTÓN INFORME SEGURO) -->
-    <!-- ... (Recover, Change Pass, Custom Modal) ... -->
+
+    <!-- MODALES -->
     <div id="custom-modal" class="modal-overlay hidden"><div class="modal-box"><h3 id="modal-title">Título</h3><p id="modal-message">Mensaje</p><div class="modal-actions"><button id="modal-btn-cancel" class="action-btn secondary">Cancelar</button><button id="modal-btn-ok" class="action-btn">Aceptar</button></div></div></div>
+    <div id="report-modal" class="modal-overlay hidden"><div class="modal-box"><h3><i class="fa-solid fa-file-pdf"></i> Generar Informe</h3><div style="margin: 15px 0; text-align:left;"><label style="color: var(--text-muted); font-size:0.9rem; display:block; margin-bottom:5px;">Filtrar por Dojo (Opcional):</label><select id="report-dojo-filter" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;"><option value="">-- Todos los Dojos --</option></select></div><p>Selecciona el tipo de ordenación:</p><div style="margin: 20px 0; display:flex; flex-direction:column; gap:10px;"><button class="menu-btn" onclick="generateReport('surname')"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos</button><button class="menu-btn" onclick="generateReport('grade')"><i class="fa-solid fa-medal"></i> Por Grado</button><button class="menu-btn" onclick="generateReport('dojo')"><i class="fa-solid fa-torii-gate"></i> Por Dojo</button><button class="menu-btn" onclick="generateReport('age')"><i class="fa-solid fa-cake-candles"></i> Por Edad</button><button class="menu-btn" onclick="generateReport('group')"><i class="fa-solid fa-users-line"></i> Por Grupo</button><button class="menu-btn" onclick="generateReport('insurance')" style="border-color:#22c55e; color:#22c55e;"><i class="fa-solid fa-file-invoice-dollar"></i> Por Estado de Seguro</button></div><div class="modal-actions"><button class="action-btn secondary" onclick="document.getElementById('report-modal').classList.add('hidden')">Cerrar</button></div></div></div>
     <div id="recover-modal" class="modal-overlay hidden"><div class="modal-box"><h3><i class="fa-solid fa-lock"></i> Recuperar Contraseña</h3><p style="font-size:0.9rem; margin-bottom:15px; color:#aaa;">Introduce tu email.</p><div class="input-group"><i class="fa-solid fa-envelope"></i><input type="email" id="recover-email" placeholder="Tu email" required style="width:100%;"></div><div class="modal-actions"><button class="action-btn secondary" onclick="document.getElementById('recover-modal').classList.add('hidden')">Cancelar</button><button class="action-btn" onclick="sendRecoveryEmail()">Enviar</button></div></div></div>
     <div id="change-pass-modal" class="modal-overlay hidden"><div class="modal-box"><h3><i class="fa-solid fa-key"></i> Cambiar Contraseña</h3><form id="change-pass-form"><div class="input-group" style="margin-bottom:15px;"><i class="fa-solid fa-lock"></i><input type="password" id="cp-current" placeholder="Contraseña Actual" required style="width:100%;"><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-current', this)"></i></div><div class="input-group" style="margin-bottom:15px;"><i class="fa-solid fa-lock"></i><input type="password" id="cp-new" placeholder="Nueva Contraseña" required style="width:100%;"><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-new', this)"></i></div><div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="cp-confirm" placeholder="Repetir Nueva Contraseña" required style="width:100%;"><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-confirm', this)"></i></div><div class="modal-actions"><button type="button" class="action-btn secondary" onclick="document.getElementById('change-pass-modal').classList.add('hidden')">Cancelar</button><button type="submit" class="action-btn">Actualizar</button></div></form></div></div>
-
-    <div id="report-modal" class="modal-overlay hidden">
-        <div class="modal-box">
-            <h3><i class="fa-solid fa-file-pdf"></i> Generar Informe</h3>
-            <div style="margin: 15px 0; text-align:left;">
-                <label style="color: var(--text-muted); font-size:0.9rem; display:block; margin-bottom:5px;">Filtrar por Dojo (Opcional):</label>
-                <select id="report-dojo-filter" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;">
-                    <option value="">-- Todos los Dojos --</option>
-                </select>
-            </div>
-            <p>Selecciona el tipo de ordenación:</p>
-            <div style="margin: 20px 0; display:flex; flex-direction:column; gap:10px;">
-                <button class="menu-btn" onclick="generateReport('surname')"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos</button>
-                <button class="menu-btn" onclick="generateReport('grade')"><i class="fa-solid fa-medal"></i> Por Grado</button>
-                <button class="menu-btn" onclick="generateReport('dojo')"><i class="fa-solid fa-torii-gate"></i> Por Dojo</button>
-                <button class="menu-btn" onclick="generateReport('age')"><i class="fa-solid fa-cake-candles"></i> Por Edad</button>
-                <button class="menu-btn" onclick="generateReport('group')"><i class="fa-solid fa-users-line"></i> Por Grupo</button>
-                <!-- NUEVO BOTÓN SEGURO -->
-                <button class="menu-btn" onclick="generateReport('insurance')" style="border-color:#22c55e; color:#22c55e;"><i class="fa-solid fa-file-invoice-dollar"></i> Por Estado de Seguro</button>
-            </div>
-            <div class="modal-actions">
-                <button class="action-btn secondary" onclick="document.getElementById('report-modal').classList.add('hidden')">Cerrar</button>
-            </div>
-        </div>
-    </div>
 
     <script src="app.js"></script>
     <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
