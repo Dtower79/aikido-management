@@ -104,18 +104,13 @@ function normalizeGrade(g) {
 function getGradeWeight(g) { return GRADE_WEIGHTS[normalizeGrade(g)] || 0; }
 function normalizeAddress(a) { return a ? a.replace(/\b(Carrer|Calle)\b/gi, 'C/').replace(/\b(Avinguda|Avenida)\b/gi, 'Avda').trim() : '-'; }
 
-// FUNCIÓN DE NORMALIZACIÓN DE CIUDAD (APLANADO DE VARIANTES)
 function normalizeCity(c) { 
     if(!c) return ''; 
     let s = c.toString().toUpperCase();
-    // Eliminar contenido entre paréntesis y los propios paréntesis
     s = s.replace(/\s*\(.*?\)\s*/g, ' ');
-    // Normalizar abreviaturas comunes
     s = s.replace(/\bSTA\b/g, 'SANTA');
     s = s.replace(/\bST\b/g, 'SANT');
-    // Eliminar puntuación y guiones al final o principio
     s = s.replace(/[.,\-\s]+$/, '').replace(/^[.,\-\s]+/, '');
-    // Caso específico Sant Adrià
     if (s.match(/SAN.*ADRI/i)) return 'SANT ADRIÀ DE BESÒS';
     return s.trim(); 
 }
@@ -229,7 +224,7 @@ async function exportBackupExcel() {
         titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; 
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-        // 4. CABECERAS DE COLUMNA (Fila 7) con salto de línea
+        // 4. CABECERAS DE COLUMNA
         const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA\nNACIMIENTO', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'FECHA\nALTA', 'GRADO', 'SEGURO'];
         const headerRow = sheet.getRow(7);
         headerRow.values = headers;
@@ -242,7 +237,7 @@ async function exportBackupExcel() {
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
-        // 5. DATOS Y AUTO-AJUSTE ESTRICTO AL CONTENIDO
+        // 5. DATOS
         let maxLengths = new Array(headers.length).fill(8);
 
         data.forEach(item => {
@@ -253,7 +248,7 @@ async function exportBackupExcel() {
                 dni: p.dni || "",
                 nac: formatDateExcel(p.fecha_nacimiento),
                 dir: p.direccion || "",
-                pob: normalizeCity(p.poblacion), // Población Aplanada y Limpia
+                pob: normalizeCity(p.poblacion),
                 cp: (p.cp || "").trim(),
                 email: p.email || "",
                 dojo: getDojoName(p.dojo),
@@ -268,22 +263,29 @@ async function exportBackupExcel() {
                 cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
                 if([1, 2, 5, 8].includes(colNumber)) cell.alignment = { vertical: 'middle', horizontal: 'left' };
-
                 const len = cell.value ? cell.value.toString().length : 0;
                 if (len > maxLengths[colNumber - 1]) maxLengths[colNumber - 1] = len;
             });
-
             const segCell = row.getCell(13);
-            if (p.seguro_pagado) {
-                segCell.font = { color: { argb: 'FF065F46' }, bold: true };
-            } else {
-                segCell.font = { color: { argb: 'FF991B1B' }, bold: true };
-            }
+            if (p.seguro_pagado) { segCell.font = { color: { argb: 'FF065F46' }, bold: true }; } 
+            else { segCell.font = { color: { argb: 'FF991B1B' }, bold: true }; }
         });
 
-        sheet.columns.forEach((col, index) => {
-            col.width = maxLengths[index] + 2; 
-        });
+        // --- AÑADIR RESUMEN AL FINAL DEL EXCEL ---
+        sheet.addRow([]); // Espacio en blanco
+        const now = new Date().toLocaleString('es-ES');
+        
+        const totalRow = sheet.addRow(['', '', '', '', '', '', '', '', '', 'TOTAL ALUMNOS:', data.length]);
+        totalRow.getCell(10).font = { bold: true };
+        totalRow.getCell(11).font = { bold: true };
+        totalRow.getCell(11).alignment = { horizontal: 'left' };
+
+        const genRow = sheet.addRow(['', '', '', '', '', '', '', '', '', 'GENERADO EL:', now]);
+        genRow.getCell(10).font = { italic: true, size: 9, color: { argb: 'FF666666' } };
+        genRow.getCell(11).font = { italic: true, size: 9, color: { argb: 'FF666666' } };
+        genRow.getCell(11).alignment = { horizontal: 'left' };
+
+        sheet.columns.forEach((col, index) => { col.width = maxLengths[index] + 2; });
 
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -330,7 +332,10 @@ async function generateReport(type) {
         const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
+        
+        // Ordenación
         list.sort((a, b) => { const pA = a.attributes || a; const pB = b.attributes || b; if (type === 'insurance') { if (pA.seguro_pagado !== pB.seguro_pagado) return (pA.seguro_pagado === true ? -1 : 1); return (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || ''); if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado); if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo)); if (type === 'group') { const cmp = (pA.grupo || '').localeCompare(pB.grupo || ''); return cmp !== 0 ? cmp : (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'age') { return new Date(pA.fecha_nacimiento||'2000-01-01') - new Date(pB.fecha_nacimiento||'2000-01-01'); } return 0; });
+        
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email'];
         if (type === 'insurance') headRow.push('Seguro'); else if (type === 'age') { headRow.push('Nac.'); headRow.push('Edad'); } else headRow.push('Nac.');
         headRow.push('Dojo');
@@ -341,8 +346,7 @@ async function generateReport(type) {
         const body = list.map(a => {
             const p = a.attributes || a;
             let dni = (p.dni || '-').toUpperCase();
-            let email = (p.email || '-');
-            const row = [(p.apellidos||'').toUpperCase(), p.nombre||'', dni, normalizeGrade(p.grado), normalizePhone(p.telefono), email];
+            const row = [(p.apellidos||'').toUpperCase(), p.nombre||'', dni, normalizeGrade(p.grado), normalizePhone(p.telefono), p.email||'-'];
             if (type === 'insurance') row.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE');
             else if (type === 'age') { row.push(formatDatePDF(p.fecha_nacimiento)); row.push(calculateAge(p.fecha_nacimiento)); }
             else row.push(formatDatePDF(p.fecha_nacimiento));
@@ -359,10 +363,23 @@ async function generateReport(type) {
             styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontStyle: 'bold', halign: 'center' },
             didDrawPage: (data) => {
+                // Header
                 doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); doc.setFontSize(16); doc.setFont("helvetica", "bold");
                 doc.text(title, pageWidth / 2, 12, { align: "center" }); doc.setFontSize(10); doc.setFont("helvetica", "normal");
-                doc.text(subText, pageWidth / 2, 18, { align: "center" }); doc.setFontSize(8);
-                doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+                doc.text(subText, pageWidth / 2, 18, { align: "center" }); 
+                
+                // --- FOOTER COMPLETO ---
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                const footerY = pageHeight - 10;
+                const now = new Date().toLocaleString('es-ES');
+                
+                // Izquierda: Fecha de generación
+                doc.text(`Generado el: ${now}`, 10, footerY);
+                // Centro: Paginación
+                doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth / 2, footerY, { align: 'center' });
+                // Derecha: Contador total
+                doc.text(`Total Alumnos: ${list.length}`, pageWidth - 10, footerY, { align: 'right' });
             }
         });
         doc.save(`Informe_Arashi_${filenameMap[type]}.pdf`);
@@ -371,7 +388,7 @@ async function generateReport(type) {
 
 function changeFontSize(t, d) { const table = document.getElementById(t); if(!table) return; table.querySelectorAll('th, td').forEach(c => { const s = parseFloat(window.getComputedStyle(c).fontSize); const p = parseFloat(window.getComputedStyle(c).paddingTop); c.style.fontSize = (Math.max(8, s + d)) + "px"; c.style.padding = `${Math.max(2, p + (d * 0.5))}px 5px`; }); }
 function setupDragScroll() { const s=document.querySelector('.drag-scroll'); if(!s)return; let d=false,x,l; s.addEventListener('mousedown',e=>{d=true;x=e.pageX-s.offsetLeft;l=s.scrollLeft;}); s.addEventListener('mouseleave',()=>d=false); s.addEventListener('mouseup',()=>d=false); s.addEventListener('mousemove',e=>{if(!d)return;e.preventDefault();const p=e.pageX-s.offsetLeft;s.scrollLeft=l-(p-x)*2;}); }
-async function runDiagnostics() { const o=document.getElementById('console-output'); if(o){ o.innerHTML=''; const l=["Iniciando...", "> Conectando DB... [OK]", "> Verificando API... [OK]", "SISTEMA ONLINE 100%"]; for(const x of l){await new Promise(r=>setTimeout(r,400));o.innerHTML+=`<div>${x}</div>`;} o.innerHTML += '<div style="padding:15px; border-top:1px solid #333;"><a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="action-btn secondary" style="text-decoration:none; display:inline-block; border-color:#33ff00; color:#33ff00;">Ver Estado de Strapi</a></div>'; } }
+async function runDiagnostics() { const o=document.getElementById('console-output'); if(o){ o.innerHTML=''; const l=["Iniciando...", "> Conectando DB... [OK]", "> Verificando API... [OK]", "SISTEMA ONLINE 100%"]; for(const x of l){await new Promise(r=>setTimeout(r,400));o.innerHTML+=`<div>${x}</div>`;} o.innerHTML += '<div style="padding:15px; border-top:1px solid #33ff00;"><a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="action-btn secondary" style="text-decoration:none; display:inline-block; border-color:#33ff00; color:#33ff00;">Ver Estado de Strapi</a></div>'; } }
 function showModal(t, m, ok) { const d=document.getElementById('custom-modal'); if(!d)return; document.getElementById('modal-title').innerText=t; document.getElementById('modal-message').innerHTML=m; document.getElementById('modal-btn-cancel').onclick=()=>d.classList.add('hidden'); document.getElementById('modal-btn-ok').onclick=()=>{if(ok)ok();d.classList.add('hidden');}; d.classList.remove('hidden'); }
 async function loadDojosSelect() { const s=document.getElementById('new-dojo'); if(s){ try{ const r=await fetch(`${API_URL}/api/dojos`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); s.innerHTML='<option value="">Selecciona Dojo...</option>'; (j.data||[]).forEach(d=>{s.innerHTML+=`<option value="${d.documentId}">${d.attributes.nombre}</option>`}); }catch{} } }
 async function loadReportDojos() { const s=document.getElementById('report-dojo-filter'); const e=document.getElementById('export-dojo-filter'); try{ const r=await fetch(`${API_URL}/api/dojos`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); const o='<option value="">-- Todos los Dojos --</option>'+(j.data||[]).map(d=>`<option value="${d.documentId}">${d.attributes.nombre}</option>`).join(''); if(s)s.innerHTML=o; if(e)e.innerHTML=o; }catch{} }
