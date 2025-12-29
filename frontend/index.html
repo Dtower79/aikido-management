@@ -67,6 +67,7 @@
                 <div class="sidebar-sep">Área Técnica</div>
                 <button class="menu-btn" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
                 <div class="sidebar-footer-mobile">
+                    <!-- Solo el salir, la contraseña ahora está en Área Técnica -->
                     <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
                 </div>
             </nav>
@@ -103,24 +104,18 @@
                             <div class="form-group"><label>Población</label><input type="text" id="new-poblacion" list="ciudades-list"><datalist id="ciudades-list"></datalist></div>
                             <div class="form-group"><label>CP</label><input type="text" id="new-cp" maxlength="5"></div>
                         </div>
-                        <hr class="form-hr">
+                        
                         <div class="form-row">
                             <div class="form-group"><label>Dojo</label><select id="new-dojo" required><option value="">Cargando...</option></select></div>
                             <div class="form-group"><label>Grupo</label><select id="new-grupo"><option value="Full Time">Full Time</option><option value="Mañanas">Mañanas</option><option value="Kids">Kids</option></select></div>
-                            <div class="form-group"><label>Grado Actual</label>
-                                <select id="new-grado">
-                                    <option value="">Selecciona grado...</option>
-                                    <option value="5º Kyu">5º Kyu</option><option value="4º Kyu">4º Kyu</option><option value="3º Kyu">3º Kyu</option><option value="2º Kyu">2º Kyu</option><option value="1º Kyu">1º Kyu</option>
-                                    <option value="1º Dan">1º Dan</option><option value="2º Dan">2º Dan</option><option value="3º Dan">3º Dan</option><option value="4º Dan">4º Dan</option><option value="5º Dan">5º Dan</option>
-                                    <option value="6º Dan">6º Dan</option><option value="7º Dan">7º Dan</option><option value="8º Dan">8º Dan</option>
-                                </select>
-                            </div>
+                            <div class="form-group"><label>Grado Actual</label><select id="new-grado"><option value="">Selecciona grado...</option><option value="5º Kyu">5º Kyu</option><option value="4º Kyu">4º Kyu</option><option value="3º Kyu">3º Kyu</option><option value="2º Kyu">2º Kyu</option><option value="1º Kyu">1º Kyu</option><option value="1º Dan">1º Dan</option><option value="2º Dan">2º Dan</option><option value="3º Dan">3º Dan</option><option value="4º Dan">4º Dan</option><option value="5º Dan">5º Dan</option><option value="6º Dan">6º Dan</option><option value="7º Dan">7º Dan</option><option value="8º Dan">8º Dan</option></select></div>
                         </div>
                         <div class="form-row" style="margin-top:20px; align-items:center; background:#162032; padding:15px; border-radius:8px; border:1px solid #334155;">
                             <label style="margin-right:15px; color:white; font-weight:bold;">Seguro Anual (<span id="current-year-lbl"></span>):</label>
                             <label class="switch"><input type="checkbox" id="new-seguro"><span class="slider round"></span></label>
                             <span id="seguro-status-text" style="margin-left:10px; font-size:0.9rem; color:#ef4444;">NO PAGADO</span>
                         </div>
+                        <!-- BOTONES AJUSTADOS SIN HR -->
                         <div class="form-actions"><button type="button" id="btn-cancelar-edit" class="action-btn secondary hidden" onclick="resetForm()">Cancelar</button><button type="submit" id="btn-submit-alumno" class="action-btn">GUARDAR ALUMNO</button></div>
                     </form>
                 </div>
@@ -136,47 +131,22 @@
                     <h2><i class="fa-solid fa-users"></i> Alumnos</h2>
                     <div class="toolbar">
                         <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES</button>
-                        <div class="font-tool">
-                            <button onclick="changeFontSize('table-alumnos', -1)">A-</button>
-                            <button onclick="changeFontSize('table-alumnos', 1)">A+</button>
-                        </div>
+                        <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
                         <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI..."></div>
                     </div>
                 </header>
                 <div class="table-container drag-scroll">
-                    <table id="table-alumnos">
-                        <thead>
-                            <tr>
-                                <th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lista-alumnos-body"></tbody>
-                    </table>
+                    <table id="table-alumnos"><thead><tr><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table>
                 </div>
             </div>
 
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header"><h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2></header>
-                <div class="toolbar" style="margin-bottom:15px; justify-content:flex-start;">
-                     <div class="font-tool">
-                        <button onclick="changeFontSize('table-bajas', -1)">A-</button>
-                        <button onclick="changeFontSize('table-bajas', 1)">A+</button>
-                    </div>
-                    <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-baja" placeholder="Buscar baja..."></div>
-                </div>
-                <div class="table-container drag-scroll">
-                    <table id="table-bajas">
-                        <thead>
-                            <tr>
-                                <th class="txt-accent">Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lista-bajas-body"></tbody>
-                    </table>
-                </div>
+                <div class="toolbar" style="margin-bottom:15px; justify-content:flex-start;"><div class="font-tool"><button onclick="changeFontSize('table-bajas', -1)">A-</button><button onclick="changeFontSize('table-bajas', 1)">A+</button></div><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-baja" placeholder="Buscar baja..."></div></div>
+                <div class="table-container drag-scroll"><table id="table-bajas"><thead><tr><th class="txt-accent">Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-bajas-body"></tbody></table></div>
             </div>
 
-            <!-- AREA TÉCNICA REESTRUCTURADA -->
+            <!-- AREA TECNICA CON GESTIÓN DE CUENTA -->
             <div id="sec-status" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-heart-pulse"></i> Área Técnica y Gestión</h2></header>
                 
@@ -200,7 +170,7 @@
                         <button onclick="confirmResetInsurance()" class="action-btn" style="width:100%; background:#ef4444;"><i class="fa-solid fa-rotate-right"></i> RESETEAR SEGUROS</button>
                     </div>
 
-                    <!-- NUEVA CARD: GESTIÓN DE CUENTA -->
+                    <!-- GESTIÓN CUENTA -->
                     <div class="card" style="border-color:#3b82f6;">
                         <h3 style="color:#3b82f6;"><i class="fa-solid fa-user-shield"></i> Mi Cuenta</h3>
                         <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Gestión de seguridad y acceso.</p>
@@ -211,12 +181,10 @@
                     </div>
                 </div>
 
+                <!-- CONSOLA LIMPIA SIN BOTÓN EXTRA -->
                 <div class="console-wrapper">
                     <div class="console-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="console-title">root@aikido-system:~# ./diagnostico.sh</span></div>
                     <div class="console-body" id="console-output"></div>
-                    <div style="padding:15px; border-top:1px solid #333;">
-                        <a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="action-btn secondary" style="text-decoration:none; display:inline-block; border-color:#33ff00; color:#33ff00;">Ver Estado de Strapi</a>
-                    </div>
                 </div>
             </div>
             
