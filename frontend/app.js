@@ -230,7 +230,6 @@ async function exportBackupExcel() {
             const logoBlob = await logoRes.blob();
             const logoBuffer = await logoBlob.arrayBuffer();
             const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
-            // Posicionamiento alineado con el título
             sheet.addImage(logoId, { tl: { col: 2.2, row: 1.2 }, ext: { width: 110, height: 60 } });
         } catch(e) { console.warn("Logo no encontrado", e); }
 
@@ -244,7 +243,7 @@ async function exportBackupExcel() {
         sheet.columns = columns;
 
         const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA\nNACIMIENTO', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'FECHA\nALTA', 'GRADO', 'SEGURO'];
-        const headerRow = sheet.getRow(8); // Empezamos datos en fila 8 tras el bloque negro
+        const headerRow = sheet.getRow(8); 
         headerRow.values = headers;
         headerRow.height = 45; 
         
@@ -340,7 +339,7 @@ async function generateReport(type) {
         list.sort((a, b) => { const pA = a.attributes || a; const pB = b.attributes || b; if (type === 'insurance') { if (pA.seguro_pagado !== pB.seguro_pagado) return (pA.seguro_pagado === true ? -1 : 1); return (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || ''); if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado); if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo)); if (type === 'group') { const cmp = (pA.grupo || '').localeCompare(pB.grupo || ''); return cmp !== 0 ? cmp : (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'age') { return new Date(pA.fecha_nacimiento||'2000-01-01') - new Date(pB.fecha_nacimiento||'2000-01-01'); } return 0; });
         
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email'];
-        if (type === 'insurance') headRow.push('Seguro'); else if (type === 'age') { headRow.push('Nac.'); headRow.push('Edad'); } else headRow.push('Nac.');
+        if (type === 'insurance') headRow.push('Seguro'); else if (type === 'age') { headRow.push('Nac.', 'Edad'); } else headRow.push('Nac.');
         headRow.push('Dojo');
         if (type === 'group') headRow.push('Grupo');
         if (type !== 'insurance') headRow.push('Dirección');
@@ -351,7 +350,7 @@ async function generateReport(type) {
             let dni = (p.dni || '-').toUpperCase();
             const row = [(p.apellidos||'').toUpperCase(), p.nombre||'', dni, normalizeGrade(p.grado), normalizePhone(p.telefono), p.email||'-'];
             if (type === 'insurance') row.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE');
-            else if (type === 'age') { row.push(formatDatePDF(p.fecha_nacimiento)); row.push(calculateAge(p.fecha_nacimiento)); }
+            else if (type === 'age') { row.push(formatDatePDF(p.fecha_nacimiento), calculateAge(p.fecha_nacimiento)); }
             else row.push(formatDatePDF(p.fecha_nacimiento));
             row.push(getDojoName(p.dojo));
             if (type === 'group') row.push(p.grupo || '-');
@@ -360,21 +359,31 @@ async function generateReport(type) {
             return row;
         });
 
+        // ADAPTACIÓN DINÁMICA DE ANCHO Y ALINEACIÓN
+        const colStyles = {};
+        headRow.forEach((h, i) => {
+            // Alineación por defecto
+            colStyles[i] = { halign: 'left', cellWidth: 'auto' }; 
+            // Columnas que van centradas
+            if (['DNI', 'Grado', 'Teléfono', 'Nac.', 'Edad', 'Seguro', 'CP', 'Grupo'].includes(h)) {
+                colStyles[i].halign = 'center';
+            }
+        });
+
         doc.autoTable({ 
             startY: 25, head: [headRow], body: body, theme: 'grid', showHead: 'everyPage', 
             margin: { top: 30, left: 5, right: 5, bottom: 15 },
-            styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle' },
+            styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontStyle: 'bold', halign: 'center' },
+            columnStyles: colStyles,
             didDrawPage: (data) => {
                 doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); doc.setFontSize(16); doc.setFont("helvetica", "bold");
                 doc.text(title, pageWidth / 2, 12, { align: "center" }); doc.setFontSize(10); doc.setFont("helvetica", "normal");
                 doc.text(subText, pageWidth / 2, 18, { align: "center" }); 
                 
-                doc.setFontSize(8);
-                doc.setTextColor(150);
+                doc.setFontSize(8); doc.setTextColor(150);
                 const footerY = pageHeight - 10;
                 const now = new Date().toLocaleString('es-ES');
-                
                 doc.text(`Generado el: ${now}`, 10, footerY);
                 doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth / 2, footerY, { align: 'center' });
                 doc.text(`Total Alumnos: ${list.length}`, pageWidth - 10, footerY, { align: 'right' });
