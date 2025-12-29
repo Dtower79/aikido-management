@@ -8,8 +8,9 @@ const GRADE_WEIGHTS = {
     '1º KYU': 5, '2º KYU': 4, '3º KYU': 3, '4º KYU': 2, '5º KYU': 1, 'S/G': 0
 };
 
+// --- INICIALIZACIÓN DE LA APLICACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Check for Reset Password Code in URL
+    // 1. Detectar si estamos en modo "Restablecer Contraseña" por URL
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
     if (resetCode) {
@@ -17,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return; 
     }
 
-    // 2. Session Check
+    // 2. Comprobar y renovar la sesión del usuario
     const loginTimeStr = localStorage.getItem('aikido_login_time');
     const ahora = Date.now();
     
@@ -28,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logout();
     }
 
-    // 3. UI Initializers
+    // 3. Inicializar elementos de la interfaz de usuario
     setupDniInput('dni-login'); 
     setupDniInput('new-dni');
     
@@ -40,9 +41,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     setupDragScroll();
 
+    // Actualizar el año en el footer dinámicamente
     const yearLabel = document.getElementById('current-year-lbl');
     if(yearLabel) yearLabel.textContent = new Date().getFullYear();
 
+    // Lógica para el switch del "Seguro Anual" en el formulario
     const seguroSwitch = document.getElementById('new-seguro');
     if(seguroSwitch) {
         seguroSwitch.addEventListener('change', (e) => {
@@ -56,31 +59,76 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Listener para el formulario de login
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const identifier = document.getElementById('dni-login').value; 
+            const password = document.getElementById('password').value;
+            try {
+                const response = await fetch(`${API_URL}/api/auth/local`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identifier, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    jwtToken = data.jwt;
+                    localStorage.setItem('aikido_jwt', jwtToken);
+                    localStorage.setItem('aikido_user', JSON.stringify(data.user));
+                    localStorage.setItem('aikido_login_time', Date.now().toString());
+                    showDashboard();
+                } else { document.getElementById('login-error').innerText = "❌ Error Credenciales"; }
+            } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
+        });
+    }
+
+    // Listener para el formulario de nuevo/edición de alumno
+    const formAlumno = document.getElementById('form-nuevo-alumno');
+    if(formAlumno) {
+        formAlumno.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const alumnoData = {
+                nombre: document.getElementById('new-nombre').value,
+                apellidos: document.getElementById('new-apellidos').value,
+                dni: document.getElementById('new-dni').value,
+                fecha_nacimiento: document.getElementById('new-nacimiento').value || null,
+                email: document.getElementById('new-email').value,
+                telefono: document.getElementById('new-telefono').value,
+                direccion: document.getElementById('new-direccion').value,
+                poblacion: document.getElementById('new-poblacion').value,
+                cp: document.getElementById('new-cp').value,
+                dojo: document.getElementById('new-dojo').value,
+                grupo: document.getElementById('new-grupo').value,
+                grado: document.getElementById('new-grado').value,
+                seguro_pagado: document.getElementById('new-seguro').checked,
+                activo: true
+            };
+
+            const method = id ? 'PUT' : 'POST';
+            const apiUrl = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`; // Renombrado a apiUrl
+
+            try {
+                const res = await fetch(apiUrl, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
+                    body: JSON.stringify({ data: alumnoData })
+                });
+                if(res.ok) {
+                    showModal("Éxito", "Guardado correctamente.", () => {
+                        showSection('alumnos');
+                        resetForm();
+                    });
+                } else { showModal("Error", "No se pudo guardar."); }
+            } catch { showModal("Error", "Fallo de conexión."); }
+        });
+    }
 });
 
-// --- SESIÓN ---
-const loginForm = document.getElementById('login-form');
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const identifier = document.getElementById('dni-login').value; 
-        const password = document.getElementById('password').value;
-        try {
-            const response = await fetch(`${API_URL}/api/auth/local`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ identifier, password })
-            });
-            const data = await response.json();
-            if (response.ok) {
-                jwtToken = data.jwt;
-                localStorage.setItem('aikido_jwt', jwtToken);
-                localStorage.setItem('aikido_user', JSON.stringify(data.user));
-                localStorage.setItem('aikido_login_time', Date.now().toString());
-                showDashboard();
-            } else { document.getElementById('login-error').innerText = "❌ Error Credenciales"; }
-        } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
-    });
-}
+
+// --- FUNCIONES DE NAVEGACIÓN Y SESIÓN ---
 
 function logout() {
     localStorage.clear();
@@ -92,11 +140,47 @@ function logout() {
     if(login) login.classList.remove('hidden');
     if(reset) reset.classList.add('hidden');
     
+    // Limpiar parámetros de URL al desloguearse
     if (window.location.search) window.history.replaceState({}, document.title, window.location.pathname);
 }
 
-// --- PASSWORD MGMT ---
+function showDashboard() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    loadDojosSelect(); 
+    loadCiudades(); 
+    loadReportDojos(); 
+    showSection('welcome'); 
+}
+
+function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    
+    const sec = document.getElementById(`sec-${id}`);
+    if(sec) sec.classList.remove('hidden');
+    
+    // Marcar el botón de menú activo
+    const btn = document.querySelector(`button[onclick="showSection('${id}', true)"]`) || document.querySelector(`button[onclick="showSection('${id}')"]`);
+    if(btn) btn.classList.add('active');
+
+    // Cargar datos específicos de la sección
+    if(id === 'alumnos') loadAlumnos(true);
+    if(id === 'bajas') loadAlumnos(false);
+    if(id === 'dojos') loadDojosCards();
+    if(id === 'status') runDiagnostics();
+    
+    // Resetear formulario de alumno solo si es para crear uno nuevo (no editar)
+    if(id === 'nuevo-alumno') {
+        const isEditing = document.getElementById('edit-id').value !== "";
+        if(!isEditing) resetForm();
+    }
+}
+
+// --- GESTIÓN DE CONTRASEÑAS ---
+
 function openRecoverModal() { document.getElementById('recover-modal').classList.remove('hidden'); }
+
 async function sendRecoveryEmail() {
     const email = document.getElementById('recover-email').value;
     if(!email) return alert("Introduce tu email");
@@ -132,6 +216,7 @@ document.getElementById('reset-password-form')?.addEventListener('submit', async
 });
 
 function openChangePasswordModal() { document.getElementById('change-pass-modal').classList.remove('hidden'); }
+
 document.getElementById('change-pass-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const currentPassword = document.getElementById('cp-current').value;
@@ -149,44 +234,8 @@ document.getElementById('change-pass-form')?.addEventListener('submit', async (e
     } catch (e) { alert("Error de conexión"); }
 });
 
-// --- NAVEGACIÓN ---
-function showDashboard() {
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('dashboard').classList.remove('hidden');
-    loadDojosSelect(); 
-    loadCiudades(); 
-    loadReportDojos(); // Carga filtros para modales
-    showSection('welcome'); 
-}
+// --- FUNCIONES DE UTILIDAD GENERAL ---
 
-function showSection(id) {
-    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
-    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
-    
-    const sec = document.getElementById(`sec-${id}`);
-    if(sec) sec.classList.remove('hidden');
-    
-    const btn = document.querySelector(`button[onclick="showSection('${id}', true)"]`);
-    if(!btn) {
-        const btn2 = document.querySelector(`button[onclick="showSection('${id}')"]`);
-        if(btn2) btn2.classList.add('active');
-    } else {
-        btn.classList.add('active');
-    }
-
-    if(id === 'alumnos') loadAlumnos(true);
-    if(id === 'bajas') loadAlumnos(false);
-    if(id === 'dojos') loadDojosCards();
-    if(id === 'status') runDiagnostics();
-    
-    // Solo limpiar si es navegación directa al formulario
-    if(id === 'nuevo-alumno') {
-        const isEditing = document.getElementById('edit-id').value !== "";
-        if(!isEditing) resetForm();
-    }
-}
-
-// --- UTILS ---
 function getDojoName(dojoObj) {
     let name = "-";
     if (dojoObj) {
@@ -257,7 +306,7 @@ function togglePassword(inputId, icon) {
     else { input.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
 }
 
-// --- CARGA DE DATOS ---
+// --- CARGA DE DATOS EN TABLAS ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
     const cols = activos ? 13 : 14; 
@@ -316,49 +365,7 @@ async function loadAlumnos(activos) {
     } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos.</td></tr>`; }
 }
 
-// --- GUARDAR ---
-const formAlumno = document.getElementById('form-nuevo-alumno');
-if(formAlumno) {
-    formAlumno.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('edit-id').value;
-        const alumnoData = {
-            nombre: document.getElementById('new-nombre').value,
-            apellidos: document.getElementById('new-apellidos').value,
-            dni: document.getElementById('new-dni').value,
-            fecha_nacimiento: document.getElementById('new-nacimiento').value || null,
-            email: document.getElementById('new-email').value,
-            telefono: document.getElementById('new-telefono').value,
-            direccion: document.getElementById('new-direccion').value,
-            poblacion: document.getElementById('new-poblacion').value,
-            cp: document.getElementById('new-cp').value,
-            dojo: document.getElementById('new-dojo').value,
-            grupo: document.getElementById('new-grupo').value,
-            grado: document.getElementById('new-grado').value,
-            seguro_pagado: document.getElementById('new-seguro').checked,
-            activo: true
-        };
-
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
-
-        try {
-            const res = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
-                body: JSON.stringify({ data: alumnoData })
-            });
-            if(res.ok) {
-                showModal("Éxito", "Guardado correctamente.", () => {
-                    showSection('alumnos');
-                    resetForm();
-                });
-            } else { showModal("Error", "No se pudo guardar."); }
-        } catch { showModal("Error", "Fallo de conexión."); }
-    });
-}
-
-// --- EDITAR ---
+// --- EDITAR ALUMNO ---
 async function editarAlumno(documentId) {
     try {
         const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
@@ -419,7 +426,8 @@ function resetForm() {
     document.getElementById('btn-cancelar-edit').classList.add('hidden');
 }
 
-// --- ACCIONES ---
+// --- ACCIONES DE GESTIÓN ---
+
 function confirmarEstado(id, activo, nombre) {
     showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => {
         const fecha = activo ? null : new Date().toISOString().split('T')[0];
@@ -442,7 +450,6 @@ function eliminarDefinitivo(id, nombre) {
     });
 }
 
-// --- DOJOS ---
 async function loadDojosCards() {
     const grid = document.getElementById('grid-dojos'); 
     if(!grid) return;
@@ -467,10 +474,14 @@ async function loadDojosCards() {
                     <a href="${p.web || '#'}" target="_blank" class="dojo-link-btn">WEB OFICIAL</a>
                 </div></div>`;
         });
-    } catch { grid.innerHTML = 'Error cargando Dojos.'; }
+    } catch(e) { 
+        console.error(e);
+        grid.innerHTML = 'Error cargando Dojos.'; 
+    }
 }
 
-// --- EXPORTAR EXCEL PROFESIONAL ---
+// --- EXPORTAR EXCEL PROFESIONAL (HTML Table Method) ---
+// --- EXPORTAR EXCEL PROFESIONAL (.XLSX REAL CON EXCELJS) ---
 async function exportBackupExcel() {
     const dojoFilter = document.getElementById('export-dojo-filter').value;
     const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
@@ -478,123 +489,118 @@ async function exportBackupExcel() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO...';
 
     try {
-        let url = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
-        if(dojoFilter) url += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
+        // 1. Obtener datos
+        let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
+        if(dojoFilter) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
 
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         const data = json.data || [];
 
-        let tableRows = '';
+        // 2. Crear Libro y Hoja
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Listado Alumnos');
+
+        // 3. Definir Columnas y Anchos
+        sheet.columns = [
+            { header: 'ID', key: 'id', width: 25 },
+            { header: 'GRUPO', key: 'grupo', width: 15 },
+            { header: 'NOM I COGNOMS', key: 'full_name', width: 35 },
+            { header: 'NOMBRE', key: 'nombre', width: 20 },
+            { header: 'APELLIDOS', key: 'apellidos', width: 25 },
+            { header: 'DNI', key: 'dni', width: 15 },
+            { header: 'DATA NAIXEMENT', key: 'nacimiento', width: 15 },
+            { header: 'ADREÇA', key: 'direccion', width: 40 },
+            { header: 'POBLACIO + CP', key: 'pob_cp', width: 25 },
+            { header: 'POBLACIO', key: 'poblacion', width: 20 },
+            { header: 'CP', key: 'cp', width: 10 },
+            { header: 'EMAIL', key: 'email', width: 30 },
+            { header: 'TELEFON', key: 'telefono', width: 15 },
+            { header: 'DATA ALTA', key: 'alta', width: 15 },
+            { header: 'GRAU', key: 'grado', width: 12 },
+            { header: 'DOJO', key: 'dojo', width: 25 },
+            { header: 'SEGURO', key: 'seguro', width: 12 }
+        ];
+
+        // 4. Estilo del Título Principal
+        sheet.mergeCells('A1:Q1'); // Fusionar celdas de la cabecera
+        const titleCell = sheet.getCell('A1');
+        titleCell.value = `ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString()})`;
+        titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } }; // Blanco
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; // Negro Azulado
+        titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        sheet.getRow(1).height = 30;
+
+        // 5. Estilo de la Fila de Cabeceras (Fila 2)
+        const headerRow = sheet.getRow(2);
+        headerRow.values = sheet.columns.map(col => col.header);
+        headerRow.height = 25;
+        headerRow.eachCell((cell) => {
+            cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } }; // Blanco
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } }; // Rojo Arashi
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        });
+
+        // 6. Añadir Datos
         data.forEach(item => {
             const p = item.attributes || item;
             const nombre = (p.nombre || '').trim();
             const apellidos = (p.apellidos || '').trim();
-            const nombreCompleto = `${nombre} ${apellidos}`.trim();
-            
-            // FIX 2: Separar Población y CP limpios
             const pob = (p.poblacion || '').trim();
             const cp = (p.cp || '').trim();
             
-            // Lógica Seguro (Verde/Rojo)
-            const seguro = p.seguro_pagado ? "SI" : "NO";
-            const seguroColor = p.seguro_pagado ? "#d1fae5" : "#fee2e2"; 
-            const seguroText = p.seguro_pagado ? "#065f46" : "#991b1b";
+            // Fila de datos
+            const rowData = {
+                id: item.documentId,
+                grupo: p.grupo || "Full Time",
+                full_name: `${nombre} ${apellidos}`,
+                nombre: nombre,
+                apellidos: apellidos,
+                dni: p.dni || "",
+                nacimiento: p.fecha_nacimiento || "",
+                direccion: p.direccion || "",
+                pob_cp: `${pob} ${cp}`,
+                poblacion: pob,
+                cp: cp,
+                email: p.email || "",
+                telefono: p.telefono || "",
+                alta: p.fecha_inicio || "",
+                grado: p.grado || "",
+                dojo: getDojoName(p.dojo),
+                seguro: p.seguro_pagado ? "SI" : "NO"
+            };
 
-            tableRows += `
-                <tr>
-                    <td>${item.documentId}</td>
-                    <td>${p.grupo || "Full Time"}</td>
-                    <td>${nombreCompleto}</td>
-                    <td>${nombre}</td>
-                    <td>${apellidos}</td>
-                    <td style="mso-number-format:'@'">${p.dni || ""}</td> <!-- Forzar texto DNI -->
-                    <td>${p.fecha_nacimiento || ""}</td>
-                    <td>${p.direccion || ""}</td>
-                    <td>${pob}</td>
-                    <td style="mso-number-format:'00000'">${cp}</td> <!-- Forzar ceros CP -->
-                    <td>${p.email || ""}</td>
-                    <td style="mso-number-format:'@'">${p.telefono || ""}</td>
-                    <td>${p.fecha_inicio || ""}</td>
-                    <td>${p.grado || ""}</td>
-                    <td>${getDojoName(p.dojo)}</td>
-                    <td style="background-color: ${seguroColor}; color: ${seguroText}; text-align: center; font-weight:bold;">${seguro}</td>
-                </tr>`;
+            const row = sheet.addRow(rowData);
+
+            // Estilos por celda (Bordes y Alineación)
+            row.eachCell((cell, colNumber) => {
+                cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                // Centrar columnas cortas
+                if([1, 6, 11, 15, 17].includes(colNumber)) {
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                }
+            });
+
+            // Color Condicional SEGURO (Columna Q = 17)
+            const seguroCell = row.getCell(17);
+            if (p.seguro_pagado) {
+                seguroCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } }; // Verde claro
+                seguroCell.font = { color: { argb: 'FF065F46' }, bold: true }; // Verde oscuro texto
+            } else {
+                seguroCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; // Rojo claro
+                seguroCell.font = { color: { argb: 'FF991B1B' }, bold: true }; // Rojo oscuro texto
+            }
         });
 
-        const fechaExport = new Date().toLocaleString();
+        // 7. Generar Buffer y Descargar
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         
-        // FIX 3: Meta Charset UTF-8 para arreglar acentos
-        const excelTemplate = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <meta charset="UTF-8"> <!-- CLAVE PARA ACENTOS -->
-                <!--[if gte mso 9]>
-                <xml>
-                    <x:ExcelWorkbook>
-                        <x:ExcelWorksheets>
-                            <x:ExcelWorksheet>
-                                <x:Name>Listado Alumnos</x:Name>
-                                <x:WorksheetOptions>
-                                    <x:DisplayGridlines/>
-                                </x:WorksheetOptions>
-                            </x:ExcelWorksheet>
-                        </x:ExcelWorksheets>
-                    </x:ExcelWorkbook>
-                </xml>
-                <![endif]-->
-                <style>
-                    body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
-                    .header-title { 
-                        font-size: 18px; font-weight: bold; color: white; 
-                        background-color: #0b1120; text-align: center; 
-                        height: 50px; vertical-align: middle; 
-                        border: 1px solid #000;
-                    }
-                    .header-col { 
-                        background-color: #ef4444; color: white; 
-                        font-weight: bold; text-align: center; 
-                        border: 1px solid #000; height: 30px; vertical-align: middle;
-                    }
-                    td { border: 1px solid #d1d5db; padding: 5px; vertical-align: middle; }
-                    tr:nth-child(even) { background-color: #f3f4f6; } /* Filas alternas */
-                </style>
-            </head>
-            <body>
-                <table>
-                    <tr>
-                        <td colspan="16" class="header-title">ARASHI GROUP AIKIDO - LISTADO OFICIAL (${fechaExport})</td>
-                    </tr>
-                    <tr></tr>
-                    <tr>
-                        <th class="header-col">ID</th>
-                        <th class="header-col">GRUPO</th>
-                        <th class="header-col">NOM I COGNOMS</th>
-                        <th class="header-col">NOMBRE</th>
-                        <th class="header-col">APELLIDOS</th>
-                        <th class="header-col">DNI</th>
-                        <th class="header-col">DATA NAIXEMENT</th>
-                        <th class="header-col">ADREÇA</th>
-                        <th class="header-col">POBLACIO</th>
-                        <th class="header-col">CP</th>
-                        <th class="header-col">EMAIL</th>
-                        <th class="header-col">TELEFON</th>
-                        <th class="header-col">DATA ALTA</th>
-                        <th class="header-col">GRAU</th>
-                        <th class="header-col">DOJO</th>
-                        <th class="header-col">SEGURO</th>
-                    </tr>
-                    ${tableRows}
-                </table>
-            </body>
-            </html>
-        `;
-
-        // Generar Blob con tipo correcto
-        const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const fileName = `Arashi_Backup_${new Date().getFullYear()}_${new Date().getMonth()+1}.xls`;
+        const fileName = `Arashi_Backup_${new Date().getFullYear()}_${new Date().getMonth()+1}.xlsx`;
         
         a.href = url;
         a.download = fileName;
@@ -602,16 +608,17 @@ async function exportBackupExcel() {
         a.click();
         document.body.removeChild(a);
 
-        showModal("Excel Generado", "Archivo descargado correctamente.");
+        showModal("Excel Generado", `Archivo <b>${fileName}</b> descargado correctamente.`);
 
     } catch(e) {
         console.error(e);
-        showModal("Error", "Falló la exportación.");
+        showModal("Error", "Falló la exportación del Excel.");
     } finally {
         btn.innerHTML = originalText;
     }
 }
 
+// --- RESET DE SEGUROS ANUALES ---
 function confirmResetInsurance() {
     showModal("⚠️ ATENCIÓN", "¿Seguro que quieres resetear TODOS los seguros a NO PAGADO?", () => runResetProcess());
 }
@@ -635,7 +642,7 @@ async function runResetProcess() {
     } catch(e) { consoleOut.innerHTML += `<div>ERROR: ${e.message}</div>`; }
 }
 
-// --- INFORMES AVANZADOS ---
+// --- INFORMES AVANZADOS (PDF) ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -653,12 +660,8 @@ async function generateReport(type) {
     logoImg.src = 'img/logo-arashi-informe.png';
     
     const fileNames = {
-        'surname': 'ARASHI - Alumnos por Apellidos',
-        'age': 'ARASHI - Alumnos por Edad',
-        'grade': 'ARASHI - Alumnos por Grado',
-        'dojo': 'ARASHI - Alumnos por Dojo',
-        'group': 'ARASHI - Alumnos por Grupo',
-        'insurance': 'ARASHI - Estado Seguros'
+        'surname': 'ARASHI - Alumnos por Apellidos', 'age': 'ARASHI - Alumnos por Edad', 'grade': 'ARASHI - Alumnos por Grado', 
+        'dojo': 'ARASHI - Alumnos por Dojo', 'group': 'ARASHI - Alumnos por Grupo', 'insurance': 'ARASHI - Estado Seguros'
     };
 
     const subtitleMap = {
@@ -693,9 +696,7 @@ async function generateReport(type) {
             const pB = b.attributes || b;
             
             if (type === 'insurance') {
-                if (pA.seguro_pagado !== pB.seguro_pagado) {
-                    return (pA.seguro_pagado === true ? -1 : 1);
-                }
+                if (pA.seguro_pagado !== pB.seguro_pagado) { return (pA.seguro_pagado === true ? -1 : 1); }
                 return (pA.apellidos || '').localeCompare(pB.apellidos || '');
             }
             if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
@@ -714,7 +715,6 @@ async function generateReport(type) {
         });
         
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email'];
-        
         if (type === 'insurance') headRow.push('Seguro'); 
         else if (type === 'age') { headRow.push('Nac.'); headRow.push('Edad'); }
         else { headRow.push('Nac.'); }
@@ -723,7 +723,6 @@ async function generateReport(type) {
         else { headRow.push('Dojo'); }
         
         if (type !== 'insurance') headRow.push('Dirección');
-        
         headRow.push('Población', 'CP');
         
         const body = list.map(a => {
@@ -741,38 +740,21 @@ async function generateReport(type) {
                 emailShow 
             ];
 
-            if (type === 'insurance') {
-                baseRow.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE');
-            } else if (type === 'age') {
-                baseRow.push(formatDatePDF(p.fecha_nacimiento));
-                baseRow.push(calculateAge(p.fecha_nacimiento));
-            } else {
-                baseRow.push(formatDatePDF(p.fecha_nacimiento));
-            }
+            if (type === 'insurance') { baseRow.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE'); } 
+            else if (type === 'age') { baseRow.push(formatDatePDF(p.fecha_nacimiento)); baseRow.push(calculateAge(p.fecha_nacimiento)); } 
+            else { baseRow.push(formatDatePDF(p.fecha_nacimiento)); }
             
             baseRow.push(getDojoName(p.dojo));
             if (type === 'group') baseRow.push(p.grupo || '-');
             
             if (type !== 'insurance') baseRow.push(normalizeAddress(p.direccion));
-            
             baseRow.push(normalizeCity(p.poblacion), p.cp || '-');
             return baseRow;
         });
         
         let colStyles = {};
         if (type === 'insurance') {
-            colStyles = {
-                0: { cellWidth: 40, fontStyle: 'bold' }, 
-                1: { cellWidth: 20, fontStyle: 'bold' }, 
-                2: { cellWidth: 22, halign: 'center' }, 
-                3: { cellWidth: 15, halign: 'center' }, 
-                4: { cellWidth: 22, halign: 'center' }, 
-                5: { cellWidth: 45 }, 
-                6: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }, 
-                7: { cellWidth: 35 }, 
-                8: { cellWidth: 35 }, 
-                9: { cellWidth: 15, halign: 'center' } 
-            };
+            colStyles = { 0: { cellWidth: 40, fontStyle: 'bold' }, 1: { cellWidth: 20, fontStyle: 'bold' }, 2: { cellWidth: 22, halign: 'center' }, 3: { cellWidth: 15, halign: 'center' }, 4: { cellWidth: 22, halign: 'center' }, 5: { cellWidth: 45 }, 6: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }, 7: { cellWidth: 35 }, 8: { cellWidth: 35, halign: 'center' }, 9: { cellWidth: 15, halign: 'center' } };
         } else if (type === 'age') { 
             colStyles = { 0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' }, 2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, 4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 38 }, 6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' }, 8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' } };
         } else if (type === 'group') {
@@ -783,11 +765,8 @@ async function generateReport(type) {
 
         const drawCell = function(data) {
             if (type === 'insurance' && data.section === 'body' && data.column.index === 6) {
-                if (data.cell.raw === 'PAGADO') {
-                    doc.setFillColor(200, 255, 200); doc.setTextColor(0, 100, 0);
-                } else {
-                    doc.setFillColor(255, 200, 200); doc.setTextColor(150, 0, 0);
-                }
+                if (data.cell.raw === 'PAGADO') { doc.setFillColor(200, 255, 200); doc.setTextColor(0, 100, 0); } 
+                else { doc.setFillColor(255, 200, 200); doc.setTextColor(150, 0, 0); }
             }
         };
 
@@ -809,40 +788,31 @@ async function generateReport(type) {
                 doc.text(footerStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
             }
         });
-        
         doc.save(`${fileNames[type] || 'Informe'}.pdf`);
     };
 }
 
 function changeFontSize(tableId, delta) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
+    const table = document.getElementById(tableId); if(!table) return;
     const cells = table.querySelectorAll('th, td');
     if (cells.length > 0) {
         const currentSize = parseFloat(window.getComputedStyle(cells[0]).fontSize);
         const currentPad = parseFloat(window.getComputedStyle(cells[0]).paddingTop);
-        const newSize = Math.max(8, currentSize + delta); 
-        const newPad = Math.max(2, currentPad + (delta * 0.5)); 
-        cells.forEach(cell => {
-            cell.style.fontSize = newSize + "px";
-            cell.style.padding = `${newPad}px 5px`; 
-        });
+        const newSize = Math.max(8, currentSize + delta); const newPad = Math.max(2, currentPad + (delta * 0.5)); 
+        cells.forEach(cell => { cell.style.fontSize = newSize + "px"; cell.style.padding = `${newPad}px 5px`; });
     }
 }
 
 function setupDragScroll() {
-    const s = document.querySelector('.drag-scroll');
-    if(!s) return;
+    const s = document.querySelector('.drag-scroll'); if(!s) return;
     let isDown = false, startX, scrollLeft;
     s.addEventListener('mousedown', (e) => { isDown = true; s.classList.add('active'); startX = e.pageX - s.offsetLeft; scrollLeft = s.scrollLeft; });
-    s.addEventListener('mouseleave', () => isDown = false);
-    s.addEventListener('mouseup', () => isDown = false);
+    s.addEventListener('mouseleave', () => isDown = false); s.addEventListener('mouseup', () => isDown = false);
     s.addEventListener('mousemove', (e) => { if(!isDown) return; e.preventDefault(); const x = e.pageX - s.offsetLeft; s.scrollLeft = scrollLeft - (x - startX) * 2; });
 }
 
 async function runDiagnostics() {
-    const o = document.getElementById('console-output'); 
-    if(o) {
+    const o = document.getElementById('console-output'); if(o) {
         o.innerHTML = '';
         const lines = ["Iniciando protocolos...", "> Conectando a Neon DB... [OK]", "> Verificando API Strapi... [OK]", "> Comprobando integridad... [OK]", "SISTEMA OPERATIVO AL 100%"];
         for(const l of lines) { await new Promise(r => setTimeout(r, 400)); o.innerHTML += `<div>${l}</div>`; }
@@ -854,7 +824,7 @@ function showModal(title, msg, onOk) {
     const m = document.getElementById('custom-modal');
     if(!m) return;
     document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-message').innerText = msg;
+    document.getElementById('modal-message').innerHTML = msg; // Usar innerHTML para texto con negritas
     document.getElementById('modal-btn-cancel').onclick = () => m.classList.add('hidden');
     document.getElementById('modal-btn-ok').onclick = () => { if(onOk) onOk(); m.classList.add('hidden'); };
     m.classList.remove('hidden');
@@ -922,8 +892,8 @@ function scrollToTop() {
 }
 const contentArea = document.querySelector('.content');
 if(contentArea) {
+    const btn = document.getElementById('btn-scroll-top');
     contentArea.addEventListener('scroll', () => {
-        const btn = document.getElementById('btn-scroll-top');
-        if (contentArea.scrollTop > 300) btn.classList.remove('hidden'); else btn.classList.add('hidden');
+        if (contentArea.scrollTop > 300) btn.classList.add('visible'); else btn.classList.remove('visible');
     });
 }
