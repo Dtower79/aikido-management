@@ -8,6 +8,7 @@ const GRADE_WEIGHTS = {
     '1º KYU': 5, '2º KYU': 4, '3º KYU': 3, '4º KYU': 2, '5º KYU': 1, 'S/G': 0
 };
 
+// --- INICIALIZACIÓN DE LA APLICACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Detectar si estamos en modo "Restablecer Contraseña" por URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -107,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const method = id ? 'PUT' : 'POST';
-            const apiUrl = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`; // Renombrado a apiUrl
+            const apiUrl = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
 
             try {
                 const res = await fetch(apiUrl, {
@@ -139,7 +140,6 @@ function logout() {
     if(login) login.classList.remove('hidden');
     if(reset) reset.classList.add('hidden');
     
-    // Limpiar parámetros de URL al desloguearse
     if (window.location.search) window.history.replaceState({}, document.title, window.location.pathname);
 }
 
@@ -406,7 +406,6 @@ async function editarAlumno(documentId) {
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
         document.getElementById('btn-cancelar-edit').classList.remove('hidden');
         
-        // Cambio manual de sección
         document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
         document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
         
@@ -480,8 +479,7 @@ async function loadDojosCards() {
     }
 }
 
-// --- EXPORTAR EXCEL PROFESIONAL (HTML Table Method) ---
-// --- EXPORTAR EXCEL PROFESIONAL (.XLSX REAL CON EXCELJS) ---
+// --- EXPORTAR EXCEL PROFESIONAL (ExcelJS) ---
 async function exportBackupExcel() {
     const dojoFilter = document.getElementById('export-dojo-filter').value;
     const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
@@ -489,7 +487,6 @@ async function exportBackupExcel() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO...';
 
     try {
-        // 1. Obtener datos
         let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
         if(dojoFilter) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
 
@@ -497,64 +494,68 @@ async function exportBackupExcel() {
         const json = await res.json();
         const data = json.data || [];
 
-        // 2. Crear Libro y Hoja
         const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet('Listado Alumnos');
+        const sheet = workbook.addWorksheet('Alumnos');
 
-        // 3. Definir Columnas y Anchos
+        // 1. CARGAR LOGO
+        try {
+            const logoRes = await fetch('img/logo-arashi.png');
+            const logoBlob = await logoRes.blob();
+            const logoBuffer = await logoBlob.arrayBuffer();
+            const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
+            sheet.addImage(logoId, { tl: { col: 0.1, row: 0.1 }, ext: { width: 140, height: 70 } });
+        } catch(e) { console.warn("Logo no encontrado", e); }
+
+        // 2. COLUMNAS (Sin ID)
         sheet.columns = [
-            { header: 'APELLIDOS', key: 'apellidos', width: 30 },
-            { header: 'NOMBRE', key: 'nombre', width: 20 },
-            { header: 'DNI', key: 'dni', width: 15 },
-            { header: 'FECHA NACIMIENTO', key: 'nac', width: 20 },
-            { header: 'DIRECCIÓN', key: 'dir', width: 40 },
-            { header: 'POBLACIÓN', key: 'pob', width: 25 },
-            { header: 'CP', key: 'cp', width: 10 },
-            { header: 'EMAIL', key: 'email', width: 30 },
-            { header: 'DOJO', key: 'dojo', width: 25 },
-            { header: 'GRUPO', key: 'grupo', width: 15 },
-            { header: 'FECHA ALTA', key: 'alta', width: 15 },
-            { header: 'GRADO', key: 'grau', width: 12 },
-            { header: 'SEGURO', key: 'seguro', width: 12 }
+            { header: 'APELLIDOS', key: 'apellidos', width: 35 },
+            { header: 'NOMBRE', key: 'nombre', width: 25 },
+            { header: 'DNI', key: 'dni', width: 18 },
+            { header: 'FECHA NACIMIENTO', key: 'nac', width: 22 },
+            { header: 'DIRECCIÓN', key: 'dir', width: 45 },
+            { header: 'POBLACIÓN', key: 'pob', width: 30 },
+            { header: 'CP', key: 'cp', width: 12 },
+            { header: 'EMAIL', key: 'email', width: 35 },
+            { header: 'DOJO', key: 'dojo', width: 30 },
+            { header: 'GRUPO', key: 'grupo', width: 18 },
+            { header: 'FECHA ALTA', key: 'alta', width: 18 },
+            { header: 'GRADO', key: 'grau', width: 15 },
+            { header: 'SEGURO', key: 'seguro', width: 15 }
         ];
 
-        // 4. Estilo del Título Principal
-        sheet.mergeCells('A1:M1'); // Fusionar celdas de la cabecera
-        const titleCell = sheet.getCell('A1');
+        // 3. CABECERA
+        sheet.mergeCells('D1:M4');
+        const titleCell = sheet.getCell('D1');
         titleCell.value = `ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString()})`;
-        titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } }; // Blanco
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; // Negro Azulado
+        titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } }; 
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; 
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-        sheet.getRow(1).height = 30;
 
-        // 5. Estilo de la Fila de Cabeceras (Fila 2)
-        const headerRow = sheet.getRow(2);
+        sheet.getRow(1).height = 20; sheet.getRow(2).height = 20;
+        sheet.getRow(3).height = 20; sheet.getRow(4).height = 20;
+
+        const headerRow = sheet.getRow(6);
         headerRow.values = sheet.columns.map(col => col.header);
-        headerRow.height = 25;
+        headerRow.height = 35;
         headerRow.eachCell((cell) => {
-            cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } }; // Blanco
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } }; // Rojo Arashi
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
-        // 6. Añadir Datos
+        // 4. DATOS
         data.forEach(item => {
             const p = item.attributes || item;
-            const nombre = (p.nombre || '').trim();
-            const apellidos = (p.apellidos || '').trim();
-            const pob = (p.poblacion || '').trim();
-            const cp = (p.cp || '').trim();
             
-            // Fila de datos
             const rowData = {
-                apellidos: apellidos,
-                nombre: nombre,
+                apellidos: (p.apellidos || '').trim(),
+                nombre: (p.nombre || '').trim(),
                 dni: p.dni || "",
                 nac: p.fecha_nacimiento || "",
                 dir: p.direccion || "",
-                pob: pob,
-                cp: cp,
+                pob: (p.poblacion || "").trim(),
+                cp: (p.cp || "").trim(),
                 email: p.email || "",
                 dojo: getDojoName(p.dojo),
                 grupo: p.grupo || "Full Time",
@@ -562,62 +563,42 @@ async function exportBackupExcel() {
                 grau: p.grado || "",
                 seguro: p.seguro_pagado ? "SI" : "NO"
             };
-
+            
             const row = sheet.addRow(rowData);
-
-            // Estilos por celda (Bordes y Alineación)
+            
             row.eachCell((cell, colNumber) => {
                 cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                cell.alignment = { vertical: 'middle', horizontal: 'left' };
-                // Centrar columnas cortas
-                if([1, 6, 11, 15, 17].includes(colNumber)) {
-                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                // Alinear Izquierda: Apell, Nom, Dir, Email (1, 2, 5, 8)
+                if([1, 2, 5, 8].includes(colNumber)) {
+                    cell.alignment = { vertical: 'middle', horizontal: 'left' };
                 }
             });
 
-            // Color Condicional SEGURO (Columna M = 13)
-            const seguroCell = row.getCell(13);
+            const segCell = row.getCell(13);
             if (p.seguro_pagado) {
-                seguroCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } }; // Verde claro
-                seguroCell.font = { color: { argb: 'FF065F46' }, bold: true }; // Verde oscuro texto
+                segCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
+                segCell.font = { color: { argb: 'FF065F46' }, bold: true };
             } else {
-                seguroCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; // Rojo claro
-                seguroCell.font = { color: { argb: 'FF991B1B' }, bold: true }; // Rojo oscuro texto
+                segCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+                segCell.font = { color: { argb: 'FF991B1B' }, bold: true };
             }
         });
 
-        // 7. Generar Buffer y Descargar
-        // Cargamos logo
-        try {
-            const logoRes = await fetch('img/logo-arashi.png');
-            const logoBlob = await logoRes.blob();
-            const logoBuffer = await logoBlob.arrayBuffer();
-            const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
-            // Posicionar Logo
-            sheet.addImage(logoId, { tl: { col: 0.1, row: 0.1 }, ext: { width: 120, height: 60 } });
-        } catch(e) { console.warn("Logo no encontrado", e); }
-
+        sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 6 }];
+        sheet.autoFilter = 'A6:M6';
+        
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const fileName = `Arashi_Backup_${new Date().getFullYear()}_${new Date().getMonth()+1}.xlsx`;
+        a.href = url; a.download = `Arashi_Listado_${new Date().getFullYear()}.xlsx`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        showModal("Excel Generado", `Archivo <b>${a.download}</b> descargado.`);
 
-        showModal("Excel Generado", `Archivo <b>${fileName}</b> descargado correctamente.`);
-
-    } catch(e) {
-        console.error(e);
-        showModal("Error", "Falló la exportación del Excel.");
-    } finally {
-        btn.innerHTML = originalText;
-    }
+    } catch(e) { console.error(e); showModal("Error", "Falló la exportación del Excel."); } 
+    finally { btn.innerHTML = originalText; }
 }
 
 // --- RESET DE SEGUROS ANUALES ---
@@ -662,20 +643,12 @@ async function generateReport(type) {
     logoImg.src = 'img/logo-arashi-informe.png';
     
     const fileNames = {
-        'surname': 'ARASHI - Alumnos por Apellidos',
-        'age': 'ARASHI - Alumnos por Edad',
-        'grade': 'ARASHI - Alumnos por Grado',
-        'dojo': 'ARASHI - Alumnos por Dojo',
-        'group': 'ARASHI - Alumnos por Grupo',
-        'insurance': 'ARASHI - Estado Seguros'
+        'surname': 'ARASHI - Alumnos por Apellidos', 'age': 'ARASHI - Alumnos por Edad', 'grade': 'ARASHI - Alumnos por Grado', 
+        'dojo': 'ARASHI - Alumnos por Dojo', 'group': 'ARASHI - Alumnos por Grupo', 'insurance': 'ARASHI - Estado Seguros'
     };
 
     const subtitleMap = {
-        'surname': 'Apellidos',
-        'age': 'Edad',
-        'grade': 'Grado',
-        'dojo': 'Dojo',
-        'group': 'Grupo',
+        'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo',
         'insurance': 'Estado del Seguro'
     };
     
@@ -770,7 +743,7 @@ async function generateReport(type) {
         
         let colStyles = {};
         if (type === 'insurance') {
-            colStyles = { 0: { cellWidth: 40, fontStyle: 'bold' }, 1: { cellWidth: 20, fontStyle: 'bold' }, 2: { cellWidth: 22, halign: 'center' }, 3: { cellWidth: 15, halign: 'center' }, 4: { cellWidth: 22, halign: 'center' }, 5: { cellWidth: 45 }, 6: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }, 7: { cellWidth: 35 }, 8: { cellWidth: 35 }, 9: { cellWidth: 15, halign: 'center' } };
+            colStyles = { 0: { cellWidth: 40, fontStyle: 'bold' }, 1: { cellWidth: 20, fontStyle: 'bold' }, 2: { cellWidth: 22, halign: 'center' }, 3: { cellWidth: 15, halign: 'center' }, 4: { cellWidth: 22, halign: 'center' }, 5: { cellWidth: 45 }, 6: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }, 7: { cellWidth: 35 }, 8: { cellWidth: 35, halign: 'center' }, 9: { cellWidth: 15, halign: 'center' } };
         } else if (type === 'age') { 
             colStyles = { 0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' }, 2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, 4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 38 }, 6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' }, 8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' } };
         } else if (type === 'group') {
@@ -832,7 +805,6 @@ async function runDiagnostics() {
         o.innerHTML = '';
         const lines = ["Iniciando protocolos...", "> Conectando a Neon DB... [OK]", "> Verificando API Strapi... [OK]", "> Comprobando integridad... [OK]", "SISTEMA OPERATIVO AL 100%"];
         for(const l of lines) { await new Promise(r => setTimeout(r, 400)); o.innerHTML += `<div>${l}</div>`; }
-        o.innerHTML += '<br><a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="btn-monitor-ext" style="color:#33ff00; border:1px solid #33ff00; padding:10px 20px; text-decoration:none;">VER ESTADO DE STRAPI</a>';
     }
 }
 
@@ -840,7 +812,7 @@ function showModal(title, msg, onOk) {
     const m = document.getElementById('custom-modal');
     if(!m) return;
     document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-message').innerHTML = msg; // Usar innerHTML para texto con negritas
+    document.getElementById('modal-message').innerHTML = msg;
     document.getElementById('modal-btn-cancel').onclick = () => m.classList.add('hidden');
     document.getElementById('modal-btn-ok').onclick = () => { if(onOk) onOk(); m.classList.add('hidden'); };
     m.classList.remove('hidden');
