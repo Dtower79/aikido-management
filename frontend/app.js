@@ -8,9 +8,8 @@ const GRADE_WEIGHTS = {
     '1º KYU': 5, '2º KYU': 4, '3º KYU': 3, '4º KYU': 2, '5º KYU': 1, 'S/G': 0
 };
 
-// --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Detectar si estamos en Reset Password (URL)
+    // 1. Check for Reset Password Code in URL
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
     if (resetCode) {
@@ -18,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return; 
     }
 
-    // 2. Comprobar Sesión
+    // 2. Session Check
     const loginTimeStr = localStorage.getItem('aikido_login_time');
     const ahora = Date.now();
     
@@ -29,11 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
         logout();
     }
 
-    // 3. Inicializar UI
+    // 3. UI Initializers
     setupDniInput('dni-login'); 
     setupDniInput('new-dni');
     
-    // Listeners de búsqueda
     const searchAlumno = document.getElementById('search-alumno');
     if(searchAlumno) searchAlumno.addEventListener('keyup', () => filtrarTabla('table-alumnos', 'search-alumno'));
     
@@ -42,11 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     setupDragScroll();
 
-    // Año actual
     const yearLabel = document.getElementById('current-year-lbl');
     if(yearLabel) yearLabel.textContent = new Date().getFullYear();
 
-    // Switch de Seguro
     const seguroSwitch = document.getElementById('new-seguro');
     if(seguroSwitch) {
         seguroSwitch.addEventListener('change', (e) => {
@@ -60,119 +56,47 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    // LISTENER LOGIN (IMPORTANTE)
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const identifier = document.getElementById('dni-login').value; 
-            const password = document.getElementById('password').value;
-            try {
-                const response = await fetch(`${API_URL}/api/auth/local`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ identifier, password })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    jwtToken = data.jwt;
-                    localStorage.setItem('aikido_jwt', jwtToken);
-                    localStorage.setItem('aikido_user', JSON.stringify(data.user));
-                    localStorage.setItem('aikido_login_time', Date.now().toString());
-                    showDashboard();
-                } else { document.getElementById('login-error').innerText = "❌ Error Credenciales"; }
-            } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
-        });
-    }
-
-    // LISTENER GUARDAR ALUMNO
-    const formAlumno = document.getElementById('form-nuevo-alumno');
-    if(formAlumno) {
-        formAlumno.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('edit-id').value;
-            const alumnoData = {
-                nombre: document.getElementById('new-nombre').value,
-                apellidos: document.getElementById('new-apellidos').value,
-                dni: document.getElementById('new-dni').value,
-                fecha_nacimiento: document.getElementById('new-nacimiento').value || null,
-                email: document.getElementById('new-email').value,
-                telefono: document.getElementById('new-telefono').value,
-                direccion: document.getElementById('new-direccion').value,
-                poblacion: document.getElementById('new-poblacion').value,
-                cp: document.getElementById('new-cp').value,
-                dojo: document.getElementById('new-dojo').value,
-                grupo: document.getElementById('new-grupo').value,
-                grado: document.getElementById('new-grado').value,
-                seguro_pagado: document.getElementById('new-seguro').checked,
-                activo: true
-            };
-
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
-
-            try {
-                const res = await fetch(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
-                    body: JSON.stringify({ data: alumnoData })
-                });
-                if(res.ok) {
-                    showModal("Éxito", "Guardado correctamente.", () => {
-                        showSection('alumnos');
-                        resetForm();
-                    });
-                } else { showModal("Error", "No se pudo guardar."); }
-            } catch { showModal("Error", "Fallo de conexión."); }
-        });
-    }
 });
 
-// --- FUNCIONES DE NAVEGACIÓN Y SESIÓN ---
+// --- SESIÓN ---
+const loginForm = document.getElementById('login-form');
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const identifier = document.getElementById('dni-login').value; 
+        const password = document.getElementById('password').value;
+        try {
+            const response = await fetch(`${API_URL}/api/auth/local`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier, password })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                jwtToken = data.jwt;
+                localStorage.setItem('aikido_jwt', jwtToken);
+                localStorage.setItem('aikido_user', JSON.stringify(data.user));
+                localStorage.setItem('aikido_login_time', Date.now().toString());
+                showDashboard();
+            } else { document.getElementById('login-error').innerText = "❌ Error Credenciales"; }
+        } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
+    });
+}
 
 function logout() {
     localStorage.clear();
-    document.getElementById('dashboard').classList.add('hidden');
-    document.getElementById('login-screen').classList.remove('hidden');
-    document.getElementById('reset-screen').classList.add('hidden');
+    const dash = document.getElementById('dashboard');
+    const login = document.getElementById('login-screen');
+    const reset = document.getElementById('reset-screen');
+    
+    if(dash) dash.classList.add('hidden');
+    if(login) login.classList.remove('hidden');
+    if(reset) reset.classList.add('hidden');
+    
     if (window.location.search) window.history.replaceState({}, document.title, window.location.pathname);
 }
 
-function showDashboard() {
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('dashboard').classList.remove('hidden');
-    loadDojosSelect(); 
-    loadCiudades(); 
-    loadReportDojos(); 
-    showSection('welcome'); 
-}
-
-function showSection(id) {
-    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
-    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
-    
-    const sec = document.getElementById(`sec-${id}`);
-    if(sec) sec.classList.remove('hidden');
-    
-    // Marcar botón activo (buscando con y sin parámetro true)
-    const btn = document.querySelector(`button[onclick="showSection('${id}', true)"]`) || document.querySelector(`button[onclick="showSection('${id}')"]`);
-    if(btn) btn.classList.add('active');
-
-    if(id === 'alumnos') loadAlumnos(true);
-    if(id === 'bajas') loadAlumnos(false);
-    if(id === 'dojos') loadDojosCards();
-    if(id === 'status') runDiagnostics();
-    
-    if(id === 'nuevo-alumno') {
-        const isEditing = document.getElementById('edit-id').value !== "";
-        if(!isEditing) resetForm();
-    }
-}
-
-// --- GESTIÓN DE CONTRASEÑAS ---
-
+// --- PASSWORD MGMT ---
 function openRecoverModal() { document.getElementById('recover-modal').classList.remove('hidden'); }
-
 async function sendRecoveryEmail() {
     const email = document.getElementById('recover-email').value;
     if(!email) return alert("Introduce tu email");
@@ -192,7 +116,6 @@ function showResetScreen(code) {
     document.getElementById('reset-code').value = code;
 }
 
-// Listeners globales para Reset y Change Password
 document.getElementById('reset-password-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const code = document.getElementById('reset-code').value;
@@ -209,7 +132,6 @@ document.getElementById('reset-password-form')?.addEventListener('submit', async
 });
 
 function openChangePasswordModal() { document.getElementById('change-pass-modal').classList.remove('hidden'); }
-
 document.getElementById('change-pass-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const currentPassword = document.getElementById('cp-current').value;
@@ -227,8 +149,44 @@ document.getElementById('change-pass-form')?.addEventListener('submit', async (e
     } catch (e) { alert("Error de conexión"); }
 });
 
-// --- UTILIDADES ---
+// --- NAVEGACIÓN ---
+function showDashboard() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    loadDojosSelect(); 
+    loadCiudades(); 
+    loadReportDojos(); // Carga filtros para modales
+    showSection('welcome'); 
+}
 
+function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    
+    const sec = document.getElementById(`sec-${id}`);
+    if(sec) sec.classList.remove('hidden');
+    
+    const btn = document.querySelector(`button[onclick="showSection('${id}', true)"]`);
+    if(!btn) {
+        const btn2 = document.querySelector(`button[onclick="showSection('${id}')"]`);
+        if(btn2) btn2.classList.add('active');
+    } else {
+        btn.classList.add('active');
+    }
+
+    if(id === 'alumnos') loadAlumnos(true);
+    if(id === 'bajas') loadAlumnos(false);
+    if(id === 'dojos') loadDojosCards();
+    if(id === 'status') runDiagnostics();
+    
+    // Solo limpiar si es navegación directa al formulario
+    if(id === 'nuevo-alumno') {
+        const isEditing = document.getElementById('edit-id').value !== "";
+        if(!isEditing) resetForm();
+    }
+}
+
+// --- UTILS ---
 function getDojoName(dojoObj) {
     let name = "-";
     if (dojoObj) {
@@ -358,7 +316,49 @@ async function loadAlumnos(activos) {
     } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos.</td></tr>`; }
 }
 
-// --- EDITAR ALUMNO ---
+// --- GUARDAR ---
+const formAlumno = document.getElementById('form-nuevo-alumno');
+if(formAlumno) {
+    formAlumno.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-id').value;
+        const alumnoData = {
+            nombre: document.getElementById('new-nombre').value,
+            apellidos: document.getElementById('new-apellidos').value,
+            dni: document.getElementById('new-dni').value,
+            fecha_nacimiento: document.getElementById('new-nacimiento').value || null,
+            email: document.getElementById('new-email').value,
+            telefono: document.getElementById('new-telefono').value,
+            direccion: document.getElementById('new-direccion').value,
+            poblacion: document.getElementById('new-poblacion').value,
+            cp: document.getElementById('new-cp').value,
+            dojo: document.getElementById('new-dojo').value,
+            grupo: document.getElementById('new-grupo').value,
+            grado: document.getElementById('new-grado').value,
+            seguro_pagado: document.getElementById('new-seguro').checked,
+            activo: true
+        };
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
+                body: JSON.stringify({ data: alumnoData })
+            });
+            if(res.ok) {
+                showModal("Éxito", "Guardado correctamente.", () => {
+                    showSection('alumnos');
+                    resetForm();
+                });
+            } else { showModal("Error", "No se pudo guardar."); }
+        } catch { showModal("Error", "Fallo de conexión."); }
+    });
+}
+
+// --- EDITAR ---
 async function editarAlumno(documentId) {
     try {
         const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
@@ -419,8 +419,7 @@ function resetForm() {
     document.getElementById('btn-cancelar-edit').classList.add('hidden');
 }
 
-// --- ACCIONES Y EXPORT ---
-
+// --- ACCIONES ---
 function confirmarEstado(id, activo, nombre) {
     showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => {
         const fecha = activo ? null : new Date().toISOString().split('T')[0];
@@ -443,6 +442,7 @@ function eliminarDefinitivo(id, nombre) {
     });
 }
 
+// --- DOJOS ---
 async function loadDojosCards() {
     const grid = document.getElementById('grid-dojos'); 
     if(!grid) return;
@@ -470,7 +470,7 @@ async function loadDojosCards() {
     } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
-// --- EXPORTAR EXCEL PROFESIONAL (ESTILO HTML + COLOR) ---
+// --- EXPORTAR EXCEL PROFESIONAL ---
 async function exportBackupExcel() {
     const dojoFilter = document.getElementById('export-dojo-filter').value;
     const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
@@ -478,10 +478,10 @@ async function exportBackupExcel() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO...';
 
     try {
-        let url = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
-        if(dojoFilter) url += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
+        let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
+        if(dojoFilter) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
 
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         const data = json.data || [];
 
@@ -495,7 +495,6 @@ async function exportBackupExcel() {
             const cp = p.cp || '';
             const pobCp = `${pob} ${cp}`.trim(); 
             const seguro = p.seguro_pagado ? "SI" : "NO";
-            // Color suave para la celda de seguro
             const seguroColor = p.seguro_pagado ? "#d1fae5" : "#fee2e2"; 
 
             tableRows += `
@@ -522,7 +521,6 @@ async function exportBackupExcel() {
 
         const fechaExport = new Date().toLocaleString();
         
-        // Plantilla HTML para Excel (Permite estilos básicos)
         const excelTemplate = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
@@ -579,11 +577,11 @@ async function exportBackupExcel() {
         `;
 
         const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel' });
-        const url = window.URL.createObjectURL(blob);
+        const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const fileName = `Arashi_Listado_${new Date().getFullYear()}_${new Date().getMonth()+1}.xls`; // .xls para compatibilidad HTML
+        const fileName = `Arashi_Listado_${new Date().getFullYear()}_${new Date().getMonth()+1}.xls`;
         
-        a.href = url;
+        a.href = downloadUrl;
         a.download = fileName;
         document.body.appendChild(a);
         a.click();
@@ -599,7 +597,6 @@ async function exportBackupExcel() {
     }
 }
 
-// --- RESET SEGUROS ---
 function confirmResetInsurance() {
     showModal("⚠️ ATENCIÓN", "¿Seguro que quieres resetear TODOS los seguros a NO PAGADO?", () => runResetProcess());
 }
@@ -623,7 +620,7 @@ async function runResetProcess() {
     } catch(e) { consoleOut.innerHTML += `<div>ERROR: ${e.message}</div>`; }
 }
 
-// --- INFORMES AVANZADOS (DISEÑO PDF MEJORADO) ---
+// --- INFORMES AVANZADOS ---
 function openReportModal() {
     document.getElementById('report-modal').classList.remove('hidden');
 }
@@ -676,7 +673,6 @@ async function generateReport(type) {
         const json = await res.json();
         let list = json.data || [];
 
-        // ORDENACIÓN
         list.sort((a, b) => {
             const pA = a.attributes || a;
             const pB = b.attributes || b;
@@ -703,6 +699,7 @@ async function generateReport(type) {
         });
         
         let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email'];
+        
         if (type === 'insurance') headRow.push('Seguro'); 
         else if (type === 'age') { headRow.push('Nac.'); headRow.push('Edad'); }
         else { headRow.push('Nac.'); }
@@ -711,6 +708,7 @@ async function generateReport(type) {
         else { headRow.push('Dojo'); }
         
         if (type !== 'insurance') headRow.push('Dirección');
+        
         headRow.push('Población', 'CP');
         
         const body = list.map(a => {
@@ -748,7 +746,18 @@ async function generateReport(type) {
         
         let colStyles = {};
         if (type === 'insurance') {
-            colStyles = { 0: { cellWidth: 40, fontStyle: 'bold' }, 1: { cellWidth: 20, fontStyle: 'bold' }, 2: { cellWidth: 22, halign: 'center' }, 3: { cellWidth: 15, halign: 'center' }, 4: { cellWidth: 22, halign: 'center' }, 5: { cellWidth: 45 }, 6: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }, 7: { cellWidth: 35 }, 8: { cellWidth: 35 }, 9: { cellWidth: 15, halign: 'center' } };
+            colStyles = {
+                0: { cellWidth: 40, fontStyle: 'bold' }, 
+                1: { cellWidth: 20, fontStyle: 'bold' }, 
+                2: { cellWidth: 22, halign: 'center' }, 
+                3: { cellWidth: 15, halign: 'center' }, 
+                4: { cellWidth: 22, halign: 'center' }, 
+                5: { cellWidth: 45 }, 
+                6: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }, 
+                7: { cellWidth: 35 }, 
+                8: { cellWidth: 35 }, 
+                9: { cellWidth: 15, halign: 'center' } 
+            };
         } else if (type === 'age') { 
             colStyles = { 0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' }, 2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, 4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 38 }, 6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' }, 8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' } };
         } else if (type === 'group') {
@@ -785,6 +794,7 @@ async function generateReport(type) {
                 doc.text(footerStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
             }
         });
+        
         doc.save(`${fileNames[type] || 'Informe'}.pdf`);
     };
 }
@@ -798,7 +808,10 @@ function changeFontSize(tableId, delta) {
         const currentPad = parseFloat(window.getComputedStyle(cells[0]).paddingTop);
         const newSize = Math.max(8, currentSize + delta); 
         const newPad = Math.max(2, currentPad + (delta * 0.5)); 
-        cells.forEach(cell => { cell.style.fontSize = newSize + "px"; cell.style.padding = `${newPad}px 5px`; });
+        cells.forEach(cell => {
+            cell.style.fontSize = newSize + "px";
+            cell.style.padding = `${newPad}px 5px`; 
+        });
     }
 }
 
@@ -813,10 +826,12 @@ function setupDragScroll() {
 }
 
 async function runDiagnostics() {
-    const o = document.getElementById('console-output'); if(o) {
+    const o = document.getElementById('console-output'); 
+    if(o) {
         o.innerHTML = '';
         const lines = ["Iniciando protocolos...", "> Conectando a Neon DB... [OK]", "> Verificando API Strapi... [OK]", "> Comprobando integridad... [OK]", "SISTEMA OPERATIVO AL 100%"];
         for(const l of lines) { await new Promise(r => setTimeout(r, 400)); o.innerHTML += `<div>${l}</div>`; }
+        o.innerHTML += '<br><a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="btn-monitor-ext" style="color:#33ff00; border:1px solid #33ff00; padding:10px 20px; text-decoration:none;">VER ESTADO DE STRAPI</a>';
     }
 }
 
@@ -896,10 +911,4 @@ if(contentArea) {
         const btn = document.getElementById('btn-scroll-top');
         if (contentArea.scrollTop > 300) btn.classList.remove('hidden'); else btn.classList.add('hidden');
     });
-}
-
-function togglePassword(inputId, icon) {
-    const input = document.getElementById(inputId);
-    if (input.type === "password") { input.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } 
-    else { input.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
 }
