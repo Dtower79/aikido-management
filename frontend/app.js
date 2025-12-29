@@ -8,7 +8,6 @@ const GRADE_WEIGHTS = {
     '1º KYU': 5, '2º KYU': 4, '3º KYU': 3, '4º KYU': 2, '5º KYU': 1, 'S/G': 0
 };
 
-// --- INICIALIZACIÓN DE LA APLICACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Detectar si estamos en modo "Restablecer Contraseña" por URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -490,6 +489,7 @@ async function exportBackupExcel() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO...';
 
     try {
+        // 1. Obtener datos
         let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
         if(dojoFilter) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
 
@@ -497,20 +497,11 @@ async function exportBackupExcel() {
         const json = await res.json();
         const data = json.data || [];
 
+        // 2. Crear Libro y Hoja
         const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet('Alumnos');
+        const sheet = workbook.addWorksheet('Listado Alumnos');
 
-        // 1. CARGAR LOGO (Debe estar en img/logo-arashi.png)
-        try {
-            const logoRes = await fetch('img/logo-arashi.png');
-            const logoBlob = await logoRes.blob();
-            const logoBuffer = await logoBlob.arrayBuffer();
-            const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
-            // Posicionar Logo
-            sheet.addImage(logoId, { tl: { col: 0.1, row: 0.1 }, ext: { width: 120, height: 60 } });
-        } catch(e) { console.warn("Logo no encontrado", e); }
-
-        // 2. DEFINIR COLUMNAS (Orden Solicitado)
+        // 3. Definir Columnas y Anchos
         sheet.columns = [
             { header: 'APELLIDOS', key: 'apellidos', width: 30 },
             { header: 'NOMBRE', key: 'nombre', width: 20 },
@@ -527,39 +518,43 @@ async function exportBackupExcel() {
             { header: 'SEGURO', key: 'seguro', width: 12 }
         ];
 
-        // 3. CABECERA CON TÍTULO
-        sheet.mergeCells('D2:M3');
-        const titleCell = sheet.getCell('D2');
+        // 4. Estilo del Título Principal
+        sheet.mergeCells('A1:M1'); // Fusionar celdas de la cabecera
+        const titleCell = sheet.getCell('A1');
         titleCell.value = `ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString()})`;
-        titleCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } };
+        titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } }; // Blanco
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; // Negro Azulado
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        sheet.getRow(1).height = 30;
 
-        // Fila de encabezados en fila 5
-        const headerRow = sheet.getRow(5);
+        // 5. Estilo de la Fila de Cabeceras (Fila 2)
+        const headerRow = sheet.getRow(2);
         headerRow.values = sheet.columns.map(col => col.header);
-        headerRow.height = 30; // Altura para que quepa "FECHA NACIMIENTO"
-        
+        headerRow.height = 25;
         headerRow.eachCell((cell) => {
-            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } };
-            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; // wrapText evita corte
+            cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } }; // Blanco
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } }; // Rojo Arashi
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
-        // 4. DATOS
+        // 6. Añadir Datos
         data.forEach(item => {
             const p = item.attributes || item;
+            const nombre = (p.nombre || '').trim();
+            const apellidos = (p.apellidos || '').trim();
+            const pob = (p.poblacion || '').trim();
+            const cp = (p.cp || '').trim();
             
-            // Preparar datos limpios
+            // Fila de datos
             const rowData = {
-                apellidos: (p.apellidos || '').trim(),
-                nombre: (p.nombre || '').trim(),
+                apellidos: apellidos,
+                nombre: nombre,
                 dni: p.dni || "",
                 nac: p.fecha_nacimiento || "",
                 dir: p.direccion || "",
-                pob: (p.poblacion || "").trim(),
-                cp: (p.cp || "").trim(),
+                pob: pob,
+                cp: cp,
                 email: p.email || "",
                 dojo: getDojoName(p.dojo),
                 grupo: p.grupo || "Full Time",
@@ -567,50 +562,63 @@ async function exportBackupExcel() {
                 grau: p.grado || "",
                 seguro: p.seguro_pagado ? "SI" : "NO"
             };
-            
+
             const row = sheet.addRow(rowData);
-            
-            // Estilos por celda
+
+            // Estilos por celda (Bordes y Alineación)
             row.eachCell((cell, colNumber) => {
                 cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                cell.alignment = { vertical: 'middle', horizontal: 'center' }; // Centrar todo por defecto
-                
-                // Excepciones: Alinear Izquierda (Nombre, Apellidos, Dirección, Email)
-                // Indices (base 1): 1=Apell, 2=Nom, 5=Dir, 8=Email
-                if([1, 2, 5, 8].includes(colNumber)) {
-                    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                // Centrar columnas cortas
+                if([1, 6, 11, 15, 17].includes(colNumber)) {
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
                 }
             });
 
-            // Color Seguro (Columna 13 = M)
-            const segCell = row.getCell(13);
+            // Color Condicional SEGURO (Columna M = 13)
+            const seguroCell = row.getCell(13);
             if (p.seguro_pagado) {
-                segCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
-                segCell.font = { color: { argb: 'FF065F46' }, bold: true };
+                seguroCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } }; // Verde claro
+                seguroCell.font = { color: { argb: 'FF065F46' }, bold: true }; // Verde oscuro texto
             } else {
-                segCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
-                segCell.font = { color: { argb: 'FF991B1B' }, bold: true };
+                seguroCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; // Rojo claro
+                seguroCell.font = { color: { argb: 'FF991B1B' }, bold: true }; // Rojo oscuro texto
             }
         });
 
-        // Finalizar
-        sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 5 }];
-        sheet.autoFilter = 'A5:M5';
-        
+        // 7. Generar Buffer y Descargar
+        // Cargamos logo
+        try {
+            const logoRes = await fetch('img/logo-arashi.png');
+            const logoBlob = await logoRes.blob();
+            const logoBuffer = await logoBlob.arrayBuffer();
+            const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
+            // Posicionar Logo
+            sheet.addImage(logoId, { tl: { col: 0.1, row: 0.1 }, ext: { width: 120, height: 60 } });
+        } catch(e) { console.warn("Logo no encontrado", e); }
+
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `Arashi_Listado_${new Date().getFullYear()}.xlsx`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        const fileName = `Arashi_Backup_${new Date().getFullYear()}_${new Date().getMonth()+1}.xlsx`;
         
-        showModal("Excel Generado", "Descarga completada.");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-    } catch(e) { console.error(e); showModal("Error", "Falló la exportación."); } 
-    finally { btn.innerHTML = originalText; }
+        showModal("Excel Generado", `Archivo <b>${fileName}</b> descargado correctamente.`);
+
+    } catch(e) {
+        console.error(e);
+        showModal("Error", "Falló la exportación del Excel.");
+    } finally {
+        btn.innerHTML = originalText;
+    }
 }
-
-
 
 // --- RESET DE SEGUROS ANUALES ---
 function confirmResetInsurance() {
@@ -663,7 +671,11 @@ async function generateReport(type) {
     };
 
     const subtitleMap = {
-        'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo',
+        'surname': 'Apellidos',
+        'age': 'Edad',
+        'grade': 'Grado',
+        'dojo': 'Dojo',
+        'group': 'Grupo',
         'insurance': 'Estado del Seguro'
     };
     
@@ -828,7 +840,7 @@ function showModal(title, msg, onOk) {
     const m = document.getElementById('custom-modal');
     if(!m) return;
     document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-message').innerText = msg;
+    document.getElementById('modal-message').innerHTML = msg; // Usar innerHTML para texto con negritas
     document.getElementById('modal-btn-cancel').onclick = () => m.classList.add('hidden');
     document.getElementById('modal-btn-ok').onclick = () => { if(onOk) onOk(); m.classList.add('hidden'); };
     m.classList.remove('hidden');
@@ -896,8 +908,8 @@ function scrollToTop() {
 }
 const contentArea = document.querySelector('.content');
 if(contentArea) {
-    const btn = document.getElementById('btn-scroll-top');
     contentArea.addEventListener('scroll', () => {
+        const btn = document.getElementById('btn-scroll-top');
         if (contentArea.scrollTop > 300) btn.classList.add('visible'); else btn.classList.remove('visible');
     });
 }
