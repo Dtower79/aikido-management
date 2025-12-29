@@ -8,175 +8,83 @@ const GRADE_WEIGHTS = {
     '1º KYU': 5, '2º KYU': 4, '3º KYU': 3, '4º KYU': 2, '5º KYU': 1, 'S/G': 0
 };
 
-// --- INICIALIZACIÓN DE LA APLICACIÓN ---
+// --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Detectar si estamos en modo "Restablecer Contraseña" por URL
+    // 1. Reset Password por URL
     const urlParams = new URLSearchParams(window.location.search);
-    const resetCode = urlParams.get('code');
-    if (resetCode) {
-        showResetScreen(resetCode);
+    if (urlParams.get('code')) {
+        showResetScreen(urlParams.get('code'));
         return; 
     }
 
-    // 2. Comprobar y renovar la sesión del usuario
+    // 2. Sesión
     const loginTimeStr = localStorage.getItem('aikido_login_time');
-    const ahora = Date.now();
-    
-    if (jwtToken && loginTimeStr && (ahora - parseInt(loginTimeStr) < 20 * 60 * 1000)) {
+    if (jwtToken && loginTimeStr && (Date.now() - parseInt(loginTimeStr) < 20 * 60 * 1000)) {
         localStorage.setItem('aikido_login_time', Date.now().toString());
         showDashboard();
     } else {
         logout();
     }
 
-    // 3. Inicializar elementos de la interfaz de usuario
+    // 3. UI
     setupDniInput('dni-login'); 
     setupDniInput('new-dni');
     
-    const searchAlumno = document.getElementById('search-alumno');
-    if(searchAlumno) searchAlumno.addEventListener('keyup', () => filtrarTabla('table-alumnos', 'search-alumno'));
-    
-    const searchBaja = document.getElementById('search-baja');
-    if(searchBaja) searchBaja.addEventListener('keyup', () => filtrarTabla('table-bajas', 'search-baja'));
+    document.getElementById('search-alumno')?.addEventListener('keyup', () => filtrarTabla('table-alumnos', 'search-alumno'));
+    document.getElementById('search-baja')?.addEventListener('keyup', () => filtrarTabla('table-bajas', 'search-baja'));
     
     setupDragScroll();
 
-    // Actualizar el año en el footer dinámicamente
     const yearLabel = document.getElementById('current-year-lbl');
     if(yearLabel) yearLabel.textContent = new Date().getFullYear();
 
-    // Lógica para el switch del "Seguro Anual" en el formulario
     const seguroSwitch = document.getElementById('new-seguro');
     if(seguroSwitch) {
         seguroSwitch.addEventListener('change', (e) => {
             const txt = document.getElementById('seguro-status-text');
             if(e.target.checked) {
-                txt.innerText = "PAGADO";
-                txt.style.color = "#22c55e";
+                txt.innerText = "PAGADO"; txt.style.color = "#22c55e";
             } else {
-                txt.innerText = "NO PAGADO";
-                txt.style.color = "#ef4444";
+                txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444";
             }
-        });
-    }
-
-    // Listener para el formulario de login
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const identifier = document.getElementById('dni-login').value; 
-            const password = document.getElementById('password').value;
-            try {
-                const response = await fetch(`${API_URL}/api/auth/local`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ identifier, password })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    jwtToken = data.jwt;
-                    localStorage.setItem('aikido_jwt', jwtToken);
-                    localStorage.setItem('aikido_user', JSON.stringify(data.user));
-                    localStorage.setItem('aikido_login_time', Date.now().toString());
-                    showDashboard();
-                } else { document.getElementById('login-error').innerText = "❌ Error Credenciales"; }
-            } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
-        });
-    }
-
-    // Listener para el formulario de nuevo/edición de alumno
-    const formAlumno = document.getElementById('form-nuevo-alumno');
-    if(formAlumno) {
-        formAlumno.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('edit-id').value;
-            const alumnoData = {
-                nombre: document.getElementById('new-nombre').value,
-                apellidos: document.getElementById('new-apellidos').value,
-                dni: document.getElementById('new-dni').value,
-                fecha_nacimiento: document.getElementById('new-nacimiento').value || null,
-                email: document.getElementById('new-email').value,
-                telefono: document.getElementById('new-telefono').value,
-                direccion: document.getElementById('new-direccion').value,
-                poblacion: document.getElementById('new-poblacion').value,
-                cp: document.getElementById('new-cp').value,
-                dojo: document.getElementById('new-dojo').value,
-                grupo: document.getElementById('new-grupo').value,
-                grado: document.getElementById('new-grado').value,
-                seguro_pagado: document.getElementById('new-seguro').checked,
-                activo: true
-            };
-
-            const method = id ? 'PUT' : 'POST';
-            const apiUrl = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
-
-            try {
-                const res = await fetch(apiUrl, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
-                    body: JSON.stringify({ data: alumnoData })
-                });
-                if(res.ok) {
-                    showModal("Éxito", "Guardado correctamente.", () => {
-                        showSection('alumnos');
-                        resetForm();
-                    });
-                } else { showModal("Error", "No se pudo guardar."); }
-            } catch { showModal("Error", "Fallo de conexión."); }
         });
     }
 });
 
-
-// --- FUNCIONES DE NAVEGACIÓN Y SESIÓN ---
+// --- SESIÓN ---
+const loginForm = document.getElementById('login-form');
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const identifier = document.getElementById('dni-login').value; 
+        const password = document.getElementById('password').value;
+        try {
+            const res = await fetch(`${API_URL}/api/auth/local`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier, password })
+            });
+            const data = await response.json();
+            if (res.ok) {
+                jwtToken = data.jwt;
+                localStorage.setItem('aikido_jwt', jwtToken);
+                localStorage.setItem('aikido_user', JSON.stringify(data.user));
+                localStorage.setItem('aikido_login_time', Date.now().toString());
+                showDashboard();
+            } else { document.getElementById('login-error').innerText = "❌ Error Credenciales"; }
+        } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
+    });
+}
 
 function logout() {
     localStorage.clear();
-    const dash = document.getElementById('dashboard');
-    const login = document.getElementById('login-screen');
-    const reset = document.getElementById('reset-screen');
-    
-    if(dash) dash.classList.add('hidden');
-    if(login) login.classList.remove('hidden');
-    if(reset) reset.classList.add('hidden');
-    
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('reset-screen').classList.add('hidden');
     if (window.location.search) window.history.replaceState({}, document.title, window.location.pathname);
 }
 
-function showDashboard() {
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('dashboard').classList.remove('hidden');
-    loadDojosSelect(); 
-    loadCiudades(); 
-    loadReportDojos(); 
-    showSection('welcome'); 
-}
-
-function showSection(id) {
-    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
-    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
-    
-    const sec = document.getElementById(`sec-${id}`);
-    if(sec) sec.classList.remove('hidden');
-    
-    const btn = document.querySelector(`button[onclick="showSection('${id}', true)"]`) || document.querySelector(`button[onclick="showSection('${id}')"]`);
-    if(btn) btn.classList.add('active');
-
-    if(id === 'alumnos') loadAlumnos(true);
-    if(id === 'bajas') loadAlumnos(false);
-    if(id === 'dojos') loadDojosCards();
-    if(id === 'status') runDiagnostics();
-    
-    if(id === 'nuevo-alumno') {
-        const isEditing = document.getElementById('edit-id').value !== "";
-        if(!isEditing) resetForm();
-    }
-}
-
-// --- GESTIÓN DE CONTRASEÑAS ---
-
+// --- PASSWORD ---
 function openRecoverModal() { document.getElementById('recover-modal').classList.remove('hidden'); }
-
 async function sendRecoveryEmail() {
     const email = document.getElementById('recover-email').value;
     if(!email) return alert("Introduce tu email");
@@ -200,11 +108,11 @@ document.getElementById('reset-password-form')?.addEventListener('submit', async
     e.preventDefault();
     const code = document.getElementById('reset-code').value;
     const password = document.getElementById('new-password-reset').value;
-    const passwordConfirmation = document.getElementById('confirm-password-reset').value;
-    if(password !== passwordConfirmation) { document.getElementById('reset-error').innerText = "Las contraseñas no coinciden"; return; }
+    const confirm = document.getElementById('confirm-password-reset').value;
+    if(password !== confirm) { document.getElementById('reset-error').innerText = "No coinciden"; return; }
     try {
         const res = await fetch(`${API_URL}/api/auth/reset-password`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, password, passwordConfirmation })
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, password, passwordConfirmation: confirm })
         });
         if (res.ok) showModal("Éxito", "Contraseña restablecida.", () => { window.location.href = window.location.pathname; });
         else { const err = await res.json(); document.getElementById('reset-error').innerText = "Error: " + (err.error?.message || "Token inválido"); }
@@ -212,36 +120,60 @@ document.getElementById('reset-password-form')?.addEventListener('submit', async
 });
 
 function openChangePasswordModal() { document.getElementById('change-pass-modal').classList.remove('hidden'); }
-
 document.getElementById('change-pass-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const currentPassword = document.getElementById('cp-current').value;
     const password = document.getElementById('cp-new').value;
     const passwordConfirmation = document.getElementById('cp-confirm').value;
-    if (password !== passwordConfirmation) return alert("La nueva contraseña no coincide");
+    if (password !== passwordConfirmation) return alert("No coinciden");
     try {
         const res = await fetch(`${API_URL}/api/auth/change-password`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
             body: JSON.stringify({ currentPassword, password, passwordConfirmation })
         });
         const data = await res.json();
-        if (res.ok) { document.getElementById('change-pass-modal').classList.add('hidden'); showModal("Éxito", "Contraseña actualizada."); } 
+        if (res.ok) { document.getElementById('change-pass-modal').classList.add('hidden'); showModal("Éxito", "Actualizada."); } 
         else { alert("Error: " + (data.error?.message || "Error al cambiar")); }
     } catch (e) { alert("Error de conexión"); }
 });
 
-// --- FUNCIONES DE UTILIDAD GENERAL ---
+// --- NAVEGACIÓN ---
+function showDashboard() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    loadDojosSelect(); loadCiudades(); loadReportDojos();
+    showSection('welcome'); 
+}
 
+function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(`sec-${id}`).classList.remove('hidden');
+    const btn = document.querySelector(`button[onclick="showSection('${id}', true)"]`) || document.querySelector(`button[onclick="showSection('${id}')"]`);
+    if(btn) btn.classList.add('active');
+
+    if(id === 'alumnos') loadAlumnos(true);
+    if(id === 'bajas') loadAlumnos(false);
+    if(id === 'dojos') loadDojosCards();
+    if(id === 'status') runDiagnostics();
+    
+    if(id === 'nuevo-alumno') {
+        const isEditing = document.getElementById('edit-id').value !== "";
+        if(!isEditing) resetForm();
+    }
+}
+
+// --- UTILS DATOS ---
 function getDojoName(dojoObj) {
     let name = "-";
     if (dojoObj) {
         if (dojoObj.nombre) name = dojoObj.nombre;
-        else if (dojoObj.data && dojoObj.data.attributes && dojoObj.data.attributes.nombre) name = dojoObj.data.attributes.nombre;
-        else if (dojoObj.attributes && dojoObj.attributes.nombre) name = dojoObj.attributes.nombre;
+        else if (dojoObj.data && dojoObj.data.attributes) name = dojoObj.data.attributes.nombre;
+        else if (dojoObj.attributes) name = dojoObj.attributes.nombre;
     }
     return name.replace(/Aikido\s+/gi, '').trim();
 }
-
 function normalizeGrade(g) {
     if(!g) return '-';
     let s = g.toUpperCase().trim();
@@ -253,136 +185,150 @@ function normalizeGrade(g) {
     }
     return s;
 }
-
-function getGradeWeight(gradeStr) {
-    if(!gradeStr) return 0;
-    const normalized = normalizeGrade(gradeStr);
-    return GRADE_WEIGHTS[normalized] || 0;
+function getGradeWeight(g) { return GRADE_WEIGHTS[normalizeGrade(g)] || 0; }
+function normalizeAddress(a) { return a ? a.replace(/\b(Carrer|Calle)\b/gi, 'C/').replace(/\b(Avinguda|Avenida)\b/gi, 'Avda').trim() : '-'; }
+function normalizeCity(c) { 
+    if(!c) return '-';
+    let s = c.replace(/\s*\(.*?\)\s*/g, '').replace(/[.,\-\s]+$/, '').trim();
+    if (s.match(/San Adria/i)) return 'SANT ADRIÀ DEL BESÒS';
+    return s.toUpperCase();
 }
+function normalizePhone(t) { return t ? t.toString().trim().replace(/^(\+?34)/, '').trim() : '-'; }
+function formatDatePDF(d) { if(!d) return '-'; const p = d.split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; }
+function calculateAge(d) { if(!d) return '-'; const t = new Date(), b = new Date(d); let a = t.getFullYear() - b.getFullYear(); if(t.getMonth() - b.getMonth() < 0 || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; return isNaN(a) ? '-' : a; }
+function togglePassword(id, icon) { const i = document.getElementById(id); if(i.type==="password"){i.type="text";icon.classList.remove('fa-eye');icon.classList.add('fa-eye-slash');}else{i.type="password";icon.classList.remove('fa-eye-slash');icon.classList.add('fa-eye');} }
 
-function normalizeAddress(addr) {
-    if(!addr) return '-';
-    return addr.replace(/\b(Carrer|Calle)\b/gi, 'C/').replace(/\b(Avinguda|Avenida)\b/gi, 'Avda').trim();
-}
-
-function normalizeCity(city) {
-    if(!city) return '-';
-    let c = city.replace(/\s*\(.*?\)\s*/g, '').replace(/[.,\-\s]+$/, '').trim();
-    if (c.match(/San Adria/i)) return 'SANT ADRIÀ DEL BESÒS';
-    return c.toUpperCase();
-}
-
-function normalizePhone(tel) {
-    if (!tel) return '-';
-    let t = tel.toString().trim();
-    t = t.replace(/^(\+?34)/, '').trim();
-    return t;
-}
-
-function formatDatePDF(dateStr) {
-    if (!dateStr) return '-';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return dateStr;
-}
-
-function calculateAge(birthDateString) {
-    if (!birthDateString) return '-';
-    const today = new Date();
-    const birthDate = new Date(birthDateString);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-    return isNaN(age) ? '-' : age;
-}
-
-function togglePassword(inputId, icon) {
-    const input = document.getElementById(inputId);
-    if (input.type === "password") { input.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } 
-    else { input.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
-}
-
-// --- CARGA DE DATOS EN TABLAS ---
+// --- CARGA TABLA ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    const cols = activos ? 13 : 14; 
-    tbody.innerHTML = `<tr><td colspan="${cols}">Cargando datos...</td></tr>`;
-    
+    tbody.innerHTML = `<tr><td colspan="${activos?13:14}">Cargando...</td></tr>`;
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
-    
     try {
-        const res = await fetch(`${API_URL}/api/alumnos?populate=dojo&${filter}&${sort}&pagination[limit]=500`, {
-            headers: { 'Authorization': `Bearer ${jwtToken}` }
-        });
+        const res = await fetch(`${API_URL}/api/alumnos?populate=dojo&${filter}&${sort}&pagination[limit]=500`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         const data = json.data || [];
         tbody.innerHTML = '';
-        
         data.forEach(a => {
             const p = a.attributes || a;
-            const id = a.documentId; 
-            const dojoNom = getDojoName(p.dojo); 
-            
-            const seguroBadge = p.seguro_pagado ? `<span class="badge-ok">PAGADO</span>` : `<span class="badge-no">PENDIENTE</span>`;
-
-            const datosComunes = `
+            const id = a.documentId;
+            const badge = p.seguro_pagado ? `<span class="badge-ok">PAGADO</span>` : `<span class="badge-no">PENDIENTE</span>`;
+            const row = `
                 <td><span class="cell-data"><strong>${p.apellidos || "-"}</strong></span></td>
                 <td><span class="cell-data">${p.nombre || "-"}</span></td>
                 <td><span class="cell-data" style="font-family:monospace">${p.dni || "-"}</span></td>
                 <td><span class="cell-data"><span class="badge">${normalizeGrade(p.grado) || 'S/G'}</span></span></td>
-                <td><span class="cell-data">${seguroBadge}</span></td>
+                <td><span class="cell-data">${badge}</span></td>
                 <td><span class="cell-data">${p.telefono || '-'}</span></td>
                 <td><span class="cell-data">${p.email || '-'}</span></td>
                 <td><span class="cell-data">${p.fecha_nacimiento || '-'}</span></td>
-                <td><span class="cell-data">${dojoNom}</span></td>
+                <td><span class="cell-data">${getDojoName(p.dojo)}</span></td>
                 <td><span class="cell-data">${p.direccion || '-'}</span></td>
                 <td><span class="cell-data">${p.poblacion || '-'}</span></td>
                 <td><span class="cell-data">${p.cp || '-'}</span></td>
             `;
-
             if (activos) {
-                tbody.innerHTML += `<tr>
-                    ${datosComunes}
-                    <td class="sticky-col">
-                        <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-                        <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
-                    </td></tr>`;
+                tbody.innerHTML += `<tr>${row}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
             } else {
-                tbody.innerHTML += `<tr>
-                    <td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</span></td>
-                    ${datosComunes}
-                    <td class="sticky-col">
-                        <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
-                        <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button>
-                    </td></tr>`;
+                tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || '-'}</span></td>${row}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
             }
         });
-    } catch(e) { tbody.innerHTML = `<tr><td colspan="${cols}">Error cargando alumnos.</td></tr>`; }
+    } catch { tbody.innerHTML = `<tr><td colspan="13">Error de carga.</td></tr>`; }
 }
 
-// --- ACCIONES DE GESTIÓN ---
+// --- GESTIÓN FORMULARIO ---
+const formAlumno = document.getElementById('form-nuevo-alumno');
+if(formAlumno) {
+    formAlumno.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-id').value;
+        const alumnoData = {
+            nombre: document.getElementById('new-nombre').value, apellidos: document.getElementById('new-apellidos').value,
+            dni: document.getElementById('new-dni').value, fecha_nacimiento: document.getElementById('new-nacimiento').value || null,
+            email: document.getElementById('new-email').value, telefono: document.getElementById('new-telefono').value,
+            direccion: document.getElementById('new-direccion').value, poblacion: document.getElementById('new-poblacion').value,
+            cp: document.getElementById('new-cp').value, dojo: document.getElementById('new-dojo').value,
+            grupo: document.getElementById('new-grupo').value, grado: document.getElementById('new-grado').value,
+            seguro_pagado: document.getElementById('new-seguro').checked, activo: true
+        };
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
+            const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: alumnoData }) });
+            if(res.ok) showModal("Éxito", "Guardado correctamente.", () => { showSection('alumnos'); resetForm(); });
+            else showModal("Error", "No se pudo guardar.");
+        } catch { showModal("Error", "Fallo de conexión."); }
+    });
+}
 
+async function editarAlumno(documentId) {
+    try {
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const json = await res.json();
+        const data = json.data;
+        const p = data.attributes || data; 
+        document.getElementById('edit-id').value = data.documentId || documentId;
+        document.getElementById('new-nombre').value = p.nombre || ''; document.getElementById('new-apellidos').value = p.apellidos || '';
+        document.getElementById('new-dni').value = p.dni || ''; document.getElementById('new-nacimiento').value = p.fecha_nacimiento || '';
+        document.getElementById('new-email').value = p.email || ''; document.getElementById('new-telefono').value = p.telefono || '';
+        document.getElementById('new-direccion').value = p.direccion || ''; document.getElementById('new-poblacion').value = p.poblacion || '';
+        document.getElementById('new-cp').value = p.cp || ''; document.getElementById('new-grado').value = p.grado || '';
+        document.getElementById('new-grupo').value = p.grupo || 'Full Time';
+        
+        const chk = document.getElementById('new-seguro');
+        const txt = document.getElementById('seguro-status-text');
+        chk.checked = p.seguro_pagado === true;
+        if(chk.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; } else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
+        
+        let dojoId = "";
+        if (p.dojo) { if (p.dojo.documentId) dojoId = p.dojo.documentId; else if (p.dojo.data) dojoId = p.dojo.data.documentId || p.dojo.data.id; }
+        const selectDojo = document.getElementById('new-dojo');
+        if (dojoId) selectDojo.value = dojoId;
+
+        document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
+        document.getElementById('btn-cancelar-edit').classList.remove('hidden');
+        document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+        document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
+    } catch(e) { showModal("Error", "No se cargaron los datos."); }
+}
+
+function resetForm() {
+    const f = document.getElementById('form-nuevo-alumno'); if(f) f.reset();
+    document.getElementById('seguro-status-text').innerText = "NO PAGADO";
+    document.getElementById('seguro-status-text').style.color = "#ef4444";
+    document.getElementById('edit-id').value = "";
+    document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO";
+    document.getElementById('btn-cancelar-edit').classList.add('hidden');
+}
+
+// --- ACCIONES TÉCNICAS ---
 function confirmarEstado(id, activo, nombre) {
     showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => {
         const fecha = activo ? null : new Date().toISOString().split('T')[0];
-        await fetch(`${API_URL}/api/alumnos/${id}`, { 
-            method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, 
-            body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) 
-        });
+        await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) });
         showSection(activo ? 'alumnos' : 'bajas');
     });
 }
-
 function eliminarDefinitivo(id, nombre) {
-    showModal("¡PELIGRO!", `¿Borrar físicamente a ${nombre}?`, () => {
-        setTimeout(() => {
-            showModal("ÚLTIMO AVISO", "Esta acción es irreversible.", async () => {
-                await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } });
-                loadAlumnos(false);
-            });
-        }, 500);
+    showModal("¡PELIGRO!", `¿Borrar definitivamente a ${nombre}?`, () => {
+        setTimeout(() => { showModal("ÚLTIMO AVISO", "Irreversible.", async () => { await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } }); loadAlumnos(false); }); }, 500);
     });
+}
+function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TODOS los seguros a NO PAGADO?", () => runResetProcess()); }
+async function runResetProcess() {
+    const out = document.getElementById('console-output'); out.innerHTML = "<div>Iniciando reseteo...</div>";
+    try {
+        const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const json = await res.json();
+        const list = json.data || [];
+        if(list.length === 0) { out.innerHTML += "<div>Nada que resetear.</div>"; return; }
+        let c = 0;
+        for (const item of list) {
+            await fetch(`${API_URL}/api/alumnos/${item.documentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { seguro_pagado: false } }) });
+            c++; if(c % 5 === 0) out.innerHTML += `<div>> Procesados: ${c}...</div>`;
+        }
+        out.innerHTML += "<div style='color:#33ff00'>COMPLETADO.</div>";
+    } catch(e) { out.innerHTML += `<div style='color:red'>ERROR: ${e.message}</div>`; }
 }
 
 async function loadDojosCards() {
@@ -415,7 +361,7 @@ async function loadDojosCards() {
     }
 }
 
-// --- EXPORTAR EXCEL PROFESIONAL (.XLSX REAL CON EXCELJS) ---
+// --- EXPORTAR EXCEL PROFESIONAL ---
 async function exportBackupExcel() {
     const dojoFilter = document.getElementById('export-dojo-filter').value;
     const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
@@ -431,7 +377,7 @@ async function exportBackupExcel() {
         const data = json.data || [];
 
         const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet('Listado Alumnos');
+        const sheet = workbook.addWorksheet('Alumnos');
 
         // 1. CARGAR LOGO
         try {
@@ -439,42 +385,44 @@ async function exportBackupExcel() {
             const logoBlob = await logoRes.blob();
             const logoBuffer = await logoBlob.arrayBuffer();
             const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
-            // Logo posicionado en A1-C4 aprox
-            sheet.addImage(logoId, { tl: { col: 0.2, row: 0.2 }, ext: { width: 140, height: 70 } });
+            // Logo grande y centrado verticalmente en las primeras 4 filas
+            sheet.addImage(logoId, { tl: { col: 0.1, row: 0.1 }, ext: { width: 140, height: 70 } });
         } catch(e) { console.warn("Logo no encontrado", e); }
 
-        // 2. DEFINIR COLUMNAS (Sin 'header' automático para evitar duplicados en fila 1)
+        // 2. COLUMNAS
         sheet.columns = [
-            { key: 'apellidos', width: 35 },
-            { key: 'nombre', width: 25 },
-            { key: 'dni', width: 18 },
-            { key: 'nac', width: 22 },
-            { key: 'dir', width: 45 },
-            { key: 'pob', width: 30 },
-            { key: 'cp', width: 12 },
-            { key: 'email', width: 35 },
-            { key: 'dojo', width: 30 },
-            { key: 'grupo', width: 18 },
-            { key: 'alta', width: 18 },
-            { key: 'grau', width: 15 },
-            { key: 'seguro', width: 15 }
+            { header: 'APELLIDOS', key: 'apellidos', width: 35 },
+            { header: 'NOMBRE', key: 'nombre', width: 25 },
+            { header: 'DNI', key: 'dni', width: 18 },
+            { header: 'FECHA NACIMIENTO', key: 'nac', width: 22 },
+            { header: 'DIRECCIÓN', key: 'dir', width: 45 },
+            { header: 'POBLACIÓN', key: 'pob', width: 30 },
+            { header: 'CP', key: 'cp', width: 12 },
+            { header: 'EMAIL', key: 'email', width: 35 },
+            { header: 'DOJO', key: 'dojo', width: 30 },
+            { header: 'GRUPO', key: 'grupo', width: 18 },
+            { header: 'FECHA ALTA', key: 'alta', width: 18 },
+            { header: 'GRADO', key: 'grau', width: 15 },
+            { header: 'SEGURO', key: 'seguro', width: 15 }
         ];
 
         // 3. CABECERA NEGRA GRANDE (Fila 1 a 4)
         sheet.mergeCells('D1:M4');
         const titleCell = sheet.getCell('D1');
         titleCell.value = `ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString()})`;
-        titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } }; // Blanco
+        titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } }; // Letra grande
         titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; // Negro
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-        // Ajustar altura para el logo y título
-        [1, 2, 3, 4].forEach(r => sheet.getRow(r).height = 20);
+        // Ajustar altura de filas para hacer la franja negra más ancha
+        sheet.getRow(1).height = 20;
+        sheet.getRow(2).height = 20;
+        sheet.getRow(3).height = 20;
+        sheet.getRow(4).height = 20;
 
         // 4. CABECERAS DE COLUMNA (Fila 6)
-        const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA NACIMIENTO', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'FECHA ALTA', 'GRADO', 'SEGURO'];
         const headerRow = sheet.getRow(6);
-        headerRow.values = headers;
+        headerRow.values = sheet.columns.map(col => col.header);
         headerRow.height = 35;
         
         headerRow.eachCell((cell) => {
@@ -517,8 +465,7 @@ async function exportBackupExcel() {
                 }
             });
 
-            // Color Seguro (Columna 13)
-            const segCell = row.getCell(13);
+            const segCell = row.getCell(13); // Columna Seguro
             if (p.seguro_pagado) {
                 segCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
                 segCell.font = { color: { argb: 'FF065F46' }, bold: true };
@@ -527,8 +474,23 @@ async function exportBackupExcel() {
                 segCell.font = { color: { argb: 'FF991B1B' }, bold: true };
             }
         });
+        
+        // Ajuste Ancho Automático (Ignorando header superior)
+        sheet.columns.forEach(column => {
+            let maxLen = 0;
+            column.eachCell({ includeEmpty: true }, function(cell) {
+                if (cell.row >= 6) { // Solo contar desde cabecera real
+                    const val = cell.value ? cell.value.toString() : "";
+                    if (val.length > maxLen) maxLen = val.length;
+                }
+            });
+            // Aplicar ancho con un poco de aire extra
+            if(maxLen > 0) {
+               column.width = maxLen < 10 ? 12 : maxLen + 2; 
+            }
+        });
 
-        // 6. FINALIZAR
+        // Finalizar
         sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 6 }];
         
         const buffer = await workbook.xlsx.writeBuffer();
@@ -538,64 +500,44 @@ async function exportBackupExcel() {
         a.href = url; a.download = `Arashi_Listado_${new Date().getFullYear()}.xlsx`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         
-        showModal("Excel Generado", `Archivo descargado correctamente.`);
+        showModal("Excel Generado", "Descarga completada.");
 
-    } catch(e) { console.error(e); showModal("Error", "Falló la exportación del Excel."); } 
+    } catch(e) { console.error(e); showModal("Error", "Falló la exportación."); } 
     finally { btn.innerHTML = originalText; }
 }
 
-// --- RESET DE SEGUROS ---
-function confirmResetInsurance() {
-    showModal("⚠️ ATENCIÓN", "¿Seguro que quieres resetear TODOS los seguros a NO PAGADO?", () => runResetProcess());
-}
-
-async function runResetProcess() {
-    const consoleOut = document.getElementById('console-output');
-    consoleOut.innerHTML = "<div>Iniciando reseteo...</div>";
-    try {
-        const res = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-        const json = await res.json();
-        const toReset = json.data || [];
-        if(toReset.length === 0) { consoleOut.innerHTML += "<div>Nada que resetear.</div>"; return; }
-        
-        let count = 0;
-        for (const item of toReset) {
-            await fetch(`${API_URL}/api/alumnos/${item.documentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { seguro_pagado: false } }) });
-            count++;
-            if(count % 5 === 0) consoleOut.innerHTML += `<div>> Reseteados: ${count}...</div>`;
-        }
-        consoleOut.innerHTML += "<div>COMPLETADO.</div>";
-    } catch(e) { consoleOut.innerHTML += `<div>ERROR: ${e.message}</div>`; }
-}
-
-// --- FUNCIONES EXTRA (Informes, Modales, Utils) ---
+// --- INFORMES AVANZADOS (PDF) ---
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
-
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
-    const dojoFilterId = document.getElementById('report-dojo-filter').value;
-    const dojoFilterName = document.getElementById('report-dojo-filter').options[document.getElementById('report-dojo-filter').selectedIndex].text;
+    const dojoSelect = document.getElementById('report-dojo-filter');
+    const dojoFilterId = dojoSelect.value;
+    const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
     
     const { jsPDF } = window.jspdf; 
     const doc = new jsPDF('l', 'mm', 'a4'); 
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
+    const fileNames = { 'surname': 'ARASHI - Alumnos por Apellidos', 'age': 'ARASHI - Alumnos por Edad', 'grade': 'ARASHI - Alumnos por Grado', 'dojo': 'ARASHI - Alumnos por Dojo', 'group': 'ARASHI - Alumnos por Grupo', 'insurance': 'ARASHI - Estado Seguros' };
     const subtitleMap = { 'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro' };
     
     logoImg.onload = async function() {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         let title = "LISTADO DE ALUMNOS";
+        if(type === 'grade') title += " POR GRADO";
+        if(type === 'age') title += " POR EDAD";
+        if(type === 'dojo') title += " POR DOJO";
+        if(type === 'surname') title += " POR APELLIDOS";
+        if(type === 'group') title += " POR GRUPO";
         if(type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
-        else title += ` POR ${subtitleMap[type].toUpperCase()}`;
 
         let subText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
         if(dojoFilterId) subText += ` (${dojoFilterName})`; 
         
         let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`;
         if(dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
-        
         const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
@@ -632,9 +574,12 @@ async function generateReport(type) {
             return row;
         });
 
-        let styles = { 0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, 4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 45 }, 6: { cellWidth: 20, halign: 'center' }, 7: { cellWidth: 30, halign: 'center' }, 8: { cellWidth: 45 }, 9: { cellWidth: 25, halign: 'center' }, 10: { cellWidth: 12, halign: 'center' } };
-        if(type==='insurance') { styles[6]={ cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }; styles[7]={ cellWidth: 35 }; styles[8]={ cellWidth: 35, halign: 'center' }; styles[9]={ cellWidth: 15, halign: 'center' }; }
+        let styles = { 0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, 4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 40 }, 6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 30 }, 8: { cellWidth: 40 }, 9: { cellWidth: 25 }, 10: { cellWidth: 12, halign: 'center' } };
         
+        if(type==='age') { styles[7] = { cellWidth: 10, halign: 'center' }; styles[8] = { cellWidth: 28 }; styles[9] = { cellWidth: 35 }; styles[10] = { cellWidth: 20 }; styles[11] = { cellWidth: 10 }; }
+        if(type==='insurance') { styles[6] = { cellWidth: 20, halign: 'center', fontStyle: 'bold' }; styles[7] = { cellWidth: 35 }; styles[8] = { cellWidth: 30 }; styles[9] = { cellWidth: 15 }; }
+        if(type==='group') { styles[7] = { cellWidth: 25 }; styles[8] = { cellWidth: 18, halign: 'center' }; styles[9] = { cellWidth: 35 }; styles[10] = { cellWidth: 20 }; styles[11] = { cellWidth: 10 }; }
+
         doc.autoTable({ 
             startY: 25, head: [headRow], body: body, theme: 'grid', showHead: 'everyPage', 
             margin: { top: 30, left: 5, right: 5, bottom: 15 },
@@ -653,10 +598,9 @@ async function generateReport(type) {
     };
 }
 
-// ... (RESTO DE HELPERS: Modales, Cargas, Filtros, Menú Móvil) ...
-function changeFontSize(tableId, d) { const t=document.getElementById(tableId); if(!t)return; t.querySelectorAll('th, td').forEach(c => { const s=parseFloat(window.getComputedStyle(c).fontSize); const p=parseFloat(window.getComputedStyle(c).paddingTop); c.style.fontSize=(Math.max(8,s+d))+"px"; c.style.padding=`${Math.max(2,p+(d*0.5))}px 5px`; }); }
+function changeFontSize(tableId, delta) { const t=document.getElementById(tableId); if(!t)return; t.querySelectorAll('th, td').forEach(c => { const s=parseFloat(window.getComputedStyle(c).fontSize); const p=parseFloat(window.getComputedStyle(c).paddingTop); c.style.fontSize=(Math.max(8,s+d))+"px"; c.style.padding=`${Math.max(2,p+(d*0.5))}px 5px`; }); }
 function setupDragScroll() { const s=document.querySelector('.drag-scroll'); if(!s)return; let isDown=false, startX, scrollLeft; s.addEventListener('mousedown',e=>{isDown=true;startX=e.pageX-s.offsetLeft;scrollLeft=s.scrollLeft;}); s.addEventListener('mouseleave',()=>isDown=false); s.addEventListener('mouseup',()=>isDown=false); s.addEventListener('mousemove',e=>{if(!isDown)return;e.preventDefault();const x=e.pageX-s.offsetLeft;s.scrollLeft=scrollLeft-(x-startX)*2;}); }
-async function runDiagnostics() { const o=document.getElementById('console-output'); if(o){o.innerHTML=''; const l=["Iniciando...", "> Conectando DB... [OK]", "> Verificando API... [OK]", "SISTEMA ONLINE 100%"]; for(const x of l){await new Promise(r=>setTimeout(r,400));o.innerHTML+=`<div>${x}</div>`;} } }
+async function runDiagnostics() { const o=document.getElementById('console-output'); if(o) { o.innerHTML=''; const l=["Iniciando...", "> Conectando DB... [OK]", "> Verificando API... [OK]", "SISTEMA ONLINE 100%"]; for(const x of l){await new Promise(r=>setTimeout(r,400));o.innerHTML+=`<div>${x}</div>`;} } }
 function showModal(t, m, ok) { const d=document.getElementById('custom-modal'); if(!d)return; document.getElementById('modal-title').innerText=t; document.getElementById('modal-message').innerHTML=m; document.getElementById('modal-btn-cancel').onclick=()=>d.classList.add('hidden'); document.getElementById('modal-btn-ok').onclick=()=>{if(ok)ok();d.classList.add('hidden');}; d.classList.remove('hidden'); }
 async function loadDojosSelect() { const s=document.getElementById('new-dojo'); if(s){ try{ const r=await fetch(`${API_URL}/api/dojos`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); s.innerHTML='<option value="">Selecciona Dojo...</option>'; (j.data||[]).forEach(d=>{s.innerHTML+=`<option value="${d.documentId}">${d.attributes.nombre}</option>`}); }catch{} } }
 async function loadReportDojos() { const s=document.getElementById('report-dojo-filter'); const e=document.getElementById('export-dojo-filter'); try{ const r=await fetch(`${API_URL}/api/dojos`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); const o='<option value="">-- Todos los Dojos --</option>'+(j.data||[]).map(d=>`<option value="${d.documentId}">${d.attributes.nombre}</option>`).join(''); if(s)s.innerHTML=o; if(e)e.innerHTML=o; }catch{} }
@@ -666,3 +610,4 @@ function filtrarTabla(t,i) { const input=document.getElementById(i); if(!input)r
 function toggleMobileMenu() { document.querySelector('.sidebar').classList.toggle('open'); }
 function scrollToTop() { const c=document.querySelector('.content'); if(c)c.scrollTo({top:0,behavior:'smooth'}); else window.scrollTo({top:0,behavior:'smooth'}); }
 const ca=document.querySelector('.content'); if(ca){ ca.addEventListener('scroll',()=>{ const b=document.getElementById('btn-scroll-top'); if(ca.scrollTop>300)b.classList.add('visible');else b.classList.remove('visible'); }); }
+function togglePassword(inputId, icon) { const input = document.getElementById(inputId); if (input.type === "password") { input.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } else { input.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } }
