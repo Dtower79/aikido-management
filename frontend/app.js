@@ -407,6 +407,7 @@ async function editarAlumno(documentId) {
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
         document.getElementById('btn-cancelar-edit').classList.remove('hidden');
         
+        // Cambio manual de sección
         document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
         document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
         
@@ -660,8 +661,12 @@ async function generateReport(type) {
     logoImg.src = 'img/logo-arashi-informe.png';
     
     const fileNames = {
-        'surname': 'ARASHI - Alumnos por Apellidos', 'age': 'ARASHI - Alumnos por Edad', 'grade': 'ARASHI - Alumnos por Grado', 
-        'dojo': 'ARASHI - Alumnos por Dojo', 'group': 'ARASHI - Alumnos por Grupo', 'insurance': 'ARASHI - Estado Seguros'
+        'surname': 'ARASHI - Alumnos por Apellidos',
+        'age': 'ARASHI - Alumnos por Edad',
+        'grade': 'ARASHI - Alumnos por Grado',
+        'dojo': 'ARASHI - Alumnos por Dojo',
+        'group': 'ARASHI - Alumnos por Grupo',
+        'insurance': 'ARASHI - Estado Seguros'
     };
 
     const subtitleMap = {
@@ -740,21 +745,27 @@ async function generateReport(type) {
                 emailShow 
             ];
 
-            if (type === 'insurance') { baseRow.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE'); } 
-            else if (type === 'age') { baseRow.push(formatDatePDF(p.fecha_nacimiento)); baseRow.push(calculateAge(p.fecha_nacimiento)); } 
-            else { baseRow.push(formatDatePDF(p.fecha_nacimiento)); }
+            if (type === 'insurance') {
+                baseRow.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE');
+            } else if (type === 'age') {
+                baseRow.push(formatDatePDF(p.fecha_nacimiento));
+                baseRow.push(calculateAge(p.fecha_nacimiento));
+            } else {
+                baseRow.push(formatDatePDF(p.fecha_nacimiento));
+            }
             
             baseRow.push(getDojoName(p.dojo));
             if (type === 'group') baseRow.push(p.grupo || '-');
             
             if (type !== 'insurance') baseRow.push(normalizeAddress(p.direccion));
+            
             baseRow.push(normalizeCity(p.poblacion), p.cp || '-');
             return baseRow;
         });
         
         let colStyles = {};
         if (type === 'insurance') {
-            colStyles = { 0: { cellWidth: 40, fontStyle: 'bold' }, 1: { cellWidth: 20, fontStyle: 'bold' }, 2: { cellWidth: 22, halign: 'center' }, 3: { cellWidth: 15, halign: 'center' }, 4: { cellWidth: 22, halign: 'center' }, 5: { cellWidth: 45 }, 6: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }, 7: { cellWidth: 35 }, 8: { cellWidth: 35, halign: 'center' }, 9: { cellWidth: 15, halign: 'center' } };
+            colStyles = { 0: { cellWidth: 40, fontStyle: 'bold' }, 1: { cellWidth: 20, fontStyle: 'bold' }, 2: { cellWidth: 22, halign: 'center' }, 3: { cellWidth: 15, halign: 'center' }, 4: { cellWidth: 22, halign: 'center' }, 5: { cellWidth: 45 }, 6: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }, 7: { cellWidth: 35 }, 8: { cellWidth: 35 }, 9: { cellWidth: 15, halign: 'center' } };
         } else if (type === 'age') { 
             colStyles = { 0: { cellWidth: 35, fontStyle: 'bold' }, 1: { cellWidth: 15, fontStyle: 'bold' }, 2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, 4: { cellWidth: 20, halign: 'center' }, 5: { cellWidth: 38 }, 6: { cellWidth: 18, halign: 'center' }, 7: { cellWidth: 10, halign: 'center' }, 8: { cellWidth: 28, halign: 'center' }, 9: { cellWidth: 38 }, 10: { cellWidth: 25, halign: 'center' }, 11: { cellWidth: 10, halign: 'center' } };
         } else if (type === 'group') {
@@ -824,7 +835,7 @@ function showModal(title, msg, onOk) {
     const m = document.getElementById('custom-modal');
     if(!m) return;
     document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-message').innerHTML = msg; // Usar innerHTML para texto con negritas
+    document.getElementById('modal-message').innerText = msg;
     document.getElementById('modal-btn-cancel').onclick = () => m.classList.add('hidden');
     document.getElementById('modal-btn-ok').onclick = () => { if(onOk) onOk(); m.classList.add('hidden'); };
     m.classList.remove('hidden');
@@ -896,4 +907,10 @@ if(contentArea) {
     contentArea.addEventListener('scroll', () => {
         if (contentArea.scrollTop > 300) btn.classList.add('visible'); else btn.classList.remove('visible');
     });
+}
+
+function togglePassword(inputId, icon) {
+    const input = document.getElementById(inputId);
+    if (input.type === "password") { input.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } 
+    else { input.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
 }
