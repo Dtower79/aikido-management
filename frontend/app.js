@@ -402,7 +402,6 @@ async function editarAlumno(documentId) {
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO";
         document.getElementById('btn-cancelar-edit').classList.remove('hidden');
         
-        // Cambio manual de sección
         document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
         document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
         
@@ -454,16 +453,11 @@ async function loadDojosCards() {
         const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         grid.innerHTML = '';
-        const data = json.data || []; // Array de Dojos
-        
-        data.forEach(d => {
-            // FIX: Acceso directo a atributos del Dojo
+        (json.data || []).forEach(d => {
             const p = d.attributes || d;
-            const cleanName = (p.nombre || 'Dojo').replace(/Aikido\s+/gi, '').trim();
             const addr = p.direccion ? p.direccion.replace(/\n/g, '<br>') : '-';
-            
             grid.innerHTML += `<div class="dojo-card">
-                <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${cleanName}</h3></div>
+                <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${getDojoName(p)}</h3></div>
                 <div class="dojo-body">
                     <div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${addr}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span></div>
                     <div class="dojo-info-row"><i class="fa-solid fa-phone"></i><span>${p.telefono || '-'}</span></div>
@@ -471,10 +465,7 @@ async function loadDojosCards() {
                     <a href="${p.web || '#'}" target="_blank" class="dojo-link-btn">WEB OFICIAL</a>
                 </div></div>`;
         });
-    } catch(e) { 
-        console.error(e);
-        grid.innerHTML = 'Error cargando Dojos.'; 
-    }
+    } catch { grid.innerHTML = 'Error cargando Dojos.'; }
 }
 
 // --- EXPORTAR EXCEL PROFESIONAL ---
@@ -505,10 +496,14 @@ async function exportBackupExcel() {
                 item.documentId, 
                 p.grupo || "Full Time", 
                 nombreCompleto, 
+                nombre, 
+                apellidos, 
                 p.dni || "", 
                 p.fecha_nacimiento || "", 
                 p.direccion || "", 
                 pobCp, 
+                p.poblacion || "", // Poblacion suelta
+                p.cp || "", // CP suelto
                 p.email || "", 
                 p.telefono || "", 
                 p.fecha_inicio || "", 
@@ -518,7 +513,7 @@ async function exportBackupExcel() {
             ];
         });
 
-        const header = ["ID", "GRUPO", "NOM I COGNOMS", "DNI", "DATA NAIXEMENT", "ADREÇA", "POBLACIO", "EMAIL", "TELEFON", "DATA ALTA", "GRAU", "DOJO", "SEGURO"];
+        const header = ["ID", "GRUPO", "NOM I COGNOMS (COMPLET)", "NOMBRE", "APELLIDOS", "DNI", "DATA NAIXEMENT", "ADREÇA", "POBLACIO + CP", "POBLACIO", "CP", "EMAIL", "TELEFON", "DATA ALTA", "GRAU", "DOJO", "SEGURO"];
         
         const wsData = [
             ["ARASHI GROUP AIKIDO - LISTADO DE ALUMNOS"],
@@ -532,15 +527,15 @@ async function exportBackupExcel() {
         const ws = XLSX.utils.aoa_to_sheet(wsData);
 
         ws['!cols'] = [
-            { wch: 15 }, { wch: 15 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, 
-            { wch: 30 }, { wch: 20 }, { wch: 25 }, { wch: 12 }, { wch: 12 }, 
+            { wch: 15 }, { wch: 15 }, { wch: 35 }, { wch: 20 }, { wch: 25 }, { wch: 12 }, { wch: 12 }, 
+            { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 8 }, { wch: 25 }, { wch: 12 }, { wch: 12 }, 
             { wch: 10 }, { wch: 20 }, { wch: 8 }   
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, "Alumnos");
         const fileName = `Arashi_Backup_${new Date().getFullYear()}_${new Date().getMonth()+1}.xlsx`;
         XLSX.writeFile(wb, fileName);
-        showModal("Excel Generado", "El archivo tiene un formato limpio.");
+        showModal("Excel Generado", `El archivo <b>${fileName}</b> se ha guardado en tu carpeta de descargas.`);
     } catch(e) { console.error(e); showModal("Error", "Falló la exportación."); } 
     finally { btn.innerHTML = originalText; }
 }
@@ -708,7 +703,7 @@ async function generateReport(type) {
                 5: { cellWidth: 45 }, 
                 6: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0] }, // Seguro
                 7: { cellWidth: 35 }, 
-                8: { cellWidth: 35 }, 
+                8: { cellWidth: 35, halign: 'center' }, // Pob Centrada
                 9: { cellWidth: 15, halign: 'center' } 
             };
         } else if (type === 'age') { 
@@ -787,7 +782,7 @@ async function runDiagnostics() {
         o.innerHTML = '';
         const lines = ["Iniciando protocolos...", "> Conectando a Neon DB... [OK]", "> Verificando API Strapi... [OK]", "> Comprobando integridad... [OK]", "SISTEMA OPERATIVO AL 100%"];
         for(const l of lines) { await new Promise(r => setTimeout(r, 400)); o.innerHTML += `<div>${l}</div>`; }
-        // Se mantiene el enlace original del dashboard por compatibilidad HTML
+        o.innerHTML += '<br><a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="btn-monitor-ext" style="color:#33ff00; border:1px solid #33ff00; padding:10px 20px; text-decoration:none;">VER GRÁFICOS</a>';
     }
 }
 
