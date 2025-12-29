@@ -483,7 +483,10 @@ async function exportBackupExcel() {
         const json = await res.json();
         const data = json.data || [];
 
-        const rows = data.map(item => {
+        // Generar Contenido HTML para el Excel
+        let tableRows = '';
+        
+        data.forEach(item => {
             const p = item.attributes || item;
             const nombre = p.nombre || '';
             const apellidos = p.apellidos || '';
@@ -491,53 +494,110 @@ async function exportBackupExcel() {
             const pob = p.poblacion || '';
             const cp = p.cp || '';
             const pobCp = `${pob} ${cp}`.trim(); 
+            const seguro = p.seguro_pagado ? "SI" : "NO";
+            const seguroColor = p.seguro_pagado ? "#d1fae5" : "#fee2e2"; // Verde/Rojo suave
 
-            return [
-                item.documentId, 
-                p.grupo || "Full Time", 
-                nombreCompleto, 
-                nombre, 
-                apellidos, 
-                p.dni || "", 
-                p.fecha_nacimiento || "", 
-                p.direccion || "", 
-                pobCp, 
-                p.poblacion || "", // Poblacion suelta
-                p.cp || "", // CP suelto
-                p.email || "", 
-                p.telefono || "", 
-                p.fecha_inicio || "", 
-                p.grado || "", 
-                getDojoName(p.dojo), 
-                p.seguro_pagado ? "SI" : "NO" 
-            ];
+            tableRows += `
+                <tr>
+                    <td>${item.documentId}</td>
+                    <td>${p.grupo || "Full Time"}</td>
+                    <td>${nombreCompleto}</td>
+                    <td>${nombre}</td>
+                    <td>${apellidos}</td>
+                    <td>${p.dni || ""}</td>
+                    <td>${p.fecha_nacimiento || ""}</td>
+                    <td>${p.direccion || ""}</td>
+                    <td>${pobCp}</td>
+                    <td>${p.poblacion || ""}</td>
+                    <td>${p.cp || ""}</td>
+                    <td>${p.email || ""}</td>
+                    <td>${p.telefono || ""}</td>
+                    <td>${p.fecha_inicio || ""}</td>
+                    <td>${p.grado || ""}</td>
+                    <td>${getDojoName(p.dojo)}</td>
+                    <td style="background-color: ${seguroColor}; text-align: center;">${seguro}</td>
+                </tr>`;
         });
 
-        const header = ["ID", "GRUPO", "NOM I COGNOMS (COMPLET)", "NOMBRE", "APELLIDOS", "DNI", "DATA NAIXEMENT", "ADREÇA", "POBLACIO + CP", "POBLACIO", "CP", "EMAIL", "TELEFON", "DATA ALTA", "GRAU", "DOJO", "SEGURO"];
+        const fechaExport = new Date().toLocaleString();
         
-        const wsData = [
-            ["ARASHI GROUP AIKIDO - LISTADO DE ALUMNOS"],
-            [`Fecha Exportación: ${new Date().toLocaleString()}`],
-            [], 
-            header, 
-            ...rows
-        ];
+        // Plantilla XML Excel con Estilos Reales
+        const excelTemplate = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>Listado Alumnos</x:Name>
+                                <x:WorksheetOptions>
+                                    <x:DisplayGridlines/>
+                                </x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    body { font-family: Arial, sans-serif; }
+                    .header-title { font-size: 18px; font-weight: bold; color: white; background-color: #0b1120; text-align: center; height: 50px; vertical-align: middle; }
+                    .header-col { background-color: #ef4444; color: white; font-weight: bold; text-align: center; border: 1px solid #000; }
+                    td { border: 1px solid #ddd; padding: 5px; }
+                </style>
+            </head>
+            <body>
+                <table>
+                    <tr>
+                        <td colspan="17" class="header-title">ARASHI GROUP AIKIDO - LISTADO OFICIAL DE ALUMNOS (${fechaExport})</td>
+                    </tr>
+                    <tr></tr>
+                    <tr>
+                        <th class="header-col">ID</th>
+                        <th class="header-col">GRUPO</th>
+                        <th class="header-col">NOM I COGNOMS</th>
+                        <th class="header-col">NOMBRE</th>
+                        <th class="header-col">APELLIDOS</th>
+                        <th class="header-col">DNI</th>
+                        <th class="header-col">DATA NAIXEMENT</th>
+                        <th class="header-col">ADREÇA</th>
+                        <th class="header-col">POBLACIO + CP</th>
+                        <th class="header-col">POBLACIO</th>
+                        <th class="header-col">CP</th>
+                        <th class="header-col">EMAIL</th>
+                        <th class="header-col">TELEFON</th>
+                        <th class="header-col">DATA ALTA</th>
+                        <th class="header-col">GRAU</th>
+                        <th class="header-col">DOJO</th>
+                        <th class="header-col">SEGURO</th>
+                    </tr>
+                    ${tableRows}
+                </table>
+            </body>
+            </html>
+        `;
 
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        // Descarga
+        const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const fileName = `Arashi_Listado_${new Date().getFullYear()}_${new Date().getMonth()+1}.xls`;
+        
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-        ws['!cols'] = [
-            { wch: 15 }, { wch: 15 }, { wch: 35 }, { wch: 20 }, { wch: 25 }, { wch: 12 }, { wch: 12 }, 
-            { wch: 30 }, { wch: 20 }, { wch: 15 }, { wch: 8 }, { wch: 25 }, { wch: 12 }, { wch: 12 }, 
-            { wch: 10 }, { wch: 20 }, { wch: 8 }   
-        ];
+        // Mensaje Profesional
+        showModal("Excel Exportado", "Archivo guardado correctamente. Revisa tu carpeta de Descargas.");
 
-        XLSX.utils.book_append_sheet(wb, ws, "Alumnos");
-        const fileName = `Arashi_Backup_${new Date().getFullYear()}_${new Date().getMonth()+1}.xlsx`;
-        XLSX.writeFile(wb, fileName);
-        showModal("Excel Generado", `El archivo <b>${fileName}</b> se ha guardado en tu carpeta de descargas.`);
-    } catch(e) { console.error(e); showModal("Error", "Falló la exportación."); } 
-    finally { btn.innerHTML = originalText; }
+    } catch(e) {
+        console.error(e);
+        showModal("Error", "Falló la exportación.");
+    } finally {
+        btn.innerHTML = originalText;
+    }
 }
 
 function confirmResetInsurance() {
@@ -853,14 +913,23 @@ function toggleMobileMenu() {
 
 // SCROLL TOP
 function scrollToTop() {
-    const content = document.querySelector('.content');
-    if(content) content.scrollTo({ top: 0, behavior: 'smooth' }); else window.scrollTo({ top: 0, behavior: 'smooth' });
+    const content = document.querySelector('.content'); // El contenedor que hace scroll
+    if(content) {
+        content.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 }
+
 const contentArea = document.querySelector('.content');
 if(contentArea) {
+    const btn = document.getElementById('btn-scroll-top');
     contentArea.addEventListener('scroll', () => {
-        const btn = document.getElementById('btn-scroll-top');
-        if (contentArea.scrollTop > 300) btn.classList.remove('hidden'); else btn.classList.add('hidden');
+        if (contentArea.scrollTop > 300) {
+            btn.classList.add('visible');
+        } else {
+            btn.classList.remove('visible');
+        }
     });
 }
 
