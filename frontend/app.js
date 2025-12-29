@@ -103,11 +103,26 @@ function normalizeGrade(g) {
 }
 function getGradeWeight(g) { return GRADE_WEIGHTS[normalizeGrade(g)] || 0; }
 function normalizeAddress(a) { return a ? a.replace(/\b(Carrer|Calle)\b/gi, 'C/').replace(/\b(Avinguda|Avenida)\b/gi, 'Avda').trim() : '-'; }
-function normalizeCity(c) { if(!c) return '-'; let s = c.replace(/\s*\(.*?\)\s*/g, '').replace(/[.,\-\s]+$/, '').trim(); if (s.match(/San Adria/i)) return 'SANT ADRIÀ DEL BESÒS'; return s.toUpperCase(); }
+
+// FUNCIÓN DE NORMALIZACIÓN DE CIUDAD (APLANADO DE VARIANTES)
+function normalizeCity(c) { 
+    if(!c) return ''; 
+    let s = c.toString().toUpperCase();
+    // Eliminar contenido entre paréntesis y los propios paréntesis
+    s = s.replace(/\s*\(.*?\)\s*/g, ' ');
+    // Normalizar abreviaturas comunes
+    s = s.replace(/\bSTA\b/g, 'SANTA');
+    s = s.replace(/\bST\b/g, 'SANT');
+    // Eliminar puntuación y guiones al final o principio
+    s = s.replace(/[.,\-\s]+$/, '').replace(/^[.,\-\s]+/, '');
+    // Caso específico Sant Adrià
+    if (s.match(/SAN.*ADRI/i)) return 'SANT ADRIÀ DE BESÒS';
+    return s.trim(); 
+}
+
 function normalizePhone(t) { return t ? t.toString().trim().replace(/^(\+?34)/, '').trim() : '-'; }
 function formatDatePDF(d) { if(!d) return '-'; const p = d.split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; }
 
-// Función específica para formato Excel DD/MM/YYYY
 function formatDateExcel(d) {
     if(!d) return "";
     const p = d.split('-');
@@ -218,12 +233,12 @@ async function exportBackupExcel() {
         const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA\nNACIMIENTO', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'FECHA\nALTA', 'GRADO', 'SEGURO'];
         const headerRow = sheet.getRow(7);
         headerRow.values = headers;
-        headerRow.height = 45; // Altura aumentada para las dos líneas
+        headerRow.height = 45; 
         
         headerRow.eachCell((cell) => {
             cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } }; 
-            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; // Ajuste de texto activado
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; 
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
@@ -238,7 +253,7 @@ async function exportBackupExcel() {
                 dni: p.dni || "",
                 nac: formatDateExcel(p.fecha_nacimiento),
                 dir: p.direccion || "",
-                pob: (p.poblacion || "").trim(),
+                pob: normalizeCity(p.poblacion), // Población Aplanada y Limpia
                 cp: (p.cp || "").trim(),
                 email: p.email || "",
                 dojo: getDojoName(p.dojo),
@@ -299,7 +314,6 @@ async function generateReport(type) {
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
-    // Mapeo para el título del PDF y nombre de archivo en castellano
     const subtitleMap = { 'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro' };
     const filenameMap = { 'surname': 'apellidos', 'age': 'edad', 'grade': 'grado', 'dojo': 'dojo', 'group': 'grupo', 'insurance': 'seguros' };
     
