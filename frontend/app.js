@@ -198,20 +198,17 @@ async function exportBackupExcel() {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Alumnos');
 
-        // --- CABECERA NEGRA SUPERIOR (Filas 1-6) ---
         for (let i = 1; i <= 6; i++) {
             const row = sheet.getRow(i);
             row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } };
         }
 
-        // Título Principal
         sheet.mergeCells('A2:M3');
         const titleCell = sheet.getCell('A2');
         titleCell.value = `            ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString('es-ES')})`;
         titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-        // Información de Resumen (Debajo del título)
         sheet.mergeCells('A4:M4');
         const totalCell = sheet.getCell('A4');
         totalCell.value = `TOTAL ALUMNOS: ${data.length}`;
@@ -224,7 +221,6 @@ async function exportBackupExcel() {
         genCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FFCCCCCC' } };
         genCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-        // Cargar Logo
         try {
             const logoRes = await fetch('img/logo-arashi.png');
             const logoBlob = await logoRes.blob();
@@ -233,7 +229,6 @@ async function exportBackupExcel() {
             sheet.addImage(logoId, { tl: { col: 2.2, row: 1.2 }, ext: { width: 110, height: 60 } });
         } catch(e) { console.warn("Logo no encontrado", e); }
 
-        // --- COLUMNAS Y CABECERAS DE DATOS ---
         const columns = [
             { key: 'apellidos' }, { key: 'nombre' }, { key: 'dni' },
             { key: 'nac' }, { key: 'dir' }, { key: 'pob' },
@@ -254,7 +249,6 @@ async function exportBackupExcel() {
             cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
         });
 
-        // 5. DATOS
         let maxLengths = new Array(headers.length).fill(8);
 
         data.forEach(item => {
@@ -307,7 +301,7 @@ function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TOD
 async function runResetProcess() { const out=document.getElementById('console-output'); out.innerHTML="<div>Iniciando...</div>"; try{ const r=await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); const l=j.data||[]; if(l.length===0){out.innerHTML+="<div>Nada que resetear.</div>";return;} for(const i of l){ await fetch(`${API_URL}/api/alumnos/${i.documentId}`,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':`Bearer ${jwtToken}`},body:JSON.stringify({data:{seguro_pagado:false}})}); } out.innerHTML+="<div style='color:#33ff00'>COMPLETADO.</div>"; }catch(e){out.innerHTML+=`<div>ERROR: ${e.message}</div>`;} }
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
-// --- GENERACIÓN PDF ---
+// --- GENERACIÓN PDF (AJUSTE DE ANCHOS Y ALINEACIÓN INTELIGENTE) ---
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -359,15 +353,24 @@ async function generateReport(type) {
             return row;
         });
 
-        // ADAPTACIÓN DINÁMICA DE ANCHO Y ALINEACIÓN
+        // LÓGICA DE ESTILOS POR COLUMNA: ANCHOS FIJOS PARA DATOS CORTOS, EL RESTO AUTO.
         const colStyles = {};
         headRow.forEach((h, i) => {
-            // Alineación por defecto
-            colStyles[i] = { halign: 'left', cellWidth: 'auto' }; 
-            // Columnas que van centradas
+            colStyles[i] = { halign: 'left', cellWidth: 'auto' }; // Por defecto auto e izquierda
+            
+            // Forzar centrado en columnas de datos atómicos
             if (['DNI', 'Grado', 'Teléfono', 'Nac.', 'Edad', 'Seguro', 'CP', 'Grupo'].includes(h)) {
                 colStyles[i].halign = 'center';
             }
+
+            // Asignar anchos fijos mínimos para evitar rotura de palabras (como 2º KYU)
+            if (h === 'Grado') colStyles[i].cellWidth = 15;
+            if (h === 'DNI') colStyles[i].cellWidth = 22;
+            if (h === 'Nac.') colStyles[i].cellWidth = 18;
+            if (h === 'Edad') colStyles[i].cellWidth = 10;
+            if (h === 'CP') colStyles[i].cellWidth = 12;
+            if (h === 'Teléfono') colStyles[i].cellWidth = 22;
+            if (h === 'Población') colStyles[i].cellWidth = 25; // Población acotada para no desperdiciar
         });
 
         doc.autoTable({ 
