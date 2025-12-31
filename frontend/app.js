@@ -155,10 +155,10 @@ function togglePassword(i, icon) {
     else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } 
 }
 
-// --- CARGA CORREGIDA ---
+// --- CARGA CORREGIDA (SEGURO Y ALTA INCLUIDOS) ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    tbody.innerHTML = `<tr><td colspan="14">Cargando...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15">Cargando...</td></tr>`;
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
     try {
@@ -171,8 +171,7 @@ async function loadAlumnos(activos) {
             const id = a.documentId;
             const badgeSeguro = p.seguro_pagado ? `<span class="badge-ok">PAGADO</span>` : `<span class="badge-no">PENDIENTE</span>`;
             
-            // Construcción de fila con el Seguro incluido en ambas
-            const rowContent = `
+            const commonFields = `
                 <td><span class="cell-data"><strong>${p.apellidos || "NO DISP"}</strong></span></td>
                 <td><span class="cell-data">${p.nombre || "NO DISP"}</span></td>
                 <td><span class="cell-data" style="font-family:monospace">${p.dni || "NO DISP"}</span></td>
@@ -182,19 +181,19 @@ async function loadAlumnos(activos) {
                 <td><span class="cell-data">${p.email || 'NO DISP'}</span></td>
                 <td><span class="cell-data">${p.fecha_nacimiento || 'NO DISP'}</span></td>
                 <td><span class="cell-data">${getDojoName(p.dojo)}</span></td>
+                <td><span class="cell-data" style="font-weight:bold">${p.fecha_inicio || 'NO DISP'}</span></td>
                 <td><span class="cell-data">${p.direccion || 'NO DISP'}</span></td>
                 <td><span class="cell-data">${p.poblacion || 'NO DISP'}</span></td>
                 <td><span class="cell-data">${p.cp || 'NO DISP'}</span></td>
             `;
 
             if (activos) {
-                tbody.innerHTML += `<tr>${rowContent}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr>${commonFields}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
             } else {
-                // Para las bajas añadimos la Fecha de Baja al principio
-                tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || 'NO DISP'}</span></td>${rowContent}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || 'NO DISP'}</span></td>${commonFields}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
             }
         });
-    } catch { tbody.innerHTML = `<tr><td colspan="14">Error de carga.</td></tr>`; }
+    } catch { tbody.innerHTML = `<tr><td colspan="15">Error de carga.</td></tr>`; }
 }
 
 const formAlumno = document.getElementById('form-nuevo-alumno');
@@ -232,16 +231,11 @@ async function editarAlumno(documentId) {
         const chk = document.getElementById('new-seguro'); const txt = document.getElementById('seguro-status-text'); chk.checked = p.seguro_pagado === true; if (chk.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; } else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
         let dojoId = "";
         if (p.dojo) {
-            if (p.dojo.documentId) {
-                dojoId = p.dojo.documentId;
-            } else if (p.dojo.data) {
-                dojoId = p.dojo.data.documentId || p.dojo.data.id;
-            }
+            if (p.dojo.documentId) { dojoId = p.dojo.documentId; } 
+            else if (p.dojo.data) { dojoId = p.dojo.data.documentId || p.dojo.data.id; }
         }
         const selectDojo = document.getElementById('new-dojo');
-        if (dojoId && selectDojo) {
-            selectDojo.value = dojoId;
-        }
+        if (dojoId && selectDojo) { selectDojo.value = dojoId; }
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; document.getElementById('btn-cancelar-edit').classList.remove('hidden'); document.querySelectorAll('.section').forEach(s => s.classList.add('hidden')); document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
     } catch { showModal("Error", "Error al cargar datos."); }
 }
@@ -375,7 +369,7 @@ function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TOD
 async function runResetProcess() { const out = document.getElementById('console-output'); out.innerHTML = "<div>Iniciando...</div>"; try { const r = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const j = await r.json(); const l = j.data || []; if (l.length === 0) { out.innerHTML += "<div>Nada que resetear.</div>"; return; } for (const i of l) { await fetch(`${API_URL}/api/alumnos/${i.documentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { seguro_pagado: false } }) }); } out.innerHTML += "<div style='color:#33ff00'>COMPLETADO.</div>"; } catch (e) { out.innerHTML += `<div>ERROR: ${e.message}</div>`; } }
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
-// --- GENERACIÓN PDF (FORZADO NO DISP EN EMAIL) ---
+// --- GENERACIÓN PDF ---
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -392,7 +386,7 @@ async function generateReport(type) {
         'bajas_surname': 'Histórico Bajas (Por Apellidos)', 'bajas_date': 'Histórico Bajas (Por Fecha)'
     };
     const filenameMap = {
-        'surname': 'apellidos', 'age': 'edad', 'grade': 'grado', 'dojo': 'dojo', 'group': 'grupo', 'insurance': 'seguros',
+        'surname': 'apellidos', 'age': 'edad', 'grade': 'grado', 'dojo': 'dojo', 'group': 'grado', 'insurance': 'seguros',
         'bajas_surname': 'historico_apellidos', 'bajas_date': 'historico_fechas'
     };
 
@@ -438,12 +432,13 @@ async function generateReport(type) {
         headRow.push('Dojo', 'Alta');
         if (!isBaja && type === 'group') headRow.push('Grupo');
         if (type !== 'insurance') headRow.push('Dirección');
-        headRow.push('Población', 'CP');
+        rowPoblacion = 'Población';
+        headRow.push(rowPoblacion, 'CP');
 
         const body = list.map(a => {
             const p = a.attributes || a;
             let dni = (p.dni || 'NO DISP').toUpperCase();
-            let email = (p.email && p.email.trim() !== "") ? p.email : 'NO DISP'; // Forzado NO DISP
+            let email = (p.email && p.email.trim() !== "") ? p.email : 'NO DISP';
             const row = [(p.apellidos || 'NO DISP').toUpperCase(), p.nombre || 'NO DISP', dni, normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', normalizePhone(p.telefono)];
 
             if (isBaja) row.unshift(formatDatePDF(p.fecha_baja));
@@ -484,7 +479,6 @@ async function generateReport(type) {
             headStyles: { fillColor: [190, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
             willDrawCell: (data) => {
-                // Buscamos la columna de seguro dinámicamente
                 if (data.section === 'body' && headRow[data.column.index] === 'Seguro') {
                     const status = data.cell.raw;
                     if (status === 'PAGADO') { doc.setFillColor(200, 255, 200); doc.setTextColor(0, 100, 0); }
