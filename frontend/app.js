@@ -154,7 +154,7 @@ if(formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
-        const alumnoData = { nombre: document.getElementById('new-nombre').value, apellidos: document.getElementById('new-apellidos').value, dni: document.getElementById('new-dni').value, fecha_nacimiento: document.getElementById('new-nacimiento').value || null, email: document.getElementById('new-email').value, telefono: document.getElementById('new-telefono').value, direccion: document.getElementById('new-direccion').value, poblacion: document.getElementById('new-poblacion').value, cp: document.getElementById('new-cp').value, dojo: document.getElementById('new-dojo').value, grupo: document.getElementById('new-grupo').value, grado: document.getElementById('new-grado').value, seguro_pagado: document.getElementById('new-seguro').checked, activo: true };
+        const alumnoData = { nombre: document.getElementById('new-nombre').value, apellidos: document.getElementById('new-apellidos').value, dni: document.getElementById('new-dni').value, fecha_nacimiento: document.getElementById('new-nacimiento').value || null, fecha_inicio: document.getElementById('new-alta').value || null, email: document.getElementById('new-email').value, telefono: document.getElementById('new-telefono').value, direccion: document.getElementById('new-direccion').value, poblacion: document.getElementById('new-poblacion').value, cp: document.getElementById('new-cp').value, dojo: document.getElementById('new-dojo').value, grupo: document.getElementById('new-grupo').value, grado: document.getElementById('new-grado').value, seguro_pagado: document.getElementById('new-seguro').checked, activo: true };
         try {
             const method = id ? 'PUT' : 'POST'; const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
             const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: alumnoData }) });
@@ -168,7 +168,18 @@ async function editarAlumno(documentId) {
         const json = await res.json();
         const data = json.data; const p = data.attributes || data; 
         document.getElementById('edit-id').value = data.documentId || documentId;
-        document.getElementById('new-nombre').value = p.nombre || ''; document.getElementById('new-apellidos').value = p.apellidos || ''; document.getElementById('new-dni').value = p.dni || ''; document.getElementById('new-nacimiento').value = p.fecha_nacimiento || ''; document.getElementById('new-email').value = p.email || ''; document.getElementById('new-telefono').value = p.telefono || ''; document.getElementById('new-direccion').value = p.direccion || ''; document.getElementById('new-poblacion').value = p.poblacion || ''; document.getElementById('new-cp').value = p.cp || ''; document.getElementById('new-grado').value = p.grado || ''; document.getElementById('new-grupo').value = p.grupo || 'Full Time';
+        document.getElementById('new-nombre').value = p.nombre || ''; 
+        document.getElementById('new-apellidos').value = p.apellidos || ''; 
+        document.getElementById('new-dni').value = p.dni || ''; 
+        document.getElementById('new-nacimiento').value = p.fecha_nacimiento || ''; 
+        document.getElementById('new-alta').value = p.fecha_inicio || ''; 
+        document.getElementById('new-email').value = p.email || ''; 
+        document.getElementById('new-telefono').value = p.telefono || ''; 
+        document.getElementById('new-direccion').value = p.direccion || ''; 
+        document.getElementById('new-poblacion').value = p.poblacion || ''; 
+        document.getElementById('new-cp').value = p.cp || ''; 
+        document.getElementById('new-grado').value = p.grado || ''; 
+        document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         const chk = document.getElementById('new-seguro'); const txt = document.getElementById('seguro-status-text'); chk.checked = p.seguro_pagado === true; if(chk.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; } else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
         let dojoId = ""; if (p.dojo) { if (p.dojo.documentId) dojoId = p.dojo.documentId; else if (p.dojo.data) dojoId = p.dojo.data.documentId || p.dojo.data.id; }
         const selectDojo = document.getElementById('new-dojo'); if (dojoId) selectDojo.value = dojoId;
@@ -198,20 +209,17 @@ async function exportBackupExcel() {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Alumnos');
 
-        // Piezas negras superiores (Filas 1-6)
         for (let i = 1; i <= 6; i++) {
             const row = sheet.getRow(i);
             row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } };
         }
 
-        // Título
         sheet.mergeCells('A2:M3');
         const titleCell = sheet.getCell('A2');
         titleCell.value = `            ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString('es-ES')})`;
         titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-        // Resumen
         sheet.mergeCells('A4:M4');
         const totalCell = sheet.getCell('A4');
         totalCell.value = `TOTAL ALUMNOS: ${data.length}`;
@@ -304,7 +312,7 @@ function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TOD
 async function runResetProcess() { const out=document.getElementById('console-output'); out.innerHTML="<div>Iniciando...</div>"; try{ const r=await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); const l=j.data||[]; if(l.length===0){out.innerHTML+="<div>Nada que resetear.</div>";return;} for(const i of l){ await fetch(`${API_URL}/api/alumnos/${i.documentId}`,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':`Bearer ${jwtToken}`},body:JSON.stringify({data:{seguro_pagado:false}})}); } out.innerHTML+="<div style='color:#33ff00'>COMPLETADO.</div>"; }catch(e){out.innerHTML+=`<div>ERROR: ${e.message}</div>`;} }
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
-// --- GENERACIÓN PDF (RESTORED COLOR LOGIC) ---
+// --- GENERACIÓN PDF (ACTUALIZADA PARA BAJAS) ---
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -316,41 +324,78 @@ async function generateReport(type) {
     const logoImg = new Image(); 
     logoImg.src = 'img/logo-arashi-informe.png';
     
-    const subtitleMap = { 'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro' };
-    const filenameMap = { 'surname': 'apellidos', 'age': 'edad', 'grade': 'grado', 'dojo': 'dojo', 'group': 'grupo', 'insurance': 'seguros' };
+    // Detectar si el reporte es de activos o bajas
+    const isBaja = type.startsWith('bajas_');
+    const subtitleMap = { 
+        'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro',
+        'bajas_surname': 'Histórico Bajas (Por Apellidos)', 'bajas_date': 'Histórico Bajas (Por Fecha)'
+    };
+    const filenameMap = { 
+        'surname': 'apellidos', 'age': 'edad', 'grade': 'grado', 'dojo': 'dojo', 'group': 'grupo', 'insurance': 'seguros',
+        'bajas_surname': 'historico_apellidos', 'bajas_date': 'historico_fechas'
+    };
     
     logoImg.onload = async function() {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        let title = "LISTADO DE ALUMNOS";
-        if(type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
-        else title += ` POR ${subtitleMap[type].toUpperCase()}`;
-        let subText = `Arashi Group Aikido | Alumnos por ${subtitleMap[type] || 'General'}`;
+        let title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO DE ALUMNOS";
+        
+        if(!isBaja && type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
+        else if(!isBaja) title += ` POR ${subtitleMap[type].toUpperCase()}`;
+        
+        let subText = `Arashi Group Aikido | Alumnos ${isBaja ? 'Inactivos' : 'Activos'}`;
         if(dojoFilterId) subText += ` (${dojoFilterName})`; 
-        let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=true&populate=dojo&pagination[limit]=1000`;
+        
+        let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
         if(dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+        
         const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         let list = json.data || [];
         
-        list.sort((a, b) => { const pA = a.attributes || a; const pB = b.attributes || b; if (type === 'insurance') { if (pA.seguro_pagado !== pB.seguro_pagado) return (pA.seguro_pagado === true ? -1 : 1); return (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || ''); if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado); if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo)); if (type === 'group') { const cmp = (pA.grupo || '').localeCompare(pB.grupo || ''); return cmp !== 0 ? cmp : (pA.apellidos || '').localeCompare(pB.apellidos || ''); } if (type === 'age') { return new Date(pA.fecha_nacimiento||'2000-01-01') - new Date(pB.fecha_nacimiento||'2000-01-01'); } return 0; });
+        // ORDENACIÓN
+        list.sort((a, b) => { 
+            const pA = a.attributes || a; 
+            const pB = b.attributes || b; 
+            
+            if (type === 'bajas_date') return new Date(pB.fecha_baja || '1900-01-01') - new Date(pA.fecha_baja || '1900-01-01');
+            if (type === 'bajas_surname' || type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
+            if (type === 'insurance') { if (pA.seguro_pagado !== pB.seguro_pagado) return (pA.seguro_pagado === true ? -1 : 1); return (pA.apellidos || '').localeCompare(pB.apellidos || ''); }
+            if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
+            if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
+            if (type === 'group') { const cmp = (pA.grupo || '').localeCompare(pB.grupo || ''); return cmp !== 0 ? cmp : (pA.apellidos || '').localeCompare(pB.apellidos || ''); }
+            if (type === 'age') return new Date(pA.fecha_nacimiento||'2000-01-01') - new Date(pB.fecha_nacimiento||'2000-01-01');
+            return 0; 
+        });
         
-        let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono', 'Email'];
-        if (type === 'insurance') headRow.push('Seguro'); else if (type === 'age') { headRow.push('Nac.', 'Edad'); } else headRow.push('Nac.');
+        let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono'];
+        if(isBaja) headRow.unshift('Fecha Baja');
+        headRow.push('Email');
+        
+        if (!isBaja && type === 'insurance') headRow.push('Seguro'); 
+        else if (!isBaja && type === 'age') { headRow.push('Nac.', 'Edad'); } 
+        else headRow.push('Nac.');
+        
         headRow.push('Dojo');
-        if (type === 'group') headRow.push('Grupo');
+        if (!isBaja && type === 'group') headRow.push('Grupo');
         if (type !== 'insurance') headRow.push('Dirección');
         headRow.push('Población', 'CP');
         
         const body = list.map(a => {
             const p = a.attributes || a;
             let dni = (p.dni || '-').toUpperCase();
-            const row = [(p.apellidos||'').toUpperCase(), p.nombre||'', dni, normalizeGrade(p.grado), normalizePhone(p.telefono), p.email||'-'];
-            if (type === 'insurance') row.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE');
-            else if (type === 'age') { row.push(formatDatePDF(p.fecha_nacimiento), calculateAge(p.fecha_nacimiento)); }
+            const row = [(p.apellidos||'').toUpperCase(), p.nombre||'', dni, normalizeGrade(p.grado), normalizePhone(p.telefono)];
+            
+            if(isBaja) row.unshift(formatDatePDF(p.fecha_baja));
+            
+            row.push(p.email||'-');
+            
+            if (!isBaja && type === 'insurance') row.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE');
+            else if (!isBaja && type === 'age') { row.push(formatDatePDF(p.fecha_nacimiento), calculateAge(p.fecha_nacimiento)); }
             else row.push(formatDatePDF(p.fecha_nacimiento));
+            
             row.push(getDojoName(p.dojo));
-            if (type === 'group') row.push(p.grupo || '-');
+            if (!isBaja && type === 'group') row.push(p.grupo || '-');
             if (type !== 'insurance') row.push(normalizeAddress(p.direccion));
             row.push(normalizeCity(p.poblacion), p.cp||'-');
             return row;
@@ -359,7 +404,7 @@ async function generateReport(type) {
         const colStyles = {};
         headRow.forEach((h, i) => {
             colStyles[i] = { halign: 'left', cellWidth: 'auto' };
-            if (['DNI', 'Grado', 'Teléfono', 'Nac.', 'Edad', 'Seguro', 'CP', 'Grupo'].includes(h)) {
+            if (['DNI', 'Grado', 'Teléfono', 'Nac.', 'Edad', 'Seguro', 'CP', 'Grupo', 'Fecha Baja'].includes(h)) {
                 colStyles[i].halign = 'center';
             }
             if (h === 'Grado') colStyles[i].cellWidth = 15;
@@ -369,33 +414,27 @@ async function generateReport(type) {
             if (h === 'CP') colStyles[i].cellWidth = 12;
             if (h === 'Teléfono') colStyles[i].cellWidth = 22;
             if (h === 'Población') colStyles[i].cellWidth = 25;
-            if (h === 'Seguro') colStyles[i].cellWidth = 20; // Ancho fijo para Seguro
+            if (h === 'Seguro') colStyles[i].cellWidth = 20;
+            if (h === 'Fecha Baja') colStyles[i].cellWidth = 20;
         });
 
         doc.autoTable({ 
             startY: 25, head: [headRow], body: body, theme: 'grid', showHead: 'everyPage', 
             margin: { top: 30, left: 5, right: 5, bottom: 15 },
-            styles: { fontSize: 7.5, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
+            styles: { fontSize: 7, cellPadding: 1.5, valign: 'middle', overflow: 'linebreak' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255,255,255], fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
-            // LOGICA DE COLOR RESTAURADA
             willDrawCell: (data) => {
                 if (type === 'insurance' && data.section === 'body' && data.column.index === 6) {
                     const status = data.cell.raw;
-                    if (status === 'PAGADO') {
-                        doc.setFillColor(200, 255, 200); // Verde suave
-                        doc.setTextColor(0, 100, 0);    // Verde oscuro
-                    } else if (status === 'PENDIENTE') {
-                        doc.setFillColor(255, 200, 200); // Rojo suave
-                        doc.setTextColor(150, 0, 0);    // Rojo oscuro
-                    }
+                    if (status === 'PAGADO') { doc.setFillColor(200, 255, 200); doc.setTextColor(0, 100, 0); } 
+                    else if (status === 'PENDIENTE') { doc.setFillColor(255, 200, 200); doc.setTextColor(150, 0, 0); }
                 }
             },
             didDrawPage: (data) => {
                 doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); doc.setFontSize(16); doc.setFont("helvetica", "bold");
                 doc.text(title, pageWidth / 2, 12, { align: "center" }); doc.setFontSize(10); doc.setFont("helvetica", "normal");
                 doc.text(subText, pageWidth / 2, 18, { align: "center" }); 
-                
                 doc.setFontSize(8); doc.setTextColor(150);
                 const footerY = pageHeight - 10;
                 const now = new Date().toLocaleString('es-ES');
