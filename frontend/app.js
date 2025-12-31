@@ -155,10 +155,10 @@ function togglePassword(i, icon) {
     else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } 
 }
 
-// --- CARGA ---
+// --- CARGA (CORREGIDA PARA EVITAR DESPLAZAMIENTO) ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    tbody.innerHTML = `<tr><td colspan="${activos ? 13 : 14}">Cargando...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${activos ? 13 : 13}">Cargando...</td></tr>`;
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
     try {
@@ -169,10 +169,33 @@ async function loadAlumnos(activos) {
         data.forEach(a => {
             const p = a.attributes || a;
             const id = a.documentId;
-            const badge = p.seguro_pagado ? `<span class="badge-ok">PAGADO</span>` : `<span class="badge-no">PENDIENTE</span>`;
-            const row = `<td><span class="cell-data"><strong>${p.apellidos || "NO DISP"}</strong></span></td><td><span class="cell-data">${p.nombre || "NO DISP"}</span></td><td><span class="cell-data" style="font-family:monospace">${p.dni || "NO DISP"}</span></td><td><span class="cell-data"><span class="badge">${normalizeGrade(p.grado)}</span></span></td><td><span class="cell-data">${badge}</span></td><td><span class="cell-data">${normalizePhone(p.telefono)}</span></td><td><span class="cell-data">${p.email || 'NO DISP'}</span></td><td><span class="cell-data">${p.fecha_nacimiento || 'NO DISP'}</span></td><td><span class="cell-data">${getDojoName(p.dojo)}</span></td><td><span class="cell-data">${p.direccion || 'NO DISP'}</span></td><td><span class="cell-data">${p.poblacion || 'NO DISP'}</span></td><td><span class="cell-data">${p.cp || 'NO DISP'}</span></td>`;
-            if (activos) { tbody.innerHTML += `<tr>${row}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`; }
-            else { tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || 'NO DISP'}</span></td>${row}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`; }
+            const badgeSeguro = p.seguro_pagado ? `<span class="badge-ok">PAGADO</span>` : `<span class="badge-no">PENDIENTE</span>`;
+            
+            // Construcción de celdas comunes
+            const commonCells = `
+                <td><span class="cell-data"><strong>${p.apellidos || "NO DISP"}</strong></span></td>
+                <td><span class="cell-data">${p.nombre || "NO DISP"}</span></td>
+                <td><span class="cell-data" style="font-family:monospace">${p.dni || "NO DISP"}</span></td>
+                <td><span class="cell-data"><span class="badge">${normalizeGrade(p.grado)}</span></span></td>
+            `;
+            
+            const contactCells = `
+                <td><span class="cell-data">${normalizePhone(p.telefono)}</span></td>
+                <td><span class="cell-data">${p.email || 'NO DISP'}</span></td>
+                <td><span class="cell-data">${p.fecha_nacimiento || 'NO DISP'}</span></td>
+                <td><span class="cell-data">${getDojoName(p.dojo)}</span></td>
+                <td><span class="cell-data">${p.direccion || 'NO DISP'}</span></td>
+                <td><span class="cell-data">${p.poblacion || 'NO DISP'}</span></td>
+                <td><span class="cell-data">${p.cp || 'NO DISP'}</span></td>
+            `;
+
+            if (activos) {
+                // Tabla Activos: Apellidos (1), Nombre (2), DNI (3), Grado (4), Seguro (5), Teléfono (6)...
+                tbody.innerHTML += `<tr>${commonCells}<td><span class="cell-data">${badgeSeguro}</span></td>${contactCells}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
+            } else {
+                // Tabla Bajas: Fecha Baja (1), Apellidos (2), Nombre (3), DNI (4), Grado (5), Teléfono (6)... (Sin Seguro)
+                tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || 'NO DISP'}</span></td>${commonCells}${contactCells}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
+            }
         });
     } catch { tbody.innerHTML = `<tr><td colspan="13">Error de carga.</td></tr>`; }
 }
@@ -355,7 +378,7 @@ function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TOD
 async function runResetProcess() { const out = document.getElementById('console-output'); out.innerHTML = "<div>Iniciando...</div>"; try { const r = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const j = await r.json(); const l = j.data || []; if (l.length === 0) { out.innerHTML += "<div>Nada que resetear.</div>"; return; } for (const i of l) { await fetch(`${API_URL}/api/alumnos/${i.documentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { seguro_pagado: false } }) }); } out.innerHTML += "<div style='color:#33ff00'>COMPLETADO.</div>"; } catch (e) { out.innerHTML += `<div>ERROR: ${e.message}</div>`; } }
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
-// --- GENERACIÓN PDF (COLUMNA ALTA AÑADIDA Y NO DISP) ---
+// --- GENERACIÓN PDF ---
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     const dojoSelect = document.getElementById('report-dojo-filter');
