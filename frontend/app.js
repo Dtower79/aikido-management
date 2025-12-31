@@ -155,10 +155,10 @@ function togglePassword(i, icon) {
     else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } 
 }
 
-// --- CARGA (CORREGIDA PARA EVITAR DESPLAZAMIENTO) ---
+// --- CARGA CORREGIDA ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    tbody.innerHTML = `<tr><td colspan="${activos ? 13 : 13}">Cargando...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14">Cargando...</td></tr>`;
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
     try {
@@ -171,15 +171,13 @@ async function loadAlumnos(activos) {
             const id = a.documentId;
             const badgeSeguro = p.seguro_pagado ? `<span class="badge-ok">PAGADO</span>` : `<span class="badge-no">PENDIENTE</span>`;
             
-            // Construcción de celdas comunes
-            const commonCells = `
+            // Construcción de fila con el Seguro incluido en ambas
+            const rowContent = `
                 <td><span class="cell-data"><strong>${p.apellidos || "NO DISP"}</strong></span></td>
                 <td><span class="cell-data">${p.nombre || "NO DISP"}</span></td>
                 <td><span class="cell-data" style="font-family:monospace">${p.dni || "NO DISP"}</span></td>
                 <td><span class="cell-data"><span class="badge">${normalizeGrade(p.grado)}</span></span></td>
-            `;
-            
-            const contactCells = `
+                <td><span class="cell-data">${badgeSeguro}</span></td>
                 <td><span class="cell-data">${normalizePhone(p.telefono)}</span></td>
                 <td><span class="cell-data">${p.email || 'NO DISP'}</span></td>
                 <td><span class="cell-data">${p.fecha_nacimiento || 'NO DISP'}</span></td>
@@ -190,14 +188,13 @@ async function loadAlumnos(activos) {
             `;
 
             if (activos) {
-                // Tabla Activos: Apellidos (1), Nombre (2), DNI (3), Grado (4), Seguro (5), Teléfono (6)...
-                tbody.innerHTML += `<tr>${commonCells}<td><span class="cell-data">${badgeSeguro}</span></td>${contactCells}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr>${rowContent}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
             } else {
-                // Tabla Bajas: Fecha Baja (1), Apellidos (2), Nombre (3), DNI (4), Grado (5), Teléfono (6)... (Sin Seguro)
-                tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || 'NO DISP'}</span></td>${commonCells}${contactCells}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
+                // Para las bajas añadimos la Fecha de Baja al principio
+                tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || 'NO DISP'}</span></td>${rowContent}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
             }
         });
-    } catch { tbody.innerHTML = `<tr><td colspan="13">Error de carga.</td></tr>`; }
+    } catch { tbody.innerHTML = `<tr><td colspan="14">Error de carga.</td></tr>`; }
 }
 
 const formAlumno = document.getElementById('form-nuevo-alumno');
@@ -378,7 +375,7 @@ function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TOD
 async function runResetProcess() { const out = document.getElementById('console-output'); out.innerHTML = "<div>Iniciando...</div>"; try { const r = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const j = await r.json(); const l = j.data || []; if (l.length === 0) { out.innerHTML += "<div>Nada que resetear.</div>"; return; } for (const i of l) { await fetch(`${API_URL}/api/alumnos/${i.documentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { seguro_pagado: false } }) }); } out.innerHTML += "<div style='color:#33ff00'>COMPLETADO.</div>"; } catch (e) { out.innerHTML += `<div>ERROR: ${e.message}</div>`; } }
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
-// --- GENERACIÓN PDF ---
+// --- GENERACIÓN PDF (FORZADO NO DISP EN EMAIL) ---
 async function generateReport(type) {
     document.getElementById('report-modal').classList.add('hidden');
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -432,14 +429,13 @@ async function generateReport(type) {
         });
 
         // Configuración de Cabecera
-        let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Teléfono'];
+        let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Seguro', 'Teléfono'];
         if (isBaja) headRow.unshift('Fecha Baja');
         headRow.push('Email');
-        if (!isBaja && type === 'insurance') headRow.push('Seguro');
-        else if (!isBaja && type === 'age') { headRow.push('Nac.', 'Edad'); }
-        else headRow.push('Nac.');
+        if (type === 'age') headRow.push('Nac.', 'Edad');
+        else if (type !== 'insurance') headRow.push('Nac.');
 
-        headRow.push('Dojo', 'Alta'); // Alta al lado del Dojo
+        headRow.push('Dojo', 'Alta');
         if (!isBaja && type === 'group') headRow.push('Grupo');
         if (type !== 'insurance') headRow.push('Dirección');
         headRow.push('Población', 'CP');
@@ -447,14 +443,14 @@ async function generateReport(type) {
         const body = list.map(a => {
             const p = a.attributes || a;
             let dni = (p.dni || 'NO DISP').toUpperCase();
-            const row = [(p.apellidos || 'NO DISP').toUpperCase(), p.nombre || 'NO DISP', dni, normalizeGrade(p.grado), normalizePhone(p.telefono)];
+            let email = (p.email && p.email.trim() !== "") ? p.email : 'NO DISP'; // Forzado NO DISP
+            const row = [(p.apellidos || 'NO DISP').toUpperCase(), p.nombre || 'NO DISP', dni, normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', normalizePhone(p.telefono)];
 
             if (isBaja) row.unshift(formatDatePDF(p.fecha_baja));
-            row.push(p.email || 'NO DISP');
+            row.push(email);
 
-            if (!isBaja && type === 'insurance') row.push(p.seguro_pagado ? 'PAGADO' : 'PENDIENTE');
-            else if (!isBaja && type === 'age') { row.push(formatDatePDF(p.fecha_nacimiento), calculateAge(p.fecha_nacimiento)); }
-            else row.push(formatDatePDF(p.fecha_nacimiento));
+            if (type === 'age') { row.push(formatDatePDF(p.fecha_nacimiento), calculateAge(p.fecha_nacimiento)); }
+            else if (type !== 'insurance') row.push(formatDatePDF(p.fecha_nacimiento));
 
             row.push(getDojoName(p.dojo), formatDatePDF(p.fecha_inicio));
             if (!isBaja && type === 'group') row.push(p.grupo || 'NO DISP');
@@ -488,7 +484,8 @@ async function generateReport(type) {
             headStyles: { fillColor: [190, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
             columnStyles: colStyles,
             willDrawCell: (data) => {
-                if (type === 'insurance' && data.section === 'body' && data.column.index === 6) {
+                // Buscamos la columna de seguro dinámicamente
+                if (data.section === 'body' && headRow[data.column.index] === 'Seguro') {
                     const status = data.cell.raw;
                     if (status === 'PAGADO') { doc.setFillColor(200, 255, 200); doc.setTextColor(0, 100, 0); }
                     else if (status === 'PENDIENTE') { doc.setFillColor(255, 200, 200); doc.setTextColor(150, 0, 0); }
