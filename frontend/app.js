@@ -181,8 +181,19 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || ''; 
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         const chk = document.getElementById('new-seguro'); const txt = document.getElementById('seguro-status-text'); chk.checked = p.seguro_pagado === true; if(chk.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; } else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
-        let dojoId = ""; if (p.dojo) { if (p.dojo.documentId) dojoId = p.dojo.documentId; else if (p.dojo.data) dojoId = p.dojo.data.documentId || p.dojo.data.id; }
-        const selectDojo = document.getElementById('new-dojo'); if (dojoId) selectDojo.value = dojoId;
+        let dojoId = "";
+            if (p.dojo) {
+                // Strapi v5 puede devolver el objeto dojo directo o dentro de .data
+                if (p.dojo.documentId) {
+                    dojoId = p.dojo.documentId;
+                } else if (p.dojo.data) {
+                    dojoId = p.dojo.data.documentId || p.dojo.data.id;
+                }
+            }
+            const selectDojo = document.getElementById('new-dojo');
+            if (dojoId && selectDojo) {
+                selectDojo.value = dojoId;
+            }
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; document.getElementById('btn-cancelar-edit').classList.remove('hidden'); document.querySelectorAll('.section').forEach(s => s.classList.add('hidden')); document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
     } catch { showModal("Error", "Error al cargar datos."); }
 }
@@ -451,8 +462,38 @@ function changeFontSize(t, d) { const table = document.getElementById(t); if(!ta
 function setupDragScroll() { const s=document.querySelector('.drag-scroll'); if(!s)return; let d=false,x,l; s.addEventListener('mousedown',e=>{d=true;x=e.pageX-s.offsetLeft;l=s.scrollLeft;}); s.addEventListener('mouseleave',()=>d=false); s.addEventListener('mouseup',()=>d=false); s.addEventListener('mousemove',e=>{if(!d)return;e.preventDefault();const p=e.pageX-s.offsetLeft;s.scrollLeft=l-(p-x)*2;}); }
 async function runDiagnostics() { const o=document.getElementById('console-output'); if(o){ o.innerHTML=''; const l=["Iniciando...", "> Conectando DB... [OK]", "> Verificando API... [OK]", "SISTEMA ONLINE 100%"]; for(const x of l){await new Promise(r=>setTimeout(r,400));o.innerHTML+=`<div>${x}</div>`;} o.innerHTML += '<div style="padding:15px; border-top:1px solid #33ff00;"><a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="action-btn secondary" style="text-decoration:none; display:inline-block; border-color:#33ff00; color:#33ff00;">Ver Estado de Strapi</a></div>'; } }
 function showModal(t, m, ok) { const d=document.getElementById('custom-modal'); if(!d)return; document.getElementById('modal-title').innerText=t; document.getElementById('modal-message').innerHTML=m; document.getElementById('modal-btn-cancel').onclick=()=>d.classList.add('hidden'); document.getElementById('modal-btn-ok').onclick=()=>{if(ok)ok();d.classList.add('hidden');}; d.classList.remove('hidden'); }
-async function loadDojosSelect() { const s=document.getElementById('new-dojo'); if(s){ try{ const r=await fetch(`${API_URL}/api/dojos`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); s.innerHTML='<option value="">Selecciona Dojo...</option>'; (j.data||[]).forEach(d=>{s.innerHTML+=`<option value="${d.documentId}">${d.attributes.nombre}</option>`}); }catch{} } }
-async function loadReportDojos() { const s=document.getElementById('report-dojo-filter'); const e=document.getElementById('export-dojo-filter'); try{ const r=await fetch(`${API_URL}/api/dojos`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); const o='<option value="">-- Todos los Dojos --</option>'+(j.data||[]).map(d=>`<option value="${d.documentId}">${d.attributes.nombre}</option>`).join(''); if(s)s.innerHTML=o; if(e)e.innerHTML=o; }catch{} }
+async function loadDojosSelect() {
+    const s = document.getElementById('new-dojo');
+    if (!s) return;
+    try {
+        const r = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const j = await r.json();
+        s.innerHTML = '<option value="">Selecciona Dojo...</option>';
+        (j.data || []).forEach(d => {
+            // Lógica híbrida para Strapi v5 (data.documentId o data.attributes.documentId)
+            const docId = d.documentId || d.id;
+            const nombre = d.nombre || (d.attributes ? d.attributes.nombre : 'Sin nombre');
+            s.innerHTML += `<option value="${docId}">${nombre}</option>`;
+        });
+    } catch (err) { console.error("Error al cargar selector de dojos:", err); }
+}
+async function loadReportDojos() {
+    const s = document.getElementById('report-dojo-filter');
+    const e = document.getElementById('export-dojo-filter');
+    try {
+        const r = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const j = await r.json();
+        const options = (j.data || []).map(d => {
+            const docId = d.documentId || d.id;
+            const nombre = d.nombre || (d.attributes ? d.attributes.nombre : 'Sin nombre');
+            return `<option value="${docId}">${nombre}</option>`;
+        }).join('');
+        
+        const html = '<option value="">-- Todos los Dojos --</option>' + options;
+        if (s) s.innerHTML = html;
+        if (e) e.innerHTML = html;
+    } catch (err) { console.error("Error al cargar filtros de dojos:", err); }
+}
 async function loadCiudades() { const d=document.getElementById('ciudades-list'); if(d){ try{ const r=await fetch(`${API_URL}/api/alumnos?fields[0]=poblacion`,{headers:{'Authorization':`Bearer ${jwtToken}`}}); const j=await r.json(); d.innerHTML=''; [...new Set((j.data||[]).map(a=>a.attributes.poblacion).filter(Boolean))].sort().forEach(c=>d.innerHTML+=`<option value="${c}">`); }catch{} } }
 function setupDniInput(id) { document.getElementById(id)?.addEventListener('input',e=>e.target.value=e.target.value.toUpperCase().replace(/[^0-9A-Z]/g,'')); }
 function filtrarTabla(t,i) { const input=document.getElementById(i); if(!input)return; const f=input.value.toUpperCase(); const rows=document.getElementById(t).getElementsByTagName('tr'); for(let j=1;j<rows.length;j++) rows[j].style.display=rows[j].textContent.toUpperCase().includes(f)?"":"none"; }
