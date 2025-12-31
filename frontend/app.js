@@ -129,7 +129,8 @@ function normalizePhone(t) {
     return t.toString().trim().replace(/^(\+?34)/, '').trim(); 
 }
 
-function formatDatePDF(d) { 
+// FORMATEADOR DE FECHAS DD/MM/AAAA PARA PANTALLA E INFORMES
+function formatDateDisplay(d) { 
     if (!d || d === "" || d === null) return 'NO DISP'; 
     const p = d.split('-'); 
     return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; 
@@ -155,7 +156,7 @@ function togglePassword(i, icon) {
     else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } 
 }
 
-// --- CARGA CORREGIDA (SEGURO Y ALTA INCLUIDOS) ---
+// --- CARGA ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
     tbody.innerHTML = `<tr><td colspan="15">Cargando...</td></tr>`;
@@ -171,7 +172,7 @@ async function loadAlumnos(activos) {
             const id = a.documentId;
             const badgeSeguro = p.seguro_pagado ? `<span class="badge-ok">PAGADO</span>` : `<span class="badge-no">PENDIENTE</span>`;
             
-            const commonFields = `
+            const rowContent = `
                 <td><span class="cell-data"><strong>${p.apellidos || "NO DISP"}</strong></span></td>
                 <td><span class="cell-data">${p.nombre || "NO DISP"}</span></td>
                 <td><span class="cell-data" style="font-family:monospace">${p.dni || "NO DISP"}</span></td>
@@ -179,18 +180,18 @@ async function loadAlumnos(activos) {
                 <td><span class="cell-data">${badgeSeguro}</span></td>
                 <td><span class="cell-data">${normalizePhone(p.telefono)}</span></td>
                 <td><span class="cell-data">${p.email || 'NO DISP'}</span></td>
-                <td><span class="cell-data">${p.fecha_nacimiento || 'NO DISP'}</span></td>
+                <td><span class="cell-data">${formatDateDisplay(p.fecha_nacimiento)}</span></td>
                 <td><span class="cell-data">${getDojoName(p.dojo)}</span></td>
-                <td><span class="cell-data" style="font-weight:bold">${p.fecha_inicio || 'NO DISP'}</span></td>
+                <td><span class="cell-data" style="font-weight:bold">${formatDateDisplay(p.fecha_inicio)}</span></td>
                 <td><span class="cell-data">${p.direccion || 'NO DISP'}</span></td>
                 <td><span class="cell-data">${p.poblacion || 'NO DISP'}</span></td>
                 <td><span class="cell-data">${p.cp || 'NO DISP'}</span></td>
             `;
 
             if (activos) {
-                tbody.innerHTML += `<tr>${commonFields}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr>${rowContent}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
             } else {
-                tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${p.fecha_baja || 'NO DISP'}</span></td>${commonFields}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${formatDateDisplay(p.fecha_baja)}</span></td>${rowContent}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
             }
         });
     } catch { tbody.innerHTML = `<tr><td colspan="15">Error de carga.</td></tr>`; }
@@ -432,8 +433,7 @@ async function generateReport(type) {
         headRow.push('Dojo', 'Alta');
         if (!isBaja && type === 'group') headRow.push('Grupo');
         if (type !== 'insurance') headRow.push('Dirección');
-        rowPoblacion = 'Población';
-        headRow.push(rowPoblacion, 'CP');
+        headRow.push('Población', 'CP');
 
         const body = list.map(a => {
             const p = a.attributes || a;
@@ -441,13 +441,13 @@ async function generateReport(type) {
             let email = (p.email && p.email.trim() !== "") ? p.email : 'NO DISP';
             const row = [(p.apellidos || 'NO DISP').toUpperCase(), p.nombre || 'NO DISP', dni, normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', normalizePhone(p.telefono)];
 
-            if (isBaja) row.unshift(formatDatePDF(p.fecha_baja));
+            if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
             row.push(email);
 
-            if (type === 'age') { row.push(formatDatePDF(p.fecha_nacimiento), calculateAge(p.fecha_nacimiento)); }
-            else if (type !== 'insurance') row.push(formatDatePDF(p.fecha_nacimiento));
+            if (type === 'age') { row.push(formatDateDisplay(p.fecha_nacimiento), calculateAge(p.fecha_nacimiento)); }
+            else if (type !== 'insurance') row.push(formatDateDisplay(p.fecha_nacimiento));
 
-            row.push(getDojoName(p.dojo), formatDatePDF(p.fecha_inicio));
+            row.push(getDojoName(p.dojo), formatDateDisplay(p.fecha_inicio));
             if (!isBaja && type === 'group') row.push(p.grupo || 'NO DISP');
             if (type !== 'insurance') row.push(normalizeAddress(p.direccion));
             row.push(normalizeCity(p.poblacion), p.cp || 'NO DISP');
