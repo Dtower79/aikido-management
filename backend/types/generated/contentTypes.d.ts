@@ -445,6 +445,10 @@ export interface ApiAlumnoAlumno extends Struct.CollectionTypeSchema {
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<true>;
     apellidos: Schema.Attribute.String;
+    asistencias: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::asistencia.asistencia'
+    >;
     cp: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -457,7 +461,9 @@ export interface ApiAlumnoAlumno extends Struct.CollectionTypeSchema {
     fecha_inicio: Schema.Attribute.Date;
     fecha_nacimiento: Schema.Attribute.Date;
     grado: Schema.Attribute.String;
+    grado_objetivo: Schema.Attribute.String;
     grupo: Schema.Attribute.String;
+    horas_acumuladas: Schema.Attribute.Decimal & Schema.Attribute.DefaultTo<0>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -469,6 +475,70 @@ export interface ApiAlumnoAlumno extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     seguro_pagado: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     telefono: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiAsistenciaAsistencia extends Struct.CollectionTypeSchema {
+  collectionName: 'asistencias';
+  info: {
+    displayName: 'Asistencia';
+    pluralName: 'asistencias';
+    singularName: 'asistencia';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    alumno: Schema.Attribute.Relation<'manyToOne', 'api::alumno.alumno'>;
+    clase: Schema.Attribute.Relation<'manyToOne', 'api::clase.clase'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    Estado: Schema.Attribute.Enumeration<
+      ['Confirmado', 'Asistio', 'No_asistio']
+    >;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::asistencia.asistencia'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiClaseClase extends Struct.CollectionTypeSchema {
+  collectionName: 'clases';
+  info: {
+    displayName: 'Clase';
+    pluralName: 'clases';
+    singularName: 'clase';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    asistencias: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::asistencia.asistencia'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    dojo: Schema.Attribute.Relation<'manyToOne', 'api::dojo.dojo'>;
+    Duracion: Schema.Attribute.Decimal;
+    Fecha_Hora: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::clase.clase'> &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    Tipo: Schema.Attribute.Enumeration<['Normal', 'Armas', 'Seminario']>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -487,6 +557,7 @@ export interface ApiDojoDojo extends Struct.CollectionTypeSchema {
   };
   attributes: {
     alumnos: Schema.Attribute.Relation<'oneToMany', 'api::alumno.alumno'>;
+    clases: Schema.Attribute.Relation<'oneToMany', 'api::clase.clase'>;
     cp: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -504,6 +575,36 @@ export interface ApiDojoDojo extends Struct.CollectionTypeSchema {
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     web: Schema.Attribute.String;
+  };
+}
+
+export interface ApiRequisitoGradoRequisitoGrado
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'requisito_grados';
+  info: {
+    displayName: 'Requisito_Grado';
+    pluralName: 'requisito-grados';
+    singularName: 'requisito-grado';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    Grado: Schema.Attribute.String;
+    Horas_Necesarias: Schema.Attribute.Integer;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::requisito-grado.requisito-grado'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
   };
 }
 
@@ -1018,7 +1119,10 @@ declare module '@strapi/strapi' {
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
       'api::alumno.alumno': ApiAlumnoAlumno;
+      'api::asistencia.asistencia': ApiAsistenciaAsistencia;
+      'api::clase.clase': ApiClaseClase;
       'api::dojo.dojo': ApiDojoDojo;
+      'api::requisito-grado.requisito-grado': ApiRequisitoGradoRequisitoGrado;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
       'plugin::i18n.locale': PluginI18NLocale;

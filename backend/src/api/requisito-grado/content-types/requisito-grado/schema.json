@@ -1,0 +1,21 @@
+{
+  "kind": "collectionType",
+  "collectionName": "requisito_grados",
+  "info": {
+    "singularName": "requisito-grado",
+    "pluralName": "requisito-grados",
+    "displayName": "Requisito_Grado"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "Grado": {
+      "type": "string"
+    },
+    "Horas_Necesarias": {
+      "type": "integer"
+    }
+  }
+}

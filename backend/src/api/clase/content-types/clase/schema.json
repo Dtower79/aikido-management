@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "clases",
+  "info": {
+    "singularName": "clase",
+    "pluralName": "clases",
+    "displayName": "Clase"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "Fecha_Hora": {
+      "type": "datetime"
+    },
+    "Duracion": {
+      "type": "decimal"
+    },
+    "Tipo": {
+      "type": "enumeration",
+      "enum": [
+        "Normal",
+        "Armas",
+        "Seminario"
+      ]
+    },
+    "dojo": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::dojo.dojo",
+      "inversedBy": "clases"
+    },
+    "asistencias": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::asistencia.asistencia",
+      "mappedBy": "clase"
+    }
+  }
+}

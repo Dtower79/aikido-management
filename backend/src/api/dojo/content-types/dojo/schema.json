@@ -37,6 +37,12 @@
     },
     "cp": {
       "type": "string"
+    },
+    "clases": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::clase.clase",
+      "mappedBy": "dojo"
     }
   }
 }

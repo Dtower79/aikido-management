@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "asistencias",
+  "info": {
+    "singularName": "asistencia",
+    "pluralName": "asistencias",
+    "displayName": "Asistencia"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "Estado": {
+      "type": "enumeration",
+      "enum": [
+        "Confirmado",
+        "Asistio",
+        "No_asistio"
+      ]
+    },
+    "alumno": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::alumno.alumno",
+      "inversedBy": "asistencias"
+    },
+    "clase": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::clase.clase",
+      "inversedBy": "asistencias"
+    }
+  }
+}

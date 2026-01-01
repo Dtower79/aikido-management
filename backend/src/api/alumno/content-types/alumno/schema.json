@@ -65,6 +65,19 @@
     "seguro_pagado": {
       "type": "boolean",
       "default": false
+    },
+    "asistencias": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::asistencia.asistencia",
+      "mappedBy": "alumno"
+    },
+    "horas_acumuladas": {
+      "type": "decimal",
+      "default": 0
+    },
+    "grado_objetivo": {
+      "type": "string"
     }
   }
 }

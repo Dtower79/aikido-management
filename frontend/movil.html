@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <!-- Este meta es vital para que se vea como una App en el móvil -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arashi App - Aikido</title>
+    
+    <!-- Librerías de iconos y fuentes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #05080f;
+            --accent: #ef4444;
+            --card-bg: rgba(30, 41, 59, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            /* Degradado de fondo profesional */
+            background-image: radial-gradient(circle at top right, #1e1b4b, transparent);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Pantalla de Login */
+        #login-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            z-index: 10;
+        }
+
+        .logo-area {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-area img {
+            width: 120px;
+            filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.4));
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            border-radius: 28px;
+            box-sizing: border-box;
+        }
+
+        .login-card h2 {
+            margin: 0 0 25px;
+            font-size: 22px;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .login-btn:active {
+            transform: scale(0.98);
+        }
+
+        .error-msg {
+            color: var(--accent);
+            font-size: 14px;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA DE ACCESO -->
+    <div id="login-screen">
+        <div class="logo-area">
+            <img src="img/logo-arashi.png" alt="Arashi Logo">
+        </div>
+        
+        <div class="login-card">
+            <h2>ACCESO ALUMNOS</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="fa-solid fa-id-card"></i>
+                    <input type="text" id="dni-login" placeholder="DNI (12345678X)" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="password" placeholder="Contraseña" required>
+                </div>
+                <button type="submit" class="login-btn">ENTRAR AL DOJO</button>
+                <p id="login-error" class="error-msg hidden"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- El contenido de la App (Dashboard) lo pondremos en el siguiente paso -->
+    <div id="main-app" class="hidden">
+        <!-- Aquí irá lo que vimos en el diseño premium -->
+    </div>
+
+    <script>
+        // CONFIGURACIÓN: Usamos la misma URL que tu web actual
+        const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
+
+        const loginForm = document.getElementById('login-form');
+        
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const identifier = document.getElementById('dni-login').value;
+            const password = document.getElementById('password').value;
+            const errorP = document.getElementById('login-error');
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/local`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identifier, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Guardamos el token igual que en la web
+                    localStorage.setItem('aikido_jwt', data.jwt);
+                    localStorage.setItem('aikido_user', JSON.stringify(data.user));
+                    
+                    alert("¡Bienvenido al Tatami!");
+                    // Aquí llamaremos a la función para cargar el Dashboard en el paso 2
+                } else {
+                    errorP.innerText = "❌ Credenciales incorrectas";
+                    errorP.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorP.innerText = "❌ Error de conexión";
+                errorP.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
