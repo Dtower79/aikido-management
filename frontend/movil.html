@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Arashi App - Aikido Móvil</title>
     
-    <!-- Iconos y Fuentes -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     
@@ -88,11 +87,12 @@
         
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; margin-top: 20px;}
         .profile-circle { 
-            width: 48px; height: 48px; border-radius: 14px; 
+            width: 52px; height: 52px; border-radius: 14px; 
             background: linear-gradient(135deg, var(--accent), #991b1b); 
             display: flex; align-items: center; justify-content: center; 
             font-weight: 800; border: 2px solid var(--glass-border);
             box-shadow: 0 5px 15px rgba(239,68,68,0.2);
+            color: white; font-size: 18px; letter-spacing: 1px;
         }
 
         .progress-card {
@@ -115,10 +115,6 @@
             background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%);
             padding: 28px; border-radius: 30px; box-shadow: 0 15px 35px rgba(239,68,68,0.35);
             margin-bottom: 35px; position: relative; overflow: hidden;
-        }
-        .class-hero::after {
-            content: '\f6d3'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
-            position: absolute; right: -20px; bottom: -20px; font-size: 120px; opacity: 0.1;
         }
 
         /* --- BARRA DE NAVEGACIÓN --- */
@@ -204,7 +200,7 @@
                 <p style="color: var(--text-muted); margin:0; font-size:14px;">Hola, Oss!</p>
                 <h1 style="margin:2px 0 0; font-size:26px; font-weight:800;" id="user-display-name">...</h1>
             </div>
-            <div class="profile-circle" id="user-initials">-</div>
+            <div class="profile-circle" id="user-initials">??</div>
         </div>
 
         <div class="progress-card">
@@ -240,12 +236,10 @@
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         let alumnoData = null;
 
-        // --- INICIO ---
         window.onload = () => {
             if (localStorage.getItem('aikido_jwt')) { initApp(); }
         };
 
-        // --- LOGIN ---
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const identifier = document.getElementById('dni-login').value.toUpperCase();
@@ -267,7 +261,6 @@
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
         });
 
-        // --- REGISTRO ---
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('reg-dni').value.toUpperCase();
@@ -288,14 +281,11 @@
             } catch (err) { showModal('Error', 'Error de red', 'fa-wifi'); }
         });
 
-        // --- CARGAR DATOS REALES ---
         async function initApp() {
             const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             if (!token || !user) return showView('login');
 
-            document.getElementById('user-display-name').innerText = user.username;
-            document.getElementById('user-initials').innerText = user.username.charAt(0);
             showView('dashboard');
 
             try {
@@ -308,13 +298,21 @@
                     alumnoData = json.data[0];
                     const p = alumnoData.attributes || alumnoData;
                     
-                    // Actualizar UI
+                    // --- CAMBIO PROFESIONAL: Iniciales y Nombre real ---
+                    const inicialNombre = (p.nombre || "").charAt(0).toUpperCase();
+                    const inicialApellido = (p.apellidos || "").charAt(0).toUpperCase();
+                    
+                    document.getElementById('user-initials').innerText = inicialNombre + inicialApellido;
+                    document.getElementById('user-display-name').innerText = p.nombre || user.username;
+                    // --------------------------------------------------
+
                     renderProgress(p.horas_acumuladas || 0, p.grado_objetivo || "Próximo Grado");
                     
-                    // Vínculo automático si falta
                     if (!p.cuenta_usuario || !p.cuenta_usuario.data) {
                         vincularCuenta(alumnoData.documentId, user.id);
                     }
+                } else {
+                    document.getElementById('user-display-name').innerText = user.username;
                 }
             } catch (err) { console.error("Error al cargar alumno:", err); }
         }
@@ -353,7 +351,6 @@
             });
         }
 
-        // --- UTILIDADES ---
         function showView(view) {
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('register-view').classList.add('hidden');
