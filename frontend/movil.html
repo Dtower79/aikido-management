@@ -2,11 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Este meta es vital para que se vea como una App en el móvil -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Arashi App - Aikido</title>
+    <title>Arashi App - Aikido Móvil</title>
     
-    <!-- Librerías de iconos y fuentes -->
+    <!-- Iconos y Fuentes -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     
@@ -21,123 +20,137 @@
         }
 
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             background-color: var(--bg);
             color: var(--text-main);
             font-family: 'Inter', sans-serif;
-            /* Degradado de fondo profesional */
             background-image: radial-gradient(circle at top right, #1e1b4b, transparent);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* Pantalla de Login */
-        #login-screen {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 30px;
-            z-index: 10;
-        }
-
-        .logo-area {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .logo-area img {
-            width: 120px;
-            filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.4));
-        }
-
-        .login-card {
-            width: 100%;
-            max-width: 400px;
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            padding: 30px;
-            border-radius: 28px;
-            box-sizing: border-box;
-        }
-
-        .login-card h2 {
-            margin: 0 0 25px;
-            font-size: 22px;
-            font-weight: 800;
-            text-align: center;
-        }
-
-        .input-group {
-            position: relative;
-            margin-bottom: 20px;
-        }
-
-        .input-group i {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 15px 15px 15px 45px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--glass-border);
-            border-radius: 14px;
-            color: white;
-            font-size: 16px;
-            box-sizing: border-box;
-            outline: none;
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 16px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 16px;
-            font-size: 16px;
-            font-weight: 800;
-            cursor: pointer;
-            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
-            transition: transform 0.2s;
-        }
-
-        .login-btn:active {
-            transform: scale(0.98);
-        }
-
-        .error-msg {
-            color: var(--accent);
-            font-size: 14px;
-            text-align: center;
-            margin-top: 15px;
-            font-weight: 600;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .hidden { display: none !important; }
 
+        /* --- MODAL PROFESIONAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 3000; transition: 0.3s;
+        }
+        .modal-content {
+            background: #1e293b; border: 1px solid var(--glass-border);
+            padding: 35px; border-radius: 28px; width: 85%; max-width: 320px;
+            text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .modal-content i { font-size: 55px; color: var(--accent); margin-bottom: 20px; }
+        .modal-content h3 { margin: 0 0 10px; font-size: 20px; }
+        .modal-content p { margin: 0 0 25px; color: var(--text-muted); font-size: 15px; }
+
+        /* --- CONTENEDORES DE AUTENTICACIÓN --- */
+        .auth-container {
+            height: 100vh;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 25px; box-sizing: border-box;
+        }
+        .auth-card {
+            width: 100%; max-width: 400px;
+            background: var(--card-bg); backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 35px; border-radius: 32px;
+            box-sizing: border-box; text-align: center;
+        }
+        .logo-img { width: 110px; margin-bottom: 35px; filter: drop-shadow(0 0 12px rgba(239,68,68,0.4)); }
+        .auth-card h2 { margin: 0 0 25px; font-weight: 800; font-size: 22px; letter-spacing: 1px; }
+
+        .input-group { position: relative; margin-bottom: 18px; }
+        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .input-group input {
+            width: 100%; padding: 16px 16px 16px 48px;
+            background: rgba(0,0,0,0.35); border: 1px solid var(--glass-border);
+            border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; outline: none;
+        }
+
+        .action-btn {
+            width: 100%; padding: 18px; background: var(--accent);
+            color: white; border: none; border-radius: 18px;
+            font-size: 16px; font-weight: 800; cursor: pointer;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); transition: 0.2s;
+        }
+        .action-btn:active { transform: scale(0.97); }
+
+        .auth-footer { margin-top: 25px; font-size: 14px; color: var(--text-muted); }
+        .auth-footer a { color: var(--accent); text-decoration: none; font-weight: 800; }
+
+        /* --- DASHBOARD PRINCIPAL --- */
+        #dashboard-view { padding: 25px; padding-bottom: 110px; }
+        
+        .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; margin-top: 20px;}
+        .profile-circle { 
+            width: 48px; height: 48px; border-radius: 14px; 
+            background: linear-gradient(135deg, var(--accent), #991b1b); 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: 800; border: 2px solid var(--glass-border);
+            box-shadow: 0 5px 15px rgba(239,68,68,0.2);
+        }
+
+        .progress-card {
+            background: var(--card-bg); backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border); padding: 22px;
+            border-radius: 28px; display: flex; align-items: center; gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .ring-container { position: relative; width: 65px; height: 65px; }
+        .ring-svg { transform: rotate(-90deg); width: 65px; height: 65px; }
+        .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 7; }
+        .ring-fill { 
+            fill: none; stroke: var(--accent); stroke-width: 7; 
+            stroke-dasharray: 176; stroke-dashoffset: 176; 
+            stroke-linecap: round; transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+
+        .class-hero {
+            background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%);
+            padding: 28px; border-radius: 30px; box-shadow: 0 15px 35px rgba(239,68,68,0.35);
+            margin-bottom: 35px; position: relative; overflow: hidden;
+        }
+        .class-hero::after {
+            content: '\f6d3'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+            position: absolute; right: -20px; bottom: -20px; font-size: 120px; opacity: 0.1;
+        }
+
+        /* --- BARRA DE NAVEGACIÓN --- */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            height: 85px; background: rgba(10, 15, 28, 0.92);
+            backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border);
+            display: flex; justify-content: space-around; align-items: center;
+            padding-bottom: 12px; z-index: 2000;
+        }
+        .nav-item { color: var(--text-muted); font-size: 22px; display: flex; flex-direction: column; align-items: center; text-decoration: none; transition: 0.2s; }
+        .nav-item.active { color: var(--accent); }
+        .nav-item span { font-size: 10px; font-weight: 700; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
 
-    <!-- PANTALLA DE ACCESO -->
-    <div id="login-screen">
-        <div class="logo-area">
-            <img src="img/logo-arashi.png" alt="Arashi Logo">
+    <!-- MODAL PERSONALIZADO -->
+    <div id="custom-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <i id="modal-icon" class="fa-solid fa-circle-check"></i>
+            <h3 id="modal-title">¡Éxito!</h3>
+            <p id="modal-text">Mensaje</p>
+            <button class="action-btn" onclick="closeModal()">ENTENDIDO</button>
         </div>
-        
-        <div class="login-card">
-            <h2>ACCESO ALUMNOS</h2>
+    </div>
+
+    <!-- VISTA LOGIN -->
+    <div id="login-view" class="auth-container">
+        <img src="img/logo-arashi.png" class="logo-img">
+        <div class="auth-card">
+            <h2>HOLA, OSS!</h2>
             <form id="login-form">
                 <div class="input-group">
                     <i class="fa-solid fa-id-card"></i>
@@ -145,56 +158,222 @@
                 </div>
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
-                    <input type="password" id="password" placeholder="Contraseña" required>
+                    <input type="password" id="pass-login" placeholder="Contraseña" required>
                 </div>
-                <button type="submit" class="login-btn">ENTRAR AL DOJO</button>
-                <p id="login-error" class="error-msg hidden"></p>
+                <button type="submit" class="action-btn">ENTRAR AL DOJO</button>
             </form>
+            <div class="auth-footer">
+                ¿Eres nuevo? <a href="#" onclick="showView('register')">Regístrate aquí</a>
+            </div>
         </div>
     </div>
 
-    <!-- El contenido de la App (Dashboard) lo pondremos en el siguiente paso -->
-    <div id="main-app" class="hidden">
-        <!-- Aquí irá lo que vimos en el diseño premium -->
+    <!-- VISTA REGISTRO -->
+    <div id="register-view" class="auth-container hidden">
+        <div class="auth-card">
+            <h2>NUEVO ALUMNO</h2>
+            <form id="register-form">
+                <div class="input-group">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="reg-name" placeholder="Nombre completo" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-id-card"></i>
+                    <input type="text" id="reg-dni" placeholder="DNI (Debe estar en tu ficha)" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" id="reg-email" placeholder="Email" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="reg-pass" placeholder="Contraseña nueva" required>
+                </div>
+                <button type="submit" class="action-btn">CREAR CUENTA</button>
+            </form>
+            <div class="auth-footer">
+                ¿Ya tienes cuenta? <a href="#" onclick="showView('login')">Inicia sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISTA DASHBOARD -->
+    <div id="dashboard-view" class="hidden">
+        <div class="header-app">
+            <div>
+                <p style="color: var(--text-muted); margin:0; font-size:14px;">Hola, Oss!</p>
+                <h1 style="margin:2px 0 0; font-size:26px; font-weight:800;" id="user-display-name">...</h1>
+            </div>
+            <div class="profile-circle" id="user-initials">-</div>
+        </div>
+
+        <div class="progress-card">
+            <div class="ring-container">
+                <svg class="ring-svg">
+                    <circle class="ring-bg" cx="32.5" cy="32.5" r="28"></circle>
+                    <circle class="ring-fill" id="progress-ring" cx="32.5" cy="32.5" r="28"></circle>
+                </svg>
+            </div>
+            <div>
+                <h3 style="margin:0; font-size:17px; font-weight:700;" id="target-grade-label">Cargando...</h3>
+                <p style="margin:5px 0 0; font-size:13px; color:var(--text-muted)" id="hours-summary">Calculando horas...</p>
+            </div>
+        </div>
+
+        <div class="class-hero">
+            <p style="margin:0; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Próxima Clase</p>
+            <h2 style="margin:12px 0; font-size:28px; font-weight:800;">19:00 - 20:30</h2>
+            <p style="margin:0; font-size:15px; font-weight:600; opacity:0.9;"><i class="fa-solid fa-location-dot"></i> Arashi Badalona</p>
+            <button class="action-btn" style="background:white; color:black; margin-top:25px; box-shadow:none;">CONFIRMAR ASISTENCIA</button>
+        </div>
+
+        <nav class="nav-bar">
+            <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-calendar-check"></i><span>Clases</span></a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-qrcode" style="font-size:30px; color:var(--accent);"></i><span>Fichar</span></a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-award"></i><span>Grados</span></a>
+            <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
+        </nav>
     </div>
 
     <script>
-        // CONFIGURACIÓN: Usamos la misma URL que tu web actual
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
+        let alumnoData = null;
 
-        const loginForm = document.getElementById('login-form');
-        
-        loginForm.addEventListener('submit', async (e) => {
+        // --- INICIO ---
+        window.onload = () => {
+            if (localStorage.getItem('aikido_jwt')) { initApp(); }
+        };
+
+        // --- LOGIN ---
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const identifier = document.getElementById('dni-login').value;
-            const password = document.getElementById('password').value;
-            const errorP = document.getElementById('login-error');
+            const identifier = document.getElementById('dni-login').value.toUpperCase();
+            const password = document.getElementById('pass-login').value;
 
             try {
-                const response = await fetch(`${API_URL}/api/auth/local`, {
+                const res = await fetch(`${API_URL}/api/auth/local`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ identifier, password })
                 });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    // Guardamos el token igual que en la web
+                const data = await res.json();
+                if (res.ok) {
                     localStorage.setItem('aikido_jwt', data.jwt);
                     localStorage.setItem('aikido_user', JSON.stringify(data.user));
-                    
-                    alert("¡Bienvenido al Tatami!");
-                    // Aquí llamaremos a la función para cargar el Dashboard en el paso 2
-                } else {
-                    errorP.innerText = "❌ Credenciales incorrectas";
-                    errorP.classList.remove('hidden');
-                }
-            } catch (err) {
-                errorP.innerText = "❌ Error de conexión";
-                errorP.classList.remove('hidden');
-            }
+                    showModal('¡Oss!', 'Entrando al Dojo...', 'fa-circle-check');
+                    setTimeout(() => { closeModal(); initApp(); }, 1500);
+                } else { showModal('Error', 'Credenciales no válidas', 'fa-circle-xmark'); }
+            } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
         });
+
+        // --- REGISTRO ---
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('reg-dni').value.toUpperCase();
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-pass').value;
+            const fullName = document.getElementById('reg-name').value;
+
+            try {
+                const res = await fetch(`${API_URL}/api/auth/local/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password, full_name: fullName })
+                });
+                if (res.ok) {
+                    showModal('¡Perfecto!', 'Cuenta creada. Inicia sesión ahora.');
+                    showView('login');
+                } else { showModal('Error', 'El DNI o Email ya están registrados', 'fa-circle-xmark'); }
+            } catch (err) { showModal('Error', 'Error de red', 'fa-wifi'); }
+        });
+
+        // --- CARGAR DATOS REALES ---
+        async function initApp() {
+            const token = localStorage.getItem('aikido_jwt');
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+            if (!token || !user) return showView('login');
+
+            document.getElementById('user-display-name').innerText = user.username;
+            document.getElementById('user-initials').innerText = user.username.charAt(0);
+            showView('dashboard');
+
+            try {
+                const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const json = await res.json();
+                
+                if (json.data && json.data.length > 0) {
+                    alumnoData = json.data[0];
+                    const p = alumnoData.attributes || alumnoData;
+                    
+                    // Actualizar UI
+                    renderProgress(p.horas_acumuladas || 0, p.grado_objetivo || "Próximo Grado");
+                    
+                    // Vínculo automático si falta
+                    if (!p.cuenta_usuario || !p.cuenta_usuario.data) {
+                        vincularCuenta(alumnoData.documentId, user.id);
+                    }
+                }
+            } catch (err) { console.error("Error al cargar alumno:", err); }
+        }
+
+        async function renderProgress(actuales, objetivo) {
+            const token = localStorage.getItem('aikido_jwt');
+            let necesarias = 60;
+
+            try {
+                const res = await fetch(`${API_URL}/api/requisito-grados?filters[grado][$eq]=${objetivo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const json = await res.json();
+                const data = json.data[0];
+                if (data) {
+                    necesarias = (data.attributes || data).horas_necesarias;
+                }
+            } catch (e) { console.warn("Usando horas por defecto"); }
+
+            const porcentaje = Math.min(Math.round((actuales / necesarias) * 100), 100);
+            const ring = document.getElementById('progress-ring');
+            const circumference = 176; 
+            const offset = circumference - (circumference * porcentaje / 100);
+            
+            ring.style.strokeDashoffset = offset;
+            document.getElementById('target-grade-label').innerText = `Camino al ${objetivo}`;
+            document.getElementById('hours-summary').innerText = `${actuales} de ${necesarias} horas completadas (${porcentaje}%)`;
+        }
+
+        async function vincularCuenta(docId, userId) {
+            const token = localStorage.getItem('aikido_jwt');
+            await fetch(`${API_URL}/api/alumnos/${docId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ data: { cuenta_usuario: userId } })
+            });
+        }
+
+        // --- UTILIDADES ---
+        function showView(view) {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('register-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById(`${view}-view`).classList.remove('hidden');
+        }
+
+        function showModal(title, text, icon) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-text').innerText = text;
+            document.getElementById('modal-icon').className = `fa-solid ${icon}`;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
     </script>
 </body>
 </html>

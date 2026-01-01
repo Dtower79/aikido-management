@@ -453,6 +453,10 @@ export interface ApiAlumnoAlumno extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    cuenta_usuario: Schema.Attribute.Relation<
+      'oneToOne',
+      'plugin::users-permissions.user'
+    >;
     direccion: Schema.Attribute.Text;
     dni: Schema.Attribute.String & Schema.Attribute.Unique;
     dojo: Schema.Attribute.Relation<'manyToOne', 'api::dojo.dojo'>;
