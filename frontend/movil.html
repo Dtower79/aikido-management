@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Arashi App - Aikido Móvil</title>
-    
+    <title>Arashi App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    
     <style>
         :root {
             --bg: #05080f;
@@ -30,23 +28,21 @@
 
         .hidden { display: none !important; }
 
-        /* --- MODAL PROFESIONAL --- */
+        /* --- MODAL --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
             display: flex; justify-content: center; align-items: center;
-            z-index: 3000; transition: 0.3s;
+            z-index: 3000;
         }
         .modal-content {
             background: #1e293b; border: 1px solid var(--glass-border);
             padding: 35px; border-radius: 28px; width: 85%; max-width: 320px;
-            text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            text-align: center;
         }
         .modal-content i { font-size: 55px; color: var(--accent); margin-bottom: 20px; }
-        .modal-content h3 { margin: 0 0 10px; font-size: 20px; }
-        .modal-content p { margin: 0 0 25px; color: var(--text-muted); font-size: 15px; }
 
-        /* --- CONTENEDORES DE AUTENTICACIÓN --- */
+        /* --- AUTH CARDS --- */
         .auth-container {
             height: 100vh;
             display: flex; flex-direction: column;
@@ -75,24 +71,20 @@
             width: 100%; padding: 18px; background: var(--accent);
             color: white; border: none; border-radius: 18px;
             font-size: 16px; font-weight: 800; cursor: pointer;
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); transition: 0.2s;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
         }
-        .action-btn:active { transform: scale(0.97); }
 
         .auth-footer { margin-top: 25px; font-size: 14px; color: var(--text-muted); }
         .auth-footer a { color: var(--accent); text-decoration: none; font-weight: 800; }
 
-        /* --- DASHBOARD PRINCIPAL --- */
+        /* --- DASHBOARD --- */
         #dashboard-view { padding: 25px; padding-bottom: 110px; }
-        
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; margin-top: 20px;}
         .profile-circle { 
             width: 52px; height: 52px; border-radius: 14px; 
             background: linear-gradient(135deg, var(--accent), #991b1b); 
             display: flex; align-items: center; justify-content: center; 
-            font-weight: 800; border: 2px solid var(--glass-border);
-            box-shadow: 0 5px 15px rgba(239,68,68,0.2);
-            color: white; font-size: 18px; letter-spacing: 1px;
+            font-weight: 800; border: 2px solid var(--glass-border); color: white;
         }
 
         .progress-card {
@@ -108,16 +100,16 @@
         .ring-fill { 
             fill: none; stroke: var(--accent); stroke-width: 7; 
             stroke-dasharray: 176; stroke-dashoffset: 176; 
-            stroke-linecap: round; transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1); 
+            stroke-linecap: round; transition: 1.5s ease; 
         }
 
         .class-hero {
             background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%);
             padding: 28px; border-radius: 30px; box-shadow: 0 15px 35px rgba(239,68,68,0.35);
-            margin-bottom: 35px; position: relative; overflow: hidden;
+            margin-bottom: 35px;
         }
 
-        /* --- BARRA DE NAVEGACIÓN --- */
+        /* --- NAVEGACIÓN --- */
         .nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
             height: 85px; background: rgba(10, 15, 28, 0.92);
@@ -125,18 +117,17 @@
             display: flex; justify-content: space-around; align-items: center;
             padding-bottom: 12px; z-index: 2000;
         }
-        .nav-item { color: var(--text-muted); font-size: 22px; display: flex; flex-direction: column; align-items: center; text-decoration: none; transition: 0.2s; }
+        .nav-item { color: var(--text-muted); font-size: 22px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
         .nav-item.active { color: var(--accent); }
-        .nav-item span { font-size: 10px; font-weight: 700; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .nav-item span { font-size: 10px; font-weight: 700; margin-top: 6px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-    <!-- MODAL PERSONALIZADO -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <i id="modal-icon" class="fa-solid fa-circle-check"></i>
-            <h3 id="modal-title">¡Éxito!</h3>
+            <h3 id="modal-title">Título</h3>
             <p id="modal-text">Mensaje</p>
             <button class="action-btn" onclick="closeModal()">ENTENDIDO</button>
         </div>
@@ -146,11 +137,11 @@
     <div id="login-view" class="auth-container">
         <img src="img/logo-arashi.png" class="logo-img">
         <div class="auth-card">
-            <h2>HOLA, OSS!</h2>
+            <h2>HOLA, ARASHI!</h2>
             <form id="login-form">
                 <div class="input-group">
                     <i class="fa-solid fa-id-card"></i>
-                    <input type="text" id="dni-login" placeholder="DNI (12345678X)" required>
+                    <input type="text" id="dni-login" placeholder="Introduce tu DNI" required>
                 </div>
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
@@ -159,36 +150,29 @@
                 <button type="submit" class="action-btn">ENTRAR AL DOJO</button>
             </form>
             <div class="auth-footer">
-                ¿Eres nuevo? <a href="#" onclick="showView('register')">Regístrate aquí</a>
+                ¿Primera vez? <a href="#" onclick="showView('register')">Activa tu cuenta</a>
             </div>
         </div>
     </div>
 
-    <!-- VISTA REGISTRO -->
+    <!-- VISTA ACTIVACIÓN (REGISTRO) -->
     <div id="register-view" class="auth-container hidden">
         <div class="auth-card">
-            <h2>NUEVO ALUMNO</h2>
+            <h2>ACTIVA TU CUENTA</h2>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Solo para alumnos ya inscritos en Arashi.</p>
             <form id="register-form">
                 <div class="input-group">
-                    <i class="fa-solid fa-user"></i>
-                    <input type="text" id="reg-name" placeholder="Nombre completo" required>
-                </div>
-                <div class="input-group">
                     <i class="fa-solid fa-id-card"></i>
-                    <input type="text" id="reg-dni" placeholder="DNI (Debe estar en tu ficha)" required>
+                    <input type="text" id="reg-dni" placeholder="Tu DNI oficial" required>
                 </div>
                 <div class="input-group">
-                    <i class="fa-solid fa-envelope"></i>
-                    <input type="email" id="reg-email" placeholder="Email" required>
+                    <i class="fa-solid fa-key"></i>
+                    <input type="password" id="reg-pass" placeholder="Crea tu contraseña" required>
                 </div>
-                <div class="input-group">
-                    <i class="fa-solid fa-lock"></i>
-                    <input type="password" id="reg-pass" placeholder="Contraseña nueva" required>
-                </div>
-                <button type="submit" class="action-btn">CREAR CUENTA</button>
+                <button type="submit" class="action-btn">ACTIVAR ACCESO</button>
             </form>
             <div class="auth-footer">
-                ¿Ya tienes cuenta? <a href="#" onclick="showView('login')">Inicia sesión</a>
+                <a href="#" onclick="showView('login')">Volver al inicio</a>
             </div>
         </div>
     </div>
@@ -197,7 +181,7 @@
     <div id="dashboard-view" class="hidden">
         <div class="header-app">
             <div>
-                <p style="color: var(--text-muted); margin:0; font-size:14px;">Hola, Oss!</p>
+                <p style="color: var(--text-muted); margin:0; font-size:14px;">Hola, Arashi!</p>
                 <h1 style="margin:2px 0 0; font-size:26px; font-weight:800;" id="user-display-name">...</h1>
             </div>
             <div class="profile-circle" id="user-initials">??</div>
@@ -211,35 +195,67 @@
                 </svg>
             </div>
             <div>
-                <h3 style="margin:0; font-size:17px; font-weight:700;" id="target-grade-label">Cargando...</h3>
-                <p style="margin:5px 0 0; font-size:13px; color:var(--text-muted)" id="hours-summary">Calculando horas...</p>
+                <h3 style="margin:0; font-size:17px; font-weight:700;" id="target-grade-label">Grado</h3>
+                <p style="margin:5px 0 0; font-size:13px; color:var(--text-muted)" id="hours-summary">0 de 0 horas</p>
             </div>
         </div>
 
-        <div class="class-hero">
-            <p style="margin:0; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Próxima Clase</p>
-            <h2 style="margin:12px 0; font-size:28px; font-weight:800;">19:00 - 20:30</h2>
-            <p style="margin:0; font-size:15px; font-weight:600; opacity:0.9;"><i class="fa-solid fa-location-dot"></i> Arashi Badalona</p>
-            <button class="action-btn" style="background:white; color:black; margin-top:25px; box-shadow:none;">CONFIRMAR ASISTENCIA</button>
+        <div class="class-hero" id="class-card">
+            <p style="margin:0; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Tu Próxima Clase</p>
+            <h2 id="next-class-time" style="margin:12px 0; font-size:28px; font-weight:800;">--:--</h2>
+            <p id="next-class-info" style="margin:0; font-size:15px; font-weight:600; opacity:0.9;"><i class="fa-solid fa-location-dot"></i> Cargando...</p>
+            <button class="action-btn" id="confirm-btn" style="background:white; color:black; margin-top:25px; box-shadow:none;">CONFIRMAR ASISTENCIA</button>
         </div>
 
         <nav class="nav-bar">
             <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
             <a href="#" class="nav-item"><i class="fa-solid fa-calendar-check"></i><span>Clases</span></a>
             <a href="#" class="nav-item"><i class="fa-solid fa-qrcode" style="font-size:30px; color:var(--accent);"></i><span>Fichar</span></a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-award"></i><span>Grados</span></a>
             <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
         </nav>
     </div>
 
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
-        let alumnoData = null;
+        let alumnoGlobal = null;
 
-        window.onload = () => {
-            if (localStorage.getItem('aikido_jwt')) { initApp(); }
-        };
+        window.onload = () => { if (localStorage.getItem('aikido_jwt')) { initApp(); } };
 
+        // --- ACTIVACIÓN MEJORADA ---
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const dni = document.getElementById('reg-dni').value.toUpperCase();
+            const password = document.getElementById('reg-pass').value;
+
+            try {
+                // 1. Verificar si el alumno existe en la BBDD
+                const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
+                const checkData = await checkRes.json();
+
+                if (checkData.data.length === 0) {
+                    return showModal('DNI No Reconocido', 'No constas en nuestra base de datos. Habla con tu Sensei.', 'fa-circle-exclamation');
+                }
+
+                const alumno = checkData.data[0];
+                const email = (alumno.attributes ? alumno.attributes.email : alumno.email) || `${dni.toLowerCase()}@arashi.com`;
+
+                // 2. Registrar usuario en Strapi vinculado a ese DNI
+                const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: dni, email: email, password: password })
+                });
+
+                if (regRes.ok) {
+                    showModal('¡Activado!', 'Tu cuenta está lista. Ya puedes entrar.', 'fa-circle-check');
+                    showView('login');
+                } else {
+                    showModal('Error', 'Esta cuenta ya podría estar activa.', 'fa-circle-xmark');
+                }
+            } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
+        });
+
+        // --- LOGIN ---
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const identifier = document.getElementById('dni-login').value.toUpperCase();
@@ -255,37 +271,14 @@
                 if (res.ok) {
                     localStorage.setItem('aikido_jwt', data.jwt);
                     localStorage.setItem('aikido_user', JSON.stringify(data.user));
-                    showModal('¡Oss!', 'Entrando al Dojo...', 'fa-circle-check');
-                    setTimeout(() => { closeModal(); initApp(); }, 1500);
-                } else { showModal('Error', 'Credenciales no válidas', 'fa-circle-xmark'); }
+                    initApp();
+                } else { showModal('Error', 'DNI o contraseña incorrectos', 'fa-circle-xmark'); }
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
-        });
-
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('reg-dni').value.toUpperCase();
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-pass').value;
-            const fullName = document.getElementById('reg-name').value;
-
-            try {
-                const res = await fetch(`${API_URL}/api/auth/local/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password, full_name: fullName })
-                });
-                if (res.ok) {
-                    showModal('¡Perfecto!', 'Cuenta creada. Inicia sesión ahora.');
-                    showView('login');
-                } else { showModal('Error', 'El DNI o Email ya están registrados', 'fa-circle-xmark'); }
-            } catch (err) { showModal('Error', 'Error de red', 'fa-wifi'); }
         });
 
         async function initApp() {
             const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
-            if (!token || !user) return showView('login');
-
             showView('dashboard');
 
             try {
@@ -293,62 +286,57 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const json = await res.json();
-                
-                if (json.data && json.data.length > 0) {
-                    alumnoData = json.data[0];
-                    const p = alumnoData.attributes || alumnoData;
+                if (json.data.length > 0) {
+                    alumnoGlobal = json.data[0];
+                    const p = alumnoGlobal.attributes || alumnoGlobal;
+                    document.getElementById('user-display-name').innerText = p.nombre;
+                    document.getElementById('user-initials').innerText = p.nombre.charAt(0) + (p.apellidos ? p.apellidos.charAt(0) : "");
                     
-                    // --- CAMBIO PROFESIONAL: Iniciales y Nombre real ---
-                    const inicialNombre = (p.nombre || "").charAt(0).toUpperCase();
-                    const inicialApellido = (p.apellidos || "").charAt(0).toUpperCase();
-                    
-                    document.getElementById('user-initials').innerText = inicialNombre + inicialApellido;
-                    document.getElementById('user-display-name').innerText = p.nombre || user.username;
-                    // --------------------------------------------------
-
-                    renderProgress(p.horas_acumuladas || 0, p.grado_objetivo || "Próximo Grado");
-                    
-                    if (!p.cuenta_usuario || !p.cuenta_usuario.data) {
-                        vincularCuenta(alumnoData.documentId, user.id);
-                    }
-                } else {
-                    document.getElementById('user-display-name').innerText = user.username;
+                    renderProgress(p.horas_acumuladas || 0, p.grado_objetivo);
+                    updateSchedule(p.grupo);
                 }
-            } catch (err) { console.error("Error al cargar alumno:", err); }
+            } catch (e) { console.error(e); }
+        }
+
+        // --- LÓGICA DE HORARIOS SEGÚN GRUPO ---
+        function updateSchedule(grupo) {
+            const timeLabel = document.getElementById('next-class-time');
+            const infoLabel = document.getElementById('next-class-info');
+            const day = new Date().getDay(); // 0=Dom, 1=Lun, 2=Mar, 3=Mie, 4=Jue...
+
+            if (grupo === 'Kids') {
+                timeLabel.innerText = "18:00 - 19:00";
+                infoLabel.innerHTML = `<i class="fa-solid fa-child"></i> Grupo Kids (Martes y Jueves)`;
+            } else {
+                // Adultos (Mañanas y Full Time)
+                if (day === 2) { // Si es Martes
+                    timeLabel.innerText = "10:00 o 19:00";
+                    infoLabel.innerHTML = `<i class="fa-solid fa-clock"></i> Mañanas o Tardes`;
+                } else if (day === 4) { // Si es Jueves
+                    timeLabel.innerText = "19:00 - 20:30";
+                    infoLabel.innerHTML = `<i class="fa-solid fa-moon"></i> Solo Tardes`;
+                } else {
+                    timeLabel.innerText = "Próxima: Martes";
+                    infoLabel.innerText = "Prepara tu equipo, Oss!";
+                }
+            }
         }
 
         async function renderProgress(actuales, objetivo) {
             const token = localStorage.getItem('aikido_jwt');
             let necesarias = 60;
-
             try {
                 const res = await fetch(`${API_URL}/api/requisito-grados?filters[grado][$eq]=${objetivo}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const json = await res.json();
-                const data = json.data[0];
-                if (data) {
-                    necesarias = (data.attributes || data).horas_necesarias;
-                }
-            } catch (e) { console.warn("Usando horas por defecto"); }
+                if (json.data[0]) necesarias = (json.data[0].attributes || json.data[0]).horas_necesarias;
+            } catch (e) {}
 
             const porcentaje = Math.min(Math.round((actuales / necesarias) * 100), 100);
-            const ring = document.getElementById('progress-ring');
-            const circumference = 176; 
-            const offset = circumference - (circumference * porcentaje / 100);
-            
-            ring.style.strokeDashoffset = offset;
-            document.getElementById('target-grade-label').innerText = `Camino al ${objetivo}`;
-            document.getElementById('hours-summary').innerText = `${actuales} de ${necesarias} horas completadas (${porcentaje}%)`;
-        }
-
-        async function vincularCuenta(docId, userId) {
-            const token = localStorage.getItem('aikido_jwt');
-            await fetch(`${API_URL}/api/alumnos/${docId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ data: { cuenta_usuario: userId } })
-            });
+            document.getElementById('progress-ring').style.strokeDashoffset = 176 - (176 * porcentaje / 100);
+            document.getElementById('target-grade-label').innerText = `Camino al ${objetivo || '...'}`;
+            document.getElementById('hours-summary').innerText = `${actuales} de ${necesarias} horas (${porcentaje}%)`;
         }
 
         function showView(view) {
@@ -364,13 +352,8 @@
             document.getElementById('modal-icon').className = `fa-solid ${icon}`;
             document.getElementById('custom-modal').classList.remove('hidden');
         }
-
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
-
-        function logout() {
-            localStorage.clear();
-            location.reload();
-        }
+        function logout() { localStorage.clear(); location.reload(); }
     </script>
 </body>
 </html>
