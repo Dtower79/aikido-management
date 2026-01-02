@@ -39,7 +39,7 @@
 
         .hidden { display: none !important; }
 
-        /* --- MURO DE INSTALACIÓN (INSTALL WALL) --- */
+        /* --- MURO DE INSTALACIÓN (SOLO MÓVIL) --- */
         #install-wall {
             position: fixed; inset: 0; background: var(--bg); z-index: 10000;
             display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center;
@@ -85,11 +85,11 @@
 </head>
 <body>
 
-    <!-- MURO DE INSTALACIÓN -->
+    <!-- MURO DE INSTALACIÓN (DINÁMICO) -->
     <div id="install-wall" class="hidden">
         <img src="img/logo-arashi.png" class="logo-img" style="width: 240px;">
         <h1 style="font-weight: 800; margin-bottom: 10px;">¡OSS!</h1>
-        <p style="color: var(--text-muted); margin-bottom: 40px;">Esta App debe estar instalada para poder entrar al Dojo.</p>
+        <p style="color: var(--text-muted); margin-bottom: 40px;">Esta App debe estar instalada para poder entrar al Dojo desde el móvil.</p>
         <button class="action-btn primary" id="btn-install-pwa">INSTALAR APP AHORA</button>
         <p style="font-size: 12px; margin-top: 20px; opacity: 0.5;">Si ya la tienes instalada, búscala en tu pantalla de inicio.</p>
     </div>
@@ -166,14 +166,17 @@
         let claseHoyId = null;
         let deferredPrompt;
 
-        // --- 1. LÓGICA DE INSTALACIÓN ---
+        // --- 1. LÓGICA DE INSTALACIÓN (FILTRO ESCRITORIO) ---
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+        if (isMobile && !isStandalone) {
+            document.getElementById('install-wall').classList.remove('hidden');
+        }
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // Si el navegador permite instalar, mostramos el muro
-            if (!window.matchMedia('(display-mode: standalone)').matches) {
-                document.getElementById('install-wall').classList.remove('hidden');
-            }
         });
 
         document.getElementById('btn-install-pwa')?.addEventListener('click', async () => {
@@ -234,10 +237,10 @@
                 const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 
-                // FILTRAR SOLO CLASES QUE NO HAN EMPEZADO
+                // LÓGICA DE EXPIRACIÓN: Solo clases con hora de inicio mayor a la actual
                 const clasesFuturas = (json.data || []).filter(c => {
                     const f = formatTimeSafe(parseData(c).Fecha_Hora);
-                    return f.raw > now; // Solo si la hora de la clase es mayor a "ahora"
+                    return f.raw > now; 
                 });
 
                 if (clasesFuturas.length > 0) {
@@ -249,8 +252,8 @@
                     document.getElementById('next-class-time').innerText = f.time;
                     document.getElementById('next-class-date').innerText = f.date;
                     document.getElementById('next-class-info').innerHTML = `<i class="fa-solid fa-location-dot"></i> Arashi Badalona (${clase.Tipo} • ${clase.Duracion}h)`;
+                    document.getElementById('confirm-btn').classList.remove('hidden');
                     
-                    // Comprobar si ya está apuntado
                     const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                     const checkData = await check.json();
                     if(checkData.data.length > 0) {
@@ -262,8 +265,8 @@
                     }
                 } else {
                     document.getElementById('next-class-time').innerText = "SIN CLASES";
-                    document.getElementById('next-class-date').innerText = "Próximamente";
-                    document.getElementById('next-class-info').innerText = "No hay clases pendientes hoy.";
+                    document.getElementById('next-class-date').innerText = "Día de descanso";
+                    document.getElementById('next-class-info').innerText = "No hay más clases programadas hoy.";
                     document.getElementById('confirm-btn').classList.add('hidden');
                 }
             } catch (e) { console.error(e); }
@@ -272,11 +275,10 @@
         // --- 4. GESTIÓN SENSEI ---
         async function generateMonthClasses() {
             const token = localStorage.getItem('aikido_jwt');
-            if(!confirm("¿Generar clases automáticas para los próximos 30 días (L-M-V)?")) return;
+            if(!confirm("¿Generar clases automáticas L-M-V para los próximos 30 días?")) return;
             
             showModal("Procesando", "Generando calendario...", "fa-spinner fa-spin");
-            
-            const days = [1, 3, 5]; // Lunes, Miércoles, Viernes
+            const days = [1, 3, 5]; 
             const now = new Date();
             let creadas = 0;
 
@@ -284,7 +286,7 @@
                 let d = new Date();
                 d.setDate(now.getDate() + i);
                 if(days.includes(d.getDay())) {
-                    d.setUTCHours(19, 0, 0, 0); // Hora por defecto 19:00h
+                    d.setUTCHours(19, 0, 0, 0); 
                     const payload = { data: { Fecha_Hora: d.toISOString(), Duracion: 1.5, Tipo: 'Normal' } };
                     await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
                     creadas++;
@@ -297,22 +299,16 @@
             const token = localStorage.getItem('aikido_jwt');
             const listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "Cargando clases...";
-            
             try {
                 const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                listDiv.innerHTML = "<h3 style='margin-bottom:15px;'>Selecciona clase para editar</h3>";
-                
+                listDiv.innerHTML = "<h3 style='margin-bottom:15px;'>Editar Horarios</h3>";
                 json.data.forEach(c => {
-                    const d = parseData(c);
-                    const f = formatTimeSafe(d.Fecha_Hora);
+                    const d = parseData(c); const f = formatTimeSafe(d.Fecha_Hora);
                     listDiv.innerHTML += `
                         <div class="student-item" onclick="openEditClass('${getID(c)}', '${d.Fecha_Hora}', ${d.Duracion})">
-                            <div>
-                                <h4 style="color:var(--accent)">${f.date} @ ${f.time}</h4>
-                                <p style="font-size:11px; opacity:0.6;">Tipo: ${d.Tipo} | Duración: ${d.Duracion}h</p>
-                            </div>
-                            <i class="fa-solid fa-pen-to-square" style="color:var(--text-muted)"></i>
+                            <div><h4 style="color:var(--accent)">${f.date} @ ${f.time}</h4><p style="font-size:11px; opacity:0.6;">${d.Duracion}h</p></div>
+                            <i class="fa-solid fa-pen-to-square"></i>
                         </div>`;
                 });
             } catch (e) {}
@@ -321,20 +317,14 @@
         function openEditClass(id, fechaRaw, duracion) {
             const f = fechaRaw.split('T')[0];
             const h = fechaRaw.split('T')[1].substring(0,5);
-            
             const html = `
                 <div class="edit-class-modal">
                     <label>Fecha:</label><input type="date" id="edit-date" value="${f}">
                     <label>Hora:</label><input type="time" id="edit-time" value="${h}">
-                    <label>Duración (Horas):</label>
-                    <select id="edit-dur">
-                        <option value="1" ${duracion == 1 ? 'selected' : ''}>1.0h</p>
-                        <option value="1.5" ${duracion == 1.5 ? 'selected' : ''}>1.5h</p>
-                        <option value="2" ${duracion == 2 ? 'selected' : ''}>2.0h</p>
-                    </select>
-                    <button class="action-btn primary" onclick="saveClassChange('${id}')">GUARDAR CAMBIOS</button>
+                    <label>Duración:</label>
+                    <select id="edit-dur"><option value="1" ${duracion == 1 ? 'selected' : ''}>1.0h</option><option value="1.5" ${duracion == 1.5 ? 'selected' : ''}>1.5h</option><option value="2" ${duracion == 2 ? 'selected' : ''}>2.0h</option></select>
+                    <button class="action-btn primary" onclick="saveClassChange('${id}')">GUARDAR</button>
                 </div>`;
-            
             document.getElementById('modal-title').innerText = "Editar Clase";
             document.getElementById('modal-body-content').innerHTML = html;
             document.getElementById('modal-footer-actions').classList.add('hidden');
@@ -343,62 +333,43 @@
 
         async function saveClassChange(id) {
             const token = localStorage.getItem('aikido_jwt');
-            const fecha = document.getElementById('edit-date').value;
-            const hora = document.getElementById('edit-time').value;
-            const dur = document.getElementById('edit-dur').value;
-            
-            const iso = `${fecha}T${hora}:00.000Z`;
-            
+            const iso = `${document.getElementById('edit-date').value}T${document.getElementById('edit-time').value}:00.000Z`;
             try {
-                const res = await fetch(`${API_URL}/api/clases/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur) } })
-                });
-                if(res.ok) {
-                    showModal("Éxito", "Clase actualizada correctamente.", "fa-check");
-                    loadManageClasses();
-                }
-            } catch (e) { alert("Error al guardar"); }
+                const res = await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(document.getElementById('edit-dur').value) } }) });
+                if(res.ok) { showModal("Éxito", "Cambios guardados.", "fa-check"); loadManageClasses(); }
+            } catch (e) {}
         }
 
-        // --- FUNCIONES UI AUXILIARES ---
         function showModal(title, text, icon = 'fa-circle-check') {
             const modal = document.getElementById('custom-modal');
             document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-text').innerText = text;
             document.getElementById('modal-icon').className = `fa-solid ${icon}`;
             document.getElementById('modal-body-content').innerHTML = `<p>${text}</p>`;
             document.getElementById('modal-footer-actions').classList.remove('hidden');
             modal.classList.remove('hidden');
         }
-
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
-
         function showView(view, el) {
             ['dashboard', 'login', 'sensei', 'clases'].forEach(v => { const d = document.getElementById(v + '-view'); if(d) d.classList.add('hidden'); });
-            const target = document.getElementById(view + '-view');
-            if(target) target.classList.remove('hidden');
+            document.getElementById(view + '-view').classList.remove('hidden');
             if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
         }
-
         async function confirmAttendance() {
             if (!claseHoyId || !alumnoGlobal) return;
             const token = localStorage.getItem('aikido_jwt');
             try {
                 const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
                 if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada.', 'fa-check-double'); checkTodayClass(); }
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
-
         async function loadSenseiPanel() {
             const token = localStorage.getItem('aikido_jwt');
             const listDiv = document.getElementById('student-list');
-            listDiv.innerHTML = "<p>Cargando alumnos...</p>";
+            listDiv.innerHTML = "<p>Cargando...</p>";
             try {
                 const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                if (!json.data || json.data.length === 0) { listDiv.innerHTML = "<p>No hay alumnos para validar.</p>"; return; }
+                if (!json.data || json.data.length === 0) { listDiv.innerHTML = "<p>Nadie para validar.</p>"; return; }
                 listDiv.innerHTML = "";
                 const vistos = new Set();
                 json.data.forEach(asistRaw => {
@@ -406,29 +377,27 @@
                     if (alu && cla) {
                         const aluId = getID(alu);
                         if (!vistos.has(aluId)) {
-                            vistos.add(aluId);
-                            const f = formatTimeSafe(cla.Fecha_Hora);
-                            listDiv.innerHTML += `<div class="student-item" id="item-${getID(asistRaw)}"><div><h4>${alu.nombre} ${(alu.apellidos || "").toUpperCase()} <span class="grade-tag">(${alu.grado || 'S/G'})</span></h4><p style="font-size:10px; color:var(--accent)">CLASE: ${f.date} @ ${f.time}</p></div><button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${aluId}', ${cla.Duracion})">VALIDAR</button></div>`;
+                            vistos.add(aluId); const f = formatTimeSafe(cla.Fecha_Hora);
+                            listDiv.innerHTML += `<div class="student-item" id="item-${getID(asistRaw)}"><div><h4>${alu.nombre} ${alu.apellidos}</h4><p style="font-size:10px; color:var(--accent)">${f.date} @ ${f.time}</p></div><button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${aluId}', ${cla.Duracion})">VALIDAR</button></div>`;
                         }
                     }
                 });
             } catch (e) {}
         }
-
-        async function validateAttendance(asistId, alumnoDocId, duracion) {
+        async function validateAttendance(asistId, aluId, dur) {
             const token = localStorage.getItem('aikido_jwt');
             const item = document.getElementById(`item-${asistId}`);
-            if(item) { item.classList.add('validated'); setTimeout(() => item.remove(), 350); }
+            if(item) { item.style.opacity = '0.3'; }
             try {
                 await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: 'Asistio' } }) });
-                const alRes = await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const alData = await alRes.json();
                 const p = parseData(alData.data);
-                const nuevasHoras = parseFloat(p.horas_acumuladas || 0) + parseFloat(duracion);
-                await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: nuevasHoras } }) });
+                const nuevasHoras = parseFloat(p.horas_acumuladas || 0) + parseFloat(dur);
+                await fetch(`${API_URL}/api/alumnos/${aluId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: nuevasHoras } }) });
+                if(item) item.remove();
             } catch (e) {}
         }
-
         async function loadMonthlyClasses(el) {
             showView('clases', el);
             const container = document.getElementById('clases-list-container');
@@ -443,19 +412,6 @@
                 });
             } catch(e) {}
         }
-
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const identifier = document.getElementById('dni-login').value;
-            const password = document.getElementById('pass-login').value;
-            try {
-                const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
-                const data = await res.json();
-                if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-                else showModal('Error', 'DNI o contraseña incorrectos', 'fa-circle-xmark');
-            } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
-        });
-
         function logout() { localStorage.clear(); location.reload(); }
     </script>
 </body>
