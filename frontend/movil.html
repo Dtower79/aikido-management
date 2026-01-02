@@ -39,22 +39,41 @@
 
         .hidden { display: none !important; }
 
-        /* --- AUTH (LOGIN/REGISTRO) --- */
-        .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; }
-        .auth-card { width: 100%; max-width: 360px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 35px 25px; border-radius: 32px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        .logo-img { width: 180px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(239,68,68,0.2)); }
-        .input-group { position: relative; margin-bottom: 15px; width: 100%; }
-        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-        .input-group input { width: 100%; padding: 16px 16px 16px 48px; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; outline: none; }
-        
-        /* RESTAURACIÓN LINK REGISTRO */
-        .auth-footer { margin-top: 25px; font-size: 14px; color: white; }
-        .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
+        /* --- MODAL RESTAURADO (ESTILO PREMIUM) --- */
+        .modal-overlay { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.85); 
+            backdrop-filter: blur(10px); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 9999; 
+            padding: 20px;
+        }
+        .modal-content { 
+            background: #111827; 
+            border: 1px solid var(--glass-border); 
+            padding: 40px 30px; 
+            border-radius: 40px; 
+            width: 100%;
+            max-width: 320px; 
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            animation: modalIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes modalIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-content i { font-size: 60px; color: var(--accent); margin-bottom: 20px; display: block; }
+        .modal-content h3 { margin: 0 0 10px; font-size: 24px; font-weight: 800; color: white; }
+        .modal-content p { margin: 0 0 25px; color: var(--text-muted); line-height: 1.5; }
 
         /* --- BOTONES PREMIUM --- */
         .action-btn { 
             width: 100%; 
-            padding: 20px; 
+            padding: 18px; 
             background: white; 
             color: black; 
             border: none; 
@@ -62,45 +81,44 @@
             font-size: 16px; 
             font-weight: 800; 
             cursor: pointer; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2); 
             transition: all 0.2s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         .action-btn:active { transform: translateY(4px) scale(0.97); }
-        
-        /* Estado Confirmado (Botón dentro de tarjeta roja) */
-        .action-btn.confirmed-badge {
-            background: rgba(0, 0, 0, 0.4);
-            color: rgba(255, 255, 255, 0.9);
-            box-shadow: none;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            cursor: default;
-        }
-
+        .action-btn.confirmed-badge { background: #1e293b; color: var(--text-muted); cursor: default; }
         .auth-btn-main { background: var(--accent); color: white; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3); }
+
+        /* --- AUTH --- */
+        .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; }
+        .auth-card { width: 100%; max-width: 360px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 35px 25px; border-radius: 32px; text-align: center; }
+        .logo-img { width: 180px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(239,68,68,0.2)); }
+        .input-group { position: relative; margin-bottom: 15px; width: 100%; }
+        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .input-group input { width: 100%; padding: 16px 16px 16px 48px; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; outline: none; }
+        .auth-footer { margin-top: 25px; font-size: 14px; color: white; }
+        .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
         /* --- DASHBOARD --- */
         #dashboard-view, #sensei-view, #clases-view { padding: 20px; padding-bottom: 120px; }
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 2px solid var(--glass-border); color: white; font-size: 18px; }
-        
         .progress-card { background: var(--card-bg); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); padding: 18px; border-radius: 24px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
         .ring-container { position: relative; width: 60px; height: 60px; }
         .ring-svg { transform: rotate(-90deg); width: 60px; height: 60px; }
         .ring-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 6; }
         .ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-dasharray: 176; stroke-dashoffset: 176; stroke-linecap: round; transition: 1.5s ease; }
-        
         .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 35px 25px; border-radius: 35px; box-shadow: 0 20px 40px rgba(239,68,68,0.25); margin-bottom: 20px; text-align: center; }
-        
+
         /* --- SENSEI ITEMS --- */
         .student-item { background: var(--card-bg); padding: 20px; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: 1px solid var(--glass-border); transition: all 0.3s ease; }
         .student-item h4 { margin: 0; font-size: 16px; font-weight: 800; color: white; }
-        .student-item .grade-tag { font-weight: 400; opacity: 0.7; font-size: 13px; margin-left: 5px; }
-        .student-item.validated { opacity: 0; transform: translateX(50px); pointer-events: none; }
+        .grade-tag { font-weight: 400; opacity: 0.7; font-size: 13px; margin-left: 5px; }
         .sensei-actions { display: flex; gap: 10px; }
         .validate-btn { background: var(--success); color: white; border: none; padding: 12px 18px; border-radius: 14px; font-weight: 800; font-size: 11px; cursor: pointer; }
         .reject-btn { background: #475569; color: white; border: none; padding: 12px; border-radius: 14px; cursor: pointer; width: 40px; }
+        .student-item.validated { opacity: 0; transform: translateX(50px); pointer-events: none; }
 
         /* --- NAV --- */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.96); backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
@@ -113,12 +131,13 @@
 </head>
 <body>
 
+    <!-- MODAL RESTAURADO -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <i id="modal-icon" class="fa-solid fa-circle-check"></i>
             <h3 id="modal-title">¡OSS!</h3>
             <p id="modal-text">...</p>
-            <button class="action-btn auth-btn-main" onclick="closeModal()" style="padding:12px; font-size:14px; box-shadow:none;">ENTENDIDO</button>
+            <button class="action-btn auth-btn-main" onclick="closeModal()">ENTENDIDO</button>
         </div>
     </div>
 
@@ -231,10 +250,8 @@
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard', document.querySelector('.nav-item'));
 
-            let isSenseiManagement = user.is_sensei === true;
-            if (isSenseiManagement) {
+            if (user.is_sensei === true) {
                 document.getElementById('nav-sensei').style.display = 'flex';
-                document.getElementById('user-display-name').innerText = user.username;
                 document.getElementById('student-progress-card').classList.add('hidden');
             }
 
@@ -265,9 +282,9 @@
                     const claseRaw = json.data[0];
                     const clase = parseData(claseRaw);
                     claseHoyId = getID(claseRaw);
-                    const formatted = formatTimeSafe(clase.Fecha_Hora);
-                    document.getElementById('next-class-time').innerText = formatted.time;
-                    document.getElementById('next-class-date').innerText = formatted.date;
+                    const f = formatTimeSafe(clase.Fecha_Hora);
+                    document.getElementById('next-class-time').innerText = f.time;
+                    document.getElementById('next-class-date').innerText = f.date;
                     document.getElementById('next-class-info').innerHTML = `<i class="fa-solid fa-location-dot"></i> Arashi Badalona (${clase.Tipo} • ${clase.Duracion}h)`;
                     
                     if(alumnoGlobal) {
@@ -312,13 +329,12 @@
                             vistos.add(alumnoId);
                             const nombre = (alumno.nombre + " " + (alumno.apellidos || "")).toUpperCase();
                             const grado = (alumno.grado || "No disp").toUpperCase();
-                            const fClase = formatTimeSafe(clase.Fecha_Hora);
-                            
+                            const f = formatTimeSafe(clase.Fecha_Hora);
                             listDiv.innerHTML += `
                                 <div class="student-item" id="item-${asistId}">
                                     <div>
                                         <h4>${nombre} <span class="grade-tag">(${grado})</span></h4>
-                                        <p style="color:var(--accent); font-weight:800; font-size:12px; margin-top:5px;">CLASE: ${fClase.date} @ ${fClase.time}</p>
+                                        <p style="color:var(--accent); font-weight:800; font-size:12px; margin-top:5px;">CLASE: ${f.date} @ ${f.time}</p>
                                         <p style="font-size:11px; color:var(--text-muted)">Duración: ${clase.Duracion}h</p>
                                     </div>
                                     <div class="sensei-actions">
