@@ -16,7 +16,7 @@
         body { margin: 0; padding: 0; background-color: var(--bg); color: var(--text-main); font-family: 'Inter', sans-serif; background-image: radial-gradient(circle at top right, #1e1b4b, transparent); min-height: 100vh; overflow-x: hidden; }
         .hidden { display: none !important; }
 
-        /* MODAL */
+        /* MODALES */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 5000; }
         .modal-content { background: #111827; border: 1px solid var(--glass-border); padding: 30px; border-radius: 30px; width: 85%; max-width: 300px; text-align: center; }
         .modal-content i { font-size: 50px; color: var(--accent); margin-bottom: 15px; }
@@ -65,7 +65,6 @@
         </div>
     </div>
 
-    <!-- LOGIN -->
     <div id="login-view" class="auth-container">
         <img src="img/logo-arashi-informe.png" class="logo-img">
         <div class="auth-card">
@@ -79,7 +78,6 @@
         </div>
     </div>
 
-    <!-- ACTIVACIÓN -->
     <div id="register-view" class="auth-container hidden">
         <div class="auth-card">
             <h2>ACTIVAR ACCESO</h2>
@@ -92,7 +90,6 @@
         </div>
     </div>
 
-    <!-- DASHBOARD -->
     <div id="dashboard-view" class="hidden">
         <div class="header-app">
             <div><p style="color:var(--text-muted); margin:0; font-size:13px;">Hola, Arashi!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
@@ -111,19 +108,16 @@
         </div>
     </div>
 
-    <!-- CALENDARIO -->
     <div id="clases-view" class="hidden">
         <h2 style="margin-top:20px; font-weight:800;">CALENDARIO</h2>
         <div id="clases-list-container" style="margin-top:20px;"></div>
     </div>
 
-    <!-- SENSEI -->
     <div id="sensei-view" class="hidden">
         <h2 style="margin-top:20px; font-weight:800;">SENSEI PANEL</h2>
         <div id="student-list" style="margin-top:20px;"></div>
     </div>
 
-    <!-- NAV -->
     <nav class="nav-bar hidden" id="main-nav">
         <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
         <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
@@ -137,9 +131,7 @@
         let alumnoGlobal = null;
         let claseHoyId = null;
 
-        window.onload = () => { if (localStorage.getItem('aikido_jwt')) initApp(); };
-
-        // MODAL HELPER
+        // --- FUNCIONES UI ---
         function showModal(title, text, icon = 'fa-circle-check') {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-text').innerText = text;
@@ -148,6 +140,18 @@
         }
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
 
+        function showView(view, el) {
+            ['dashboard', 'register', 'login', 'sensei', 'clases'].forEach(v => { 
+                const d = document.getElementById(v + '-view');
+                if(d) d.classList.add('hidden'); 
+            });
+            document.getElementById(view + '-view').classList.remove('hidden');
+            if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
+        }
+
+        window.onload = () => { if (localStorage.getItem('aikido_jwt')) initApp(); };
+
+        // --- LÓGICA CORE ---
         async function initApp() {
             const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
@@ -170,9 +174,12 @@
 
         async function checkTodayClass() {
             const token = localStorage.getItem('aikido_jwt');
-            const today = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const today = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
+            
             try {
-                const res = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$startsWith]=${today}&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
+                // Rango para pillar cualquier clase de hoy (Strapi v5 Datetime Fix)
+                const res = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$gte]=${today}T00:00:00.000Z&filters[Fecha_Hora][$lte]=${today}T23:59:59.999Z&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 if (json.data && json.data.length > 0) {
                     const clase = json.data[0].attributes || json.data[0];
@@ -180,7 +187,7 @@
                     const d = new Date(clase.Fecha_Hora);
                     document.getElementById('next-class-time').innerText = d.getUTCHours().toString().padStart(2, '0') + ":" + d.getUTCMinutes().toString().padStart(2, '0');
                     document.getElementById('next-class-date').innerText = d.toLocaleDateString('es-ES');
-                    document.getElementById('next-class-info').innerHTML = `<i class="fa-solid fa-location-dot"></i> Arashi Badalona (${clase.Tipo})`;
+                    document.getElementById('next-class-info').innerHTML = `<i class="fa-solid fa-location-dot"></i> Arashi Badalona (${clase.Tipo} • ${clase.Duracion}h)`;
                     document.getElementById('confirm-btn').disabled = false;
                 } else {
                     document.getElementById('next-class-time').innerText = "Sin clases hoy";
@@ -231,8 +238,8 @@
             const listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "<p>Buscando alumnos...</p>";
             try {
-                // SINCRO STRAI V5: populate exacto
-                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][fields][0]=nombre&populate[alumno][fields][1]=apellidos&populate[clase][fields][0]=Duracion`, { headers: { 'Authorization': `Bearer ${token}` } });
+                // SINCRO STRAI V5: populate directo
+                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate=alumno,clase`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 listDiv.innerHTML = (json.data && json.data.length > 0) ? "" : "<p>No hay confirmaciones pendientes.</p>";
                 json.data.forEach(asist => {
@@ -242,7 +249,7 @@
                     const docId = asist.documentId || asist.id;
                     listDiv.innerHTML += `<div class="student-item"><div><h4>${alumno.nombre} ${alumno.apellidos}</h4><p>Clase de ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${docId}', '${a.alumno.data.documentId}', ${clase.Duracion})">VALIDAR</button></div>`;
                 });
-            } catch (e) { listDiv.innerHTML = "<p>Error de conexión al cargar lista.</p>"; }
+            } catch (e) { listDiv.innerHTML = "<p>Error al conectar con la base de datos.</p>"; }
         }
 
         async function validateAttendance(asistId, alumnoDocId, duracion) {
@@ -276,11 +283,6 @@
             } catch(e) { container.innerHTML = "Error al cargar clases."; }
         }
 
-        function showView(view, el) {
-            ['dashboard', 'register', 'login', 'sensei', 'clases'].forEach(v => { if(document.getElementById(v + '-view')) document.getElementById(v + '-view').classList.add('hidden'); });
-            document.getElementById(view + '-view').classList.remove('hidden');
-            if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
-        }
         function logout() { localStorage.clear(); location.reload(); }
     </script>
 </body>
