@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="img/logo-arashi.png">
+    <link rel="apple-touch-icon" href="img/logo-arashi-informe.png">
     <title>Arashi App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -104,7 +104,7 @@
         </div>
         <div class="class-hero" id="class-card">
             <p style="margin:0; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">Tu Próxima Clase</p>
-            <h2 id="next-class-time" style="margin:10px 0 2px; font-size:32px; font-weight:800;">Buscando...</h2>
+            <h2 id="next-class-time" style="margin:10px 0 2px; font-size:32px; font-weight:800;">--:--</h2>
             <p id="next-class-date" style="margin:0 0 15px; font-size:16px; opacity:0.9; font-weight:800;">--/--/----</p>
             <p id="next-class-info" style="margin:0; font-size:14px; font-weight:600;"><i class="fa-solid fa-location-dot"></i> Cargando horario...</p>
             <button class="action-btn" id="confirm-btn" style="background:white; color:black; margin-top:20px; box-shadow:none;" onclick="confirmAttendance()">CONFIRMAR ASISTENCIA</button>
@@ -123,10 +123,11 @@
         <div id="student-list" style="margin-top:20px;"></div>
     </div>
 
+    <!-- NAV -->
     <nav class="nav-bar hidden" id="main-nav">
         <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
         <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
-        <div class="qr-main-btn" onclick="showModal('Fichar Asistencia', 'Apunta al código QR del Dojo al terminar la clase.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
+        <div class="qr-main-btn" onclick="showModal('Escanear QR', 'Apunta al código QR del Dojo al terminar la clase.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
         <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="loadSenseiPanel(this)"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
         <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
     </nav>
@@ -137,16 +138,18 @@
         let claseHoyId = null;
 
         function showModal(title, text, icon = 'fa-circle-check') {
+            const modal = document.getElementById('custom-modal');
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-text').innerText = text;
             document.getElementById('modal-icon').className = `fa-solid ${icon}`;
-            document.getElementById('custom-modal').classList.remove('hidden');
+            modal.classList.remove('hidden');
         }
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
 
         function showView(view, el) {
             ['dashboard', 'register', 'login', 'sensei', 'clases'].forEach(v => { const d = document.getElementById(v + '-view'); if(d) d.classList.add('hidden'); });
-            document.getElementById(view + '-view').classList.remove('hidden');
+            const target = document.getElementById(view + '-view');
+            if(target) target.classList.remove('hidden');
             if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
         }
 
@@ -169,7 +172,7 @@
                     renderProgress(p.horas_acumuladas || 0, p.grado_objetivo);
                     checkTodayClass();
                 }
-            } catch (e) { console.error("Error App Init:", e); }
+            } catch (e) { console.error(e); }
         }
 
         async function checkTodayClass() {
@@ -193,27 +196,23 @@
                     document.getElementById('next-class-info').innerText = "Día de descanso, Oss!";
                     document.getElementById('confirm-btn').disabled = true;
                 }
-            } catch (e) { console.error("Error Checking Classes:", e); }
+            } catch (e) { console.error(e); }
         }
 
         async function renderProgress(actuales, objetivo) {
             const token = localStorage.getItem('aikido_jwt');
             let necesarias = 60;
             try {
-                // SINCRO V5: Nombre exacto "requisito-grados"
                 const res = await fetch(`${API_URL}/api/requisito-grados?filters[Grado][$eq]=${encodeURIComponent(objetivo)}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                console.log("Requisitos Grado Data:", json);
                 if (json.data && json.data.length > 0) {
                     const r = json.data[0].attributes || json.data[0];
                     necesarias = r.Horas_Necesarias || 60;
                 }
-            } catch (e) { console.warn("Error requisitos, usando default."); }
+            } catch (e) { console.warn("Default hours"); }
 
             const porcentaje = Math.min(Math.round((actuales / necesarias) * 100), 100);
-            setTimeout(() => {
-                document.getElementById('progress-ring').style.strokeDashoffset = 176 - (176 * porcentaje / 100);
-            }, 200);
+            document.getElementById('progress-ring').style.strokeDashoffset = 176 - (176 * porcentaje / 100);
             document.getElementById('target-grade-label').innerText = `Camino al ${objetivo || 'examen'}`;
             document.getElementById('hours-summary').innerText = `${actuales}h de ${necesarias}h completadas (${porcentaje}%)`;
         }
@@ -223,30 +222,27 @@
             const token = localStorage.getItem('aikido_jwt');
             const listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "<p>Buscando alumnos...</p>";
-            console.log("Iniciando carga Sensei Panel...");
             try {
-                // SINCRO V5: populate simple
+                // SINCRO V5: Estructura corregida para evitar el 400
                 const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                console.log("Asistencias Recibidas:", json);
-
-                if (!json || !json.data || json.data.length === 0) {
-                    listDiv.innerHTML = "<p>No hay alumnos para validar hoy.</p>";
-                    return;
-                }
+                if (!json.data || json.data.length === 0) { listDiv.innerHTML = "<p>No hay alumnos para validar hoy.</p>"; return; }
                 listDiv.innerHTML = "";
                 json.data.forEach(asist => {
+                    // Detección profunda de datos del alumno y la clase para Strapi v5
                     const a = asist.attributes || asist;
-                    const alumno = a.alumno?.data?.attributes || a.alumno?.data;
-                    const clase = a.clase?.data?.attributes || a.clase?.data;
+                    const alumno = a.alumno?.data?.attributes || a.alumno?.data || a.alumno;
+                    const clase = a.clase?.data?.attributes || a.clase?.data || a.clase;
                     const docId = asist.documentId || asist.id;
-                    if (alumno && clase) {
-                        listDiv.innerHTML += `<div class="student-item"><div><h4>${alumno.nombre} ${alumno.apellidos}</h4><p>Clase de ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${docId}', '${a.alumno.data.documentId}', ${clase.Duracion})">VALIDAR</button></div>`;
+                    const alumnoId = a.alumno?.data?.documentId || a.alumno?.data?.id || (a.alumno ? a.alumno.id : null);
+
+                    if (alumno && clase && alumnoId) {
+                        listDiv.innerHTML += `<div class="student-item"><div><h4>${alumno.nombre} ${alumno.apellidos}</h4><p>Clase de ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${docId}', '${alumnoId}', ${clase.Duracion})">VALIDAR</button></div>`;
                     }
                 });
             } catch (e) { 
-                console.error("Error Sensei Panel:", e);
-                listDiv.innerHTML = "<p>Error al conectar con la base de datos.</p>"; 
+                console.error("Fallo Sensei Panel:", e);
+                listDiv.innerHTML = "<p>Error de conexión al cargar lista.</p>"; 
             }
         }
 
@@ -256,9 +252,10 @@
                 await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: 'Asistio' } }) });
                 const alRes = await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const alData = await alRes.json();
-                const curH = (alData.data.attributes || alData.data).horas_acumuladas || 0;
+                const p = alData.data.attributes || alData.data;
+                const curH = p.horas_acumuladas || 0;
                 await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: parseFloat(curH) + parseFloat(duracion) } }) });
-                showModal('¡OSS!', 'Asistencia validada.', 'fa-circle-check');
+                showModal('¡OSS!', 'Asistencia validada con éxito.', 'fa-circle-check');
                 loadSenseiPanel(document.getElementById('nav-sensei'));
             } catch (e) { showModal('Error', 'No se pudo validar.', 'fa-circle-xmark'); }
         }
@@ -279,16 +276,6 @@
                     container.innerHTML += `<div class="student-item"><div><h4>${dateStr} - ${timeStr}</h4><p>${d.Tipo} • ${d.Duracion}h</p></div></div>`;
                 });
             } catch(e) { container.innerHTML = "Error al cargar clases."; }
-        }
-
-        async function confirmAttendance() {
-            if (!claseHoyId) return;
-            const token = localStorage.getItem('aikido_jwt');
-            try {
-                const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { alumno: alumnoGlobal.documentId || alumnoGlobal.id, clase: claseHoyId, Estado: 'Confirmado' } }) });
-                if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada.', 'fa-check-double'); document.getElementById('confirm-btn').innerText = "CONFIRMADO"; document.getElementById('confirm-btn').disabled = true; }
-                else { showModal('Aviso', 'Ya has confirmado hoy.', 'fa-circle-exclamation'); }
-            } catch (e) { showModal('Error', 'Fallo de conexión.', 'fa-wifi'); }
         }
 
         function logout() { localStorage.clear(); location.reload(); }
