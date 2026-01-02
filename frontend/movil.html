@@ -22,33 +22,42 @@
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
-        /* AUTH DISEÑO CORREGIDO */
+        /* AUTH DISEÑO PREMIUM CORREGIDO */
         .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
         .logo-img { width: 140px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.3)); }
-        .auth-card { 
-            width: 90%; max-width: 340px; background: var(--card-bg); backdrop-filter: blur(20px); 
-            border: 1px solid var(--glass-border); padding: 30px 25px; border-radius: 32px; 
-            text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-        }
+        .auth-card { width: 90%; max-width: 340px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 30px 25px; border-radius: 32px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        
         .input-group { position: relative; margin-bottom: 12px; width: 100%; }
-        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; }
+        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; z-index: 10; }
+        
+        /* INPUTS TRASLÚCIDOS PROFESIONALES */
         .input-group input { 
-            width: 100%; padding: 14px 14px 14px 44px; background: rgba(255,255,255,0.05); 
-            border: 1px solid var(--glass-border); border-radius: 14px; color: white; 
-            font-size: 15px; box-sizing: border-box; outline: none; transition: 0.3s;
+            width: 100%; padding: 14px 14px 14px 44px; 
+            background: rgba(15, 23, 42, 0.6) !important; /* Fondo oscuro integrado */
+            border: 1px solid var(--glass-border); border-radius: 14px; 
+            color: white !important; font-size: 15px; box-sizing: border-box; 
+            outline: none; transition: 0.3s;
         }
-        .input-group input:focus { border-color: var(--accent); background: rgba(255,255,255,0.1); }
+        .input-group input:focus { border-color: var(--accent); background: rgba(15, 23, 42, 0.8) !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
+        
+        /* Reset para Chrome Autofill */
+        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus { 
+            -webkit-text-fill-color: white !important; 
+            -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important; 
+            transition: background-color 5000s ease-in-out 0s; 
+        }
+
         .auth-footer { margin-top: 20px; font-size: 13px; color: #ffffff; }
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 700; }
 
         /* BOTONES */
-        .action-btn { width: 100%; padding: 16px; background: white; color: black; border: none; border-radius: 18px; font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+        .action-btn { width: 100%; padding: 16px; background: white; color: black; border: none; border-radius: 18px; font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         .action-btn:active { transform: translateY(3px) scale(0.98); }
         .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
 
         /* UI APP */
         #dashboard-view, #sensei-view, #clases-view { padding: 20px; padding-bottom: 100px; height: 100%; overflow-y: auto; }
-        .profile-circle { width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid var(--glass-border); color: white; }
+        .profile-circle { width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 2px solid var(--glass-border); color: white; }
         .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 30px 20px; border-radius: 30px; box-shadow: 0 20px 40px rgba(239,68,68,0.25); text-align: center; }
         .student-item { background: var(--card-bg); padding: 15px; border-radius: 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid var(--glass-border); }
         
@@ -76,7 +85,7 @@
         <button class="action-btn primary" id="btn-install-pwa" style="max-width: 280px;">INSTALAR AHORA</button>
     </div>
     <div id="app-content">
-        <div id="custom-modal" class="modal-overlay hidden"><div class="modal-content"><i id="modal-icon" class="fa-solid fa-circle-check"></i><h3 id="modal-title">¡OSS!</h3><div id="modal-body-content"></div><button class="action-btn primary" onclick="closeModal()" style="margin-top:20px;">OK</button></div></div>
+        <div id="custom-modal" class="modal-overlay hidden"><div class="modal-content"><i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:40px; color:var(--accent); margin-bottom:15px; display:block;"></i><h3 id="modal-title">¡OSS!</h3><div id="modal-body-content"></div><button class="action-btn primary" onclick="closeModal()" style="margin-top:20px; padding:12px;">OK</button></div></div>
         
         <div id="login-view" class="auth-container">
             <img src="img/logo-arashi.png" class="logo-img">
@@ -88,19 +97,6 @@
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
                 <div class="auth-footer">¿Nuevo Alumno? <a href="#" onclick="showView('register')">Activa tu cuenta</a></div>
-            </div>
-        </div>
-
-        <div id="register-view" class="auth-container hidden">
-            <img src="img/logo-arashi.png" class="logo-img">
-            <div class="auth-card">
-                <h2 style="margin-top:0; font-size: 20px;">ACTIVAR ACCESO</h2>
-                <form id="register-form">
-                    <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="reg-dni" placeholder="DNI: 12345678X" required></div>
-                    <div class="input-group"><i class="fa-solid fa-key"></i><input type="password" id="reg-pass" placeholder="Nueva Contraseña" required></div>
-                    <button type="submit" class="action-btn primary">ACTIVAR CUENTA</button>
-                </form>
-                <div class="auth-footer"><a href="#" onclick="showView('login')">Volver</a></div>
             </div>
         </div>
 
@@ -126,7 +122,7 @@
 
         <div id="clases-view" class="hidden"><h2 style="margin:15px 0; font-weight:800; font-size:20px;">CALENDARIO</h2><div id="clases-list-container"></div></div>
 
-        <nav class="nav-bar hidden" id="main-nav"><a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a><a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a><div class="qr-main-btn" onclick="showModal('QR Dojo', 'Presenta esto al Sensei.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div><a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a><a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a></nav>
+        <nav class="nav-bar hidden" id="main-nav"><a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a><a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a><div class="qr-main-btn" onclick="showModal('QR Dojo', 'Muestra esto al Sensei.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div><a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a><a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a></nav>
     </div>
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
@@ -148,7 +144,7 @@
             showView('dashboard');
             if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
             try {
-                const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, { headers: { 'Authorization': f`Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 if (json.data?.length > 0) {
                     alumnoGlobal = json.data[0]; const p = parseData(alumnoGlobal);
@@ -162,11 +158,11 @@
         async function checkTodayClass() {
             const token = localStorage.getItem('aikido_jwt'), now = new Date();
             try {
-                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { headers: { 'Authorization': f`Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 const clasesFuturas = (json.data || []).filter(c => formatTimeSafe(parseData(c).Fecha_Hora).raw > now);
                 if (clasesFuturas.length > 0) {
-                    const clase = parseData(clasesFuturas[0]); claseHoyId = getID(clasesFuturas[0]);
+                    const claseRaw = clasesFuturas[0]; const clase = parseData(claseRaw); claseHoyId = getID(claseRaw);
                     const f = formatTimeSafe(clase.Fecha_Hora);
                     document.getElementById('next-class-time').innerText = f.time;
                     document.getElementById('next-class-date').innerText = f.date;
@@ -183,7 +179,7 @@
 
         function uiGenerateMonth() {
             const now = new Date(), currentMonth = now.toISOString().substring(0, 7);
-            const html = `<div style="text-align:left;"><label style="font-size:12px;color:var(--text-muted)">Mes (Martes/Jueves 19h):</label><input type="month" id="gen-month-input" value="${currentMonth}" style="width:100%;padding:12px;margin:10px 0;background:#000;border:1px solid var(--glass-border);color:white;"><button class="action-btn primary" onclick="processGeneration()">GENERAR</button></div>`;
+            const html = `<div style="text-align:left;"><label style="font-size:12px;color:var(--text-muted)">Mes (Martes/Jueves 19h):</label><input type="month" id="gen-month-input" value="${currentMonth}" style="width:100%;padding:12px;margin:15px 0;background:#000;border:1px solid var(--glass-border);color:white;"><button class="action-btn primary" onclick="processGeneration()">GENERAR</button></div>`;
             document.getElementById('modal-title').innerText = "Generador";
             document.getElementById('modal-body-content').innerHTML = html;
             document.getElementById('custom-modal').classList.remove('hidden');
@@ -197,11 +193,11 @@
                 if(date.getMonth() !== month - 1) break;
                 if(date.getDay() === 2 || date.getDay() === 4) {
                     date.setHours(19, 0, 0, 0);
-                    await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': f`Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: date.toISOString(), Duracion: 1.5, Tipo: 'Normal' } }) });
+                    await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: date.toISOString(), Duracion: 1.5, Tipo: 'Normal' } }) });
                     creadas++;
                 }
             }
-            showModal('Éxito', f`${creadas} clases generadas.`);
+            showModal('Éxito', `${creadas} clases generadas.`);
         }
 
         function openEditClass(id, raw, dur) {
@@ -212,8 +208,8 @@
         }
 
         async function saveClass(id) {
-            const token = localStorage.getItem('aikido_jwt'), iso = f`${document.getElementById('e-d').value}T${document.getElementById('e-h').value}:00.000Z`;
-            await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': f`Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(document.getElementById('e-dur').value) } }) });
+            const token = localStorage.getItem('aikido_jwt'), iso = `${document.getElementById('e-d').value}T${document.getElementById('e-h').value}:00.000Z`;
+            await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(document.getElementById('e-dur').value) } }) });
             closeModal(); loadManageClasses();
         }
 
@@ -221,7 +217,7 @@
             showView('clases', el); const container = document.getElementById('clases-list-container'), now = new Date();
             container.innerHTML = "Cargando...";
             try {
-                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc`, { headers: { 'Authorization': f`Bearer ${localStorage.getItem('aikido_jwt')}` } });
+                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
                 const json = await res.json(); container.innerHTML = "";
                 json.data.forEach(c => {
                     const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora);
@@ -234,49 +230,45 @@
             const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "Cargando...";
             try {
-                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { headers: { 'Authorization': f`Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json(); listDiv.innerHTML = "";
                 json.data.forEach(c => { const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora); listDiv.innerHTML += `<div class="student-item" onclick="openEditClass('${getID(c)}','${d.Fecha_Hora}',${d.Duracion})"><div><h4>${f.date} @ ${f.time}</h4><p style="font-size:11px; opacity:0.6;">${d.Duracion}h</p></div><i class="fa-solid fa-pen-to-square"></i></div>`; });
             } catch (e) {}
         }
 
         function showView(v, el) { ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); document.getElementById(v + '-view').classList.remove('hidden'); if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); } }
-        function showModal(t, txt) { document.getElementById('modal-title').innerText = t; document.getElementById('modal-body-content').innerHTML = `<p>${txt}</p>`; document.getElementById('custom-modal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
-        
         async function confirmAttendance() {
             if (!claseHoyId || !alumnoGlobal) return;
             try {
-                const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': f`Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
+                const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
                 if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada.'); checkTodayClass(); }
             } catch (e) {}
         }
-
         async function loadSenseiPanel() {
             const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "Cargando...";
             try {
-                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': f`Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json(); if (!json.data || json.data.length === 0) { listDiv.innerHTML = "<p>Nadie para validar.</p>"; return; }
                 listDiv.innerHTML = ""; const vistos = new Set();
                 json.data.forEach(asist => {
                     const a = parseData(asist), alu = parseRelation(a.alumno), cla = parseRelation(a.clase);
-                    if (alu && cla && !vistos.has(getID(a.alumno))) {
-                        vistos.add(getID(a.alumno)); const f = formatTimeSafe(cla.Fecha_Hora);
-                        listDiv.innerHTML += `<div class="student-item" id="item-${getID(asist)}"><div><h4>${alu.nombre}</h4><p style="font-size:10px; color:var(--accent)">${f.date} @ ${f.time}</p></div><button class="action-btn" style="width:auto;padding:10px 15px;background:var(--success);color:white;font-size:11px;" onclick="validateAttendance('${getID(asist)}', '${getID(a.alumno)}', ${cla.Duracion})">VALIDAR</button></div>`;
+                    if (alu && cla && !vistos.has(getID(alu))) {
+                        vistos.add(getID(alu)); const f = formatTimeSafe(cla.Fecha_Hora);
+                        listDiv.innerHTML += `<div class="student-item"><div><h4>${alu.nombre}</h4><p style="font-size:10px; color:var(--accent)">${f.date} @ ${f.time}</p></div><button class="action-btn" style="width:auto;padding:10px 15px;background:var(--success);color:white;font-size:11px;" onclick="validateAttendance('${getID(asist)}', '${getID(alu)}', ${cla.Duracion})">VALIDAR</button></div>`;
                     }
                 });
             } catch (e) {}
         }
         async function validateAttendance(asistId, aluId, dur) {
             const token = localStorage.getItem('aikido_jwt');
-            await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': f`Bearer ${token}` }, body: JSON.stringify({ data: { Estado: 'Asistio' } }) });
-            const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': f`Bearer ${token}` } });
+            await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: 'Asistio' } }) });
+            const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
             const alData = await alRes.json();
-            await fetch(`${API_URL}/api/alumnos/${aluId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': f`Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: (parseFloat(parseData(alData.data).horas_acumuladas || 0) + parseFloat(dur)) } }) });
+            await fetch(`${API_URL}/api/alumnos/${aluId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: (parseFloat(parseData(alData.data).horas_acumuladas || 0) + parseFloat(dur)) } }) });
             loadSenseiPanel();
         }
-
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
@@ -285,6 +277,7 @@
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
             } catch (err) {}
         });
+        function showModal(t, txt) { document.getElementById('modal-title').innerText = t; document.getElementById('modal-body-content').innerHTML = `<p>${txt}</p>`; document.getElementById('custom-modal').classList.remove('hidden'); }
         function logout() { localStorage.clear(); location.reload(); }
     </script>
 </body>
