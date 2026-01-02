@@ -58,6 +58,12 @@ function showDashboard() {
 function showSection(id) {
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
     document.getElementById(`sec-${id}`).classList.remove('hidden');
+    
+    // Marcar botón activo en sidebar
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.getElementById(`btn-nav-${id}`);
+    if(activeBtn) activeBtn.classList.add('active');
+
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
@@ -86,9 +92,8 @@ function getGradeWeight(g) { return GRADE_WEIGHTS[normalizeGrade(g)] || 0; }
 function formatDateDisplay(d) { if (!d) return 'NO DISP'; const p = d.split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; }
 function calculateAge(d) { if (!d) return 'NO DISP'; const t = new Date(), b = new Date(d); let a = t.getFullYear() - b.getFullYear(); if (t.getMonth() - b.getMonth() < 0 || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; return isNaN(a) ? 'NO DISP' : a; }
 function normalizePhone(t) { if (!t || t === "-") return 'NO DISP'; return t.toString().replace(/^(\+?34)/, '').trim(); }
-function normalizeCity(c) { if (!c) return 'NO DISP'; return c.toString().toUpperCase().trim(); }
 
-// --- CARGA ---
+// --- CARGA ALUMNOS ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
     tbody.innerHTML = `<tr><td colspan="10">Cargando...</td></tr>`;
@@ -123,7 +128,51 @@ async function loadAlumnos(activos) {
     } catch { tbody.innerHTML = 'Error.'; }
 }
 
-// --- INFORMES PROFESIONALES ---
+// --- CARGA DOJOS ---
+async function loadDojosCards() {
+    const grid = document.getElementById('grid-dojos');
+    if (!grid) return;
+    grid.innerHTML = '<p>Cargando dojos...</p>';
+    try {
+        const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const json = await res.json();
+        grid.innerHTML = '';
+        const data = json.data || [];
+
+        data.forEach(d => {
+            // Strapi v5 Flattening
+            const p = d.attributes || d;
+            const cleanName = (p.nombre || 'Dojo').replace(/Aikido\s+/gi, '').trim();
+            const addr = (p.direccion || 'NO DISP').replace(/\n/g, '<br>');
+            
+            grid.innerHTML += `
+                <div class="dojo-card">
+                    <div class="dojo-header">
+                        <h3><i class="fa-solid fa-torii-gate"></i> ${cleanName}</h3>
+                    </div>
+                    <div class="dojo-body">
+                        <div class="dojo-info-row">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <span>${addr}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span>
+                        </div>
+                        <div class="dojo-info-row">
+                            <i class="fa-solid fa-phone"></i>
+                            <span>${p.telefono || 'NO DISP'}</span>
+                        </div>
+                        <div class="dojo-info-row">
+                            <i class="fa-solid fa-envelope"></i>
+                            <span>${p.email || 'NO DISP'}</span>
+                        </div>
+                        <a href="${p.web || '#'}" target="_blank" class="dojo-link-btn">WEB OFICIAL</a>
+                    </div>
+                </div>`;
+        });
+    } catch (err) {
+        grid.innerHTML = '<p>Error al cargar dojos.</p>';
+    }
+}
+
+// --- INFORMES ---
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
 async function generateReport(type) {
@@ -147,7 +196,6 @@ async function generateReport(type) {
                 title = "ASISTENCIA DIARIA - TATAMI";
                 subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
                 
-                // LÓGICA DE RANGO PARA STRAPI V5 (EVITA EL ERROR DE CONTAINS)
                 const startDay = `${attendanceDate}T00:00:00.000Z`;
                 const endDay = `${attendanceDate}T23:59:59.999Z`;
 
@@ -162,14 +210,11 @@ async function generateReport(type) {
                     const a = item.attributes || item;
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    
-                    // Formatear hora de la clase quitando el UTC
                     let horaStr = "--:--";
                     if(cla?.Fecha_Hora) {
                         const d = new Date(cla.Fecha_Hora);
                         horaStr = d.getUTCHours().toString().padStart(2, '0') + ":" + d.getUTCMinutes().toString().padStart(2, '0') + "h";
                     }
-
                     return [
                         `${(alu?.apellidos || '').toUpperCase()}, ${alu?.nombre || ''}`,
                         alu?.dni || 'NO DISP',
@@ -180,7 +225,6 @@ async function generateReport(type) {
                     ];
                 });
             } else {
-                // INFORMES DE LISTADO
                 const isBaja = type.startsWith('bajas_');
                 title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO OFICIAL ALUMNOS";
                 subText = `${isBaja ? 'Alumnos Inactivos' : 'Alumnos Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
@@ -223,20 +267,23 @@ async function generateReport(type) {
                     doc.setFontSize(9); doc.text(subText, pageWidth / 2, 18, { align: 'center' });
                 }
             });
-            doc.save(`Arashi_Informe_${type}_${attendanceDate || 'Listado'}.pdf`);
+            doc.save(`Arashi_Informe_${type}.pdf`);
             document.getElementById('report-modal').classList.add('hidden');
-        } catch (e) { console.error(e); alert("Error al generar PDF"); }
+        } catch (e) { alert("Error PDF"); }
     };
 }
 
-// --- MANTENIMIENTO ---
+// --- OTROS MANTENIMIENTOS ---
 async function loadDojosSelect() {
     const s = document.getElementById('new-dojo');
     try {
         const r = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const j = await r.json();
         s.innerHTML = '<option value="">Selecciona...</option>';
-        (j.data || []).forEach(d => { s.innerHTML += `<option value="${d.documentId}">${parseRelation(d).nombre}</option>`; });
+        (j.data || []).forEach(d => { 
+            const p = d.attributes || d;
+            s.innerHTML += `<option value="${d.documentId}">${p.nombre}</option>`; 
+        });
     } catch {}
 }
 
@@ -246,7 +293,10 @@ async function loadReportDojos() {
     try {
         const r = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const j = await r.json();
-        const options = (j.data || []).map(d => `<option value="${d.documentId}">${parseRelation(d).nombre}</option>`).join('');
+        const options = (j.data || []).map(d => {
+            const p = d.attributes || d;
+            return `<option value="${d.documentId}">${p.nombre}</option>`;
+        }).join('');
         if (s) s.innerHTML = '<option value="">Todos los dojos</option>' + options;
         if (e) e.innerHTML = '<option value="">Todos los dojos</option>' + options;
     } catch {}

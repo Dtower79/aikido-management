@@ -40,12 +40,12 @@
                 <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
             </div>
             <nav class="menu">
-                <button class="menu-btn" onclick="showSection('nuevo-alumno')"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
-                <button class="menu-btn" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
-                <button class="menu-btn" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos</button>
-                <button class="menu-btn" onclick="showSection('bajas')"><i class="fa-solid fa-user-xmark"></i> Histórico Bajas</button>
+                <button class="menu-btn" id="btn-nav-nuevo" onclick="showSection('nuevo-alumno')"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
+                <button class="menu-btn" id="btn-nav-dojos" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
+                <button class="menu-btn" id="btn-nav-alumnos" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos</button>
+                <button class="menu-btn" id="btn-nav-bajas" onclick="showSection('bajas')"><i class="fa-solid fa-user-xmark"></i> Histórico Bajas</button>
                 <div class="sidebar-sep">Área Técnica</div>
-                <button class="menu-btn" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado Sistema</button>
+                <button class="menu-btn" id="btn-nav-status" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado Sistema</button>
                 <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-power-off"></i> Salir</button>
             </nav>
         </div>
@@ -135,6 +135,12 @@
                 </div>
             </div>
 
+            <!-- DOJOS -->
+            <div id="sec-dojos" class="section hidden">
+                <header class="section-header"><h2><i class="fa-solid fa-torii-gate"></i> Dojos</h2></header>
+                <div id="grid-dojos" class="dojo-grid"></div>
+            </div>
+
             <!-- STATUS / TECNICO -->
             <div id="sec-status" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-heart-pulse"></i> Gestión Técnica</h2></header>
@@ -153,11 +159,6 @@
                 <div class="console-wrapper" style="margin-top:20px; height: 300px;">
                     <div class="console-body" id="console-output">Consola de sistema lista...</div>
                 </div>
-            </div>
-
-            <div id="sec-dojos" class="section hidden">
-                <header class="section-header"><h2><i class="fa-solid fa-torii-gate"></i> Dojos</h2></header>
-                <div id="grid-dojos" class="dojo-grid"></div>
             </div>
         </main>
     </div>
