@@ -3,9 +3,14 @@
   "name": "Arashi Group Aikido",
   "icons": [
     {
-      "src": "img/logo-arashi.png",
+      "src": "img/logo-arashi-informe.png",
       "type": "image/png",
       "sizes": "192x192"
+    },
+    {
+      "src": "img/logo-arashi-informe.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
   ],
   "start_url": "/movil.html",

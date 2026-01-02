@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#ef4444">
+    
+    <!-- Configuración PWA y Apple -->
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <!-- Este enlace es el que permite la instalación -->
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="img/logo-arashi.png">
+    <link rel="apple-touch-icon" href="img/logo-arashi-informe.png">
     
     <title>Arashi App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -51,11 +51,11 @@
         }
         .modal-content i { font-size: 50px; color: var(--accent); margin-bottom: 20px; }
 
-        /* --- LOGIN & REGISTRO --- */
+        /* --- AUTH CARDS --- */
         .auth-container { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px; box-sizing: border-box; }
         .auth-card { width: 100%; max-width: 400px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 35px; border-radius: 32px; box-sizing: border-box; text-align: center; }
         .logo-img { width: 110px; margin-bottom: 35px; filter: drop-shadow(0 0 12px rgba(239,68,68,0.4)); }
-        
+
         .input-group { position: relative; margin-bottom: 18px; }
         .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
         .input-group input { width: 100%; padding: 16px 16px 16px 48px; background: rgba(0,0,0,0.35); border: 1px solid var(--glass-border); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; outline: none; }
@@ -82,15 +82,15 @@
         .student-info p { margin: 2px 0 0; font-size: 11px; color: var(--text-muted); }
         .validate-btn { background: #22c55e; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: 800; font-size: 11px; }
 
-        /* --- NAVEGACIÓN --- */
+        /* --- NAVEGACIÓN INFERIOR --- */
         .nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
-            height: 95px; background: rgba(10, 15, 28, 0.95);
+            height: 90px; background: rgba(10, 15, 28, 0.95);
             backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border);
             display: flex; justify-content: space-around; align-items: center;
-            padding-bottom: env(safe-area-inset-bottom, 20px); z-index: 2000;
+            padding-bottom: env(safe-area-inset-bottom, 15px); z-index: 2000;
         }
-        .nav-item { color: var(--text-muted); font-size: 20px; display: flex; flex-direction: column; align-items: center; text-decoration: none; min-width: 50px; }
+        .nav-item { color: var(--text-muted); font-size: 20px; display: flex; flex-direction: column; align-items: center; text-decoration: none; min-width: 55px; }
         .nav-item.active { color: var(--accent); }
         .nav-item span { font-size: 9px; font-weight: 700; margin-top: 5px; text-transform: uppercase; }
 
@@ -105,6 +105,7 @@
 </head>
 <body>
 
+    <!-- MODAL -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <i id="modal-icon" class="fa-solid fa-circle-check"></i>
@@ -114,7 +115,7 @@
         </div>
     </div>
 
-    <!-- LOGIN -->
+    <!-- VISTA LOGIN -->
     <div id="login-view" class="auth-container">
         <img src="img/logo-arashi.png" class="logo-img">
         <div class="auth-card">
@@ -134,7 +135,7 @@
         </div>
     </div>
 
-    <!-- REGISTRO -->
+    <!-- VISTA ACTIVACIÓN -->
     <div id="register-view" class="auth-container hidden">
         <div class="auth-card">
             <h2>ACTIVA TU CUENTA</h2>
@@ -153,7 +154,7 @@
         </div>
     </div>
 
-    <!-- DASHBOARD ALUMNO -->
+    <!-- VISTA DASHBOARD ALUMNO -->
     <div id="dashboard-view" class="hidden">
         <div class="header-app">
             <div>
@@ -187,15 +188,16 @@
     <!-- VISTA SENSEI -->
     <div id="sensei-view" class="hidden">
         <h2 style="margin-top:20px; font-weight:800;">PASAR LISTA</h2>
-        <p style="color:var(--text-muted); margin-bottom:20px;">Alumnos confirmados para hoy:</p>
+        <p style="color:var(--text-muted); margin-bottom:20px;">Confirmados para hoy:</p>
         <div id="student-list"></div>
     </div>
 
     <!-- NAVEGACIÓN -->
     <nav class="nav-bar hidden" id="main-nav">
-        <a href="#" id="nav-inicio" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
+        <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
+        <a href="#" class="nav-item" onclick="showModal('Próximamente', 'Aquí verás el historial de tus horas detallado.', 'fa-award')"><i class="fa-solid fa-medal"></i><span>Grados</span></a>
         
-        <div class="qr-btn-container" onclick="showModal('Fichar', 'Escanea el código QR del Dojo para validar tu asistencia.', 'fa-qrcode')">
+        <div class="qr-btn-container" onclick="showModal('QR Dojo', 'Escanea el QR de la entrada para validar tu asistencia.', 'fa-qrcode')">
             <div class="qr-btn"><i class="fa-solid fa-qrcode"></i></div>
         </div>
 
@@ -210,14 +212,15 @@
         window.onload = () => { if (localStorage.getItem('aikido_jwt')) { initApp(); } };
 
         const setupDniInput = (id) => {
-            document.getElementById(id).addEventListener('input', (e) => {
+            const input = document.getElementById(id);
+            if(!input) return;
+            input.addEventListener('input', (e) => {
                 let val = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
                 e.target.value = val.slice(0, 9);
             });
         };
         setupDniInput('dni-login'); setupDniInput('reg-dni');
 
-        // ACTIVACIÓN
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const dni = document.getElementById('reg-dni').value;
@@ -236,7 +239,6 @@
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
         });
 
-        // LOGIN
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const identifier = document.getElementById('dni-login').value;
@@ -259,7 +261,7 @@
             const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             document.getElementById('main-nav').classList.remove('hidden');
-            showView('dashboard', document.getElementById('nav-inicio'));
+            showView('dashboard');
 
             try {
                 const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, {
@@ -269,13 +271,11 @@
                 if (json.data.length > 0) {
                     alumnoGlobal = json.data[0];
                     const p = alumnoGlobal.attributes || alumnoGlobal;
-                    
-                    // Iniciales (Nombre + Apellido)
                     const iniciales = (p.nombre ? p.nombre.charAt(0) : "") + (p.apellidos ? p.apellidos.charAt(0) : "");
                     document.getElementById('user-initials').innerText = iniciales.toUpperCase();
                     document.getElementById('user-display-name').innerText = p.nombre;
                     
-                    // --- ARREGLO SENSEI: Lógica más agresiva ---
+                    // FORZAR MOSTRAR SENSEI SI ES TRUE
                     if(p.es_instructor === true || p.es_instructor === "true") {
                         document.getElementById('nav-sensei').style.display = 'flex';
                     }
@@ -349,8 +349,7 @@
             try {
                 const res = await fetch(`${API_URL}/api/requisito-grados?filters[grado][$eq]=${objetivo}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                const d = json.data[0];
-                if (d) necesarias = (d.attributes || d).horas_necesarias;
+                if (json.data[0]) necesarias = (json.data[0].attributes || json.data[0]).horas_necesarias;
             } catch (e) {}
             const porcentaje = Math.min(Math.round((actuales / necesarias) * 100), 100);
             document.getElementById('progress-ring').style.strokeDashoffset = 176 - (176 * porcentaje / 100);
