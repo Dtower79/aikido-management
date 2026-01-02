@@ -1,3 +1,4 @@
+<!-- Sustituye todo el movil.html por este -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,11 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#ef4444">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Arashi App</title>
-    
-    <!-- Enlace al manifest para pantalla completa -->
     <link rel="manifest" href="manifest.json">
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -86,7 +83,7 @@
         .auth-footer a { color: var(--accent); text-decoration: none; font-weight: 800; }
 
         /* --- DASHBOARD --- */
-        #dashboard-view { padding: 25px; padding-bottom: 110px; }
+        #dashboard-view, #sensei-view { padding: 25px; padding-bottom: 110px; }
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; margin-top: 20px;}
         .profile-circle { 
             width: 52px; height: 52px; border-radius: 14px; 
@@ -117,13 +114,26 @@
             margin-bottom: 35px;
         }
 
+        /* --- SENSEI LIST STYLES --- */
+        .student-item {
+            background: var(--card-bg); padding: 15px 20px;
+            border-radius: 20px; display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 12px; border: 1px solid var(--glass-border);
+        }
+        .student-info h4 { margin: 0; font-size: 16px; }
+        .student-info p { margin: 3px 0 0; font-size: 12px; color: var(--text-muted); }
+        
+        .validate-btn {
+            background: #22c55e; color: white; border: none;
+            padding: 8px 15px; border-radius: 12px; font-weight: 800; font-size: 12px;
+        }
+
         /* --- NAVEGACIÓN --- */
         .nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
             height: 85px; background: rgba(10, 15, 28, 0.92);
             backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border);
             display: flex; justify-content: space-around; align-items: center;
-            padding-bottom: 12px; z-index: 2000;
         }
         .nav-item { color: var(--text-muted); font-size: 22px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
         .nav-item.active { color: var(--accent); }
@@ -185,7 +195,7 @@
         </div>
     </div>
 
-    <!-- VISTA DASHBOARD -->
+    <!-- VISTA DASHBOARD ALUMNO -->
     <div id="dashboard-view" class="hidden">
         <div class="header-app">
             <div>
@@ -217,8 +227,25 @@
 
         <nav class="nav-bar">
             <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-calendar-check"></i><span>Clases</span></a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-qrcode" style="font-size:30px; color:var(--accent);"></i><span>Fichar</span></a>
+            <a href="#" class="nav-item" id="sensei-tab-link" onclick="loadSenseiPanel()" style="display:none;"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-award"></i><span>Horas</span></a>
+            <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
+        </nav>
+    </div>
+
+    <!-- VISTA SENSEI (PASAR LISTA) -->
+    <div id="sensei-view" class="hidden">
+        <h2 style="margin-top:20px; font-weight:800;">PASAR LISTA</h2>
+        <p style="color:var(--text-muted); margin-bottom:30px;">Alumnos confirmados para hoy:</p>
+        
+        <div id="student-list">
+            <!-- Los alumnos aparecerán aquí -->
+            <p>Buscando alumnos...</p>
+        </div>
+
+        <nav class="nav-bar">
+            <a href="#" class="nav-item" onclick="showView('dashboard')"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
+            <a href="#" class="nav-item active"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
             <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
         </nav>
     </div>
@@ -226,11 +253,10 @@
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         let alumnoGlobal = null;
-        let proximaClaseId = null;
+        let esSensei = false;
 
         window.onload = () => { if (localStorage.getItem('aikido_jwt')) { initApp(); } };
 
-        // VALIDACIÓN DNI EN TIEMPO REAL
         const setupDniInput = (id) => {
             document.getElementById(id).addEventListener('input', (e) => {
                 let val = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
@@ -241,41 +267,29 @@
         setupDniInput('dni-login');
         setupDniInput('reg-dni');
 
-        // --- ACTIVACIÓN ---
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const dni = document.getElementById('reg-dni').value;
             const password = document.getElementById('reg-pass').value;
-
-            if(!/^[0-9]{8}[A-Z]$/.test(dni)) return showModal('Formato Incorrecto', 'El DNI debe ser 8 números y 1 letra.', 'fa-circle-exclamation');
-
             try {
                 const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
                 const checkData = await checkRes.json();
-                if (checkData.data.length === 0) return showModal('DNI No Reconocido', 'No constas en nuestra base de datos.', 'fa-circle-exclamation');
-
+                if (checkData.data.length === 0) return showModal('Error', 'DNI no encontrado.', 'fa-circle-exclamation');
                 const alumno = checkData.data[0];
                 const email = (alumno.attributes ? alumno.attributes.email : alumno.email) || `${dni.toLowerCase()}@arashi.com`;
-
                 const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: dni, email: email, password: password })
                 });
-
-                if (regRes.ok) {
-                    showModal('¡Activado!', 'Cuenta lista. Ya puedes entrar.', 'fa-circle-check');
-                    showView('login');
-                } else { showModal('Error', 'Esta cuenta ya está activa.', 'fa-circle-xmark'); }
+                if (regRes.ok) { showModal('¡Éxito!', 'Ya puedes entrar.', 'fa-circle-check'); showView('login'); }
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
         });
 
-        // --- LOGIN ---
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const identifier = document.getElementById('dni-login').value;
             const password = document.getElementById('pass-login').value;
-
             try {
                 const res = await fetch(`${API_URL}/api/auth/local`, {
                     method: 'POST',
@@ -287,7 +301,7 @@
                     localStorage.setItem('aikido_jwt', data.jwt);
                     localStorage.setItem('aikido_user', JSON.stringify(data.user));
                     initApp();
-                } else { showModal('Error', 'DNI o contraseña incorrectos', 'fa-circle-xmark'); }
+                } else { showModal('Error', 'Credenciales incorrectas', 'fa-circle-xmark'); }
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
         });
 
@@ -307,80 +321,127 @@
                     document.getElementById('user-display-name').innerText = p.nombre;
                     document.getElementById('user-initials').innerText = p.nombre.charAt(0) + (p.apellidos ? p.apellidos.charAt(0) : "");
                     
+                    // Verificamos si es Sensei
+                    if(p.es_instructor) {
+                        document.getElementById('sensei-tab-link').style.display = 'flex';
+                        esSensei = true;
+                    }
+
                     renderProgress(p.horas_acumuladas || 0, p.grado_objetivo);
                     updateSchedule(p.grupo);
                 }
             } catch (e) { console.error(e); }
         }
 
+        // --- PANEL DEL SENSEI ---
+        async function loadSenseiPanel() {
+            showView('sensei');
+            const token = localStorage.getItem('aikido_jwt');
+            const listDiv = document.getElementById('student-list');
+            listDiv.innerHTML = "<p>Buscando alumnos confirmados...</p>";
+
+            try {
+                // Buscamos asistencias del día de hoy que estén en estado "Confirmado"
+                const today = new Date().toISOString().split('T')[0];
+                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate=alumno,clase`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const json = await res.json();
+                
+                listDiv.innerHTML = "";
+                if(json.data.length === 0) {
+                    listDiv.innerHTML = "<p>No hay alumnos pendientes de validar hoy.</p>";
+                    return;
+                }
+
+                json.data.forEach(asist => {
+                    const a = asist.attributes || asist;
+                    const alumno = a.alumno.data.attributes || a.alumno.data;
+                    const clase = a.clase.data.attributes || a.clase.data;
+                    const docId = asist.documentId || asist.id;
+
+                    listDiv.innerHTML += `
+                        <div class="student-item" id="asist-${docId}">
+                            <div class="student-info">
+                                <h4>${alumno.nombre} ${alumno.apellidos}</h4>
+                                <p>${alumno.grupo} • Clase ${clase.Duracion}h</p>
+                            </div>
+                            <button class="validate-btn" onclick="validateAttendance('${docId}', '${a.alumno.data.documentId}', ${clase.Duracion})">VALIDAR</button>
+                        </div>
+                    `;
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        // --- LÓGICA DE VALIDACIÓN Y SUMA DE HORAS ---
+        async function validateAttendance(asistId, alumnoDocId, duracion) {
+            const token = localStorage.getItem('aikido_jwt');
+            
+            try {
+                // 1. Cambiar estado de la asistencia a "Asistio"
+                await fetch(`${API_URL}/api/asistencias/${asistId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ data: { Estado: 'Asistio' } })
+                });
+
+                // 2. Obtener horas actuales del alumno para sumar
+                const alRes = await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const alData = await alRes.json();
+                const currentHours = (alData.data.attributes || alData.data).horas_acumuladas || 0;
+                const newHours = parseFloat(currentHours) + parseFloat(duracion);
+
+                // 3. Actualizar la ficha del alumno con las nuevas horas
+                await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ data: { horas_acumuladas: newHours } })
+                });
+
+                showModal('¡Hecho!', 'Asistencia validada y horas sumadas.', 'fa-circle-check');
+                document.getElementById(`asist-${asistId}`).remove();
+
+            } catch (e) { showModal('Error', 'No se pudo validar.', 'fa-circle-xmark'); }
+        }
+
         function updateSchedule(grupo) {
             const timeLabel = document.getElementById('next-class-time');
             const infoLabel = document.getElementById('next-class-info');
             const day = new Date().getDay(); 
-
             if (grupo === 'Kids') {
                 timeLabel.innerText = "18:00 - 19:00";
-                infoLabel.innerHTML = `<i class="fa-solid fa-child"></i> Grupo Kids (Martes y Jueves)`;
+                infoLabel.innerHTML = `<i class="fa-solid fa-child"></i> Grupo Kids`;
             } else {
-                if (day === 2) { 
-                    timeLabel.innerText = "10:00 o 19:00";
-                    infoLabel.innerHTML = `<i class="fa-solid fa-clock"></i> Mañanas o Tardes`;
-                } else if (day === 4) { 
-                    timeLabel.innerText = "19:00 - 20:30";
-                    infoLabel.innerHTML = `<i class="fa-solid fa-moon"></i> Solo Tardes`;
+                if (day === 2 || day === 4) { 
+                    timeLabel.innerText = day === 2 ? "10:00 o 19:00" : "19:00 - 20:30";
+                    infoLabel.innerHTML = `<i class="fa-solid fa-clock"></i> Clase disponible hoy`;
                 } else {
                     timeLabel.innerText = "Próxima: Martes";
-                    infoLabel.innerText = "Prepara tu equipo, Oss!";
+                    infoLabel.innerText = "Descansa, Oss!";
                     document.getElementById('confirm-btn').disabled = true;
                 }
             }
         }
 
-        // LÓGICA DE CONFIRMACIÓN DE ASISTENCIA
         async function confirmAttendance() {
             const token = localStorage.getItem('aikido_jwt');
             const btn = document.getElementById('confirm-btn');
-            
-            // Paso 1: Buscar si hay una clase creada en Strapi para HOY
-            // (Para que esto funcione, debes haber creado la Clase en Strapi)
             try {
-                const classRes = await fetch(`${API_URL}/api/clases?filters[fecha][$contains]=${new Date().toISOString().split('T')[0]}`, {
+                const classRes = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$contains]=${new Date().toISOString().split('T')[0]}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const classData = await classRes.json();
-                
-                if(classData.data.length === 0) {
-                    return showModal('Sin Clases', 'No hay ninguna clase programada para hoy en el sistema.', 'fa-calendar-xmark');
-                }
-
-                const claseId = classData.data[0].id || classData.data[0].documentId;
-
-                // Paso 2: Crear el registro de asistencia
+                if(classData.data.length === 0) return showModal('Sin Clases', 'No hay clases programadas para hoy.', 'fa-calendar-xmark');
+                const claseId = classData.data[0].documentId || classData.data[0].id;
                 const assistRes = await fetch(`${API_URL}/api/asistencias`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` 
-                    },
-                    body: JSON.stringify({
-                        data: {
-                            alumno: alumnoGlobal.id || alumnoGlobal.documentId,
-                            clase: claseId,
-                            Estado: 'Confirmado'
-                        }
-                    })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ data: { alumno: alumnoGlobal.documentId || alumnoGlobal.id, clase: claseId, Estado: 'Confirmado' } })
                 });
-
-                if(assistRes.ok) {
-                    showModal('¡Confirmado!', 'Se ha registrado tu intención de asistir.', 'fa-check-double');
-                    btn.innerText = "ASISTENCIA CONFIRMADA";
-                    btn.disabled = true;
-                    btn.style.background = "#22c55e";
-                    btn.style.color = "white";
-                }
-            } catch (e) {
-                showModal('Error', 'No se pudo confirmar la asistencia.', 'fa-circle-xmark');
-            }
+                if(assistRes.ok) { showModal('¡OSS!', 'Confirmado. ¡Nos vemos en el tatami!', 'fa-check-double'); btn.innerText = "CONFIRMADO"; btn.disabled = true; btn.style.background = "#22c55e"; }
+            } catch (e) { showModal('Error', 'No se pudo confirmar.', 'fa-circle-xmark'); }
         }
 
         async function renderProgress(actuales, objetivo) {
@@ -391,9 +452,9 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const json = await res.json();
-                if (json.data[0]) necesarias = (json.data[0].attributes || json.data[0]).horas_necesarias;
+                const d = json.data[0];
+                if (d) necesarias = (d.attributes || d).horas_necesarias;
             } catch (e) {}
-
             const porcentaje = Math.min(Math.round((actuales / necesarias) * 100), 100);
             document.getElementById('progress-ring').style.strokeDashoffset = 176 - (176 * porcentaje / 100);
             document.getElementById('target-grade-label').innerText = `Camino al ${objetivo || '...'}`;
@@ -403,11 +464,9 @@
         function showView(view) {
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('register-view').classList.add('hidden');
-            document.getElementById('dashboard-view').classList.remove('hidden');
-            if(view === 'login' || view === 'register') {
-                document.getElementById('dashboard-view').classList.add('hidden');
-                document.getElementById(`${view}-view`).classList.remove('hidden');
-            }
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('sensei-view').classList.add('hidden');
+            document.getElementById(`${view}-view`).classList.remove('hidden');
         }
 
         function showModal(title, text, icon) {

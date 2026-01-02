@@ -461,6 +461,7 @@ export interface ApiAlumnoAlumno extends Struct.CollectionTypeSchema {
     dni: Schema.Attribute.String & Schema.Attribute.Unique;
     dojo: Schema.Attribute.Relation<'manyToOne', 'api::dojo.dojo'>;
     email: Schema.Attribute.Email;
+    es_instructor: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     fecha_baja: Schema.Attribute.Date;
     fecha_inicio: Schema.Attribute.Date;
     fecha_nacimiento: Schema.Attribute.Date;

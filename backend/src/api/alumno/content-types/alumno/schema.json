@@ -83,6 +83,10 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "plugin::users-permissions.user"
+    },
+    "es_instructor": {
+      "type": "boolean",
+      "default": false
     }
   }
 }
