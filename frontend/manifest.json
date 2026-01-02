@@ -6,13 +6,13 @@
       "src": "img/logo-arashi-informe.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      //"purpose": "any maskable"
     },
     {
       "src": "img/logo-arashi.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any"
+      //"purpose": "any"
     }
   ],
   "start_url": "/movil.html",
