@@ -100,7 +100,7 @@ async function loadAlumnos(activos) {
         (json.data || []).forEach(a => {
             const p = a.attributes || a;
             const id = a.documentId;
-            const horas = parseFloat(p.horas_acumuladas || 0).toFixed(1); // FORMATEO DE HORAS
+            const horas = parseFloat(p.horas_acumuladas || 0).toFixed(1);
             
             tbody.innerHTML += `
                 <tr>
@@ -113,7 +113,7 @@ async function loadAlumnos(activos) {
                     <td>${normalizePhone(p.telefono)}</td>
                     <td>${getDojoName(p.dojo)}</td>
                     <td>${formatDateDisplay(p.fecha_inicio)}</td>
-                    <td style="font-weight:bold; color:var(--primary)">${horas}h</td> <!-- NUEVA COLUMNA -->
+                    <td style="font-weight:bold; color:var(--primary)">${horas}h</td>
                     <td class="sticky-col">
                         ${activos ? `<button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>` : ''}
                         <button class="action-btn-icon" onclick="confirmarEstado('${id}', ${!activos}, '${p.nombre}')"><i class="fa-solid ${activos ? 'fa-user-xmark' : 'fa-rotate-left'}"></i></button>
@@ -123,7 +123,7 @@ async function loadAlumnos(activos) {
     } catch { tbody.innerHTML = 'Error.'; }
 }
 
-// --- INFORMES ---
+// --- INFORMES PROFESIONALES ---
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
 async function generateReport(type) {
@@ -147,28 +147,40 @@ async function generateReport(type) {
                 title = "ASISTENCIA DIARIA - TATAMI";
                 subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
                 
-                let url = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
+                // LÓGICA DE RANGO PARA STRAPI V5 (EVITA EL ERROR DE CONTAINS)
+                const startDay = `${attendanceDate}T00:00:00.000Z`;
+                const endDay = `${attendanceDate}T23:59:59.999Z`;
+
+                let url = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${startDay}&filters[clase][Fecha_Hora][$lte]=${endDay}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
                 if (dojoFilterId) url += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
                 
                 const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
                 const json = await res.json();
                 
-                headRow = ['Apellidos y Nombre', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
+                headRow = ['Apellidos y Nombre', 'DNI', 'Dojo', 'Clase', 'Hora Clase', 'Estado'];
                 body = (json.data || []).map(item => {
                     const a = item.attributes || item;
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    const hora = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0,5)+'h' : '--:--';
+                    
+                    // Formatear hora de la clase quitando el UTC
+                    let horaStr = "--:--";
+                    if(cla?.Fecha_Hora) {
+                        const d = new Date(cla.Fecha_Hora);
+                        horaStr = d.getUTCHours().toString().padStart(2, '0') + ":" + d.getUTCMinutes().toString().padStart(2, '0') + "h";
+                    }
+
                     return [
                         `${(alu?.apellidos || '').toUpperCase()}, ${alu?.nombre || ''}`,
                         alu?.dni || 'NO DISP',
                         getDojoName(alu?.dojo),
                         cla?.Tipo || 'General',
-                        hora,
+                        horaStr,
                         a.Estado === 'Asistio' ? 'ASISTIÓ' : 'PENDIENTE / NO VINO'
                     ];
                 });
             } else {
+                // INFORMES DE LISTADO
                 const isBaja = type.startsWith('bajas_');
                 title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO OFICIAL ALUMNOS";
                 subText = `${isBaja ? 'Alumnos Inactivos' : 'Alumnos Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
@@ -190,8 +202,7 @@ async function generateReport(type) {
                 headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Seguro', 'Dojo', 'Horas', 'Alta'];
                 body = list.map(item => {
                     const p = item.attributes || item;
-                    const row = [(p.apellidos || '').toUpperCase(), p.nombre || '', p.dni || '', normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', getDojoName(p.dojo), parseFloat(p.horas_acumuladas || 0).toFixed(1)+'h', formatDateDisplay(p.fecha_inicio)];
-                    return row;
+                    return [(p.apellidos || '').toUpperCase(), p.nombre || '', p.dni || '', normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', getDojoName(p.dojo), parseFloat(p.horas_acumuladas || 0).toFixed(1)+'h', formatDateDisplay(p.fecha_inicio)];
                 });
             }
 
@@ -212,9 +223,9 @@ async function generateReport(type) {
                     doc.setFontSize(9); doc.text(subText, pageWidth / 2, 18, { align: 'center' });
                 }
             });
-            doc.save(`Arashi_Informe_${type}.pdf`);
+            doc.save(`Arashi_Informe_${type}_${attendanceDate || 'Listado'}.pdf`);
             document.getElementById('report-modal').classList.add('hidden');
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error(e); alert("Error al generar PDF"); }
     };
 }
 
@@ -244,3 +255,4 @@ async function loadReportDojos() {
 function setupDniInput(id) { document.getElementById(id)?.addEventListener('input', e => e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '')); }
 function filtrarTabla(t, i) { const input = document.getElementById(i); if (!input) return; const f = input.value.toUpperCase(); const rows = document.getElementById(t).getElementsByTagName('tr'); for (let j = 1; j < rows.length; j++) rows[j].style.display = rows[j].textContent.toUpperCase().includes(f) ? "" : "none"; }
 function showModal(t, m, ok) { const d = document.getElementById('custom-modal'); document.getElementById('modal-title').innerText = t; document.getElementById('modal-message').innerText = m; document.getElementById('modal-btn-cancel').onclick = () => d.classList.add('hidden'); document.getElementById('modal-btn-ok').onclick = () => { if (ok) ok(); d.classList.add('hidden'); }; d.classList.remove('hidden'); }
+function toggleMobileMenu() { document.querySelector('.sidebar').classList.toggle('open'); }
