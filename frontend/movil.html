@@ -32,6 +32,7 @@
             background-image: radial-gradient(circle at top right, #1e1b4b, transparent);
             min-height: 100vh;
             overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .hidden { display: none !important; }
@@ -50,6 +51,32 @@
         }
         .modal-content i { font-size: 50px; color: var(--accent); margin-bottom: 15px; }
 
+        /* --- BOTÓN PREMIUM --- */
+        .action-btn { 
+            width: 100%; 
+            padding: 18px; 
+            background: var(--accent); 
+            color: white; 
+            border: none; 
+            border-radius: 20px; 
+            font-size: 16px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); 
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .action-btn:active {
+            transform: scale(0.95) translateY(5px);
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+        }
+        .action-btn:disabled {
+            background: #334155;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
         /* --- AUTH --- */
         .auth-container { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
         .auth-card { width: 100%; max-width: 400px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 35px; border-radius: 32px; text-align: center; }
@@ -57,7 +84,6 @@
         .input-group { position: relative; margin-bottom: 15px; }
         .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
         .input-group input { width: 100%; padding: 16px 16px 16px 48px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; outline: none; }
-        .action-btn { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 18px; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); }
         .auth-footer { margin-top: 35px; font-size: 13px; color: #64748b; }
         .auth-footer a { color: #cbd5e1; text-decoration: underline; font-weight: 600; }
 
@@ -74,7 +100,7 @@
         
         .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 30px 25px; border-radius: 30px; box-shadow: 0 15px 30px rgba(239,68,68,0.25); margin-bottom: 20px; text-align: center; }
         .student-item { background: var(--card-bg); padding: 15px; border-radius: 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid var(--glass-border); text-align: left; }
-        .validate-btn { background: #22c55e; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: 800; font-size: 11px; }
+        .validate-btn { background: #22c55e; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: 800; font-size: 11px; cursor:pointer; }
 
         /* --- NAV --- */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.96); backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
@@ -82,7 +108,8 @@
         .nav-item.active { color: var(--accent); }
         .nav-item span { font-size: 9px; font-weight: 700; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
         .qr-main-btn { transform: translateY(-20px); }
-        .qr-inner { width: 60px; height: 60px; background: var(--accent); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); }
+        .qr-inner { width: 60px; height: 60px; background: var(--accent); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transition: 0.2s; }
+        .qr-inner:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
@@ -92,7 +119,7 @@
             <i id="modal-icon" class="fa-solid fa-circle-check"></i>
             <h3 id="modal-title">¡OSS!</h3>
             <p id="modal-text">...</p>
-            <button class="action-btn" onclick="closeModal()">ENTENDIDO</button>
+            <button class="action-btn" onclick="closeModal()" style="padding:12px; font-size:14px; margin-top:15px; box-shadow:none;">ENTENDIDO</button>
         </div>
     </div>
 
@@ -213,25 +240,24 @@
 
         async function checkTodayClass() {
             const token = localStorage.getItem('aikido_jwt');
-            
-            // Lógica estricta de Barcelona para evitar saltos de día
             const now = new Date();
-            const barcelonaDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }); // YYYY-MM-DD
             
-            const startISO = `${barcelonaDate}T00:00:00.000Z`;
-            const endISO = `${barcelonaDate}T23:59:59.999Z`;
-
             try {
-                const res = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$gte]=${startISO}&filters[Fecha_Hora][$lte]=${endISO}&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
+                // Pedimos las clases ordenadas para encontrar la más cercana
+                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 
                 if (json.data && json.data.length > 0) {
-                    const claseRaw = json.data[0];
+                    // Buscamos una clase que sea "Hoy" (mismo día local en Barcelona)
+                    const claseRaw = json.data.find(c => {
+                        const d = new Date(parseData(c).Fecha_Hora);
+                        return d.toLocaleDateString('es-ES') === now.toLocaleDateString('es-ES');
+                    }) || json.data[0]; // Si no hay hoy, mostramos la siguiente disponible
+
                     const clase = parseData(claseRaw);
                     claseHoyId = getID(claseRaw);
                     
                     const d = new Date(clase.Fecha_Hora);
-                    // Forzamos visualización en hora de Barcelona
                     const timeStr = d.toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }) + "h";
                     const dateStr = d.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' });
 
@@ -240,10 +266,8 @@
                     document.getElementById('next-class-info').innerHTML = `<i class="fa-solid fa-location-dot"></i> Arashi Badalona (${clase.Tipo} • ${clase.Duracion}h)`;
                     document.getElementById('confirm-btn').disabled = false;
                 } else {
-                    document.getElementById('next-class-time').innerText = "Sin clases hoy";
-                    document.getElementById('next-class-date').innerText = barcelonaDate.split('-').reverse().join('/');
-                    document.getElementById('next-class-info').innerText = "Día de descanso, Oss!";
-                    document.getElementById('confirm-btn').disabled = true;
+                    document.getElementById('next-class-time').innerText = "Sin clases";
+                    document.getElementById('next-class-info').innerText = "Oss!";
                 }
             } catch (e) { console.error(e); }
         }
@@ -252,6 +276,17 @@
             if (!claseHoyId) return;
             const token = localStorage.getItem('aikido_jwt');
             try {
+                // 1. Verificar si ya existe asistencia para este alumno y esta clase
+                const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const checkJson = await check.json();
+                
+                if (checkJson.data && checkJson.data.length > 0) {
+                    showModal('Aviso', 'Ya estás apuntado a esta clase.', 'fa-circle-info');
+                    document.getElementById('confirm-btn').innerText = "CONFIRMADO";
+                    document.getElementById('confirm-btn').disabled = true;
+                    return;
+                }
+
                 const res = await fetch(`${API_URL}/api/asistencias`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -261,7 +296,7 @@
                     showModal('¡OSS!', 'Asistencia confirmada. El Sensei te validará en el Dojo.', 'fa-check-double');
                     document.getElementById('confirm-btn').innerText = "CONFIRMADO";
                     document.getElementById('confirm-btn').disabled = true;
-                } else { showModal('Error', 'Ya has confirmado hoy.', 'fa-circle-xmark'); }
+                }
             } catch (e) { showModal('Error', 'Fallo de conexión.', 'fa-wifi'); }
         }
 
@@ -270,7 +305,7 @@
             const label = document.getElementById('target-grade-label');
             const summary = document.getElementById('hours-summary');
 
-            if (!objetivo) {
+            if (!objetivo || objetivo.trim() === "") {
                 label.innerText = "Grado no definido";
                 summary.innerText = "Habla con tu Sensei";
                 ring.style.strokeDashoffset = 176;
@@ -279,19 +314,21 @@
 
             const token = localStorage.getItem('aikido_jwt');
             try {
-                // Buscamos ignorando mayúsculas y espacios laterales
-                const res = await fetch(`${API_URL}/api/requisito-grados?filters[Grado][$containsi]=${encodeURIComponent(objetivo.trim())}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                // Normalizamos el grado para la búsqueda (2º Kyu -> 2º KYU)
+                const gradoNorm = objetivo.trim().toUpperCase();
+                const res = await fetch(`${API_URL}/api/requisito-grados?filters[Grado][$containsi]=${encodeURIComponent(gradoNorm)}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 
                 if (json.data && json.data.length > 0) {
                     const r = parseData(json.data[0]);
-                    const porcentaje = Math.min(Math.round((actuales / r.Horas_Necesarias) * 100), 100);
+                    const reqHoras = parseFloat(r.Horas_Necesarias) || 1;
+                    const porcentaje = Math.min(Math.round((actuales / reqHoras) * 100), 100);
                     ring.style.strokeDashoffset = 176 - (176 * porcentaje / 100);
                     label.innerText = `Camino al ${objetivo}`;
-                    summary.innerText = `${actuales}h de ${r.Horas_Necesarias}h (${porcentaje}%)`;
+                    summary.innerText = `${actuales}h de ${reqHoras}h (${porcentaje}%)`;
                 } else {
                     label.innerText = objetivo;
-                    summary.innerText = "Sin requisitos definidos";
+                    summary.innerText = "Sin requisitos en BD";
                     ring.style.strokeDashoffset = 176;
                 }
             } catch (e) { summary.innerText = "Error cargando progreso"; }
@@ -304,27 +341,33 @@
             listDiv.innerHTML = "<p>Buscando alumnos...</p>";
             
             try {
-                // Sintaxis de populate robusta para Strapi v5
-                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
 
                 if (!json.data || json.data.length === 0) {
                     listDiv.innerHTML = "<p>No hay alumnos confirmados hoy.</p>";
                     return;
                 }
+                
                 listDiv.innerHTML = "";
+                // SISTEMA ANTI-DUPLICADOS LOCAL
+                const vistos = new Set();
+                
                 json.data.forEach(asistRaw => {
                     const a = parseData(asistRaw);
                     const alumno = parseRelation(a.alumno);
                     const clase = parseRelation(a.clase);
                     
                     if (alumno && clase) {
-                        const nombre = alumno.nombre + " " + (alumno.apellidos || "");
-                        listDiv.innerHTML += `<div class="student-item"><div><h4>${nombre}</h4><p>Clase de ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${getID(alumno)}', ${clase.Duracion})">VALIDAR</button></div>`;
+                        const alumnoId = getID(alumno);
+                        if (!vistos.has(alumnoId)) {
+                            vistos.add(alumnoId);
+                            const nombre = (alumno.nombre + " " + (alumno.apellidos || "")).toUpperCase();
+                            listDiv.innerHTML += `<div class="student-item"><div><h4>${nombre}</h4><p>Clase de ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${alumnoId}', ${clase.Duracion})">VALIDAR</button></div>`;
+                        }
                     }
                 });
             } catch (e) { 
-                console.error(e);
                 listDiv.innerHTML = "<p>Error al recuperar datos.</p>"; 
             }
         }
@@ -336,7 +379,8 @@
                 const alRes = await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const alData = await alRes.json();
                 const p = parseData(alData.data);
-                await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: parseFloat(p.horas_acumuladas || 0) + parseFloat(duracion) } }) });
+                const nuevasHoras = parseFloat(p.horas_acumuladas || 0) + parseFloat(duracion);
+                await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: nuevasHoras } }) });
                 showModal('¡Validado!', 'Asistencia registrada con éxito.', 'fa-circle-check');
                 loadSenseiPanel(document.getElementById('nav-sensei'));
             } catch (e) { showModal('Error', 'Fallo al validar.', 'fa-circle-xmark'); }
