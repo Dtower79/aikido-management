@@ -39,7 +39,7 @@
 
         .hidden { display: none !important; }
 
-        /* --- AUTH --- */
+        /* --- AUTH (LOGIN/REGISTRO) --- */
         .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; }
         .auth-card { width: 100%; max-width: 360px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 35px 25px; border-radius: 32px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
         .logo-img { width: 180px; margin-bottom: 25px; filter: drop-shadow(0 0 10px rgba(239,68,68,0.2)); }
@@ -47,13 +47,56 @@
         .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
         .input-group input { width: 100%; padding: 16px 16px 16px 48px; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; outline: none; }
         
-        /* --- BOTONES --- */
-        .action-btn { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 20px; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); transition: all 0.1s ease; text-transform: uppercase; letter-spacing: 1px; }
-        .action-btn:active { transform: translateY(4px) scale(0.97); }
-        .action-btn:disabled { background: #1e293b; color: var(--text-muted); box-shadow: none; cursor: default; }
+        /* RESTAURACIÓN LINK REGISTRO */
+        .auth-footer { margin-top: 25px; font-size: 14px; color: white; }
+        .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
-        /* --- ITEMS SENSEI --- */
+        /* --- BOTONES PREMIUM --- */
+        .action-btn { 
+            width: 100%; 
+            padding: 20px; 
+            background: white; 
+            color: black; 
+            border: none; 
+            border-radius: 20px; 
+            font-size: 16px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .action-btn:active { transform: translateY(4px) scale(0.97); }
+        
+        /* Estado Confirmado (Botón dentro de tarjeta roja) */
+        .action-btn.confirmed-badge {
+            background: rgba(0, 0, 0, 0.4);
+            color: rgba(255, 255, 255, 0.9);
+            box-shadow: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: default;
+        }
+
+        .auth-btn-main { background: var(--accent); color: white; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3); }
+
+        /* --- DASHBOARD --- */
+        #dashboard-view, #sensei-view, #clases-view { padding: 20px; padding-bottom: 120px; }
+        .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 2px solid var(--glass-border); color: white; font-size: 18px; }
+        
+        .progress-card { background: var(--card-bg); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); padding: 18px; border-radius: 24px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .ring-container { position: relative; width: 60px; height: 60px; }
+        .ring-svg { transform: rotate(-90deg); width: 60px; height: 60px; }
+        .ring-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 6; }
+        .ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-dasharray: 176; stroke-dashoffset: 176; stroke-linecap: round; transition: 1.5s ease; }
+        
+        .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 35px 25px; border-radius: 35px; box-shadow: 0 20px 40px rgba(239,68,68,0.25); margin-bottom: 20px; text-align: center; }
+        
+        /* --- SENSEI ITEMS --- */
         .student-item { background: var(--card-bg); padding: 20px; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: 1px solid var(--glass-border); transition: all 0.3s ease; }
+        .student-item h4 { margin: 0; font-size: 16px; font-weight: 800; color: white; }
+        .student-item .grade-tag { font-weight: 400; opacity: 0.7; font-size: 13px; margin-left: 5px; }
         .student-item.validated { opacity: 0; transform: translateX(50px); pointer-events: none; }
         .sensei-actions { display: flex; gap: 10px; }
         .validate-btn { background: var(--success); color: white; border: none; padding: 12px 18px; border-radius: 14px; font-weight: 800; font-size: 11px; cursor: pointer; }
@@ -66,17 +109,6 @@
         .nav-item span { font-size: 9px; font-weight: 700; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
         .qr-main-btn { transform: translateY(-20px); }
         .qr-inner { width: 60px; height: 60px; background: var(--accent); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); }
-
-        /* DASHBOARD VIEWS */
-        #dashboard-view, #sensei-view, #clases-view { padding: 20px; padding-bottom: 120px; }
-        .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 2px solid var(--glass-border); color: white; font-size: 18px; }
-        .progress-card { background: var(--card-bg); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); padding: 18px; border-radius: 24px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-        .ring-container { position: relative; width: 60px; height: 60px; }
-        .ring-svg { transform: rotate(-90deg); width: 60px; height: 60px; }
-        .ring-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 6; }
-        .ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-dasharray: 176; stroke-dashoffset: 176; stroke-linecap: round; transition: 1.5s ease; }
-        .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 30px 25px; border-radius: 30px; box-shadow: 0 15px 30px rgba(239,68,68,0.25); margin-bottom: 20px; text-align: center; }
     </style>
 </head>
 <body>
@@ -86,7 +118,7 @@
             <i id="modal-icon" class="fa-solid fa-circle-check"></i>
             <h3 id="modal-title">¡OSS!</h3>
             <p id="modal-text">...</p>
-            <button class="action-btn" onclick="closeModal()" style="padding:12px; font-size:14px; box-shadow:none;">OK</button>
+            <button class="action-btn auth-btn-main" onclick="closeModal()" style="padding:12px; font-size:14px; box-shadow:none;">ENTENDIDO</button>
         </div>
     </div>
 
@@ -98,9 +130,23 @@
             <form id="login-form">
                 <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="dni-login" placeholder="DNI: 12345678X" required></div>
                 <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="pass-login" placeholder="Contraseña" required></div>
-                <button type="submit" class="action-btn">ENTRAR AL DOJO</button>
+                <button type="submit" class="action-btn auth-btn-main">ENTRAR AL DOJO</button>
             </form>
             <div class="auth-footer">¿Nuevo Alumno? <a href="#" onclick="showView('register')">Activa tu cuenta</a></div>
+        </div>
+    </div>
+
+    <!-- VISTA ACTIVACIÓN -->
+    <div id="register-view" class="auth-container hidden">
+        <img src="img/logo-arashi.png" class="logo-img">
+        <div class="auth-card">
+            <h2 style="margin-top:0;">ACTIVAR ACCESO</h2>
+            <form id="register-form">
+                <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="reg-dni" placeholder="DNI: 12345678X" required></div>
+                <div class="input-group"><i class="fa-solid fa-key"></i><input type="password" id="reg-pass" placeholder="Nueva Contraseña" required></div>
+                <button type="submit" class="action-btn auth-btn-main">ACTIVAR MI CUENTA</button>
+            </form>
+            <div class="auth-footer"><a href="#" onclick="showView('login')">Volver al Login</a></div>
         </div>
     </div>
 
@@ -118,7 +164,7 @@
             <p style="margin:0; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">Tu Próxima Clase</p>
             <h2 id="next-class-time" style="margin:10px 0 2px; font-size:32px; font-weight:800;">--:--</h2>
             <p id="next-class-date" style="margin:0 0 15px; font-size:16px; opacity:0.9; font-weight:800;">--/--/----</p>
-            <p id="next-class-info" style="margin:0; font-size:14px; font-weight:600;"><i class="fa-solid fa-location-dot"></i> Cargando horario...</p>
+            <p id="next-class-info" style="margin:0 0 25px; font-size:14px; font-weight:600;"><i class="fa-solid fa-location-dot"></i> Cargando horario...</p>
             <button class="action-btn" id="confirm-btn" onclick="confirmAttendance()">CONFIRMAR ASISTENCIA</button>
         </div>
     </div>
@@ -195,7 +241,6 @@
             try {
                 const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                
                 if (json.data && json.data.length > 0) {
                     alumnoGlobal = json.data[0];
                     const p = parseData(alumnoGlobal);
@@ -212,6 +257,7 @@
 
         async function checkTodayClass() {
             const token = localStorage.getItem('aikido_jwt');
+            const btn = document.getElementById('confirm-btn');
             try {
                 const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=5`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
@@ -224,15 +270,17 @@
                     document.getElementById('next-class-date').innerText = formatted.date;
                     document.getElementById('next-class-info').innerHTML = `<i class="fa-solid fa-location-dot"></i> Arashi Badalona (${clase.Tipo} • ${clase.Duracion}h)`;
                     
-                    // LÓGICA: Comprobar si ya existe asistencia confirmada
                     if(alumnoGlobal) {
                         const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}&filters[Estado][$eq]=Confirmado`, { headers: { 'Authorization': `Bearer ${token}` } });
                         const checkData = await check.json();
                         if (checkData.data.length > 0) {
-                            document.getElementById('confirm-btn').innerText = "YA CONFIRMADO";
-                            document.getElementById('confirm-btn').disabled = true;
+                            btn.innerText = "YA CONFIRMADO";
+                            btn.classList.add('confirmed-badge');
+                            btn.disabled = true;
                         } else {
-                            document.getElementById('confirm-btn').disabled = false;
+                            btn.innerText = "CONFIRMAR ASISTENCIA";
+                            btn.classList.remove('confirmed-badge');
+                            btn.disabled = false;
                         }
                     }
                 }
@@ -263,12 +311,14 @@
                         if (!vistos.has(alumnoId)) {
                             vistos.add(alumnoId);
                             const nombre = (alumno.nombre + " " + (alumno.apellidos || "")).toUpperCase();
+                            const grado = (alumno.grado || "No disp").toUpperCase();
                             const fClase = formatTimeSafe(clase.Fecha_Hora);
+                            
                             listDiv.innerHTML += `
                                 <div class="student-item" id="item-${asistId}">
                                     <div>
-                                        <h4>${nombre}</h4>
-                                        <p style="color:var(--accent); font-weight:800; font-size:12px;">CLASE: ${fClase.date} @ ${fClase.time}</p>
+                                        <h4>${nombre} <span class="grade-tag">(${grado})</span></h4>
+                                        <p style="color:var(--accent); font-weight:800; font-size:12px; margin-top:5px;">CLASE: ${fClase.date} @ ${fClase.time}</p>
                                         <p style="font-size:11px; color:var(--text-muted)">Duración: ${clase.Duracion}h</p>
                                     </div>
                                     <div class="sensei-actions">
@@ -280,16 +330,6 @@
                     }
                 });
             } catch (e) { listDiv.innerHTML = "<p>Error al recuperar datos.</p>"; }
-        }
-
-        async function rejectAttendance(asistId) {
-            const token = localStorage.getItem('aikido_jwt');
-            const item = document.getElementById(`item-${asistId}`);
-            if(item) { item.classList.add('validated'); setTimeout(() => item.remove(), 350); }
-            try {
-                // Simplemente borramos el registro de asistencia
-                await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            } catch (e) { console.error(e); }
         }
 
         async function validateAttendance(asistId, alumnoDocId, duracion) {
@@ -306,16 +346,24 @@
             } catch (e) { console.error(e); }
         }
 
+        async function rejectAttendance(asistId) {
+            const token = localStorage.getItem('aikido_jwt');
+            const item = document.getElementById(`item-${asistId}`);
+            if(item) { item.classList.add('validated'); setTimeout(() => item.remove(), 350); }
+            try {
+                await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            } catch (e) { console.error(e); }
+        }
+
         async function confirmAttendance() {
             if (!claseHoyId || !alumnoGlobal) return;
             const token = localStorage.getItem('aikido_jwt');
             try {
                 const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
-                if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada.', 'fa-check-double'); document.getElementById('confirm-btn').innerText = "CONFIRMADO"; document.getElementById('confirm-btn').disabled = true; }
+                if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada.', 'fa-check-double'); checkTodayClass(); }
             } catch (e) { showModal('Error', 'Fallo de conexión.', 'fa-wifi'); }
         }
 
-        // --- RESTO DE FUNCIONES (PROGRESS, CLASSES, LOGOUT) SE MANTIENEN IGUAL ---
         async function renderProgress(actuales, objetivo) {
             const ring = document.getElementById('progress-ring');
             const label = document.getElementById('target-grade-label');
@@ -363,8 +411,24 @@
                 const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-                else showModal('Error', 'Credenciales incorrectas', 'fa-circle-xmark');
+                else showModal('Error', 'DNI o contraseña incorrectos', 'fa-circle-xmark');
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
+        });
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const dni = document.getElementById('reg-dni').value;
+            const password = document.getElementById('reg-pass').value;
+            try {
+                const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
+                const checkData = await checkRes.json();
+                if (checkData.data.length === 0) return showModal('Error', 'DNI no encontrado.', 'fa-circle-exclamation');
+                const p = parseData(checkData.data[0]);
+                const email = p.email || `${dni.toLowerCase()}@arashi.com`;
+                const regRes = await fetch(`${API_URL}/api/auth/local/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: dni, email: email, password: password }) });
+                if (regRes.ok) { showModal('¡OSS!', 'Activación completada.', 'fa-circle-check'); showView('login'); }
+                else showModal('Error', 'Esta cuenta ya está activa.', 'fa-circle-xmark');
+            } catch (err) { showModal('Error', 'Fallo de red', 'fa-wifi'); }
         });
 
         function logout() { localStorage.clear(); location.reload(); }
