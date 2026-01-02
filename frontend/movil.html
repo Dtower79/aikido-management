@@ -2,15 +2,16 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#ef4444">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- Enlace al manifest para el modo App Fullscreen -->
+    <!-- Este enlace es el que permite la instalación -->
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="img/logo-arashi.png">
     
-    <title>Arashi App - Aikido</title>
+    <title>Arashi App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     
@@ -61,7 +62,6 @@
 
         .action-btn { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 18px; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); transition: 0.2s; }
         .action-btn:active { transform: scale(0.97); }
-        .action-btn:disabled { background: #1e293b; color: #475569; box-shadow: none; }
 
         /* --- DASHBOARD --- */
         #dashboard-view, #sensei-view, #hours-view { padding: 25px; padding-bottom: 120px; }
@@ -82,19 +82,18 @@
         .student-info p { margin: 2px 0 0; font-size: 11px; color: var(--text-muted); }
         .validate-btn { background: #22c55e; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: 800; font-size: 11px; }
 
-        /* --- NAVEGACIÓN INFERIOR MEJORADA --- */
+        /* --- NAVEGACIÓN --- */
         .nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
-            height: 90px; background: rgba(10, 15, 28, 0.95);
+            height: 95px; background: rgba(10, 15, 28, 0.95);
             backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border);
             display: flex; justify-content: space-around; align-items: center;
-            padding-bottom: 15px; z-index: 2000;
+            padding-bottom: env(safe-area-inset-bottom, 20px); z-index: 2000;
         }
-        .nav-item { color: var(--text-muted); font-size: 20px; display: flex; flex-direction: column; align-items: center; text-decoration: none; min-width: 60px; }
+        .nav-item { color: var(--text-muted); font-size: 20px; display: flex; flex-direction: column; align-items: center; text-decoration: none; min-width: 50px; }
         .nav-item.active { color: var(--accent); }
         .nav-item span { font-size: 9px; font-weight: 700; margin-top: 5px; text-transform: uppercase; }
 
-        /* BOTÓN QR CENTRAL */
         .qr-btn-container { transform: translateY(-25px); }
         .qr-btn { 
             width: 65px; height: 65px; background: var(--accent); 
@@ -106,7 +105,6 @@
 </head>
 <body>
 
-    <!-- MODAL -->
     <div id="custom-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <i id="modal-icon" class="fa-solid fa-circle-check"></i>
@@ -136,7 +134,7 @@
         </div>
     </div>
 
-    <!-- ACTIVACIÓN -->
+    <!-- REGISTRO -->
     <div id="register-view" class="auth-container hidden">
         <div class="auth-card">
             <h2>ACTIVA TU CUENTA</h2>
@@ -179,10 +177,10 @@
         </div>
 
         <div class="class-hero">
-            <p style="margin:0; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Próxima Clase</p>
+            <p style="margin:0; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Tu Próxima Clase</p>
             <h2 id="next-class-time" style="margin:12px 0; font-size:28px; font-weight:800;">--:--</h2>
             <p id="next-class-info" style="margin:0; font-size:15px; font-weight:600; opacity:0.9;"><i class="fa-solid fa-location-dot"></i> Arashi Badalona</p>
-            <button class="action-btn" id="confirm-btn" style="background:white; color:black; margin-top:20px; box-shadow:none;" onclick="confirmAttendance()">CONFIRMAR ASISTENCIA</button>
+            <button class="action-btn" id="confirm-btn" style="background:white; color:black; margin-top:25px; box-shadow:none;" onclick="confirmAttendance()">CONFIRMAR ASISTENCIA</button>
         </div>
     </div>
 
@@ -195,14 +193,13 @@
 
     <!-- NAVEGACIÓN -->
     <nav class="nav-bar hidden" id="main-nav">
-        <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
-        <a href="#" class="nav-item" onclick="showView('hours', this)"><i class="fa-solid fa-award"></i><span>Horas</span></a>
+        <a href="#" id="nav-inicio" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
         
-        <div class="qr-btn-container" onclick="showModal('Próximamente', 'El escáner QR se activará en la siguiente fase.', 'fa-qrcode')">
+        <div class="qr-btn-container" onclick="showModal('Fichar', 'Escanea el código QR del Dojo para validar tu asistencia.', 'fa-qrcode')">
             <div class="qr-btn"><i class="fa-solid fa-qrcode"></i></div>
         </div>
 
-        <a href="#" class="nav-item" id="nav-sensei" style="display:none;" onclick="loadSenseiPanel(this)"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
+        <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="loadSenseiPanel(this)"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
         <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
     </nav>
 
@@ -212,7 +209,6 @@
 
         window.onload = () => { if (localStorage.getItem('aikido_jwt')) { initApp(); } };
 
-        // VALIDACIÓN DNI
         const setupDniInput = (id) => {
             document.getElementById(id).addEventListener('input', (e) => {
                 let val = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
@@ -255,7 +251,7 @@
                     localStorage.setItem('aikido_jwt', data.jwt);
                     localStorage.setItem('aikido_user', JSON.stringify(data.user));
                     initApp();
-                } else { showModal('Error', 'DNI o contraseña incorrectos', 'fa-circle-xmark'); }
+                } else { showModal('Error', 'Credenciales incorrectas', 'fa-circle-xmark'); }
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
         });
 
@@ -263,7 +259,7 @@
             const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             document.getElementById('main-nav').classList.remove('hidden');
-            showView('dashboard');
+            showView('dashboard', document.getElementById('nav-inicio'));
 
             try {
                 const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, {
@@ -279,7 +275,10 @@
                     document.getElementById('user-initials').innerText = iniciales.toUpperCase();
                     document.getElementById('user-display-name').innerText = p.nombre;
                     
-                    if(p.es_instructor) document.getElementById('nav-sensei').style.display = 'flex';
+                    // --- ARREGLO SENSEI: Lógica más agresiva ---
+                    if(p.es_instructor === true || p.es_instructor === "true") {
+                        document.getElementById('nav-sensei').style.display = 'flex';
+                    }
 
                     renderProgress(p.horas_acumuladas || 0, p.grado_objetivo);
                     updateSchedule(p.grupo);
@@ -350,7 +349,8 @@
             try {
                 const res = await fetch(`${API_URL}/api/requisito-grados?filters[grado][$eq]=${objetivo}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                if (json.data[0]) necesarias = (json.data[0].attributes || json.data[0]).horas_necesarias;
+                const d = json.data[0];
+                if (d) necesarias = (d.attributes || d).horas_necesarias;
             } catch (e) {}
             const porcentaje = Math.min(Math.round((actuales / necesarias) * 100), 100);
             document.getElementById('progress-ring').style.strokeDashoffset = 176 - (176 * porcentaje / 100);
@@ -363,6 +363,7 @@
             document.getElementById('register-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('sensei-view').classList.add('hidden');
+            
             if (view !== 'login' && view !== 'register') {
                 document.getElementById(`${view}-view`).classList.remove('hidden');
                 if (el) {
