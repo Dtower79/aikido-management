@@ -103,8 +103,9 @@
             <div><h3 style="margin:0; font-size:16px; font-weight:700;" id="target-grade-label">Grado</h3><p style="margin:4px 0 0; font-size:12px; color:var(--text-muted)" id="hours-summary">Calculando...</p></div>
         </div>
         <div class="class-hero" id="class-card">
-            <p style="margin:0; font-size:11px; font-weight:800; text-transform:uppercase; opacity:0.8;">Tu Próxima Clase</p>
-            <h2 id="next-class-time" style="margin:10px 0; font-size:26px; font-weight:800;">Buscando...</h2>
+            <p style="margin:0; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">Tu Próxima Clase</p>
+            <h2 id="next-class-time" style="margin:10px 0 0; font-size:26px; font-weight:800;">Buscando...</h2>
+            <p id="next-class-date" style="margin:0 0 10px; font-size:14px; opacity:0.8; font-weight:800;">--/--/----</p>
             <p id="next-class-info" style="margin:0; font-size:14px; font-weight:600;"><i class="fa-solid fa-location-dot"></i> Cargando horario...</p>
             <button class="action-btn" id="confirm-btn" style="background:white; color:black; margin-top:20px; box-shadow:none;" onclick="confirmAttendance()">CONFIRMAR ASISTENCIA</button>
         </div>
@@ -122,10 +123,11 @@
         <div id="student-list" style="margin-top:20px;"></div>
     </div>
 
+    <!-- NAV -->
     <nav class="nav-bar hidden" id="main-nav">
         <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
         <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
-        <div class="qr-main-btn" onclick="showModal('Fichar Asistencia', 'Apunta al código QR del Sensei al terminar la clase.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
+        <div class="qr-main-btn" onclick="showModal('Fichar Asistencia', 'Apunta al código QR del Dojo al terminar la clase.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
         <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="loadSenseiPanel(this)"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
         <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
     </nav>
@@ -136,6 +138,15 @@
         let claseHoyId = null;
 
         window.onload = () => { if (localStorage.getItem('aikido_jwt')) initApp(); };
+
+        // MODAL HELPER
+        function showModal(title, text, icon = 'fa-circle-check') {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-text').innerText = text;
+            document.getElementById('modal-icon').className = `fa-solid ${icon}`;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+        function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
 
         async function initApp() {
             const token = localStorage.getItem('aikido_jwt');
@@ -159,27 +170,21 @@
 
         async function checkTodayClass() {
             const token = localStorage.getItem('aikido_jwt');
-            const now = new Date();
-            // Creamos rango de hoy para evitar errores de Datetime
-            const start = new Date(now.setHours(0,0,0,0)).toISOString();
-            const end = new Date(now.setHours(23,59,59,999)).toISOString();
-            
+            const today = new Date().toISOString().split('T')[0];
             try {
-                const res = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$gte]=${start}&filters[Fecha_Hora][$lte]=${end}&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$startsWith]=${today}&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-
                 if (json.data && json.data.length > 0) {
                     const clase = json.data[0].attributes || json.data[0];
                     claseHoyId = json.data[0].documentId || json.data[0].id;
-                    // Fix Zona Horaria: Tomamos la hora UTC y la mostramos tal cual (para que coincida con Strapi)
                     const d = new Date(clase.Fecha_Hora);
-                    const horaStr = d.getUTCHours().toString().padStart(2, '0') + ":" + d.getUTCMinutes().toString().padStart(2, '0');
-                    
-                    document.getElementById('next-class-time').innerText = horaStr;
+                    document.getElementById('next-class-time').innerText = d.getUTCHours().toString().padStart(2, '0') + ":" + d.getUTCMinutes().toString().padStart(2, '0');
+                    document.getElementById('next-class-date').innerText = d.toLocaleDateString('es-ES');
                     document.getElementById('next-class-info').innerHTML = `<i class="fa-solid fa-location-dot"></i> Arashi Badalona (${clase.Tipo})`;
                     document.getElementById('confirm-btn').disabled = false;
                 } else {
                     document.getElementById('next-class-time').innerText = "Sin clases hoy";
+                    document.getElementById('next-class-date').innerText = "--/--/----";
                     document.getElementById('next-class-info').innerText = "Día de descanso, Oss!";
                     document.getElementById('confirm-btn').disabled = true;
                 }
@@ -199,7 +204,7 @@
                     showModal('¡OSS!', 'Asistencia confirmada. El Sensei te validará en el Dojo.', 'fa-check-double');
                     document.getElementById('confirm-btn').innerText = "CONFIRMADO";
                     document.getElementById('confirm-btn').disabled = true;
-                } else { showModal('Aviso', 'Ya has confirmado tu asistencia para esta clase.', 'fa-circle-exclamation'); }
+                } else { showModal('Aviso', 'Ya has confirmado para esta clase.', 'fa-circle-exclamation'); }
             } catch (e) { showModal('Error', 'Fallo de conexión.', 'fa-wifi'); }
         }
 
@@ -217,7 +222,7 @@
             const porcentaje = Math.min(Math.round((actuales / necesarias) * 100), 100);
             document.getElementById('progress-ring').style.strokeDashoffset = 176 - (176 * porcentaje / 100);
             document.getElementById('target-grade-label').innerText = `Camino al ${objetivo}`;
-            document.getElementById('hours-summary').innerText = `${actuales} de ${necesarias} horas (${porcentaje}%)`;
+            document.getElementById('hours-summary').innerText = `${actuales}h de ${necesarias}h completadas (${porcentaje}%)`;
         }
 
         async function loadSenseiPanel(el) {
@@ -226,8 +231,8 @@
             const listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "<p>Buscando alumnos...</p>";
             try {
-                // Filtramos por estado minúsculas por si acaso
-                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$containsi]=Confirmado&populate=alumno,clase`, { headers: { 'Authorization': `Bearer ${token}` } });
+                // SINCRO STRAI V5: populate exacto
+                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][fields][0]=nombre&populate[alumno][fields][1]=apellidos&populate[clase][fields][0]=Duracion`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 listDiv.innerHTML = (json.data && json.data.length > 0) ? "" : "<p>No hay confirmaciones pendientes.</p>";
                 json.data.forEach(asist => {
@@ -237,7 +242,7 @@
                     const docId = asist.documentId || asist.id;
                     listDiv.innerHTML += `<div class="student-item"><div><h4>${alumno.nombre} ${alumno.apellidos}</h4><p>Clase de ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${docId}', '${a.alumno.data.documentId}', ${clase.Duracion})">VALIDAR</button></div>`;
                 });
-            } catch (e) { listDiv.innerHTML = "<p>Error de conexión.</p>"; }
+            } catch (e) { listDiv.innerHTML = "<p>Error de conexión al cargar lista.</p>"; }
         }
 
         async function validateAttendance(asistId, alumnoDocId, duracion) {
@@ -276,7 +281,6 @@
             document.getElementById(view + '-view').classList.remove('hidden');
             if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
         }
-        function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
         function logout() { localStorage.clear(); location.reload(); }
     </script>
 </body>
