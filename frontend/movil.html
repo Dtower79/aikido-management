@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ef4444">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Arashi App</title>
+    
+    <!-- Enlace al manifest para pantalla completa -->
+    <link rel="manifest" href="manifest.json">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -74,6 +80,8 @@
             box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
         }
 
+        .action-btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+
         .auth-footer { margin-top: 25px; font-size: 14px; color: var(--text-muted); }
         .auth-footer a { color: var(--accent); text-decoration: none; font-weight: 800; }
 
@@ -141,7 +149,7 @@
             <form id="login-form">
                 <div class="input-group">
                     <i class="fa-solid fa-id-card"></i>
-                    <input type="text" id="dni-login" placeholder="Introduce tu DNI" required>
+                    <input type="text" id="dni-login" placeholder="DNI: 12345678X" required maxlength="9">
                 </div>
                 <div class="input-group">
                     <i class="fa-solid fa-lock"></i>
@@ -155,15 +163,15 @@
         </div>
     </div>
 
-    <!-- VISTA ACTIVACIÓN (REGISTRO) -->
+    <!-- VISTA ACTIVACIÓN -->
     <div id="register-view" class="auth-container hidden">
         <div class="auth-card">
             <h2>ACTIVA TU CUENTA</h2>
-            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Solo para alumnos ya inscritos en Arashi.</p>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Para alumnos ya inscritos en Arashi.</p>
             <form id="register-form">
                 <div class="input-group">
                     <i class="fa-solid fa-id-card"></i>
-                    <input type="text" id="reg-dni" placeholder="Tu DNI oficial" required>
+                    <input type="text" id="reg-dni" placeholder="DNI: 12345678X" required maxlength="9">
                 </div>
                 <div class="input-group">
                     <i class="fa-solid fa-key"></i>
@@ -204,7 +212,7 @@
             <p style="margin:0; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Tu Próxima Clase</p>
             <h2 id="next-class-time" style="margin:12px 0; font-size:28px; font-weight:800;">--:--</h2>
             <p id="next-class-info" style="margin:0; font-size:15px; font-weight:600; opacity:0.9;"><i class="fa-solid fa-location-dot"></i> Cargando...</p>
-            <button class="action-btn" id="confirm-btn" style="background:white; color:black; margin-top:25px; box-shadow:none;">CONFIRMAR ASISTENCIA</button>
+            <button class="action-btn" id="confirm-btn" style="background:white; color:black; margin-top:25px; box-shadow:none;" onclick="confirmAttendance()">CONFIRMAR ASISTENCIA</button>
         </div>
 
         <nav class="nav-bar">
@@ -218,28 +226,37 @@
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         let alumnoGlobal = null;
+        let proximaClaseId = null;
 
         window.onload = () => { if (localStorage.getItem('aikido_jwt')) { initApp(); } };
 
-        // --- ACTIVACIÓN MEJORADA ---
+        // VALIDACIÓN DNI EN TIEMPO REAL
+        const setupDniInput = (id) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                let val = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
+                if (val.length > 9) val = val.slice(0, 9);
+                e.target.value = val;
+            });
+        };
+        setupDniInput('dni-login');
+        setupDniInput('reg-dni');
+
+        // --- ACTIVACIÓN ---
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const dni = document.getElementById('reg-dni').value.toUpperCase();
+            const dni = document.getElementById('reg-dni').value;
             const password = document.getElementById('reg-pass').value;
 
+            if(!/^[0-9]{8}[A-Z]$/.test(dni)) return showModal('Formato Incorrecto', 'El DNI debe ser 8 números y 1 letra.', 'fa-circle-exclamation');
+
             try {
-                // 1. Verificar si el alumno existe en la BBDD
                 const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
                 const checkData = await checkRes.json();
-
-                if (checkData.data.length === 0) {
-                    return showModal('DNI No Reconocido', 'No constas en nuestra base de datos. Habla con tu Sensei.', 'fa-circle-exclamation');
-                }
+                if (checkData.data.length === 0) return showModal('DNI No Reconocido', 'No constas en nuestra base de datos.', 'fa-circle-exclamation');
 
                 const alumno = checkData.data[0];
                 const email = (alumno.attributes ? alumno.attributes.email : alumno.email) || `${dni.toLowerCase()}@arashi.com`;
 
-                // 2. Registrar usuario en Strapi vinculado a ese DNI
                 const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -247,18 +264,16 @@
                 });
 
                 if (regRes.ok) {
-                    showModal('¡Activado!', 'Tu cuenta está lista. Ya puedes entrar.', 'fa-circle-check');
+                    showModal('¡Activado!', 'Cuenta lista. Ya puedes entrar.', 'fa-circle-check');
                     showView('login');
-                } else {
-                    showModal('Error', 'Esta cuenta ya podría estar activa.', 'fa-circle-xmark');
-                }
+                } else { showModal('Error', 'Esta cuenta ya está activa.', 'fa-circle-xmark'); }
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
         });
 
         // --- LOGIN ---
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const identifier = document.getElementById('dni-login').value.toUpperCase();
+            const identifier = document.getElementById('dni-login').value;
             const password = document.getElementById('pass-login').value;
 
             try {
@@ -298,27 +313,73 @@
             } catch (e) { console.error(e); }
         }
 
-        // --- LÓGICA DE HORARIOS SEGÚN GRUPO ---
         function updateSchedule(grupo) {
             const timeLabel = document.getElementById('next-class-time');
             const infoLabel = document.getElementById('next-class-info');
-            const day = new Date().getDay(); // 0=Dom, 1=Lun, 2=Mar, 3=Mie, 4=Jue...
+            const day = new Date().getDay(); 
 
             if (grupo === 'Kids') {
                 timeLabel.innerText = "18:00 - 19:00";
                 infoLabel.innerHTML = `<i class="fa-solid fa-child"></i> Grupo Kids (Martes y Jueves)`;
             } else {
-                // Adultos (Mañanas y Full Time)
-                if (day === 2) { // Si es Martes
+                if (day === 2) { 
                     timeLabel.innerText = "10:00 o 19:00";
                     infoLabel.innerHTML = `<i class="fa-solid fa-clock"></i> Mañanas o Tardes`;
-                } else if (day === 4) { // Si es Jueves
+                } else if (day === 4) { 
                     timeLabel.innerText = "19:00 - 20:30";
                     infoLabel.innerHTML = `<i class="fa-solid fa-moon"></i> Solo Tardes`;
                 } else {
                     timeLabel.innerText = "Próxima: Martes";
                     infoLabel.innerText = "Prepara tu equipo, Oss!";
+                    document.getElementById('confirm-btn').disabled = true;
                 }
+            }
+        }
+
+        // LÓGICA DE CONFIRMACIÓN DE ASISTENCIA
+        async function confirmAttendance() {
+            const token = localStorage.getItem('aikido_jwt');
+            const btn = document.getElementById('confirm-btn');
+            
+            // Paso 1: Buscar si hay una clase creada en Strapi para HOY
+            // (Para que esto funcione, debes haber creado la Clase en Strapi)
+            try {
+                const classRes = await fetch(`${API_URL}/api/clases?filters[fecha][$contains]=${new Date().toISOString().split('T')[0]}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const classData = await classRes.json();
+                
+                if(classData.data.length === 0) {
+                    return showModal('Sin Clases', 'No hay ninguna clase programada para hoy en el sistema.', 'fa-calendar-xmark');
+                }
+
+                const claseId = classData.data[0].id || classData.data[0].documentId;
+
+                // Paso 2: Crear el registro de asistencia
+                const assistRes = await fetch(`${API_URL}/api/asistencias`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({
+                        data: {
+                            alumno: alumnoGlobal.id || alumnoGlobal.documentId,
+                            clase: claseId,
+                            Estado: 'Confirmado'
+                        }
+                    })
+                });
+
+                if(assistRes.ok) {
+                    showModal('¡Confirmado!', 'Se ha registrado tu intención de asistir.', 'fa-check-double');
+                    btn.innerText = "ASISTENCIA CONFIRMADA";
+                    btn.disabled = true;
+                    btn.style.background = "#22c55e";
+                    btn.style.color = "white";
+                }
+            } catch (e) {
+                showModal('Error', 'No se pudo confirmar la asistencia.', 'fa-circle-xmark');
             }
         }
 
@@ -342,8 +403,11 @@
         function showView(view) {
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('register-view').classList.add('hidden');
-            document.getElementById('dashboard-view').classList.add('hidden');
-            document.getElementById(`${view}-view`).classList.remove('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            if(view === 'login' || view === 'register') {
+                document.getElementById('dashboard-view').classList.add('hidden');
+                document.getElementById(`${view}-view`).classList.remove('hidden');
+            }
         }
 
         function showModal(title, text, icon) {

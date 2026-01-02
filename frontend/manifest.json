@@ -1,0 +1,16 @@
+{
+  "short_name": "Arashi",
+  "name": "Arashi Group Aikido",
+  "icons": [
+    {
+      "src": "img/logo-arashi.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ],
+  "start_url": "/movil.html",
+  "background_color": "#05080f",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#ef4444"
+}
