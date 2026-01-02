@@ -25,9 +25,10 @@
             --success: #22c55e;
         }
 
+        /* EVITAR FLASH BLANCO AL CARGAR */
+        html, body { background-color: var(--bg); margin: 0; padding: 0; height: 100%; }
+
         body {
-            margin: 0; padding: 0;
-            background-color: var(--bg);
             color: var(--text-main);
             font-family: 'Inter', sans-serif;
             background-image: radial-gradient(circle at top right, #1e1b4b, transparent);
@@ -39,7 +40,10 @@
 
         .hidden { display: none !important; }
 
-        /* --- MURO DE INSTALACIÓN (SOLO MÓVIL) --- */
+        /* --- CONTENEDOR PRINCIPAL (OCULTO POR DEFECTO) --- */
+        #app-content { display: none; flex-direction: column; flex: 1; }
+
+        /* --- MURO DE INSTALACIÓN (VISIBLE POR DEFECTO) --- */
         #install-wall {
             position: fixed; inset: 0; background: var(--bg); z-index: 10000;
             display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center;
@@ -67,7 +71,6 @@
         /* --- SENSEI MANAGEMENT --- */
         .admin-box { background: rgba(255,255,255,0.05); border-radius: 24px; padding: 20px; margin-bottom: 20px; border: 1px dashed var(--glass-border); }
         .student-item { background: var(--card-bg); padding: 18px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid var(--glass-border); transition: 0.3s; }
-        .grade-tag { opacity: 0.6; font-size: 12px; font-weight: 400; margin-left: 5px; }
         
         /* --- NAV --- */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.96); backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
@@ -77,16 +80,33 @@
         .qr-main-btn { transform: translateY(-20px); }
         .qr-inner { width: 60px; height: 60px; background: var(--accent); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); }
 
-        /* MODAL EDITAR CLASE */
+        /* MODALES */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
+        .modal-content { background: #111827; border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 40px; width: 100%; max-width: 320px; text-align: center; }
         .edit-class-modal { text-align: left; }
         .edit-class-modal label { display: block; margin: 10px 0 5px; font-size: 12px; color: var(--text-muted); }
         .edit-class-modal input, .edit-class-modal select { width: 100%; padding: 12px; border-radius: 12px; background: #000; border: 1px solid var(--glass-border); color: white; margin-bottom: 15px; }
     </style>
+
+    <script>
+        // --- LÓGICA DE BLOQUEO INMEDIATA (EJECUTADA ANTES DEL BODY) ---
+        function checkInstallation() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+            // Si es escritorio O ya está instalado
+            if (!isMobile || isStandalone) {
+                // Quitamos el muro y activamos la app antes de que se pinte nada más
+                document.documentElement.classList.add('ready');
+            }
+        }
+        checkInstallation();
+    </script>
 </head>
 <body>
 
-    <!-- MURO DE INSTALACIÓN (DINÁMICO) -->
-    <div id="install-wall" class="hidden">
+    <!-- MURO DE INSTALACIÓN -->
+    <div id="install-wall">
         <img src="img/logo-arashi.png" class="logo-img" style="width: 240px;">
         <h1 style="font-weight: 800; margin-bottom: 10px;">¡OSS!</h1>
         <p style="color: var(--text-muted); margin-bottom: 40px;">Esta App debe estar instalada para poder entrar al Dojo desde el móvil.</p>
@@ -94,71 +114,76 @@
         <p style="font-size: 12px; margin-top: 20px; opacity: 0.5;">Si ya la tienes instalada, búscala en tu pantalla de inicio.</p>
     </div>
 
-    <!-- MODAL GLOBAL -->
-    <div id="custom-modal" class="modal-overlay hidden">
-        <div class="modal-content" id="modal-container">
-            <i id="modal-icon" class="fa-solid fa-circle-check"></i>
-            <h3 id="modal-title">¡OSS!</h3>
-            <div id="modal-body-content"><p id="modal-text">...</p></div>
-            <div id="modal-footer-actions" style="margin-top: 20px;">
-                <button class="action-btn primary" onclick="closeModal()" style="padding: 12px;">ENTENDIDO</button>
+    <!-- CONTENEDOR DE LA APP (DENTRO DE APP-CONTENT) -->
+    <div id="app-content">
+        <!-- MODAL GLOBAL -->
+        <div id="custom-modal" class="modal-overlay hidden">
+            <div class="modal-content" id="modal-container">
+                <i id="modal-icon" class="fa-solid fa-circle-check"></i>
+                <h3 id="modal-title">¡OSS!</h3>
+                <div id="modal-body-content"><p id="modal-text">...</p></div>
+                <div id="modal-footer-actions" style="margin-top: 20px;">
+                    <button class="action-btn primary" onclick="closeModal()" style="padding: 12px;">ENTENDIDO</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- VISTA LOGIN -->
-    <div id="login-view" class="auth-container">
-        <img src="img/logo-arashi.png" class="logo-img">
-        <div class="auth-card">
-            <h2>HOLA, ARASHI!</h2>
-            <form id="login-form">
-                <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="dni-login" placeholder="DNI: 12345678X" required></div>
-                <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="pass-login" placeholder="Contraseña" required></div>
-                <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
-            </form>
-            <div class="auth-footer">¿Nuevo Alumno? <a href="#" onclick="showView('register')">Activa tu cuenta</a></div>
-        </div>
-    </div>
-
-    <!-- DASHBOARD -->
-    <div id="dashboard-view" class="hidden">
-        <div class="header-app">
-            <div><p style="color:var(--text-muted); margin:0; font-size:13px;">Hola, Arashi!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
-            <div class="profile-circle" id="user-initials">??</div>
-        </div>
-        <div class="class-hero" id="class-hero-card">
-            <p style="margin:0; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">Tu Próxima Clase</p>
-            <h2 id="next-class-time" style="margin:10px 0 2px; font-size:32px; font-weight:800;">--:--</h2>
-            <p id="next-class-date" style="margin:0 0 15px; font-size:16px; opacity:0.9; font-weight:800;">--/--/----</p>
-            <p id="next-class-info" style="margin:0 0 25px; font-size:14px; font-weight:600;"><i class="fa-solid fa-location-dot"></i> Cargando...</p>
-            <button class="action-btn" id="confirm-btn" onclick="confirmAttendance()">CONFIRMAR ASISTENCIA</button>
-        </div>
-    </div>
-
-    <!-- SENSEI VIEW -->
-    <div id="sensei-view" class="hidden">
-        <div class="admin-box">
-            <h3 style="margin:0 0 15px; font-weight:800; color:var(--accent);">SENSEI TOOLS</h3>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <button class="action-btn secondary" style="padding:10px; font-size:11px;" onclick="generateMonthClasses()">GENERAR MES</button>
-                <button class="action-btn secondary" style="padding:10px; font-size:11px;" onclick="loadManageClasses()">EDITAR CLASES</button>
+        <!-- VISTA LOGIN -->
+        <div id="login-view" class="auth-container">
+            <img src="img/logo-arashi.png" class="logo-img">
+            <div class="auth-card">
+                <h2>HOLA, ARASHI!</h2>
+                <form id="login-form">
+                    <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="dni-login" placeholder="DNI: 12345678X" required></div>
+                    <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="pass-login" placeholder="Contraseña" required></div>
+                    <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
+                </form>
+                <div class="auth-footer">¿Nuevo Alumno? <a href="#" onclick="showView('register')">Activa tu cuenta</a></div>
             </div>
         </div>
-        <div id="student-list"></div>
-    </div>
 
-    <div id="clases-view" class="hidden">
-        <h2 style="margin-top:20px; font-weight:800;">CALENDARIO</h2>
-        <div id="clases-list-container"></div>
-    </div>
+        <!-- DASHBOARD -->
+        <div id="dashboard-view" class="hidden">
+            <div class="header-app">
+                <div><p style="color:var(--text-muted); margin:0; font-size:13px;">Hola, Arashi!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
+                <div class="profile-circle" id="user-initials">??</div>
+            </div>
+            <div class="class-hero" id="class-hero-card">
+                <p style="margin:0; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">Tu Próxima Clase</p>
+                <h2 id="next-class-time" style="margin:10px 0 2px; font-size:32px; font-weight:800;">--:--</h2>
+                <p id="next-class-date" style="margin:0 0 15px; font-size:16px; opacity:0.9; font-weight:800;">--/--/----</p>
+                <p id="next-class-info" style="margin:0 0 25px; font-size:14px; font-weight:600;"><i class="fa-solid fa-location-dot"></i> Cargando...</p>
+                <button class="action-btn" id="confirm-btn" onclick="confirmAttendance()">CONFIRMAR ASISTENCIA</button>
+            </div>
+        </div>
 
-    <nav class="nav-bar hidden" id="main-nav">
-        <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
-        <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
-        <div class="qr-main-btn" onclick="showModal('Asistencia', 'Presenta tu QR en el Dojo.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
-        <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
-        <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
-    </nav>
+        <!-- SENSEI VIEW -->
+        <div id="sensei-view" class="hidden">
+            <div class="admin-box">
+                <h3 style="margin:0 0 15px; font-weight:800; color:var(--accent);">SENSEI TOOLS</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <button class="action-btn secondary" style="padding:10px; font-size:11px;" onclick="generateMonthClasses()">GENERAR MES</button>
+                    <button class="action-btn secondary" style="padding:10px; font-size:11px;" onclick="loadManageClasses()">EDITAR CLASES</button>
+                </div>
+            </div>
+            <div id="student-list"></div>
+        </div>
+
+        <!-- CALENDARIO -->
+        <div id="clases-view" class="hidden">
+            <h2 style="margin-top:20px; font-weight:800;">CALENDARIO</h2>
+            <div id="clases-list-container"></div>
+        </div>
+
+        <!-- NAVEGACIÓN -->
+        <nav class="nav-bar hidden" id="main-nav">
+            <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
+            <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
+            <div class="qr-main-btn" onclick="showModal('Asistencia', 'Presenta tu QR en el Dojo.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
+            <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
+            <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
+        </nav>
+    </div>
 
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
@@ -166,12 +191,10 @@
         let claseHoyId = null;
         let deferredPrompt;
 
-        // --- 1. LÓGICA DE INSTALACIÓN (FILTRO ESCRITORIO) ---
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
-        if (isMobile && !isStandalone) {
-            document.getElementById('install-wall').classList.remove('hidden');
+        // --- 1. APLICAR VISIBILIDAD BASADA EN LA DECISIÓN INICIAL ---
+        if (document.documentElement.classList.contains('ready')) {
+            document.getElementById('install-wall').classList.add('hidden');
+            document.getElementById('app-content').style.display = 'flex';
         }
 
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -184,8 +207,10 @@
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
-                    document.getElementById('install-wall').classList.add('hidden');
+                    location.reload(); // Recargamos para que el checkStandalone detecte el cambio
                 }
+            } else {
+                alert("Para instalar: Pulsa el icono de 'Compartir' y luego 'Añadir a pantalla de inicio'.");
             }
         });
 
@@ -236,19 +261,13 @@
             try {
                 const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                
-                // LÓGICA DE EXPIRACIÓN: Solo clases con hora de inicio mayor a la actual
-                const clasesFuturas = (json.data || []).filter(c => {
-                    const f = formatTimeSafe(parseData(c).Fecha_Hora);
-                    return f.raw > now; 
-                });
+                const clasesFuturas = (json.data || []).filter(c => formatTimeSafe(parseData(c).Fecha_Hora).raw > now);
 
                 if (clasesFuturas.length > 0) {
                     const claseRaw = clasesFuturas[0];
                     const clase = parseData(claseRaw);
                     claseHoyId = getID(claseRaw);
                     const f = formatTimeSafe(clase.Fecha_Hora);
-                    
                     document.getElementById('next-class-time').innerText = f.time;
                     document.getElementById('next-class-date').innerText = f.date;
                     document.getElementById('next-class-info').innerHTML = `<i class="fa-solid fa-location-dot"></i> Arashi Badalona (${clase.Tipo} • ${clase.Duracion}h)`;
@@ -266,29 +285,22 @@
                 } else {
                     document.getElementById('next-class-time').innerText = "SIN CLASES";
                     document.getElementById('next-class-date').innerText = "Día de descanso";
-                    document.getElementById('next-class-info').innerText = "No hay más clases programadas hoy.";
                     document.getElementById('confirm-btn').classList.add('hidden');
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
         // --- 4. GESTIÓN SENSEI ---
         async function generateMonthClasses() {
             const token = localStorage.getItem('aikido_jwt');
             if(!confirm("¿Generar clases automáticas L-M-V para los próximos 30 días?")) return;
-            
             showModal("Procesando", "Generando calendario...", "fa-spinner fa-spin");
-            const days = [1, 3, 5]; 
-            const now = new Date();
-            let creadas = 0;
-
+            const days = [1, 3, 5]; const now = new Date(); let creadas = 0;
             for(let i=0; i<30; i++) {
-                let d = new Date();
-                d.setDate(now.getDate() + i);
+                let d = new Date(); d.setDate(now.getDate() + i);
                 if(days.includes(d.getDay())) {
                     d.setUTCHours(19, 0, 0, 0); 
-                    const payload = { data: { Fecha_Hora: d.toISOString(), Duracion: 1.5, Tipo: 'Normal' } };
-                    await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+                    await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: d.toISOString(), Duracion: 1.5, Tipo: 'Normal' } }) });
                     creadas++;
                 }
             }
@@ -305,11 +317,7 @@
                 listDiv.innerHTML = "<h3 style='margin-bottom:15px;'>Editar Horarios</h3>";
                 json.data.forEach(c => {
                     const d = parseData(c); const f = formatTimeSafe(d.Fecha_Hora);
-                    listDiv.innerHTML += `
-                        <div class="student-item" onclick="openEditClass('${getID(c)}', '${d.Fecha_Hora}', ${d.Duracion})">
-                            <div><h4 style="color:var(--accent)">${f.date} @ ${f.time}</h4><p style="font-size:11px; opacity:0.6;">${d.Duracion}h</p></div>
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </div>`;
+                    listDiv.innerHTML += `<div class="student-item" onclick="openEditClass('${getID(c)}', '${d.Fecha_Hora}', ${d.Duracion})"><div><h4 style="color:var(--accent)">${f.date} @ ${f.time}</h4><p style="font-size:11px; opacity:0.6;">${d.Duracion}h</p></div><i class="fa-solid fa-pen-to-square"></i></div>`;
                 });
             } catch (e) {}
         }
@@ -317,14 +325,7 @@
         function openEditClass(id, fechaRaw, duracion) {
             const f = fechaRaw.split('T')[0];
             const h = fechaRaw.split('T')[1].substring(0,5);
-            const html = `
-                <div class="edit-class-modal">
-                    <label>Fecha:</label><input type="date" id="edit-date" value="${f}">
-                    <label>Hora:</label><input type="time" id="edit-time" value="${h}">
-                    <label>Duración:</label>
-                    <select id="edit-dur"><option value="1" ${duracion == 1 ? 'selected' : ''}>1.0h</option><option value="1.5" ${duracion == 1.5 ? 'selected' : ''}>1.5h</option><option value="2" ${duracion == 2 ? 'selected' : ''}>2.0h</option></select>
-                    <button class="action-btn primary" onclick="saveClassChange('${id}')">GUARDAR</button>
-                </div>`;
+            const html = `<div class="edit-class-modal"><label>Fecha:</label><input type="date" id="edit-date" value="${f}"><label>Hora:</label><input type="time" id="edit-time" value="${h}"><label>Duración:</label><select id="edit-dur"><option value="1" ${duracion == 1 ? 'selected' : ''}>1.0h</option><option value="1.5" ${duracion == 1.5 ? 'selected' : ''}>1.5h</option><option value="2" ${duracion == 2 ? 'selected' : ''}>2.0h</option></select><button class="action-btn primary" onclick="saveClassChange('${id}')">GUARDAR</button></div>`;
             document.getElementById('modal-title').innerText = "Editar Clase";
             document.getElementById('modal-body-content').innerHTML = html;
             document.getElementById('modal-footer-actions').classList.add('hidden');
@@ -365,7 +366,7 @@
         async function loadSenseiPanel() {
             const token = localStorage.getItem('aikido_jwt');
             const listDiv = document.getElementById('student-list');
-            listDiv.innerHTML = "<p>Cargando...</p>";
+            listDiv.innerHTML = "<p>Cargando alumnos...</p>";
             try {
                 const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
@@ -378,7 +379,7 @@
                         const aluId = getID(alu);
                         if (!vistos.has(aluId)) {
                             vistos.add(aluId); const f = formatTimeSafe(cla.Fecha_Hora);
-                            listDiv.innerHTML += `<div class="student-item" id="item-${getID(asistRaw)}"><div><h4>${alu.nombre} ${alu.apellidos}</h4><p style="font-size:10px; color:var(--accent)">${f.date} @ ${f.time}</p></div><button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${aluId}', ${cla.Duracion})">VALIDAR</button></div>`;
+                            listDiv.innerHTML += `<div class="student-item" id="item-${getID(asistRaw)}"><div><h4>${alu.nombre} ${alu.apellidos}</h4><p style="font-size:10px; color:var(--accent)">${f.date} @ ${f.time}</p></div><button class="validate-btn" style="background:var(--success); color:white; border:none; padding:10px 15px; border-radius:12px; font-weight:800; font-size:11px;" onclick="validateAttendance('${getID(asistRaw)}', '${aluId}', ${cla.Duracion})">VALIDAR</button></div>`;
                         }
                     }
                 });
