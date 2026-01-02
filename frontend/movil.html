@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="img/logo-arashi.png">
+    <link rel="apple-touch-icon" href="img/logo-arashi-informe.png">
     <title>Arashi App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
         body { margin: 0; padding: 0; background-color: var(--bg); color: var(--text-main); font-family: 'Inter', sans-serif; background-image: radial-gradient(circle at top right, #1e1b4b, transparent); min-height: 100vh; overflow-x: hidden; }
         .hidden { display: none !important; }
 
-        /* MODAL */
+        /* MODALES */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 5000; }
         .modal-content { background: #111827; border: 1px solid var(--glass-border); padding: 30px; border-radius: 30px; width: 85%; max-width: 300px; text-align: center; }
         .modal-content i { font-size: 50px; color: var(--accent); margin-bottom: 15px; }
@@ -30,7 +30,7 @@
         .input-group input { width: 100%; padding: 16px 16px 16px 48px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; outline: none; }
         .action-btn { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 18px; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); }
         .auth-footer { margin-top: 35px; font-size: 13px; color: #64748b; }
-        .auth-footer a { color: #cbd5e1; text-decoration: underline; font-weight: 600; margin-left: 5px; }
+        .auth-footer a { color: #cbd5e1; text-decoration: underline; font-weight: 600; }
 
         /* DASHBOARD */
         #dashboard-view, #sensei-view, #clases-view { padding: 20px; padding-bottom: 120px; }
@@ -111,13 +111,11 @@
         </div>
     </div>
 
-    <!-- CALENDARIO -->
     <div id="clases-view" class="hidden">
         <h2 style="margin-top:20px; font-weight:800;">CALENDARIO</h2>
         <div id="clases-list-container" style="margin-top:20px;"></div>
     </div>
 
-    <!-- SENSEI -->
     <div id="sensei-view" class="hidden">
         <h2 style="margin-top:20px; font-weight:800;">SENSEI PANEL</h2>
         <div id="student-list" style="margin-top:20px;"></div>
@@ -174,6 +172,7 @@
             const now = new Date();
             const today = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
             try {
+                // Rango para Strapi v5 Datetime Fix
                 const res = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$gte]=${today}T00:00:00.000Z&filters[Fecha_Hora][$lte]=${today}T23:59:59.999Z&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 if (json.data && json.data.length > 0) {
@@ -211,10 +210,14 @@
         }
 
         async function renderProgress(actuales, objetivo) {
-            if(!objetivo) return;
+            if(!objetivo) {
+                document.getElementById('target-grade-label').innerText = "Grado no definido";
+                document.getElementById('hours-summary').innerText = "Habla con tu Sensei";
+                return;
+            }
             const token = localStorage.getItem('aikido_jwt');
             try {
-                // SINCRO STRAPI V5: Caso exacto para campos
+                // SINCRO STRAPI V5: Campos exactos
                 const res = await fetch(`${API_URL}/api/requisito-grados?filters[Grado][$eq]=${encodeURIComponent(objetivo)}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 if (json.data && json.data.length > 0) {
@@ -223,8 +226,13 @@
                     document.getElementById('progress-ring').style.strokeDashoffset = 176 - (176 * porcentaje / 100);
                     document.getElementById('target-grade-label').innerText = `Camino al ${objetivo}`;
                     document.getElementById('hours-summary').innerText = `${actuales}h de ${r.Horas_Necesarias}h completadas (${porcentaje}%)`;
+                } else {
+                    document.getElementById('target-grade-label').innerText = objetivo;
+                    document.getElementById('hours-summary').innerText = `${actuales}h acumuladas`;
                 }
-            } catch (e) { console.log("Progress error:", e); }
+            } catch (e) { 
+                document.getElementById('hours-summary').innerText = "Error al cargar requisitos";
+            }
         }
 
         async function loadSenseiPanel(el) {
@@ -233,10 +241,10 @@
             const listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "<p>Buscando alumnos...</p>";
             try {
-                // SINCRO STRAPI V5: Campos exactos de tus capturas
+                // SINCRO STRAPI V5: Campos exactos de tus capturas (Mayúsculas)
                 const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno]=*&populate[clase]=*`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                listDiv.innerHTML = (json.data && json.data.length > 0) ? "" : "<p>No hay confirmaciones hoy.</p>";
+                listDiv.innerHTML = (json.data && json.data.length > 0) ? "" : "<p>No hay alumnos confirmados hoy.</p>";
                 json.data.forEach(asist => {
                     const a = asist.attributes || asist;
                     const alumno = a.alumno.data.attributes || a.alumno.data;
@@ -244,20 +252,21 @@
                     const docId = asist.documentId || asist.id;
                     listDiv.innerHTML += `<div class="student-item"><div><h4>${alumno.nombre} ${alumno.apellidos}</h4><p>Clase de ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${docId}', '${a.alumno.data.documentId}', ${clase.Duracion})">VALIDAR</button></div>`;
                 });
-            } catch (e) { listDiv.innerHTML = "<p>Error de conexión al cargar lista.</p>"; }
+            } catch (e) { listDiv.innerHTML = "<p>Error al conectar con la base de datos.</p>"; }
         }
 
         async function validateAttendance(asistId, alumnoDocId, duracion) {
             const token = localStorage.getItem('aikido_jwt');
             try {
+                // Actualizar estado a Asistio (Mayúscula inicial como en tu Strapi)
                 await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: 'Asistio' } }) });
                 const alRes = await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const alData = await alRes.json();
                 const curH = (alData.data.attributes || alData.data).horas_acumuladas || 0;
                 await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: parseFloat(curH) + parseFloat(duracion) } }) });
-                showModal('¡OSS!', 'Asistencia validada con éxito.', 'fa-circle-check');
+                showModal('¡Validado!', 'Asistencia registrada con éxito.', 'fa-circle-check');
                 loadSenseiPanel(document.getElementById('nav-sensei'));
-            } catch (e) { showModal('Error', 'Fallo al validar.', 'fa-circle-xmark'); }
+            } catch (e) { showModal('Error', 'No se pudo validar.', 'fa-circle-xmark'); }
         }
 
         async function loadMonthlyClasses(el) {
@@ -278,40 +287,12 @@
             } catch(e) { container.innerHTML = "Error al cargar clases."; }
         }
 
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const identifier = document.getElementById('dni-login').value;
-            const password = document.getElementById('pass-login').value;
-            try {
-                const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
-                const data = await res.json();
-                if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-                else showModal('Error', 'DNI o contraseña incorrectos', 'fa-circle-xmark');
-            } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
-        });
-
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const dni = document.getElementById('reg-dni').value;
-            const password = document.getElementById('reg-pass').value;
-            try {
-                const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
-                const checkData = await checkRes.json();
-                if (checkData.data.length === 0) return showModal('Error', 'DNI no encontrado.', 'fa-circle-exclamation');
-                const p = checkData.data[0].attributes || checkData.data[0];
-                const email = p.email || `${dni.toLowerCase()}@arashi.com`;
-                const regRes = await fetch(`${API_URL}/api/auth/local/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: dni, email: email, password: password }) });
-                if (regRes.ok) { showModal('¡OSS!', 'Activación completada.', 'fa-circle-check'); showView('login'); }
-                else showModal('Error', 'Esta cuenta ya está activa.', 'fa-circle-xmark');
-            } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
-        });
-
+        function logout() { localStorage.clear(); location.reload(); }
         function showView(view, el) {
             ['dashboard', 'register', 'login', 'sensei', 'clases'].forEach(v => { const d = document.getElementById(v + '-view'); if(d) d.classList.add('hidden'); });
             document.getElementById(view + '-view').classList.remove('hidden');
             if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
         }
-        function logout() { localStorage.clear(); location.reload(); }
     </script>
 </body>
 </html>
