@@ -257,19 +257,46 @@
         }
 
         async function renderProgress(actuales, objetivo) {
-            if(!objetivo) return;
+            const ring = document.getElementById('progress-ring');
+            const label = document.getElementById('target-grade-label');
+            const summary = document.getElementById('hours-summary');
+
+            if (!objetivo || objetivo === "NO DISP") {
+                label.innerText = "Grado no definido";
+                summary.innerText = "Habla con tu Sensei";
+                ring.style.strokeDashoffset = 176; // Vacío
+                return;
+            }
+
             const token = localStorage.getItem('aikido_jwt');
             try {
-                const res = await fetch(`${API_URL}/api/requisito-grados?filters[Grado][$eq]=${encodeURIComponent(objetivo)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/requisito-grados?filters[Grado][$eq]=${encodeURIComponent(objetivo)}`, { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                });
                 const json = await res.json();
+                
                 if (json.data && json.data.length > 0) {
                     const r = parseData(json.data[0]);
-                    const porcentaje = Math.min(Math.round((actuales / r.Horas_Necesarias) * 100), 100);
-                    document.getElementById('progress-ring').style.strokeDashoffset = 176 - (176 * porcentaje / 100);
-                    document.getElementById('target-grade-label').innerText = `Camino al ${objetivo}`;
-                    document.getElementById('hours-summary').innerText = `${actuales}h de ${r.Horas_Necesarias}h (${porcentaje}%)`;
+                    const horasNecesarias = parseFloat(r.Horas_Necesarias) || 1;
+                    const horasActuales = parseFloat(actuales) || 0;
+                    
+                    const porcentaje = Math.min(Math.round((horasActuales / horasNecesarias) * 100), 100);
+                    
+                    // Animación del círculo (SVG stroke-dasharray es 176)
+                    const offset = 176 - (176 * porcentaje / 100);
+                    ring.style.strokeDashoffset = offset;
+                    
+                    label.innerText = `Camino al ${objetivo}`;
+                    summary.innerText = `${horasActuales}h de ${horasNecesarias}h (${porcentaje}%)`;
+                } else {
+                    label.innerText = objetivo;
+                    summary.innerText = "Sin requisitos definidos";
+                    ring.style.strokeDashoffset = 176;
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error("Error en Progreso:", e);
+                summary.innerText = "Error al calcular horas";
+            }
         }
 
         async function loadSenseiPanel(el) {
@@ -277,26 +304,46 @@
             const token = localStorage.getItem('aikido_jwt');
             const listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "<p>Buscando alumnos...</p>";
+            
             try {
-                // SINCRO V5: Usamos populate básico pero efectivo
-                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
+                // En Strapi v5, a veces es mejor ser explícito con el populate
+                const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno]=*&populate[clase]=*`, { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                });
                 const json = await res.json();
-                console.log("Datos recibidos Sensei:", json.data);
-
+                
                 if (!json.data || json.data.length === 0) {
                     listDiv.innerHTML = "<p>No hay alumnos confirmados hoy.</p>";
                     return;
                 }
+
                 listDiv.innerHTML = "";
                 json.data.forEach(asistRaw => {
                     const a = parseData(asistRaw);
                     const alumno = parseRelation(a.alumno);
                     const clase = parseRelation(a.clase);
+                    
+                    // Verificación de seguridad para evitar que el bucle rompa por datos huérfanos
                     if (alumno && clase) {
-                        listDiv.innerHTML += `<div class="student-item"><div><h4>${alumno.nombre} ${alumno.apellidos}</h4><p>Clase de ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${getID(a.alumno.data)}', ${clase.Duracion})">VALIDAR</button></div>`;
+                        const nombreCompleto = `${alumno.nombre || ''} ${alumno.apellidos || ''}`.trim() || "Alumno Desconocido";
+                        const duracion = clase.Duracion || 0;
+                        
+                        listDiv.innerHTML += `
+                            <div class="student-item">
+                                <div>
+                                    <h4>${nombreCompleto}</h4>
+                                    <p>Clase de ${duracion}h</p>
+                                </div>
+                                <button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${getID(alumno)}', ${duracion})">
+                                    VALIDAR
+                                </button>
+                            </div>`;
                     }
                 });
-            } catch (e) { listDiv.innerHTML = "<p>Fallo de conexión.</p>"; }
+            } catch (e) {
+                console.error("Error en Sensei Panel:", e);
+                listDiv.innerHTML = "<p>Error al procesar lista de alumnos.</p>";
+            }
         }
 
         async function validateAttendance(asistId, alumnoDocId, duracion) {
