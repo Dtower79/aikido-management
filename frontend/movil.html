@@ -37,6 +37,30 @@
 
         .hidden { display: none !important; }
 
+        /* --- BOTÓN PREMIUM CON EFECTO CLICK --- */
+        .action-btn { 
+            width: 100%; 
+            padding: 18px; 
+            background: var(--accent); 
+            color: white; 
+            border: none; 
+            border-radius: 20px; 
+            font-size: 16px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); 
+            transition: all 0.1s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            outline: none;
+        }
+        .action-btn:active {
+            transform: translateY(4px) scale(0.97);
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+            background: #dc2626;
+        }
+        .action-btn:disabled { background: #334155; box-shadow: none; opacity: 0.6; cursor: default; }
+
         /* --- MODAL --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -50,32 +74,6 @@
             text-align: center;
         }
         .modal-content i { font-size: 50px; color: var(--accent); margin-bottom: 15px; }
-
-        /* --- BOTÓN PREMIUM --- */
-        .action-btn { 
-            width: 100%; 
-            padding: 18px; 
-            background: var(--accent); 
-            color: white; 
-            border: none; 
-            border-radius: 20px; 
-            font-size: 16px; 
-            font-weight: 800; 
-            cursor: pointer; 
-            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); 
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .action-btn:active {
-            transform: scale(0.95) translateY(5px);
-            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
-        }
-        .action-btn:disabled {
-            background: #334155;
-            box-shadow: none;
-            opacity: 0.6;
-        }
 
         /* --- AUTH --- */
         .auth-container { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
@@ -99,8 +97,9 @@
         .ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-dasharray: 176; stroke-dashoffset: 176; stroke-linecap: round; transition: 1.5s ease; }
         
         .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 30px 25px; border-radius: 30px; box-shadow: 0 15px 30px rgba(239,68,68,0.25); margin-bottom: 20px; text-align: center; }
-        .student-item { background: var(--card-bg); padding: 15px; border-radius: 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border: 1px solid var(--glass-border); text-align: left; }
-        .validate-btn { background: #22c55e; color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: 800; font-size: 11px; cursor:pointer; }
+        .student-item { background: var(--card-bg); padding: 20px; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: 1px solid var(--glass-border); }
+        .validate-btn { background: #22c55e; color: white; border: none; padding: 12px 18px; border-radius: 14px; font-weight: 800; font-size: 11px; cursor: pointer; transition: 0.2s; }
+        .validate-btn:active { transform: scale(0.9); }
 
         /* --- NAV --- */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.96); backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
@@ -108,8 +107,7 @@
         .nav-item.active { color: var(--accent); }
         .nav-item span { font-size: 9px; font-weight: 700; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
         .qr-main-btn { transform: translateY(-20px); }
-        .qr-inner { width: 60px; height: 60px; background: var(--accent); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transition: 0.2s; }
-        .qr-inner:active { transform: scale(0.9); }
+        .qr-inner { width: 60px; height: 60px; background: var(--accent); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); }
     </style>
 </head>
 <body>
@@ -119,11 +117,11 @@
             <i id="modal-icon" class="fa-solid fa-circle-check"></i>
             <h3 id="modal-title">¡OSS!</h3>
             <p id="modal-text">...</p>
-            <button class="action-btn" onclick="closeModal()" style="padding:12px; font-size:14px; margin-top:15px; box-shadow:none;">ENTENDIDO</button>
+            <button class="action-btn" onclick="closeModal()" style="padding:12px; font-size:14px; box-shadow:none;">OK</button>
         </div>
     </div>
 
-    <!-- VISTA LOGIN -->
+    <!-- VISTAS -->
     <div id="login-view" class="auth-container">
         <img src="img/logo-arashi.png" class="logo-img">
         <div class="auth-card">
@@ -137,7 +135,6 @@
         </div>
     </div>
 
-    <!-- VISTA ACTIVACIÓN -->
     <div id="register-view" class="auth-container hidden">
         <div class="auth-card">
             <h2>ACTIVAR ACCESO</h2>
@@ -150,7 +147,6 @@
         </div>
     </div>
 
-    <!-- VISTA DASHBOARD -->
     <div id="dashboard-view" class="hidden">
         <div class="header-app">
             <div><p style="color:var(--text-muted); margin:0; font-size:13px;">Hola, Arashi!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
@@ -169,19 +165,16 @@
         </div>
     </div>
 
-    <!-- VISTA SENSEI -->
     <div id="sensei-view" class="hidden">
         <h2 style="margin-top:20px; font-weight:800;">SENSEI PANEL</h2>
         <div id="student-list" style="margin-top:20px;"></div>
     </div>
 
-    <!-- VISTA CALENDARIO -->
     <div id="clases-view" class="hidden">
         <h2 style="margin-top:20px; font-weight:800;">CALENDARIO</h2>
         <div id="clases-list-container" style="margin-top:20px;"></div>
     </div>
 
-    <!-- NAVEGACIÓN -->
     <nav class="nav-bar hidden" id="main-nav">
         <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
         <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
@@ -198,6 +191,19 @@
         const parseData = (obj) => obj.attributes || obj;
         const parseRelation = (obj) => { if(!obj || !obj.data) return obj; return obj.data.attributes || obj.data; };
         const getID = (obj) => obj.documentId || obj.id;
+
+        // FUNCIÓN CLAVE: Extrae fecha y hora exactamente como están en Strapi (ISO -> Local Arashi)
+        function formatTimeSafe(isoString) {
+            if(!isoString) return { time: "--:--", date: "--/--/----" };
+            const d = new Date(isoString);
+            // Sumamos el offset para que 23:00 sea 23:00 en España sin que JS lo mueva al día siguiente
+            const hours = d.getUTCHours().toString().padStart(2, '0');
+            const minutes = d.getUTCMinutes().toString().padStart(2, '0');
+            const day = d.getUTCDate().toString().padStart(2, '0');
+            const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+            const year = d.getUTCFullYear();
+            return { time: `${hours}:${minutes}h`, date: `${day}/${month}/${year}` };
+        }
 
         function showModal(title, text, icon = 'fa-circle-check') {
             const modal = document.getElementById('custom-modal');
@@ -240,64 +246,20 @@
 
         async function checkTodayClass() {
             const token = localStorage.getItem('aikido_jwt');
-            const now = new Date();
-            
             try {
-                // Pedimos las clases ordenadas para encontrar la más cercana
-                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=5`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-                
                 if (json.data && json.data.length > 0) {
-                    // Buscamos una clase que sea "Hoy" (mismo día local en Barcelona)
-                    const claseRaw = json.data.find(c => {
-                        const d = new Date(parseData(c).Fecha_Hora);
-                        return d.toLocaleDateString('es-ES') === now.toLocaleDateString('es-ES');
-                    }) || json.data[0]; // Si no hay hoy, mostramos la siguiente disponible
-
+                    const claseRaw = json.data[0];
                     const clase = parseData(claseRaw);
                     claseHoyId = getID(claseRaw);
-                    
-                    const d = new Date(clase.Fecha_Hora);
-                    const timeStr = d.toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }) + "h";
-                    const dateStr = d.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' });
-
-                    document.getElementById('next-class-time').innerText = timeStr;
-                    document.getElementById('next-class-date').innerText = dateStr;
+                    const formatted = formatTimeSafe(clase.Fecha_Hora);
+                    document.getElementById('next-class-time').innerText = formatted.time;
+                    document.getElementById('next-class-date').innerText = formatted.date;
                     document.getElementById('next-class-info').innerHTML = `<i class="fa-solid fa-location-dot"></i> Arashi Badalona (${clase.Tipo} • ${clase.Duracion}h)`;
                     document.getElementById('confirm-btn').disabled = false;
-                } else {
-                    document.getElementById('next-class-time').innerText = "Sin clases";
-                    document.getElementById('next-class-info').innerText = "Oss!";
                 }
             } catch (e) { console.error(e); }
-        }
-
-        async function confirmAttendance() {
-            if (!claseHoyId) return;
-            const token = localStorage.getItem('aikido_jwt');
-            try {
-                // 1. Verificar si ya existe asistencia para este alumno y esta clase
-                const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const checkJson = await check.json();
-                
-                if (checkJson.data && checkJson.data.length > 0) {
-                    showModal('Aviso', 'Ya estás apuntado a esta clase.', 'fa-circle-info');
-                    document.getElementById('confirm-btn').innerText = "CONFIRMADO";
-                    document.getElementById('confirm-btn').disabled = true;
-                    return;
-                }
-
-                const res = await fetch(`${API_URL}/api/asistencias`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } })
-                });
-                if(res.ok) {
-                    showModal('¡OSS!', 'Asistencia confirmada. El Sensei te validará en el Dojo.', 'fa-check-double');
-                    document.getElementById('confirm-btn').innerText = "CONFIRMADO";
-                    document.getElementById('confirm-btn').disabled = true;
-                }
-            } catch (e) { showModal('Error', 'Fallo de conexión.', 'fa-wifi'); }
         }
 
         async function renderProgress(actuales, objetivo) {
@@ -305,7 +267,7 @@
             const label = document.getElementById('target-grade-label');
             const summary = document.getElementById('hours-summary');
 
-            if (!objetivo || objetivo.trim() === "") {
+            if (!objetivo) {
                 label.innerText = "Grado no definido";
                 summary.innerText = "Habla con tu Sensei";
                 ring.style.strokeDashoffset = 176;
@@ -314,9 +276,8 @@
 
             const token = localStorage.getItem('aikido_jwt');
             try {
-                // Normalizamos el grado para la búsqueda (2º Kyu -> 2º KYU)
-                const gradoNorm = objetivo.trim().toUpperCase();
-                const res = await fetch(`${API_URL}/api/requisito-grados?filters[Grado][$containsi]=${encodeURIComponent(gradoNorm)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                // SINCRO STRAPI V5: La colección se llama requisito-grados (plural y guion)
+                const res = await fetch(`${API_URL}/api/requisito-grados?filters[Grado][$containsi]=${encodeURIComponent(objetivo.trim())}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
                 
                 if (json.data && json.data.length > 0) {
@@ -328,7 +289,7 @@
                     summary.innerText = `${actuales}h de ${reqHoras}h (${porcentaje}%)`;
                 } else {
                     label.innerText = objetivo;
-                    summary.innerText = "Sin requisitos en BD";
+                    summary.innerText = "Sin requisitos definidos";
                     ring.style.strokeDashoffset = 176;
                 }
             } catch (e) { summary.innerText = "Error cargando progreso"; }
@@ -350,7 +311,6 @@
                 }
                 
                 listDiv.innerHTML = "";
-                // SISTEMA ANTI-DUPLICADOS LOCAL
                 const vistos = new Set();
                 
                 json.data.forEach(asistRaw => {
@@ -363,13 +323,38 @@
                         if (!vistos.has(alumnoId)) {
                             vistos.add(alumnoId);
                             const nombre = (alumno.nombre + " " + (alumno.apellidos || "")).toUpperCase();
-                            listDiv.innerHTML += `<div class="student-item"><div><h4>${nombre}</h4><p>Clase de ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${alumnoId}', ${clase.Duracion})">VALIDAR</button></div>`;
+                            const fClase = formatTimeSafe(clase.Fecha_Hora);
+                            
+                            listDiv.innerHTML += `
+                                <div class="student-item">
+                                    <div>
+                                        <h4>${nombre}</h4>
+                                        <p style="color:var(--accent); font-weight:800; font-size:12px;">CLASE: ${fClase.date} @ ${fClase.time}</p>
+                                        <p style="font-size:11px; color:var(--text-muted)">Duración: ${clase.Duracion}h</p>
+                                    </div>
+                                    <button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${alumnoId}', ${clase.Duracion})">VALIDAR</button>
+                                </div>`;
                         }
                     }
                 });
-            } catch (e) { 
-                listDiv.innerHTML = "<p>Error al recuperar datos.</p>"; 
-            }
+            } catch (e) { listDiv.innerHTML = "<p>Error al recuperar datos.</p>"; }
+        }
+
+        async function confirmAttendance() {
+            if (!claseHoyId) return;
+            const token = localStorage.getItem('aikido_jwt');
+            try {
+                const res = await fetch(`${API_URL}/api/asistencias`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } })
+                });
+                if(res.ok) {
+                    showModal('¡OSS!', 'Asistencia confirmada. El Sensei te validará en el Dojo.', 'fa-check-double');
+                    document.getElementById('confirm-btn').innerText = "CONFIRMADO";
+                    document.getElementById('confirm-btn').disabled = true;
+                }
+            } catch (e) { showModal('Error', 'Fallo de conexión.', 'fa-wifi'); }
         }
 
         async function validateAttendance(asistId, alumnoDocId, duracion) {
@@ -396,10 +381,8 @@
                 container.innerHTML = "";
                 json.data.forEach(c => {
                     const d = parseData(c);
-                    const date = new Date(d.Fecha_Hora);
-                    const dateStr = date.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', weekday:'short', day:'numeric', month:'short' });
-                    const timeStr = date.toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }) + "h";
-                    container.innerHTML += `<div class="student-item"><div><h4>${dateStr} - ${timeStr}</h4><p>${d.Tipo} • ${d.Duracion}h</p></div></div>`;
+                    const f = formatTimeSafe(d.Fecha_Hora);
+                    container.innerHTML += `<div class="student-item"><div><h4>${f.date} - ${f.time}</h4><p>${d.Tipo} • ${d.Duracion}h</p></div></div>`;
                 });
             } catch(e) {}
         }
@@ -424,7 +407,7 @@
                 const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
                 const checkData = await checkRes.json();
                 if (checkData.data.length === 0) return showModal('Error', 'DNI no encontrado.', 'fa-circle-exclamation');
-                const p = checkData.data[0].attributes || checkData.data[0];
+                const p = parseData(checkData.data[0]);
                 const email = p.email || `${dni.toLowerCase()}@arashi.com`;
                 const regRes = await fetch(`${API_URL}/api/auth/local/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: dni, email: email, password: password }) });
                 if (regRes.ok) { showModal('¡OSS!', 'Activación completada.', 'fa-circle-check'); showView('login'); }
