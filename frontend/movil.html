@@ -26,46 +26,49 @@
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
-        /* --- MODALES ESPECTACULARES --- */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
-        .modal-content { 
-            background: #0f172a; border: 1px solid var(--glass-border); 
-            padding: 35px 25px; border-radius: 40px; width: 100%; max-width: 340px; 
-            text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.8);
-            box-sizing: border-box; /* EVITA QUE LOS CAMPOS TOQUEN LAS PAREDES */
-        }
-        .modal-content h3 { font-weight: 800; font-size: 24px; margin: 10px 0 20px; color: white; }
-
-        /* INPUTS DENTRO DE MODAL */
-        .modal-input-group { text-align: left; margin-bottom: 15px; width: 100%; }
-        .modal-input-group label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; margin-left: 5px; }
+        /* --- AUTH & INPUTS (DISEÑO OSCURO REAL) --- */
+        .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .logo-img { width: 150px; height: auto; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
+        .auth-card { width: 100%; max-width: 350px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
         
-        .modal-field { 
-            width: 100%; padding: 16px; background: rgba(255,255,255,0.05); 
-            border: 1px solid var(--glass-border); border-radius: 18px; color: white; 
-            font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s;
+        .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
+        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; }
+        .input-group input { 
+            width: 100%; padding: 16px 16px 16px 48px; 
+            background: rgba(15, 23, 42, 0.9) !important; 
+            border: 1px solid var(--glass-border); border-radius: 18px; 
+            color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s;
         }
-        .modal-field:focus { border-color: var(--accent); background: rgba(255,255,255,0.1); box-shadow: var(--neon); }
+        input:-webkit-autofill { -webkit-text-fill-color: white !important; -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important; }
 
-        /* --- BOTONES PREMIUM --- */
-        .action-btn { width: 100%; padding: 18px; background: white; color: black; border: none; border-radius: 22px; font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); margin-top: 10px; }
+        .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; }
+        .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 700; }
+
+        /* --- HEADER CORREGIDO --- */
+        .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%; padding: 0 5px; box-sizing: border-box; }
+        .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid var(--glass-border); color: white; flex-shrink: 0; box-shadow: var(--neon); }
+
+        /* --- BOTONES --- */
+        .action-btn { width: 100%; padding: 18px; background: white; color: black; border: none; border-radius: 22px; font-size: 16px; font-weight: 800; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+        .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
         .action-btn:active { transform: translateY(4px) scale(0.96); }
 
-        /* --- UI APP --- */
-        .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
-        .logo-img { width: 160px; height: auto; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
-        .auth-card { width: 100%; max-width: 360px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; text-align: center; }
-        
+        /* --- TARJETAS --- */
         #dashboard-view, #sensei-view, #clases-view { padding: 25px; padding-bottom: 110px; height: 100%; overflow-y: auto; box-sizing: border-box; }
         .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 35px 25px; border-radius: 40px; box-shadow: 0 20px 45px rgba(239,68,68,0.3); text-align: center; margin-bottom: 25px; }
         .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        
+
+        /* --- NAV --- */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.98); backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
-        .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; transition: 0.3s; }
+        .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
         .nav-item.active { color: var(--accent); }
         .nav-item span { font-size: 9px; font-weight: 700; margin-top: 6px; text-transform: uppercase; }
         .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
+
+        /* --- MODALES --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
+        .modal-content { background: #0f172a; border: 1px solid var(--glass-border); padding: 35px 25px; border-radius: 40px; width: 100%; max-width: 340px; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.8); box-sizing: border-box; }
+        .modal-field { width: 100%; padding: 16px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 18px; color: white; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; }
     </style>
     <script>
         function checkAccess() {
@@ -81,7 +84,7 @@
         <img src="img/logo-arashi.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
         <p style="color: var(--text-muted); margin-bottom: 35px;">Instala la App para continuar.</p>
-        <button class="action-btn primary" id="btn-install-pwa" style="max-width: 280px;">INSTALAR AHORA</button>
+        <button class="action-btn primary" id="btn-install-pwa">INSTALAR AHORA</button>
     </div>
 
     <div id="app-content">
@@ -91,21 +94,22 @@
                 <h3 id="modal-title">¡OSS!</h3>
                 <div id="modal-body-content"></div>
                 <div id="modal-actions" style="margin-top:25px;">
-                    <button id="modal-main-btn" class="action-btn primary" onclick="closeModal()">ENTENDIDO</button>
+                    <button class="action-btn primary" onclick="closeModal()">ENTENDIDO</button>
                 </div>
             </div>
         </div>
 
+        <!-- LOGIN -->
         <div id="login-view" class="auth-container">
             <img src="img/logo-arashi.png" class="logo-img">
             <div class="auth-card">
-                <h2 style="margin-top:0; font-size: 22px;">HOLA, ARASHI!</h2>
+                <h2>HOLA, ARASHI!</h2>
                 <form id="login-form">
                     <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="dni-login" placeholder="DNI: 12345678X" required></div>
                     <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="pass-login" placeholder="Contraseña" required></div>
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
-                <div class="auth-footer" style="margin-top:20px; font-size:13px;">¿Nuevo Alumno? <a href="#" onclick="showView('register')" style="color:var(--accent); font-weight:700;">Activa tu cuenta</a></div>
+                <div class="auth-footer">¿Nuevo? <a href="#" onclick="showView('register')">Activa tu cuenta</a></div>
             </div>
         </div>
 
@@ -137,7 +141,7 @@
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
             <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
-            <div class="qr-main-btn" onclick="showModal('QR Dojo', 'Presenta esto al Sensei.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
+            <div class="qr-main-btn" onclick="showModal('QR Dojo', 'Muestra esto al Sensei.', 'fa-qrcode')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
             <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
             <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
         </nav>
@@ -146,6 +150,7 @@
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         let alumnoGlobal = null, claseHoyId = null;
+        
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
         const getID = (o) => o.documentId || o.id;
@@ -198,7 +203,6 @@
                 } else {
                     document.getElementById('next-class-time').innerText = "SIN CLASES";
                     document.getElementById('next-class-date').innerText = "Tatami Libre";
-                    document.getElementById('next-class-info').innerText = "";
                     document.getElementById('confirm-btn').classList.add('hidden');
                 }
             } catch (e) {}
@@ -207,11 +211,11 @@
         function uiGenerateMonth() {
             const currentMonth = new Date().toISOString().substring(0, 7);
             const html = `
-                <div class="modal-input-group">
-                    <label>Elegir Mes:</label>
+                <div style="text-align:left;">
+                    <label style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">Mes a Generar:</label>
                     <input type="month" id="gen-month-input" value="${currentMonth}" class="modal-field">
-                </div>
-                <button id="btn-do-gen" class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button>`;
+                    <button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button>
+                </div>`;
             document.getElementById('modal-title').innerText = "Generador";
             document.getElementById('modal-body-content').innerHTML = html;
             document.getElementById('modal-actions').classList.add('hidden');
@@ -221,11 +225,8 @@
         async function processGeneration() {
             const token = localStorage.getItem('aikido_jwt'), val = document.getElementById('gen-month-input').value;
             const [year, month] = val.split('-').map(Number);
-            const dojoId = getID(parseRelation(alumnoGlobal.attributes.dojo)); // Relación con Dojo
+            const dojoId = getID(parseRelation(alumnoGlobal.attributes.dojo));
             
-            const btn = document.getElementById('btn-do-gen');
-            btn.innerText = "SUBIENDO..."; btn.disabled = true;
-
             let creadas = 0;
             const ultimoDia = new Date(year, month, 0).getDate();
             
@@ -234,30 +235,29 @@
                 if(d.getDay() === 2 || d.getDay() === 4) { // Martes(2) y Jueves(4)
                     d.setHours(19, 0, 0, 0);
                     const payload = { data: { Fecha_Hora: d.toISOString(), Duracion: 1.5, Tipo: 'Normal', dojo: dojoId } };
-                    const res = await fetch(`${API_URL}/api/clases`, { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                        body: JSON.stringify(payload) 
-                    });
+                    const res = await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
                     if(res.ok) creadas++;
                 }
             }
-            showModal('¡OSS!', `Calendario enviado a Strapi: ${creadas} clases nuevas.`);
+            showModal('¡OSS!', `Calendario enviado: ${creadas} clases nuevas.`);
             checkTodayClass();
         }
 
         function openEditClass(id, raw, dur) {
             const f = raw.split('T')[0], h = raw.split('T')[1].substring(0,5);
             const html = `
-                <div class="modal-input-group"><label>Día de la clase:</label><input type="date" id="e-d" value="${f}" class="modal-field"></div>
-                <div class="modal-input-group"><label>Hora de inicio:</label><input type="time" id="e-h" value="${h}" class="modal-field"></div>
-                <div class="modal-input-group"><label>Duración:</label>
+                <div style="text-align:left;">
+                    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Día:</label>
+                    <input type="date" id="e-d" value="${f}" class="modal-field">
+                    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Hora:</label>
+                    <input type="time" id="e-h" value="${h}" class="modal-field">
+                    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Duración:</label>
                     <select id="e-dur" class="modal-field">
-                        <option value="1" ${dur==1?'selected':''}>1.0h (Intensivo)</option>
-                        <option value="1.5" ${dur==1.5?'selected':''}>1.5h (Normal)</option>
+                        <option value="1" ${dur==1?'selected':''}>1.0h</option>
+                        <option value="1.5" ${dur==1.5?'selected':''}>1.5h</option>
                     </select>
-                </div>
-                <button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR CAMBIOS</button>`;
+                    <button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR CAMBIOS</button>
+                </div>`;
             document.getElementById('modal-title').innerText = "Editar Clase";
             document.getElementById('modal-body-content').innerHTML = html;
             document.getElementById('modal-actions').classList.add('hidden');
@@ -266,29 +266,32 @@
 
         async function saveClass(id) {
             const token = localStorage.getItem('aikido_jwt');
-            const iso = `${document.getElementById('e-d').value}T${document.getElementById('e-h').value}:00.000Z`;
+            const date = document.getElementById('e-d').value;
+            const time = document.getElementById('e-h').value;
             const dur = document.getElementById('e-dur').value;
+            const iso = `${date}T${time}:00.000Z`;
+
             const res = await fetch(`${API_URL}/api/clases/${id}`, { 
                 method: 'PUT', 
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
                 body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur) } }) 
             });
-            if(res.ok) { showModal('¡ÉXITO!', 'Cambios guardados en Strapi.'); loadManageClasses(); checkTodayClass(); }
+            if(res.ok) { showModal('¡ÉXITO!', 'Clase actualizada.'); loadManageClasses(); checkTodayClass(); }
         }
 
         async function loadManageClasses() {
             const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
-            listDiv.innerHTML = "<p style='text-align:center;opacity:0.5;'>Sincronizando...</p>";
+            listDiv.innerHTML = "Sincronizando...";
             try {
-                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=25`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=30`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json(); 
-                listDiv.innerHTML = "<h3 style='margin-bottom:15px; font-size:14px; opacity:0.6;'>PRÓXIMAS CLASES</h3>";
+                listDiv.innerHTML = "<h3>LISTADO PRÓXIMO</h3>";
                 json.data.forEach(c => {
                     const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora);
                     listDiv.innerHTML += `
                         <div class="class-card" onclick="openEditClass('${getID(c)}','${d.Fecha_Hora}',${d.Duracion})">
-                            <div class="class-info"><h4>${f.date} @ ${f.time}</h4><p>${d.Duracion}h • ${d.Tipo}</p></div>
-                            <i class="fa-solid fa-chevron-right" style="color:var(--accent)"></i>
+                            <div><h4>${f.date} @ ${f.time}</h4><p>${d.Duracion}h • ${d.Tipo}</p></div>
+                            <i class="fa-solid fa-pen-to-square" style="color:var(--accent)"></i>
                         </div>`;
                 });
             } catch (e) {}
@@ -296,7 +299,7 @@
 
         async function loadMonthlyClasses(el) {
             showView('clases', el); const container = document.getElementById('clases-list-container'), now = new Date();
-            container.innerHTML = "<p style='text-align:center;padding:40px;opacity:0.5;'>Abriendo pergamino...</p>";
+            container.innerHTML = "Abriendo pergamino...";
             try {
                 const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=40`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
                 const json = await res.json(); container.innerHTML = "";
@@ -308,18 +311,16 @@
             } catch(e) {}
         }
 
-        function showView(v, el) { ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); document.getElementById(v + '-view').classList.remove('hidden'); if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); } }
+        function showView(v, el) { ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); document.getElementById(v + '-view').classList.remove('hidden'); if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); } }
         function showModal(t, txt) { document.getElementById('modal-title').innerText = t; document.getElementById('modal-body-content').innerHTML = `<p>${txt}</p>`; document.getElementById('modal-actions').classList.remove('hidden'); document.getElementById('custom-modal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
         function logout() { localStorage.clear(); location.reload(); }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            try {
-                const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: document.getElementById('dni-login').value, password: document.getElementById('pass-login').value }) });
-                const data = await res.json();
-                if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-            } catch (err) {}
+            const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: document.getElementById('dni-login').value, password: document.getElementById('pass-login').value }) });
+            const data = await res.json();
+            if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
         });
     </script>
 </body>
