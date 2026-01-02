@@ -107,7 +107,23 @@
                     </div>
                 </header>
                 <div class="table-container drag-scroll">
-                    <table id="table-alumnos"><thead><tr><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Dojo</th><th>Alta</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table>
+                    <table id="table-alumnos">
+                        <thead>
+                            <tr>
+                                <th>Apellidos</th>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Grado</th>
+                                <th>Seguro</th>
+                                <th>Teléfono</th>
+                                <th>Dojo</th>
+                                <th>Alta</th>
+                                <th>Horas</th> <!-- NUEVA COLUMNA -->
+                                <th class="sticky-col">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-alumnos-body"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -146,7 +162,7 @@
         </main>
     </div>
 
-    <!-- MODAL DE INFORMES (RESTAURADO Y MEJORADO) -->
+    <!-- MODAL DE INFORMES -->
     <div id="report-modal" class="modal-overlay hidden">
         <div class="modal-box" style="width:650px; max-width: 95vw;">
             <h3><i class="fa-solid fa-file-pdf"></i> Centro de Informes Arashi</h3>

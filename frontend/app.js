@@ -100,6 +100,8 @@ async function loadAlumnos(activos) {
         (json.data || []).forEach(a => {
             const p = a.attributes || a;
             const id = a.documentId;
+            const horas = parseFloat(p.horas_acumuladas || 0).toFixed(1); // FORMATEO DE HORAS
+            
             tbody.innerHTML += `
                 <tr>
                     ${!activos ? `<td>${formatDateDisplay(p.fecha_baja)}</td>` : ''}
@@ -111,6 +113,7 @@ async function loadAlumnos(activos) {
                     <td>${normalizePhone(p.telefono)}</td>
                     <td>${getDojoName(p.dojo)}</td>
                     <td>${formatDateDisplay(p.fecha_inicio)}</td>
+                    <td style="font-weight:bold; color:var(--primary)">${horas}h</td> <!-- NUEVA COLUMNA -->
                     <td class="sticky-col">
                         ${activos ? `<button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>` : ''}
                         <button class="action-btn-icon" onclick="confirmarEstado('${id}', ${!activos}, '${p.nombre}')"><i class="fa-solid ${activos ? 'fa-user-xmark' : 'fa-rotate-left'}"></i></button>
@@ -144,7 +147,6 @@ async function generateReport(type) {
                 title = "ASISTENCIA DIARIA - TATAMI";
                 subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
                 
-                // Buscamos asistencias de ese día concreto
                 let url = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
                 if (dojoFilterId) url += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
                 
@@ -185,17 +187,10 @@ async function generateReport(type) {
                     return (pA.apellidos || '').localeCompare(pB.apellidos || '');
                 });
 
-                headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Seguro', 'Teléfono', 'Dojo', 'Alta'];
-                if (type === 'age') headRow.push('Edad');
-                if (type === 'group') headRow.push('Grupo');
-                if (type === 'surname' || type === 'dojo') headRow.push('Población');
-
+                headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Seguro', 'Dojo', 'Horas', 'Alta'];
                 body = list.map(item => {
                     const p = item.attributes || item;
-                    const row = [(p.apellidos || '').toUpperCase(), p.nombre || '', p.dni || '', normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', normalizePhone(p.telefono), getDojoName(p.dojo), formatDateDisplay(p.fecha_inicio)];
-                    if (type === 'age') row.push(calculateAge(p.fecha_nacimiento));
-                    if (type === 'group') row.push(p.grupo || 'Full Time');
-                    if (type === 'surname' || type === 'dojo') row.push(normalizeCity(p.poblacion));
+                    const row = [(p.apellidos || '').toUpperCase(), p.nombre || '', p.dni || '', normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', getDojoName(p.dojo), parseFloat(p.horas_acumuladas || 0).toFixed(1)+'h', formatDateDisplay(p.fecha_inicio)];
                     return row;
                 });
             }
@@ -223,7 +218,7 @@ async function generateReport(type) {
     };
 }
 
-// --- MANTENIMIENTO DOJOS ---
+// --- MANTENIMIENTO ---
 async function loadDojosSelect() {
     const s = document.getElementById('new-dojo');
     try {
