@@ -72,10 +72,8 @@
             transition: all 0.1s ease;
             text-transform: uppercase;
         }
-        /* EFECTO PULSACIÓN SENSEI */
         .validate-btn:active {
             transform: translateY(3px) scale(0.92);
-            box-shadow: 0 2px 5px rgba(34, 197, 94, 0.2);
             filter: brightness(1.2);
         }
 
@@ -105,7 +103,6 @@
         
         .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 30px 25px; border-radius: 30px; box-shadow: 0 15px 30px rgba(239,68,68,0.25); margin-bottom: 20px; text-align: center; }
         
-        /* TRANSICIÓN DE DESAPARICIÓN PARA SENSEI */
         .student-item { 
             background: var(--card-bg); 
             padding: 20px; 
@@ -116,8 +113,6 @@
             margin-bottom: 12px; 
             border: 1px solid var(--glass-border); 
             transition: all 0.3s ease;
-            opacity: 1;
-            transform: translateX(0);
         }
         .student-item.validated {
             opacity: 0;
@@ -159,25 +154,14 @@
         </div>
     </div>
 
-    <div id="register-view" class="auth-container hidden">
-        <div class="auth-card">
-            <h2>ACTIVAR ACCESO</h2>
-            <form id="register-form">
-                <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="reg-dni" placeholder="DNI: 12345678X" required></div>
-                <div class="input-group"><i class="fa-solid fa-key"></i><input type="password" id="reg-pass" placeholder="Nueva Contraseña" required></div>
-                <button type="submit" class="action-btn">ACTIVAR MI CUENTA</button>
-            </form>
-            <div class="auth-footer"><a href="#" onclick="showView('login')">Volver</a></div>
-        </div>
-    </div>
-
     <!-- VISTA DASHBOARD -->
     <div id="dashboard-view" class="hidden">
         <div class="header-app">
             <div><p style="color:var(--text-muted); margin:0; font-size:13px;">Hola, Arashi!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
             <div class="profile-circle" id="user-initials">??</div>
         </div>
-        <div class="progress-card">
+        <!-- El progreso solo se muestra si el usuario es Alumno -->
+        <div class="progress-card" id="student-progress-card">
             <div class="ring-container"><svg class="ring-svg"><circle class="ring-bg" cx="30" cy="30" r="28"></circle><circle class="ring-fill" id="progress-ring" cx="30" cy="30" r="28"></circle></svg></div>
             <div><h3 style="margin:0; font-size:16px; font-weight:700;" id="target-grade-label">Grado</h3><p style="margin:4px 0 0; font-size:12px; color:var(--text-muted)" id="hours-summary">Calculando...</p></div>
         </div>
@@ -252,19 +236,37 @@
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard', document.querySelector('.nav-item'));
+
+            // LÓGICA DE PRIORIDAD SENSEI (USER LEVEL)
+            let isSenseiManagement = user.is_sensei === true;
+            if (isSenseiManagement) {
+                document.getElementById('nav-sensei').style.display = 'flex';
+                document.getElementById('user-display-name').innerText = user.username;
+                document.getElementById('student-progress-card').classList.add('hidden');
+            }
+
             try {
                 const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
+                
                 if (json.data && json.data.length > 0) {
                     alumnoGlobal = json.data[0];
                     const p = parseData(alumnoGlobal);
                     document.getElementById('user-display-name').innerText = p.nombre;
                     const ini = (p.nombre ? p.nombre.charAt(0) : "") + (p.apellidos ? p.apellidos.charAt(0) : "");
                     document.getElementById('user-initials').innerText = ini.toUpperCase();
+                    
+                    // Si es instructor por ficha de Alumno, también se le da acceso
                     if(p.es_instructor) document.getElementById('nav-sensei').style.display = 'flex';
+                    
+                    document.getElementById('student-progress-card').classList.remove('hidden');
                     renderProgress(p.horas_acumuladas || 0, p.grado_objetivo);
-                    checkTodayClass();
+                } else if (!isSenseiManagement) {
+                    // No es alumno ni sensei management (caso raro)
+                    document.getElementById('student-progress-card').classList.add('hidden');
                 }
+                
+                checkTodayClass();
             } catch (e) { console.error(e); }
         }
 
@@ -346,8 +348,6 @@
                             vistos.add(alumnoId);
                             const nombre = (alumno.nombre + " " + (alumno.apellidos || "")).toUpperCase();
                             const fClase = formatTimeSafe(clase.Fecha_Hora);
-                            
-                            // AÑADIMOS ID AL DIV PARA PODER QUITARLO LUEGO
                             listDiv.innerHTML += `
                                 <div class="student-item" id="item-${asistId}">
                                     <div>
@@ -366,37 +366,15 @@
         async function validateAttendance(asistId, alumnoDocId, duracion) {
             const token = localStorage.getItem('aikido_jwt');
             const item = document.getElementById(`item-${asistId}`);
-            
-            // 1. EFECTO OPTIMISTA: Desaparece al instante
-            if(item) {
-                item.classList.add('validated');
-                setTimeout(() => item.remove(), 350);
-            }
-
+            if(item) { item.classList.add('validated'); setTimeout(() => item.remove(), 350); }
             try {
-                // 2. TRABAJO EN SEGUNDO PLANO
-                await fetch(`${API_URL}/api/asistencias/${asistId}`, { 
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                    body: JSON.stringify({ data: { Estado: 'Asistio' } }) 
-                });
-
+                await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: 'Asistio' } }) });
                 const alRes = await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const alData = await alRes.json();
                 const p = parseData(alData.data);
                 const nuevasHoras = parseFloat(p.horas_acumuladas || 0) + parseFloat(duracion);
-                
-                await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { 
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                    body: JSON.stringify({ data: { horas_acumuladas: nuevasHoras } }) 
-                });
-                
-                console.log(`Validado: ${alumnoDocId} + ${duracion}h`);
-            } catch (e) { 
-                console.error("Error validando:", e);
-                showModal('Error', 'No se pudo sincronizar la validación.', 'fa-wifi');
-            }
+                await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: nuevasHoras } }) });
+            } catch (e) { showModal('Error', 'No se pudo sincronizar.', 'fa-wifi'); }
         }
 
         async function confirmAttendance() {
@@ -404,7 +382,7 @@
             const token = localStorage.getItem('aikido_jwt');
             try {
                 const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
-                if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada. El Sensei te validará en el Dojo.', 'fa-check-double'); document.getElementById('confirm-btn').innerText = "CONFIRMADO"; document.getElementById('confirm-btn').disabled = true; }
+                if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada.', 'fa-check-double'); document.getElementById('confirm-btn').innerText = "CONFIRMADO"; document.getElementById('confirm-btn').disabled = true; }
             } catch (e) { showModal('Error', 'Fallo de conexión.', 'fa-wifi'); }
         }
 
@@ -432,7 +410,7 @@
                 const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-                else showModal('Error', 'DNI o contraseña incorrectos', 'fa-circle-xmark');
+                else showModal('Error', 'Credenciales incorrectas', 'fa-circle-xmark');
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
         });
 
