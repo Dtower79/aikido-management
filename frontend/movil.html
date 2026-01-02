@@ -37,7 +37,7 @@
 
         .hidden { display: none !important; }
 
-        /* --- BOTÓN PREMIUM CON EFECTO CLICK --- */
+        /* --- BOTÓN PREMIUM --- */
         .action-btn { 
             width: 100%; 
             padding: 18px; 
@@ -52,14 +52,12 @@
             transition: all 0.1s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
-            outline: none;
         }
         .action-btn:active {
             transform: translateY(4px) scale(0.97);
             box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
-            background: #dc2626;
         }
-        .action-btn:disabled { background: #334155; box-shadow: none; opacity: 0.6; cursor: default; }
+        .action-btn:disabled { background: #334155; opacity: 0.6; box-shadow: none; }
 
         /* --- MODAL --- */
         .modal-overlay {
@@ -75,16 +73,6 @@
         }
         .modal-content i { font-size: 50px; color: var(--accent); margin-bottom: 15px; }
 
-        /* --- AUTH --- */
-        .auth-container { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
-        .auth-card { width: 100%; max-width: 400px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 35px; border-radius: 32px; text-align: center; }
-        .logo-img { width: 140px; margin-bottom: 30px; filter: drop-shadow(0 0 10px rgba(239,68,68,0.3)); }
-        .input-group { position: relative; margin-bottom: 15px; }
-        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-        .input-group input { width: 100%; padding: 16px 16px 16px 48px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; outline: none; }
-        .auth-footer { margin-top: 35px; font-size: 13px; color: #64748b; }
-        .auth-footer a { color: #cbd5e1; text-decoration: underline; font-weight: 600; }
-
         /* --- DASHBOARD --- */
         #dashboard-view, #sensei-view, #clases-view { padding: 20px; padding-bottom: 120px; }
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
@@ -98,8 +86,7 @@
         
         .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 30px 25px; border-radius: 30px; box-shadow: 0 15px 30px rgba(239,68,68,0.25); margin-bottom: 20px; text-align: center; }
         .student-item { background: var(--card-bg); padding: 20px; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: 1px solid var(--glass-border); }
-        .validate-btn { background: #22c55e; color: white; border: none; padding: 12px 18px; border-radius: 14px; font-weight: 800; font-size: 11px; cursor: pointer; transition: 0.2s; }
-        .validate-btn:active { transform: scale(0.9); }
+        .validate-btn { background: #22c55e; color: white; border: none; padding: 12px 18px; border-radius: 14px; font-weight: 800; font-size: 11px; cursor: pointer; }
 
         /* --- NAV --- */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.96); backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
@@ -121,7 +108,7 @@
         </div>
     </div>
 
-    <!-- VISTAS -->
+    <!-- VISTA LOGIN -->
     <div id="login-view" class="auth-container">
         <img src="img/logo-arashi.png" class="logo-img">
         <div class="auth-card">
@@ -135,18 +122,7 @@
         </div>
     </div>
 
-    <div id="register-view" class="auth-container hidden">
-        <div class="auth-card">
-            <h2>ACTIVAR ACCESO</h2>
-            <form id="register-form">
-                <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="reg-dni" placeholder="DNI: 12345678X" required></div>
-                <div class="input-group"><i class="fa-solid fa-key"></i><input type="password" id="reg-pass" placeholder="Nueva Contraseña" required></div>
-                <button type="submit" class="action-btn">ACTIVAR MI CUENTA</button>
-            </form>
-            <div class="auth-footer"><a href="#" onclick="showView('login')">Volver</a></div>
-        </div>
-    </div>
-
+    <!-- VISTA DASHBOARD -->
     <div id="dashboard-view" class="hidden">
         <div class="header-app">
             <div><p style="color:var(--text-muted); margin:0; font-size:13px;">Hola, Arashi!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
@@ -192,11 +168,9 @@
         const parseRelation = (obj) => { if(!obj || !obj.data) return obj; return obj.data.attributes || obj.data; };
         const getID = (obj) => obj.documentId || obj.id;
 
-        // FUNCIÓN CLAVE: Extrae fecha y hora exactamente como están en Strapi (ISO -> Local Arashi)
         function formatTimeSafe(isoString) {
             if(!isoString) return { time: "--:--", date: "--/--/----" };
             const d = new Date(isoString);
-            // Sumamos el offset para que 23:00 sea 23:00 en España sin que JS lo mueva al día siguiente
             const hours = d.getUTCHours().toString().padStart(2, '0');
             const minutes = d.getUTCMinutes().toString().padStart(2, '0');
             const day = d.getUTCDate().toString().padStart(2, '0');
@@ -244,6 +218,55 @@
             } catch (e) { console.error(e); }
         }
 
+        async function renderProgress(actuales, objetivo) {
+            const ring = document.getElementById('progress-ring');
+            const label = document.getElementById('target-grade-label');
+            const summary = document.getElementById('hours-summary');
+
+            if (!objetivo || objetivo.trim() === "") {
+                label.innerText = "Grado no definido";
+                summary.innerText = "Habla con tu Sensei";
+                ring.style.strokeDashoffset = 176;
+                return;
+            }
+
+            const token = localStorage.getItem('aikido_jwt');
+            try {
+                // MÉTODO BLINDADO: Traemos todos los requisitos y buscamos el match localmente
+                // Probamos con la ruta de Strapi v5 habitual (plural y guiones)
+                const res = await fetch(`${API_URL}/api/requisito-grados?pagination[limit]=100`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const json = await res.json();
+                
+                // Función de limpieza para comparar (ej: "2º KYU" vs "2º Kyu")
+                const clean = (s) => s.toString().toUpperCase().replace(/\s+/g, '').trim();
+                const targetClean = clean(objetivo);
+                
+                let requisitoEncontrado = null;
+                if (json.data) {
+                    requisitoEncontrado = json.data.find(item => {
+                        const r = parseData(item);
+                        return clean(r.Grado) === targetClean;
+                    });
+                }
+
+                if (requisitoEncontrado) {
+                    const r = parseData(requisitoEncontrado);
+                    const reqHoras = parseFloat(r.Horas_Necesarias) || 1;
+                    const porcentaje = Math.min(Math.round((actuales / reqHoras) * 100), 100);
+                    ring.style.strokeDashoffset = 176 - (176 * porcentaje / 100);
+                    label.innerText = `Camino al ${objetivo}`;
+                    summary.innerText = `${actuales}h de ${reqHoras}h (${porcentaje}%)`;
+                } else {
+                    label.innerText = objetivo;
+                    summary.innerText = "Requisito no configurado";
+                    ring.style.strokeDashoffset = 176;
+                }
+            } catch (e) { 
+                console.error("Error cargando requisitos:", e);
+                summary.innerText = "Error cargando progreso"; 
+            }
+        }
+
         async function checkTodayClass() {
             const token = localStorage.getItem('aikido_jwt');
             try {
@@ -262,78 +285,31 @@
             } catch (e) { console.error(e); }
         }
 
-        async function renderProgress(actuales, objetivo) {
-            const ring = document.getElementById('progress-ring');
-            const label = document.getElementById('target-grade-label');
-            const summary = document.getElementById('hours-summary');
-
-            if (!objetivo) {
-                label.innerText = "Grado no definido";
-                summary.innerText = "Habla con tu Sensei";
-                ring.style.strokeDashoffset = 176;
-                return;
-            }
-
-            const token = localStorage.getItem('aikido_jwt');
-            try {
-                // SINCRO STRAPI V5: La colección se llama requisito-grados (plural y guion)
-                const res = await fetch(`${API_URL}/api/requisito-grados?filters[Grado][$containsi]=${encodeURIComponent(objetivo.trim())}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const json = await res.json();
-                
-                if (json.data && json.data.length > 0) {
-                    const r = parseData(json.data[0]);
-                    const reqHoras = parseFloat(r.Horas_Necesarias) || 1;
-                    const porcentaje = Math.min(Math.round((actuales / reqHoras) * 100), 100);
-                    ring.style.strokeDashoffset = 176 - (176 * porcentaje / 100);
-                    label.innerText = `Camino al ${objetivo}`;
-                    summary.innerText = `${actuales}h de ${reqHoras}h (${porcentaje}%)`;
-                } else {
-                    label.innerText = objetivo;
-                    summary.innerText = "Sin requisitos definidos";
-                    ring.style.strokeDashoffset = 176;
-                }
-            } catch (e) { summary.innerText = "Error cargando progreso"; }
-        }
-
         async function loadSenseiPanel(el) {
             showView('sensei', el);
             const token = localStorage.getItem('aikido_jwt');
             const listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "<p>Buscando alumnos...</p>";
-            
             try {
                 const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
-
                 if (!json.data || json.data.length === 0) {
                     listDiv.innerHTML = "<p>No hay alumnos confirmados hoy.</p>";
                     return;
                 }
-                
                 listDiv.innerHTML = "";
                 const vistos = new Set();
-                
                 json.data.forEach(asistRaw => {
                     const a = parseData(asistRaw);
                     const alumno = parseRelation(a.alumno);
                     const clase = parseRelation(a.clase);
-                    
                     if (alumno && clase) {
                         const alumnoId = getID(alumno);
                         if (!vistos.has(alumnoId)) {
                             vistos.add(alumnoId);
                             const nombre = (alumno.nombre + " " + (alumno.apellidos || "")).toUpperCase();
                             const fClase = formatTimeSafe(clase.Fecha_Hora);
-                            
-                            listDiv.innerHTML += `
-                                <div class="student-item">
-                                    <div>
-                                        <h4>${nombre}</h4>
-                                        <p style="color:var(--accent); font-weight:800; font-size:12px;">CLASE: ${fClase.date} @ ${fClase.time}</p>
-                                        <p style="font-size:11px; color:var(--text-muted)">Duración: ${clase.Duracion}h</p>
-                                    </div>
-                                    <button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${alumnoId}', ${clase.Duracion})">VALIDAR</button>
-                                </div>`;
+                            listDiv.innerHTML += `<div class="student-item"><div><h4>${nombre}</h4><p style="color:var(--accent); font-weight:800; font-size:12px;">CLASE: ${fClase.date} @ ${fClase.time}</p><p style="font-size:11px; color:var(--text-muted)">Duración: ${clase.Duracion}h</p></div><button class="validate-btn" onclick="validateAttendance('${getID(asistRaw)}', '${alumnoId}', ${clase.Duracion})">VALIDAR</button></div>`;
                         }
                     }
                 });
@@ -344,16 +320,8 @@
             if (!claseHoyId) return;
             const token = localStorage.getItem('aikido_jwt');
             try {
-                const res = await fetch(`${API_URL}/api/asistencias`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } })
-                });
-                if(res.ok) {
-                    showModal('¡OSS!', 'Asistencia confirmada. El Sensei te validará en el Dojo.', 'fa-check-double');
-                    document.getElementById('confirm-btn').innerText = "CONFIRMADO";
-                    document.getElementById('confirm-btn').disabled = true;
-                }
+                const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
+                if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada. El Sensei te validará en el Dojo.', 'fa-check-double'); document.getElementById('confirm-btn').innerText = "CONFIRMADO"; document.getElementById('confirm-btn').disabled = true; }
             } catch (e) { showModal('Error', 'Fallo de conexión.', 'fa-wifi'); }
         }
 
@@ -397,22 +365,6 @@
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
                 else showModal('Error', 'DNI o contraseña incorrectos', 'fa-circle-xmark');
             } catch (err) { showModal('Error', 'Fallo de conexión', 'fa-wifi'); }
-        });
-
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const dni = document.getElementById('reg-dni').value;
-            const password = document.getElementById('reg-pass').value;
-            try {
-                const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
-                const checkData = await checkRes.json();
-                if (checkData.data.length === 0) return showModal('Error', 'DNI no encontrado.', 'fa-circle-exclamation');
-                const p = parseData(checkData.data[0]);
-                const email = p.email || `${dni.toLowerCase()}@arashi.com`;
-                const regRes = await fetch(`${API_URL}/api/auth/local/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: dni, email: email, password: password }) });
-                if (regRes.ok) { showModal('¡OSS!', 'Activación completada.', 'fa-circle-check'); showView('login'); }
-                else showModal('Error', 'Esta cuenta ya está activa.', 'fa-circle-xmark');
-            } catch (err) { showModal('Error', 'Fallo de red', 'fa-wifi'); }
         });
 
         function logout() { localStorage.clear(); location.reload(); }
