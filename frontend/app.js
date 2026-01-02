@@ -376,6 +376,9 @@ async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
     const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
+    
+    // Para el informe de asistencia
+    const attendanceDate = document.getElementById('report-attendance-date').value;
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -384,121 +387,136 @@ async function generateReport(type) {
 
     const subtitleMap = {
         'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro',
-        'bajas_surname': 'Histórico Bajas (Por Apellidos)', 'bajas_date': 'Histórico Bajas (Por Fecha)'
-    };
-    const filenameMap = {
-        'surname': 'apellidos', 'age': 'edad', 'grade': 'grado', 'dojo': 'dojo', 'group': 'grado', 'insurance': 'seguros',
-        'bajas_surname': 'historico_apellidos', 'bajas_date': 'historico_fechas'
+        'bajas_surname': 'Histórico Bajas (Por Apellidos)', 'bajas_date': 'Histórico Bajas (Por Fecha)',
+        'attendance': 'Asistencia Diaria'
     };
 
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const isBaja = type.startsWith('bajas_');
-        let title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO DE ALUMNOS";
+        
+        let title = "";
+        let subText = "";
+        let headRow = [];
+        let body = [];
+        let list = [];
 
-        if (!isBaja && type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
-        else if (!isBaja) title += ` POR ${subtitleMap[type].toUpperCase()}`;
+        // --- LÓGICA ESPECIAL PARA INFORME DE ASISTENCIA ---
+        if (type === 'attendance') {
+            if (!attendanceDate) { alert("Por favor, selecciona una fecha para el informe de asistencia."); return; }
+            
+            title = "INFORME DE ASISTENCIA DIARIA";
+            subText = `Día: ${formatDateDisplay(attendanceDate)} | Arashi Group Aikido`;
+            if (dojoFilterId) subText += ` (${dojoFilterName})`;
 
-        let subText = `Arashi Group Aikido | Alumnos ${isBaja ? 'Inactivos' : 'Activos'}`;
-        if (dojoFilterId) subText += ` (${dojoFilterName})`;
+            // Query a asistencias filtrando por la fecha de la clase
+            let apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
+            if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
 
-        let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
-        if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            const json = await res.json();
+            list = json.data || [];
 
-        const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-        const json = await res.json();
-        let list = json.data || [];
+            headRow = ['Alumno', 'DNI', 'Dojo', 'Clase', 'Hora Clase', 'Estado Final'];
 
-        list.sort((a, b) => {
-            const pA = a.attributes || a;
-            const pB = b.attributes || b;
-            if (type === 'bajas_date') return new Date(pB.fecha_baja || '1900-01-01') - new Date(pA.fecha_baja || '1900-01-01');
-            if (type === 'bajas_surname' || type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
-            if (type === 'insurance') { if (pA.seguro_pagado !== pB.seguro_pagado) return (pA.seguro_pagado === true ? -1 : 1); return (pA.apellidos || '').localeCompare(pB.apellidos || ''); }
-            if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
-            if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
-            if (type === 'group') { const cmp = (pA.grupo || '').localeCompare(pB.grupo || ''); return cmp !== 0 ? cmp : (pA.apellidos || '').localeCompare(pB.apellidos || ''); }
-            if (type === 'age') return new Date(pA.fecha_nacimiento || '2000-01-01') - new Date(pB.fecha_nacimiento || '2000-01-01');
-            return 0;
-        });
+            body = list.map(item => {
+                const a = item.attributes || item;
+                const alumno = parseRelation(a.alumno);
+                const clase = parseRelation(a.clase);
+                
+                const nombreAlumno = alumno ? `${(alumno.apellidos || '').toUpperCase()}, ${alumno.nombre || ''}` : 'NO DISP';
+                const dojoAlumno = alumno ? getDojoName(alumno.dojo) : 'NO DISP';
+                const tipoClase = clase ? clase.Tipo : 'NO DISP';
+                const horaClase = clase ? (clase.Fecha_Hora ? clase.Fecha_Hora.split('T')[1].substring(0,5)+'h' : 'NO DISP') : 'NO DISP';
+                
+                // ESTADO CRÍTICO: "Asistio" (OK) vs "Confirmado" (PENDIENTE)
+                const estado = a.Estado === 'Asistio' ? 'ASISTIÓ' : 'NO SE PRESENTÓ / PENDIENTE';
 
-        // Configuración de Cabecera
-        let headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Seguro', 'Teléfono'];
-        if (isBaja) headRow.unshift('Fecha Baja');
-        headRow.push('Email');
-        if (type === 'age') headRow.push('Nac.', 'Edad');
-        else if (type !== 'insurance') headRow.push('Nac.');
+                return [nombreAlumno, alumno ? alumno.dni : 'NO DISP', dojoAlumno, tipoClase, horaClase, estado];
+            });
 
-        headRow.push('Dojo', 'Alta');
-        if (!isBaja && type === 'group') headRow.push('Grupo');
-        if (type !== 'insurance') headRow.push('Dirección');
-        headRow.push('Población', 'CP');
+        } else {
+            // --- LÓGICA PARA INFORMES ESTÁNDAR (ALUMNOS / BAJAS) ---
+            const isBaja = type.startsWith('bajas_');
+            title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO DE ALUMNOS";
+            if (!isBaja && type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
+            else if (!isBaja) title += ` POR ${subtitleMap[type].toUpperCase()}`;
 
-        const body = list.map(a => {
-            const p = a.attributes || a;
-            let dni = (p.dni || 'NO DISP').toUpperCase();
-            let email = (p.email && p.email.trim() !== "") ? p.email : 'NO DISP';
-            const row = [(p.apellidos || 'NO DISP').toUpperCase(), p.nombre || 'NO DISP', dni, normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', normalizePhone(p.telefono)];
+            subText = `Arashi Group Aikido | Alumnos ${isBaja ? 'Inactivos' : 'Activos'}`;
+            if (dojoFilterId) subText += ` (${dojoFilterName})`;
 
-            if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
-            row.push(email);
+            let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
+            if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
 
-            if (type === 'age') { row.push(formatDateDisplay(p.fecha_nacimiento), calculateAge(p.fecha_nacimiento)); }
-            else if (type !== 'insurance') row.push(formatDateDisplay(p.fecha_nacimiento));
+            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            const json = await res.json();
+            list = json.data || [];
 
-            row.push(getDojoName(p.dojo), formatDateDisplay(p.fecha_inicio));
-            if (!isBaja && type === 'group') row.push(p.grupo || 'NO DISP');
-            if (type !== 'insurance') row.push(normalizeAddress(p.direccion));
-            row.push(normalizeCity(p.poblacion), p.cp || 'NO DISP');
-            return row;
-        });
+            // Sorteo de lista
+            list.sort((a, b) => {
+                const pA = a.attributes || a; const pB = b.attributes || b;
+                if (type === 'bajas_date') return new Date(pB.fecha_baja || '1900-01-01') - new Date(pA.fecha_baja || '1900-01-01');
+                if (type === 'bajas_surname' || type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
+                if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
+                if (type === 'age') return new Date(pA.fecha_nacimiento || '2000-01-01') - new Date(pB.fecha_nacimiento || '2000-01-01');
+                return (pA.apellidos || '').localeCompare(pB.apellidos || '');
+            });
 
-        const colStyles = {};
-        headRow.forEach((h, i) => {
-            colStyles[i] = { halign: 'left', cellWidth: 'auto' };
-            if (['DNI', 'Grado', 'Teléfono', 'Nac.', 'Edad', 'Seguro', 'CP', 'Grupo', 'Fecha Baja', 'Alta'].includes(h)) {
-                colStyles[i].halign = 'center';
-            }
-            if (h === 'Grado') colStyles[i].cellWidth = 14;
-            if (h === 'DNI') colStyles[i].cellWidth = 22;
-            if (h === 'Nac.') colStyles[i].cellWidth = 18;
-            if (h === 'Alta') colStyles[i].cellWidth = 18;
-            if (h === 'Edad') colStyles[i].cellWidth = 10;
-            if (h === 'CP') colStyles[i].cellWidth = 12;
-            if (h === 'Teléfono') colStyles[i].cellWidth = 22;
-            if (h === 'Población') colStyles[i].cellWidth = 22;
-            if (h === 'Seguro') colStyles[i].cellWidth = 18;
-            if (h === 'Fecha Baja') colStyles[i].cellWidth = 18;
-        });
+            headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Seguro', 'Teléfono'];
+            if (isBaja) headRow.unshift('Fecha Baja');
+            headRow.push('Email', 'Dojo', 'Alta');
+            if (type === 'age') headRow.push('Edad');
 
+            body = list.map(a => {
+                const p = a.attributes || a;
+                const row = [(p.apellidos || 'NO DISP').toUpperCase(), p.nombre || 'NO DISP', p.dni || 'NO DISP', normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', normalizePhone(p.telefono)];
+                if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
+                row.push(p.email || 'NO DISP', getDojoName(p.dojo), formatDateDisplay(p.fecha_inicio));
+                if (type === 'age') row.push(calculateAge(p.fecha_nacimiento));
+                return row;
+            });
+        }
+
+        // --- RENDERIZADO COMÚN DE LA TABLA ---
         doc.autoTable({
-            startY: 25, head: [headRow], body: body, theme: 'grid', showHead: 'everyPage',
-            margin: { top: 30, left: 5, right: 5, bottom: 15 },
-            styles: { fontSize: 6.8, cellPadding: 1.2, valign: 'middle', overflow: 'linebreak' },
+            startY: 25, head: [headRow], body: body, theme: 'grid',
+            margin: { top: 30, left: 10, right: 10, bottom: 15 },
+            styles: { fontSize: 7, cellPadding: 1.5, valign: 'middle' },
             headStyles: { fillColor: [190, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-            columnStyles: colStyles,
-            willDrawCell: (data) => {
-                if (data.section === 'body' && headRow[data.column.index] === 'Seguro') {
-                    const status = data.cell.raw;
-                    if (status === 'PAGADO') { doc.setFillColor(200, 255, 200); doc.setTextColor(0, 100, 0); }
-                    else if (status === 'PENDIENTE') { doc.setFillColor(255, 200, 200); doc.setTextColor(150, 0, 0); }
+            didParseCell: function(data) {
+                // Colorización de estados
+                if (data.section === 'body') {
+                    const cellText = data.cell.raw;
+                    if (cellText === 'ASISTIÓ' || cellText === 'PAGADO') {
+                        data.cell.styles.textColor = [0, 128, 0]; data.cell.styles.fontStyle = 'bold';
+                    }
+                    if (cellText === 'NO SE PRESENTÓ / PENDIENTE' || cellText === 'PENDIENTE') {
+                        data.cell.styles.textColor = [190, 0, 0]; data.cell.styles.fontStyle = 'bold';
+                    }
                 }
             },
             didDrawPage: (data) => {
-                doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); doc.setFontSize(16); doc.setFont("helvetica", "bold");
-                doc.text(title, pageWidth / 2, 12, { align: "center" }); doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                doc.setFontSize(16); doc.setFont("helvetica", "bold");
+                doc.text(title, pageWidth / 2, 12, { align: "center" });
+                doc.setFontSize(10); doc.setFont("helvetica", "normal");
                 doc.text(subText, pageWidth / 2, 18, { align: "center" });
-                doc.setFontSize(8); doc.setTextColor(150);
+                
                 const footerY = pageHeight - 10;
-                const now = new Date().toLocaleString('es-ES');
-                doc.text(`Generado el: ${now}`, 10, footerY);
+                doc.setFontSize(8); doc.setTextColor(150);
+                doc.text(`Generado: ${new Date().toLocaleString()}`, 10, footerY);
                 doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth / 2, footerY, { align: 'center' });
-                doc.text(`Total Alumnos: ${list.length}`, pageWidth - 10, footerY, { align: 'right' });
             }
         });
-        doc.save(`Informe_Arashi_${filenameMap[type]}.pdf`);
+
+        doc.save(`Informe_Arashi_${type}_${attendanceDate || ''}.pdf`);
     };
+}
+
+// Auxiliar para manejar relaciones en reportes
+function parseRelation(obj) {
+    if(!obj || !obj.data) return obj;
+    return obj.data.attributes || obj.data;
 }
 
 function changeFontSize(t, d) { const table = document.getElementById(t); if (!table) return; table.querySelectorAll('th, td').forEach(c => { const s = parseFloat(window.getComputedStyle(c).fontSize); const p = parseFloat(window.getComputedStyle(c).paddingTop); c.style.fontSize = (Math.max(8, s + d)) + "px"; c.style.padding = `${Math.max(2, p + (d * 0.5))}px 5px`; }); }
