@@ -15,29 +15,17 @@
             --bg: #05080f; --accent: #ef4444; --card-bg: rgba(30, 41, 59, 0.4); 
             --glass-border: rgba(255, 255, 255, 0.1); --text-main: #f8fafc; 
             --text-muted: #94a3b8; --success: #22c55e; --neon: 0 0 20px rgba(239, 68, 68, 0.4);
-            accent-color: var(--accent); /* Cambia el color azul nativo por Rojo Arashi */
         }
+        html, body { background-color: var(--bg); margin: 0; padding: 0; height: 100vh; width: 100vw; color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; color-scheme: dark; accent-color: var(--accent); }
+        body { background-image: radial-gradient(circle at top right, #1e1b4b, transparent); display: flex; flex-direction: column; }
         
-        /* --- CORRECCIÓN SCROLL UNIVERSAL --- */
-        html { height: 100%; overflow: hidden; }
-        body { 
-            background-color: var(--bg); 
-            margin: 0; padding: 0; 
-            height: 100%; width: 100vw; 
-            color: var(--text-main); 
-            font-family: 'Inter', sans-serif; 
-            color-scheme: dark; 
-            background-image: radial-gradient(circle at top right, #1e1b4b, transparent);
-            overflow-y: auto; /* Permite scroll en PC y Móvil */
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
         .hidden { display: none !important; }
         
-        #app-content { display: flex; flex-direction: column; flex: 1; width: 100%; padding-bottom: 110px; }
-        #install-wall { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        /* --- LÓGICA DE VISIBILIDAD --- */
+        #app-content { display: none; flex-direction: column; flex: 1; height: 100%; width: 100%; overflow-y: auto; padding-bottom: 110px; -webkit-overflow-scrolling: touch; }
+        #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        
+        /* Clase activada por JS para saltar el muro */
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
@@ -50,19 +38,7 @@
 
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
         .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
-        
-        /* Estilo para los inputs y el calendario nativo */
-        input, select { 
-            width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; 
-            border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; 
-            font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; 
-        }
-
-        /* --- TRUCO ROJO PARA ICONOS DE CALENDARIO --- */
-        ::-webkit-calendar-picker-indicator {
-            filter: invert(30%) sepia(100%) saturate(5000%) hue-rotate(340deg) brightness(100%) contrast(100%);
-            cursor: pointer;
-        }
+        input { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
 
         /* --- PROGRESS --- */
         .progress-container { display: flex; justify-content: center; align-items: center; position: relative; margin: 15px 0 25px; }
@@ -125,7 +101,7 @@
         }
         .modal-content::-webkit-scrollbar { display: none; }
         
-        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
+        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
         .modal-actions-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
         #modal-ok-btn { margin-top: 35px; }
 
@@ -135,26 +111,34 @@
     </style>
     
     <script>
+        /**
+         * LÓGICA DE MURO PWA
+         * - PC/Mac: Salta el muro directamente.
+         * - Móvil/Tablet: Muestra el muro si no está instalada (standalone).
+         */
         (function() {
             const ua = navigator.userAgent;
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-            const isIPad = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            const hasToken = !!localStorage.getItem('aikido_jwt');
-            if ((!isMobile && !isIPad) || isStandalone || hasToken) document.documentElement.classList.add('ready-to-show');
+
+            // Si NO es móvil/tablet O ya está instalada -> Saltamos el muro.
+            if (!isMobileOrTablet || isStandalone) {
+                document.documentElement.classList.add('ready-to-show');
+            }
         })();
     </script>
 </head>
 <body>
+    <!-- MURO DE INSTALACIÓN (Solo visible en Móvil/Tablet si no es PWA) -->
     <div id="install-wall">
         <img src="img/logo-arashi.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
-        <p style="color: var(--text-muted); margin-bottom: 35px;">Instala la App en tu pantalla de inicio para continuar.</p>
+        <p style="color: var(--text-muted); margin-bottom: 35px;">Añade la App a tu pantalla de inicio para continuar.</p>
         <button class="action-btn primary" onclick="alert('Pulsa Compartir > Añadir a pantalla de inicio')">INSTALAR AHORA</button>
     </div>
 
     <div id="app-content">
-        <!-- MODAL -->
+        <!-- MODAL GENÉRICO -->
         <div id="custom-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
@@ -462,7 +446,7 @@
                     <input type="time" id="gen-afternoon" value="19:00" class="modal-field">
                     <div class="modal-actions-container">
                         <button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button>
-                        <button class="action-btn" style="background:#1e293b; color:white; margin-top:5px;" onclick="closeModal()">CERRAR</button>
+                        <button class="action-btn" style="background:#1e293b; color:white;" onclick="closeModal()">CERRAR</button>
                     </div>
                 </div>
             `, false);
@@ -505,7 +489,7 @@
                     <div class="modal-actions-container">
                         <button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR CAMBIOS</button>
                         <button class="action-btn" style="background:#1e293b; color:#ff4444; border:1px solid rgba(239,68,68,0.2);" onclick="confirmDeleteClass('${id}')">ELIMINAR CLASE</button>
-                        <button class="action-btn" style="background:#1e293b; color:white; margin-top:5px;" onclick="closeModal()">CERRAR</button>
+                        <button class="action-btn" style="background:#1e293b; color:white;" onclick="closeModal()">CERRAR</button>
                     </div>
                 </div>
             `, false); 
@@ -518,7 +502,7 @@
         }
 
         async function deleteClass(id) { 
-            await fetch(`${API_URL('api/clases/' + id)}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } }); 
+            await fetch(`${API_URL}/api/clases/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } }); 
             showModal("Éxito", "Clase eliminada.", true);
             loadManageClasses(); 
         }
