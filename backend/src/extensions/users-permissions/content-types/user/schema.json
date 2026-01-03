@@ -69,6 +69,12 @@
     "is_sensei": {
       "type": "boolean",
       "default": false
+    },
+    "nombre": {
+      "type": "string"
+    },
+    "apellidos": {
+      "type": "string"
     }
   }
 }
