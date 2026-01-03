@@ -264,7 +264,7 @@
                 document.getElementById('nav-sensei').style.display = 'flex';
                 // CONFIG SENSEI: Usar datos de tabla User, ocultar círculo
                 document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
-                document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellido?.[0] || "");
+                document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellidos?.[0] || "");
                 document.getElementById('student-progress-circle').classList.add('hidden');
                 document.getElementById('class-hero-card').classList.add('hidden');
                 document.getElementById('sensei-welcome-card').classList.remove('hidden');
