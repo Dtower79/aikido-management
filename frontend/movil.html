@@ -17,7 +17,12 @@
             --text-muted: #94a3b8; --success: #22c55e; --neon: 0 0 20px rgba(239, 68, 68, 0.4);
         }
         
-        html, body { background-color: var(--bg); margin: 0; padding: 0; height: 100vh; width: 100vw; color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; }
+        html, body { 
+            background-color: var(--bg); margin: 0; padding: 0; height: 100vh; width: 100vw; 
+            color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden;
+            accent-color: var(--accent); /* Cambia el azul por rojo Arashi en controles del sistema */
+        }
+        
         body { background-image: radial-gradient(circle at top right, #1e1b4b, transparent); display: flex; flex-direction: column; }
         .hidden { display: none !important; }
         
@@ -26,49 +31,55 @@
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
-        /* --- INPUTS PREMIUM (ANTI-BLANCO) --- */
+        /* --- AUTH & INPUTS PREMIUM --- */
+        .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .logo-img { width: 140px; height: auto; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
+        .auth-card { 
+            width: 100%; max-width: 350px; background: var(--card-bg); backdrop-filter: blur(20px); 
+            border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; 
+            text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); 
+        }
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
-        .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 15px; z-index: 10; }
+        .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         
         input, select { 
             width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.85) !important; 
             border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; 
             font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s;
-            appearance: none;
+            font-family: 'Inter', sans-serif;
         }
-        input:focus, select:focus { border-color: var(--accent); box-shadow: var(--neon); }
-        
-        /* Bloqueo total de autocompletado blanco */
-        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus { 
-            -webkit-text-fill-color: white !important; 
-            -webkit-box-shadow: 0 0 0px 1000px #0b1120 inset !important; 
-            transition: background-color 5000s ease-in-out 0s; 
-        }
+        input:focus { border-color: var(--accent); box-shadow: var(--neon); }
+        input:-webkit-autofill { -webkit-text-fill-color: white !important; -webkit-box-shadow: 0 0 0px 1000px #0b1120 inset !important; }
 
-        .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
-        .logo-img { width: 150px; height: auto; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
-        .auth-card { width: 100%; max-width: 350px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; text-align: center; }
-        .auth-footer { margin-top: 25px; font-size: 13px; color: #ffffff; }
+        .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; }
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 700; }
 
-        /* --- DASHBOARD (SMOOTH FADE-IN) --- */
-        #class-hero-card { 
-            opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease, transform 0.8s ease;
-            background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
-            padding: 40px 25px; border-radius: 40px; box-shadow: 0 20px 45px rgba(239,68,68,0.3); text-align: center; margin-bottom: 25px; 
+        /* --- HEADER MEJORADO --- */
+        .header-app { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 30px; width: 100%; padding: 0 25px; box-sizing: border-box; 
         }
-        .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%; box-sizing: border-box; }
-        .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid var(--glass-border); color: white; flex-shrink: 0; }
+        .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid var(--glass-border); color: white; flex-shrink: 0; box-shadow: var(--neon); }
 
         /* BOTONES */
         .action-btn { width: 100%; padding: 18px; background: white; color: black; border: none; border-radius: 22px; font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-transform: uppercase; letter-spacing: 1px; }
         .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
         .action-btn:active { transform: translateY(4px) scale(0.96); }
 
+        /* UI APP */
+        #dashboard-view, #sensei-view, #clases-view { padding: 25px; padding-bottom: 110px; height: 100%; overflow-y: auto; box-sizing: border-box; }
+        .class-hero { 
+            opacity: 0; transform: translateY(10px); transition: 0.8s all ease;
+            background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
+            padding: 40px 25px; border-radius: 40px; box-shadow: 0 20px 45px rgba(239,68,68,0.3); text-align: center; margin-bottom: 25px; 
+        }
+        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-left: 4px solid var(--accent); }
+
         /* NAV */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.98); backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
-        .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
+        .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; transition: 0.3s; }
         .nav-item.active { color: var(--accent); }
+        .nav-item span { font-size: 9px; font-weight: 700; margin-top: 6px; text-transform: uppercase; }
         .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
 
         /* MODALES */
@@ -77,9 +88,7 @@
         .modal-field { 
             width: 100%; padding: 16px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); 
             border-radius: 18px; color: white; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; color-scheme: dark;
-            appearance: auto;
         }
-        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-left: 4px solid var(--accent); }
     </style>
     <script>
         function checkAccess() {
@@ -94,7 +103,7 @@
     <div id="install-wall">
         <img src="img/logo-arashi.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
-        <p style="color: var(--text-muted); margin-bottom: 35px;">Instala la App para continuar.</p>
+        <p style="color: var(--text-muted); margin-bottom: 30px;">Instala la App para continuar.</p>
         <button class="action-btn primary" id="btn-install-pwa">INSTALAR AHORA</button>
     </div>
 
@@ -151,7 +160,7 @@
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
             <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
-            <div class="qr-main-btn" onclick="showModal('Asistencia', 'Muestra tu código QR.')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
+            <div class="qr-main-btn" onclick="showModal('QR Dojo', 'Muestra tu código QR.')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
             <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
             <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
         </nav>
@@ -167,10 +176,11 @@
 
         function formatTimeSafe(iso) {
             if(!iso) return { time: "--:--", date: "--/--/----", raw: null };
-            const d = new Date(iso.replace('Z', '')); 
+            // Procesamos la fecha ISO en el huso local del dispositivo
+            const d = new Date(iso); 
             return { 
-                time: d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0') + "h", 
-                date: d.getDate().toString().padStart(2, '0') + "/" + (d.getMonth()+1).toString().padStart(2, '0') + "/" + d.getFullYear(), 
+                time: d.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'}) + "h", 
+                date: d.toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit', year: 'numeric'}), 
                 raw: d 
             };
         }
@@ -191,7 +201,8 @@
                     const p = parseData(alumnoGlobal);
                     dojoIdGlobal = getID(parseRelation(p.dojo)); 
                     document.getElementById('user-display-name').innerText = p.nombre;
-                    document.getElementById('user-initials').innerText = ((p.nombre?p.nombre[0]:"")+(p.apellidos?p.apellidos[0]:"")).toUpperCase();
+                    const ini = ((p.nombre?p.nombre[0]:"")+(p.apellidos?p.apellidos[0]:"")).toUpperCase();
+                    document.getElementById('user-initials').innerText = ini;
                 }
                 checkTodayClass();
             } catch (e) {}
@@ -212,105 +223,68 @@
                     document.getElementById('confirm-btn').classList.remove('hidden');
                 } else {
                     document.getElementById('next-class-time').innerText = "SIN CLASES";
-                    document.getElementById('next-class-date').innerText = "Día de descanso";
                     document.getElementById('confirm-btn').classList.add('hidden');
                 }
-                // EFECTO SMOOTH: Solo aparece cuando los datos están inyectados
-                hero.style.opacity = '1';
-                hero.style.transform = 'translateY(0)';
+                hero.style.opacity = '1'; hero.style.transform = 'translateY(0)';
             } catch (e) { hero.style.opacity = '1'; }
         }
 
         function uiGenerateMonth() {
             const currentMonth = new Date().toISOString().substring(0, 7);
-            const html = `
-                <div style="text-align:left;">
-                    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">1. Elegir Mes:</label>
-                    <input type="month" id="gen-month-input" value="${currentMonth}" class="modal-field">
-                    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">2. Hora Inicio Keikos:</label>
-                    <input type="time" id="gen-time-input" value="19:00" class="modal-field">
-                    <button id="btn-do-gen" class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button>
-                </div>`;
-            showModal("Generador", "");
-            document.getElementById('modal-body-content').innerHTML = html;
+            showModal("Generador", `<div style="text-align:left;"><label style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">1. Elegir Mes:</label><input type="month" id="gen-month-input" value="${currentMonth}" class="modal-field"><label style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">2. Hora Inicio Keiko:</label><input type="time" id="gen-time-input" value="19:00" class="modal-field"><button id="btn-do-gen" class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button></div>`);
         }
 
         async function processGeneration() {
             const token = localStorage.getItem('aikido_jwt');
             const monthVal = document.getElementById('gen-month-input').value;
             const timeVal = document.getElementById('gen-time-input').value;
-            if(!monthVal || !timeVal || !dojoIdGlobal) return alert("Completa todos los datos.");
+            if(!monthVal || !timeVal || !dojoIdGlobal) return alert("Completa los datos");
             
-            const btn = document.getElementById('btn-do-gen');
-            btn.innerText = "GENERANDO..."; btn.disabled = true;
-
             const [year, month] = monthVal.split('-').map(Number);
             const [hour, minute] = timeVal.split(':').map(Number);
             let creadas = 0;
             const ultimoDia = new Date(year, month, 0).getDate();
             
             for(let day=1; day<=ultimoDia; day++) {
-                const d = new Date(year, month - 1, day);
-                if(d.getDay() === 2 || d.getDay() === 4) { // Martes y Jueves
-                    d.setHours(hour, minute, 0, 0);
+                // Creamos fecha local
+                const d = new Date(year, month - 1, day, hour, minute, 0);
+                if(d.getDay() === 2 || d.getDay() === 4) { // Martes(2) y Jueves(4)
+                    // Enviamos el ISO real (convertido a UTC automáticamente por JS)
                     const payload = { data: { Fecha_Hora: d.toISOString(), Duracion: 1.5, Tipo: 'Normal', dojo: dojoIdGlobal } };
                     const res = await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
                     if(res.ok) creadas++;
                 }
             }
-            showModal('¡OSS!', `Se han generado ${creadas} keikos.`);
+            showModal('¡OSS!', `Se han generado ${creadas} clases.`);
             checkTodayClass();
         }
 
         function openEditClass(id, raw, dur) {
-            const f = raw.split('T')[0], h = raw.split('T')[1].substring(0,5);
-            const html = `
-                <div style="text-align:left;">
-                    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Fecha:</label>
-                    <input type="date" id="e-d" value="${f}" class="modal-field">
-                    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Hora:</label>
-                    <input type="time" id="e-h" value="${h}" class="modal-field">
-                    <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Duración:</label>
-                    <select id="e-dur" class="modal-field">
-                        <option value="1">1.0h</option>
-                        <option value="1.5" selected>1.5h</option>
-                    </select>
-                    <button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR</button>
-                </div>`;
-            showModal("Editar", ""); document.getElementById('modal-body-content').innerHTML = html;
+            const d = new Date(raw);
+            const f = d.toISOString().split('T')[0];
+            const h = d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
+            showModal("Editar", `<div style="text-align:left;"><label>FECHA:</label><input type="date" id="e-d" value="${f}" class="modal-field"><label>HORA:</label><input type="time" id="e-h" value="${h}" class="modal-field"><label>DURACIÓN:</label><select id="e-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select><button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR</button></div>`);
         }
 
         async function saveClass(id) {
-            const token = localStorage.getItem('aikido_jwt'), iso = `${document.getElementById('e-d').value}T${document.getElementById('e-h').value}:00.000Z`, dur = document.getElementById('e-dur').value;
-            const res = await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur), dojo: dojoIdGlobal, Tipo: 'Normal' } }) });
+            const token = localStorage.getItem('aikido_jwt');
+            const dateVal = document.getElementById('e-d').value;
+            const timeVal = document.getElementById('e-h').value;
+            const dur = document.getElementById('e-dur').value;
+            
+            // Reconstruimos fecha local para guardar correctamente el desfase
+            const [y, m, d] = dateVal.split('-').map(Number);
+            const [hh, mm] = timeVal.split(':').map(Number);
+            const localDate = new Date(y, m - 1, d, hh, mm);
+
+            const res = await fetch(`${API_URL}/api/clases/${id}`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                body: JSON.stringify({ data: { Fecha_Hora: localDate.toISOString(), Duracion: parseFloat(dur), dojo: dojoIdGlobal, Tipo: 'Normal' } }) 
+            });
             if(res.ok) { showModal('¡Éxito!', 'Clase actualizada.'); loadManageClasses(); checkTodayClass(); }
         }
 
-        function showView(v, el) { ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); document.getElementById(v + '-view').classList.remove('hidden'); if(el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); } }
-        function showModal(t, txt, icon='fa-circle-check') { document.getElementById('modal-title').innerText = t; document.getElementById('modal-icon').className = `fa-solid ${icon}`; document.getElementById('modal-body-content').innerHTML = txt ? `<p>${txt}</p>` : ""; document.getElementById('custom-modal').classList.remove('hidden'); }
-        function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
-        function logout() { localStorage.clear(); location.reload(); }
-
-        async function loadMonthlyClasses(el) {
-            showView('clases', el); const container = document.getElementById('clases-list-container'), now = new Date();
-            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=40`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
-            const json = await res.json(); container.innerHTML = "";
-            (json.data || []).filter(c => formatTimeSafe(parseData(c).Fecha_Hora).raw > now).forEach(c => {
-                const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora);
-                container.innerHTML += `<div class="class-card"><div><h4>${f.date}</h4><p>${f.time}</p></div><div style="font-weight:800;color:var(--accent)">${d.Duracion}h</div></div>`;
-            });
-        }
-        async function loadManageClasses() {
-            const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
-            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=25`, { headers: { 'Authorization': `Bearer ${token}` } });
-            const json = await res.json(); listDiv.innerHTML = "<h3>Editar</h3>";
-            json.data.forEach(c => { const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora); listDiv.innerHTML += `<div class="class-card" onclick="openEditClass('${getID(c)}','${d.Fecha_Hora}',${d.Duracion})"><div><h4>${f.date} @ ${f.time}</h4><p>${d.Duracion}h</p></div><i class="fa-solid fa-pen"></i></div>`; });
-        }
-        async function confirmAttendance() {
-            if (!claseHoyId || !alumnoGlobal) return;
-            const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
-            if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada.'); checkTodayClass(); }
-        }
         async function loadSenseiPanel() {
             const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
             const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
@@ -332,6 +306,31 @@
             await fetch(`${API_URL}/api/alumnos/${aluId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: nuevasHoras } }) });
             loadSenseiPanel();
         }
+
+        async function loadMonthlyClasses(el) {
+            showView('clases', el); const container = document.getElementById('clases-list-container'), now = new Date();
+            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=40`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+            const json = await res.json(); container.innerHTML = "";
+            (json.data || []).filter(c => formatTimeSafe(parseData(c).Fecha_Hora).raw > now).forEach(c => {
+                const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora);
+                container.innerHTML += `<div class="class-card"><div><h4>${f.date}</h4><p>${f.time}</p></div><div style="font-weight:800;color:var(--accent)">${d.Duracion}h</div></div>`;
+            });
+        }
+        async function loadManageClasses() {
+            const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
+            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=25`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const json = await res.json(); listDiv.innerHTML = "<h3>Editar</h3>";
+            json.data.forEach(c => { const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora); listDiv.innerHTML += `<div class="class-card" onclick="openEditClass('${getID(c)}','${d.Fecha_Hora}',${d.Duracion})"><div><h4>${f.date} @ ${f.time}</h4><p>${d.Duracion}h</p></div><i class="fa-solid fa-pen"></i></div>`; });
+        }
+        async function confirmAttendance() {
+            if (!claseHoyId || !alumnoGlobal) return;
+            const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
+            if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada.'); checkTodayClass(); }
+        }
+        function showView(v, el) { ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); document.getElementById(v + '-view').classList.remove('hidden'); if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); } }
+        function showModal(t, txt, icon='fa-circle-check') { document.getElementById('modal-title').innerText = t; document.getElementById('modal-icon').className = `fa-solid ${icon}`; document.getElementById('modal-body-content').innerHTML = txt ? `<p>${txt}</p>` : ""; document.getElementById('custom-modal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
+        function logout() { localStorage.clear(); location.reload(); }
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: document.getElementById('dni-login').value, password: document.getElementById('pass-login').value }) });
