@@ -20,7 +20,8 @@
         html, body { 
             background-color: var(--bg); margin: 0; padding: 0; height: 100vh; width: 100vw; 
             color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden;
-            accent-color: var(--accent); /* Cambia el azul por rojo Arashi en controles del sistema */
+            color-scheme: dark; /* Fuerza controles del sistema a modo oscuro */
+            accent-color: var(--accent); /* Cambia el azul por Rojo Arashi */
         }
         
         body { background-image: radial-gradient(circle at top right, #1e1b4b, transparent); display: flex; flex-direction: column; }
@@ -31,53 +32,40 @@
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
-        /* --- AUTH & INPUTS PREMIUM --- */
+        /* --- AUTH Y LOGIN --- */
         .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .logo-img { width: 140px; height: auto; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
-        .auth-card { 
-            width: 100%; max-width: 350px; background: var(--card-bg); backdrop-filter: blur(20px); 
-            border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; 
-            text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); 
-        }
-        .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
+        .auth-card { width: 100%; max-width: 350px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .input-group { position: relative; margin-bottom: 15px; width: 100%; }
         .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
-        
         input, select { 
-            width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.85) !important; 
+            width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; 
             border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; 
             font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s;
-            font-family: 'Inter', sans-serif;
         }
-        input:focus { border-color: var(--accent); box-shadow: var(--neon); }
         input:-webkit-autofill { -webkit-text-fill-color: white !important; -webkit-box-shadow: 0 0 0px 1000px #0b1120 inset !important; }
-
-        .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; }
+        .auth-footer { margin-top: 25px; font-size: 13px; color: #ffffff; }
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 700; }
 
-        /* --- HEADER MEJORADO --- */
-        .header-app { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 30px; width: 100%; padding: 0 25px; box-sizing: border-box; 
-        }
+        /* --- HEADER CORREGIDO --- */
+        .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%; padding: 0 25px; box-sizing: border-box; }
         .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid var(--glass-border); color: white; flex-shrink: 0; box-shadow: var(--neon); }
 
-        /* BOTONES */
+        /* --- BOTONES PREMIUM --- */
         .action-btn { width: 100%; padding: 18px; background: white; color: black; border: none; border-radius: 22px; font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-transform: uppercase; letter-spacing: 1px; }
         .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
-        .action-btn:active { transform: translateY(4px) scale(0.96); }
+        .action-btn:disabled { background: #1e293b; color: var(--text-muted); cursor: default; box-shadow: none; }
+        .action-btn:active:not(:disabled) { transform: translateY(4px) scale(0.96); }
 
-        /* UI APP */
+        /* --- UI APP --- */
         #dashboard-view, #sensei-view, #clases-view { padding: 25px; padding-bottom: 110px; height: 100%; overflow-y: auto; box-sizing: border-box; }
-        .class-hero { 
-            opacity: 0; transform: translateY(10px); transition: 0.8s all ease;
-            background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
-            padding: 40px 25px; border-radius: 40px; box-shadow: 0 20px 45px rgba(239,68,68,0.3); text-align: center; margin-bottom: 25px; 
-        }
-        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-left: 4px solid var(--accent); }
+        .class-hero { opacity: 0; transform: translateY(10px); transition: 0.8s all ease; background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 40px 25px; border-radius: 40px; box-shadow: 0 20px 45px rgba(239,68,68,0.3); text-align: center; margin-bottom: 25px; }
+        .student-item { background: var(--card-bg); padding: 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border: 1px solid var(--glass-border); border-left: 4px solid var(--accent); }
+        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 
         /* NAV */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.98); backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
-        .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; transition: 0.3s; }
+        .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
         .nav-item.active { color: var(--accent); }
         .nav-item span { font-size: 9px; font-weight: 700; margin-top: 6px; text-transform: uppercase; }
         .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
@@ -85,10 +73,7 @@
         /* MODALES */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
         .modal-content { background: #0f172a; border: 1px solid var(--glass-border); padding: 35px 25px; border-radius: 40px; width: 100%; max-width: 330px; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.8); box-sizing: border-box; }
-        .modal-field { 
-            width: 100%; padding: 16px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); 
-            border-radius: 18px; color: white; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; color-scheme: dark;
-        }
+        .modal-field { width: 100%; padding: 16px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 18px; color: white; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; }
     </style>
     <script>
         function checkAccess() {
@@ -113,9 +98,7 @@
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
                 <h3 id="modal-title">...</h3>
                 <div id="modal-body-content"></div>
-                <div id="modal-actions" style="margin-top:25px;">
-                    <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">OK</button>
-                </div>
+                <button class="action-btn primary" onclick="closeModal()" style="margin-top:25px;">OK</button>
             </div>
         </div>
 
@@ -123,13 +106,13 @@
         <div id="login-view" class="auth-container">
             <img src="img/logo-arashi.png" class="logo-img">
             <div class="auth-card">
-                <h2 style="margin-top:0; font-size: 22px;">HOLA, ARASHI!</h2>
+                <h2>HOLA, ARASHI!</h2>
                 <form id="login-form">
                     <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="dni-login" placeholder="DNI: 12345678X" required></div>
                     <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="pass-login" placeholder="Contraseña" required></div>
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
-                <div class="auth-footer">¿Nuevo Alumno? <a href="#" onclick="showView('register')">Activa tu cuenta</a></div>
+                <div class="auth-footer">¿Nuevo? <a href="#" onclick="showView('register')">Activa tu cuenta</a></div>
             </div>
         </div>
 
@@ -142,7 +125,7 @@
                 <p style="margin:0; font-size:11px; font-weight:800; text-transform:uppercase; opacity:0.8;">Tu Próxima Clase</p>
                 <h2 id="next-class-time" style="margin:12px 0 4px; font-size:36px; font-weight:800;">--:--</h2>
                 <p id="next-class-date" style="margin:0 0 15px; font-size:16px; opacity:0.9; font-weight:800;">--/--/----</p>
-                <button class="action-btn" id="confirm-btn" onclick="confirmAttendance()" style="background:white; color:black;">ASISTIR AL KEIKO</button>
+                <button class="action-btn" id="confirm-btn" onclick="confirmAttendance()">ASISTIR AL KEIKO</button>
             </div>
         </div>
 
@@ -160,7 +143,7 @@
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
             <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
-            <div class="qr-main-btn" onclick="showModal('QR Dojo', 'Muestra tu código QR.')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
+            <div class="qr-main-btn" onclick="showModal('Asistencia', 'Presenta tu código QR.')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
             <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
             <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
         </nav>
@@ -169,14 +152,12 @@
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null;
-        
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
         const getID = (o) => o.documentId || o.id;
 
         function formatTimeSafe(iso) {
             if(!iso) return { time: "--:--", date: "--/--/----", raw: null };
-            // Procesamos la fecha ISO en el huso local del dispositivo
             const d = new Date(iso); 
             return { 
                 time: d.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'}) + "h", 
@@ -201,8 +182,7 @@
                     const p = parseData(alumnoGlobal);
                     dojoIdGlobal = getID(parseRelation(p.dojo)); 
                     document.getElementById('user-display-name').innerText = p.nombre;
-                    const ini = ((p.nombre?p.nombre[0]:"")+(p.apellidos?p.apellidos[0]:"")).toUpperCase();
-                    document.getElementById('user-initials').innerText = ini;
+                    document.getElementById('user-initials').innerText = ((p.nombre?p.nombre[0]:"")+(p.apellidos?p.apellidos[0]:"")).toUpperCase();
                 }
                 checkTodayClass();
             } catch (e) {}
@@ -211,6 +191,7 @@
         async function checkTodayClass() {
             const token = localStorage.getItem('aikido_jwt'), now = new Date();
             const hero = document.getElementById('class-hero-card');
+            const btn = document.getElementById('confirm-btn');
             try {
                 const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
@@ -220,10 +201,21 @@
                     const f = formatTimeSafe(parseData(claseRaw).Fecha_Hora);
                     document.getElementById('next-class-time').innerText = f.time;
                     document.getElementById('next-class-date').innerText = f.date;
-                    document.getElementById('confirm-btn').classList.remove('hidden');
+                    
+                    // Comprobar si ya existe confirmación
+                    const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const checkData = await check.json();
+                    if (checkData.data.length > 0) {
+                        btn.innerText = "YA CONFIRMADO";
+                        btn.disabled = true;
+                    } else {
+                        btn.innerText = "ASISTIR AL KEIKO";
+                        btn.disabled = false;
+                    }
+                    btn.classList.remove('hidden');
                 } else {
                     document.getElementById('next-class-time').innerText = "SIN CLASES";
-                    document.getElementById('confirm-btn').classList.add('hidden');
+                    btn.classList.add('hidden');
                 }
                 hero.style.opacity = '1'; hero.style.transform = 'translateY(0)';
             } catch (e) { hero.style.opacity = '1'; }
@@ -231,57 +223,35 @@
 
         function uiGenerateMonth() {
             const currentMonth = new Date().toISOString().substring(0, 7);
-            showModal("Generador", `<div style="text-align:left;"><label style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">1. Elegir Mes:</label><input type="month" id="gen-month-input" value="${currentMonth}" class="modal-field"><label style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">2. Hora Inicio Keiko:</label><input type="time" id="gen-time-input" value="19:00" class="modal-field"><button id="btn-do-gen" class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button></div>`);
+            showModal("Generador", `<div style="text-align:left;"><label style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">Elegir Mes:</label><input type="month" id="gen-month-input" value="${currentMonth}" class="modal-field"><label style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">Hora Inicio:</label><input type="time" id="gen-time-input" value="19:00" class="modal-field"><button id="btn-do-gen" class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button></div>`);
         }
 
         async function processGeneration() {
-            const token = localStorage.getItem('aikido_jwt');
-            const monthVal = document.getElementById('gen-month-input').value;
-            const timeVal = document.getElementById('gen-time-input').value;
+            const token = localStorage.getItem('aikido_jwt'), monthVal = document.getElementById('gen-month-input').value, timeVal = document.getElementById('gen-time-input').value;
             if(!monthVal || !timeVal || !dojoIdGlobal) return alert("Completa los datos");
-            
-            const [year, month] = monthVal.split('-').map(Number);
-            const [hour, minute] = timeVal.split(':').map(Number);
-            let creadas = 0;
-            const ultimoDia = new Date(year, month, 0).getDate();
-            
-            for(let day=1; day<=ultimoDia; day++) {
-                // Creamos fecha local
-                const d = new Date(year, month - 1, day, hour, minute, 0);
-                if(d.getDay() === 2 || d.getDay() === 4) { // Martes(2) y Jueves(4)
-                    // Enviamos el ISO real (convertido a UTC automáticamente por JS)
+            const [year, month] = monthVal.split('-').map(Number), [hour, min] = timeVal.split(':').map(Number);
+            let creadas = 0, ultimo = new Date(year, month, 0).getDate();
+            for(let day=1; day<=ultimo; day++) {
+                const d = new Date(year, month - 1, day, hour, min);
+                if(d.getDay() === 2 || d.getDay() === 4) {
                     const payload = { data: { Fecha_Hora: d.toISOString(), Duracion: 1.5, Tipo: 'Normal', dojo: dojoIdGlobal } };
                     const res = await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
                     if(res.ok) creadas++;
                 }
             }
-            showModal('¡OSS!', `Se han generado ${creadas} clases.`);
-            checkTodayClass();
+            showModal('¡OSS!', `Generadas ${creadas} clases.`); checkTodayClass();
         }
 
         function openEditClass(id, raw, dur) {
-            const d = new Date(raw);
-            const f = d.toISOString().split('T')[0];
-            const h = d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
+            const d = new Date(raw), f = d.toISOString().split('T')[0], h = d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
             showModal("Editar", `<div style="text-align:left;"><label>FECHA:</label><input type="date" id="e-d" value="${f}" class="modal-field"><label>HORA:</label><input type="time" id="e-h" value="${h}" class="modal-field"><label>DURACIÓN:</label><select id="e-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select><button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR</button></div>`);
         }
 
         async function saveClass(id) {
-            const token = localStorage.getItem('aikido_jwt');
-            const dateVal = document.getElementById('e-d').value;
-            const timeVal = document.getElementById('e-h').value;
-            const dur = document.getElementById('e-dur').value;
-            
-            // Reconstruimos fecha local para guardar correctamente el desfase
-            const [y, m, d] = dateVal.split('-').map(Number);
-            const [hh, mm] = timeVal.split(':').map(Number);
-            const localDate = new Date(y, m - 1, d, hh, mm);
-
-            const res = await fetch(`${API_URL}/api/clases/${id}`, { 
-                method: 'PUT', 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                body: JSON.stringify({ data: { Fecha_Hora: localDate.toISOString(), Duracion: parseFloat(dur), dojo: dojoIdGlobal, Tipo: 'Normal' } }) 
-            });
+            const token = localStorage.getItem('aikido_jwt'), dVal = document.getElementById('e-d').value, tVal = document.getElementById('e-h').value, dur = document.getElementById('e-dur').value;
+            const [y, m, d] = dVal.split('-').map(Number), [hh, mm] = tVal.split(':').map(Number);
+            const iso = new Date(y, m-1, d, hh, mm).toISOString();
+            const res = await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) });
             if(res.ok) { showModal('¡Éxito!', 'Clase actualizada.'); loadManageClasses(); checkTodayClass(); }
         }
 
@@ -294,7 +264,7 @@
                 const a = parseData(asist), alu = parseRelation(a.alumno), cla = parseRelation(a.clase);
                 if (alu && cla && !vistos.has(getID(a.alumno))) {
                     vistos.add(getID(a.alumno)); const f = formatTimeSafe(cla.Fecha_Hora);
-                    listDiv.innerHTML += `<div class="student-item"><div><h4>${alu.nombre}</h4><p style="font-size:10px; color:var(--accent)">${f.time}</p></div><button class="action-btn" style="width:auto;padding:10px 15px;background:var(--success);color:white;font-size:11px;" onclick="validateAttendance('${getID(asist)}', '${getID(a.alumno)}', ${cla.Duracion})">VALIDAR</button></div>`;
+                    listDiv.innerHTML += `<div class="student-item"><div><h4>${alu.nombre} ${alu.apellidos || ""} <span style="font-weight:400; opacity:0.6; font-size:12px;">(${alu.grado || 'S/G'})</span></h4><p style="font-size:11px; color:var(--accent); margin-top:5px; font-weight:800;">${f.date} @ ${f.time}</p></div><button class="action-btn" style="width:auto;padding:12px 18px;background:var(--success);color:white;font-size:11px;" onclick="validateAttendance('${getID(asist)}', '${getID(a.alumno)}', ${cla.Duracion})">VALIDAR</button></div>`;
                 }
             });
         }
@@ -328,7 +298,6 @@
             if(res.ok) { showModal('¡OSS!', 'Asistencia confirmada.'); checkTodayClass(); }
         }
         function showView(v, el) { ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); document.getElementById(v + '-view').classList.remove('hidden'); if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); } }
-        function showModal(t, txt, icon='fa-circle-check') { document.getElementById('modal-title').innerText = t; document.getElementById('modal-icon').className = `fa-solid ${icon}`; document.getElementById('modal-body-content').innerHTML = txt ? `<p>${txt}</p>` : ""; document.getElementById('custom-modal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
         function logout() { localStorage.clear(); location.reload(); }
         document.getElementById('login-form').addEventListener('submit', async (e) => {
