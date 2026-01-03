@@ -30,7 +30,11 @@
         .logo-img { width: 140px !important; height: auto; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
         .auth-card { width: 100%; max-width: 350px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
         
-        /* CORRECCIÓN DE INPUTS (DISEÑO ARASHI) */
+        /* FOOTER LOGIN */
+        .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; font-weight: 300; letter-spacing: 0.5px; }
+        .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
+
+        /* INPUTS ARASHI DARK */
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
         .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         
@@ -45,11 +49,8 @@
             box-sizing: border-box; 
             outline: none; 
             transition: 0.3s;
-            appearance: none;
-            -webkit-appearance: none;
         }
 
-        /* Fix Chrome Autofill Background */
         input:-webkit-autofill,
         input:-webkit-autofill:hover, 
         input:-webkit-autofill:focus {
@@ -110,7 +111,7 @@
         <img src="img/logo-arashi.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
         <p style="color: var(--text-muted); margin-bottom: 35px;">Instala la App para continuar.</p>
-        <button class="action-btn primary">INSTALAR AHORA</button>
+        <button class="action-btn primary" onclick="alert('Pulsa Compartir > Añadir a pantalla de inicio')">INSTALAR AHORA</button>
     </div>
 
     <div id="app-content">
@@ -127,12 +128,14 @@
         <div id="login-view" class="auth-container">
             <img src="img/logo-arashi.png" class="logo-img">
             <div class="auth-card">
-                <h2 style="margin-bottom:30px; font-weight:800; letter-spacing:1px;">HOLA, ARASHI!</h2>
+                <h2 style="margin-bottom:30px; font-weight:800;">HOLA, ARASHI!</h2>
                 <form id="login-form">
                     <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="dni-login" placeholder="DNI: 12345678X" required></div>
                     <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="password" placeholder="Contraseña" required></div>
-                    <button type="submit" class="action-btn primary" style="margin-top:10px;">ENTRAR AL DOJO</button>
+                    <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
+                <!-- LAS LETRAS RESTAURADAS -->
+                <div class="auth-footer">¿Usuario Nuevo? <a href="#" onclick="alert('Contacta con el Sensei en el Dojo.')">Activa tu cuenta</a></div>
             </div>
         </div>
 
@@ -174,7 +177,7 @@
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
             <a href="#" class="nav-item"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
-            <div class="qr-main-btn" onclick="showModal('Asistencia', 'Presenta tu DNI en el tatami para entrar.')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
+            <div class="qr-main-btn" onclick="showModal('Asistencia', 'Presenta tu DNI en el tatami.')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
             <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
             <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
         </nav>
@@ -229,6 +232,7 @@
                 if (json.data?.length > 0) {
                     alumnoGlobal = json.data[0];
                     const p = parseData(alumnoGlobal);
+                    dojoIdGlobal = getID(parseRelation(p.dojo)); 
                     document.getElementById('user-display-name').innerText = p.nombre;
                     document.getElementById('user-initials').innerText = (p.nombre[0] + (p.apellidos?p.apellidos[0]:"")).toUpperCase();
                     updateProgress(parseFloat(p.horas_acumuladas || 0), parseFloat(p.Horas_Necesarias || 60));
