@@ -34,11 +34,8 @@
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
-        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
+        .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         input { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
-
-        /* TRUCO ROJO CALENDARIO */
-        ::-webkit-calendar-picker-indicator { filter: invert(30%) sepia(100%) saturate(5000%) hue-rotate(340deg) brightness(100%) contrast(100%); cursor: pointer; }
 
         /* --- PROGRESS --- */
         .progress-container { display: flex; justify-content: center; align-items: center; position: relative; margin: 15px 0 25px; }
@@ -84,8 +81,6 @@
         .mini-btn { border: none; border-radius: 18px; height: 52px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.3s; }
         .mini-btn.no { width: 52px; background: #334155; color: #ff4444; font-size: 22px; }
         .mini-btn.ok { width: 156px; background: var(--success); font-weight: 800; font-size: 13px; text-transform: uppercase; box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4); }
-
-        /* Animación botón éxito */
         .mini-btn.ok.animating { background: white !important; color: var(--success) !important; transform: scale(1.05); }
 
         /* --- NAV --- */
@@ -99,7 +94,7 @@
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
         .modal-content { background: #0f172a; border: 1px solid var(--glass-border); padding: 35px; border-radius: 40px; width: 100%; max-width: 380px; text-align: center; box-sizing: border-box; max-height: 92vh; overflow-y: auto; scrollbar-width: none; }
         .modal-content::-webkit-scrollbar { display: none; }
-        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
+        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
         .modal-actions-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
         #modal-ok-btn { margin-top: 35px; }
 
@@ -136,7 +131,7 @@
             </div>
         </div>
 
-        <!-- LOGIN -->
+        <!-- VISTA LOGIN -->
         <div id="login-view" class="auth-container">
             <img src="img/logo-arashi.png" class="logo-img">
             <div class="auth-card">
@@ -150,7 +145,7 @@
             </div>
         </div>
 
-        <!-- DASHBOARD -->
+        <!-- VISTA DASHBOARD -->
         <div id="dashboard-view" class="hidden">
             <div class="header-app">
                 <div><p style="color:var(--text-muted); margin:0; font-size:12px;">Hola!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
@@ -252,8 +247,22 @@
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
             if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
+            
+            // Carga inicial de datos
+            await refreshStudentData();
+            checkTodayClass();
+        }
+
+        // --- FUNCIÓN DE REFRESCO RE-ACTIVA DE HORAS ---
+        async function refreshStudentData() {
+            const token = localStorage.getItem('aikido_jwt');
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+            if (!token || !user) return;
+            
             try {
-                const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                });
                 const json = await res.json();
                 if (json.data?.length > 0) {
                     alumnoGlobal = json.data[0];
@@ -261,10 +270,11 @@
                     dojoIdGlobal = getID(parseRelation(p.dojo)); 
                     document.getElementById('user-display-name').innerText = p.nombre;
                     document.getElementById('user-initials').innerText = (p.nombre[0] + (p.apellidos?p.apellidos[0]:"")).toUpperCase();
+                    
+                    // Actualizamos UI
                     updateProgress(parseFloat(p.horas_acumuladas || 0), parseFloat(p.Horas_Necesarias || 60));
                 }
-                checkTodayClass();
-            } catch (e) {}
+            } catch (e) { console.error("Error refreshing stats", e); }
         }
 
         async function checkTodayClass() {
@@ -328,22 +338,10 @@
             json.data.forEach(asist => {
                 const a = parseData(asist), alu = parseRelation(a.alumno), cla = parseRelation(a.clase);
                 const f = formatTimeSafe(cla.Fecha_Hora);
-                listDiv.innerHTML += `
-                    <div class="student-item" id="it-${getID(asist)}">
-                        <div style="flex:1;">
-                            <h4 style="margin:0;">${alu.nombre} ${alu.apellidos || ""}</h4>
-                            <p style="margin:2px 0; font-size:11px; opacity:0.7;">${alu.grado || 'S/G'} • ${parseFloat(alu.horas_acumuladas || 0).toFixed(1)}h</p>
-                            <p style="font-size:10px; color:var(--accent); font-weight:800; margin-top:5px;">Keiko: ${f.date} @ ${f.time}</p>
-                        </div>
-                        <div class="sensei-actions">
-                            <button class="mini-btn no" onclick="validateAttendance('${getID(asist)}', false)"><i class="fa-solid fa-xmark"></i></button>
-                            <button class="mini-btn ok" onclick="validateAttendance('${getID(asist)}', true, '${getID(a.alumno)}', ${cla.Duracion})">VALIDAR</button>
-                        </div>
-                    </div>`;
+                listDiv.innerHTML += `<div class="student-item" id="it-${getID(asist)}"><div style="flex:1;"><h4 style="margin:0;">${alu.nombre} ${alu.apellidos || ""}</h4><p style="margin:2px 0; font-size:11px; opacity:0.7;">${alu.grado || 'S/G'} • ${parseFloat(alu.horas_acumuladas || 0).toFixed(1)}h</p><p style="font-size:10px; color:var(--accent); font-weight:800; margin-top:5px;">Keiko: ${f.date} @ ${f.time}</p></div><div class="sensei-actions"><button class="mini-btn no" onclick="validateAttendance('${getID(asist)}', false)"><i class="fa-solid fa-xmark"></i></button><button class="mini-btn ok" onclick="validateAttendance('${getID(asist)}', true, '${getID(a.alumno)}', ${cla.Duracion})">VALIDAR</button></div></div>`;
             });
         }
 
-        // --- LÓGICA DE ANIMACIÓN Y VALIDACIÓN ---
         async function validateAttendance(asistId, asiste, aluId, dur) {
             const token = localStorage.getItem('aikido_jwt');
             const row = document.getElementById(`it-${asistId}`);
@@ -351,7 +349,6 @@
             const estado = asiste ? 'Asistio' : 'No Asistio';
 
             if(asiste) {
-                // Animación feedback botón
                 okBtn.classList.add('animating');
                 okBtn.innerHTML = '<i class="fa-solid fa-heart-pulse fa-beat"></i> ¡OSS!';
             }
@@ -366,16 +363,12 @@
                     await fetch(`${API_URL}/api/alumnos/${aluId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: actual + parseFloat(dur) } }) });
                 }
 
-                // Animación de salida de la fila
                 setTimeout(() => {
                     row.classList.add('validated');
                     setTimeout(() => row.remove(), 500);
                 }, 400);
 
-            } catch(e) {
-                alert("Error de red.");
-                okBtn.classList.remove('animating');
-            }
+            } catch(e) { okBtn.classList.remove('animating'); }
         }
 
         async function loadManageClasses() {
@@ -535,10 +528,18 @@
             showModal('¡Éxito!', 'Clase actualizada.', true); loadManageClasses(); checkTodayClass();
         }
 
+        // --- NAVEGACIÓN RE-ACTIVA ---
         function showView(v, el) { 
             ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); 
             document.getElementById(v + '-view').classList.remove('hidden');
-            if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
+            
+            if(el) { 
+                document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); 
+                el.classList.add('active'); 
+            }
+            
+            // Si el usuario vuelve a inicio, refrescamos los datos reales del alumno
+            if (v === 'dashboard') refreshStudentData();
         }
 
         async function confirmAttendance() {
@@ -552,10 +553,17 @@
             const identifier = document.getElementById('dni-login').value;
             const password = document.getElementById('password').value;
             try {
-                const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
+                const res = await fetch(`${API_URL}/api/auth/local`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identifier, password })
+                });
                 const data = await res.json();
-                if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-            } catch (e) { alert("Error"); }
+                if (res.ok) {
+                    localStorage.setItem('aikido_jwt', data.jwt);
+                    localStorage.setItem('aikido_user', JSON.stringify(data.user));
+                    initApp();
+                } else { alert("DNI o Contraseña incorrectos."); }
+            } catch (e) { alert("Error de conexión"); }
         });
 
         function logout() { localStorage.clear(); location.reload(); }
