@@ -29,31 +29,18 @@
         .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .logo-img { width: 140px !important; height: auto; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
         .auth-card { width: 100%; max-width: 350px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
-        
-        /* FOOTER LOGIN */
         .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; font-weight: 300; letter-spacing: 0.5px; }
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
-        /* INPUTS ARASHI DARK */
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
         .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         
         input { 
-            width: 100%; 
-            padding: 16px 16px 16px 52px; 
-            background: rgba(15, 23, 42, 0.9) !important; 
-            border: 1px solid var(--glass-border); 
-            border-radius: 18px; 
-            color: white !important; 
-            font-size: 16px; 
-            box-sizing: border-box; 
-            outline: none; 
-            transition: 0.3s;
+            width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; 
+            border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s;
         }
 
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus {
+        input:-webkit-autofill {
             -webkit-text-fill-color: white !important;
             -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important;
             transition: background-color 5000s ease-in-out 0s;
@@ -76,6 +63,13 @@
         .action-btn:disabled { background: #1e293b !important; color: var(--text-muted) !important; cursor: default; box-shadow: none; border: 1px solid var(--glass-border); opacity: 0.8; }
 
         .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 35px 25px; border-radius: 40px; box-shadow: 0 20px 45px rgba(239,68,68,0.3); text-align: center; margin: 0 20px 25px; }
+
+        /* --- GRIDS & CARDS --- */
+        .section-label { padding: 0 25px; margin: 20px 0 10px; font-size: 11px; text-transform: uppercase; font-weight: 800; color: var(--accent); letter-spacing: 1px; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 0 20px 20px; }
+        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 15px; border-radius: 20px; text-align: center; border-bottom: 3px solid var(--accent); }
+        .class-card h4 { margin: 0; font-size: 14px; }
+        .class-card p { margin: 5px 0 0; font-size: 12px; font-weight: 800; color: var(--text-main); }
 
         /* --- SENSEI UI --- */
         .student-item { background: var(--card-bg); padding: 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; margin: 0 20px 12px; border: 1px solid var(--glass-border); border-left: 4px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
@@ -110,11 +104,12 @@
     <div id="install-wall">
         <img src="img/logo-arashi.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
-        <p style="color: var(--text-muted); margin-bottom: 35px;">Instala la App para continuar.</p>
-        <button class="action-btn primary" onclick="alert('Pulsa Compartir > Añadir a pantalla de inicio')">INSTALAR AHORA</button>
+        <p style="color: var(--text-muted); margin-bottom: 35px;">Instala la App en tu pantalla de inicio para continuar.</p>
+        <button class="action-btn primary" onclick="alert('Pulsa Compartir > Pantalla de inicio')">INSTALAR AHORA</button>
     </div>
 
     <div id="app-content">
+        <!-- MODAL -->
         <div id="custom-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
@@ -124,7 +119,7 @@
             </div>
         </div>
 
-        <!-- VISTA LOGIN -->
+        <!-- LOGIN -->
         <div id="login-view" class="auth-container">
             <img src="img/logo-arashi.png" class="logo-img">
             <div class="auth-card">
@@ -134,12 +129,11 @@
                     <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="password" placeholder="Contraseña" required></div>
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
-                <!-- LAS LETRAS RESTAURADAS -->
-                <div class="auth-footer">¿Usuario Nuevo? <a href="#" onclick="alert('Contacta con el Sensei en el Dojo.')">Activa tu cuenta</a></div>
+                <div class="auth-footer">¿Usuario Nuevo? <a href="#" onclick="alert('Contacta con el Sensei.')">Activa tu cuenta</a></div>
             </div>
         </div>
 
-        <!-- VISTA DASHBOARD -->
+        <!-- DASHBOARD -->
         <div id="dashboard-view" class="hidden">
             <div class="header-app">
                 <div><p style="color:var(--text-muted); margin:0; font-size:12px;">Hola!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
@@ -163,20 +157,27 @@
             </div>
         </div>
 
-        <!-- PANEL SENSEI -->
+        <!-- CALENDARIO -->
+        <div id="clases-view" class="hidden">
+            <header class="header-app"><h1 style="margin:0; font-weight:800; font-size:22px;">CALENDARIO</h1></header>
+            <div id="calendar-morning"></div>
+            <div id="calendar-afternoon"></div>
+        </div>
+
+        <!-- SENSEI PANEL -->
         <div id="sensei-view" class="hidden">
             <header class="header-app"><h1 style="font-weight:800; font-size:22px; margin:0;">SENSEI PANEL</h1></header>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 20px 25px;">
-                <button class="action-btn" style="padding:15px; font-size:11px; background:#1e293b; color:white;">GENERAR MES</button>
-                <button class="action-btn" style="padding:15px; font-size:11px; background:#1e293b; color:white;">EDITAR CLASES</button>
+                <button class="action-btn" style="padding:15px; font-size:11px; background:#1e293b; color:white;" onclick="alert('Función de oficina')">GENERAR MES</button>
+                <button class="action-btn" style="padding:15px; font-size:11px; background:#1e293b; color:white;" onclick="alert('Función de oficina')">EDITAR CLASES</button>
             </div>
             <div id="student-list"></div>
         </div>
 
-        <!-- BARRA NAVEGACIÓN -->
+        <!-- NAVEGACIÓN -->
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
-            <a href="#" class="nav-item"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
+            <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
             <div class="qr-main-btn" onclick="showModal('Asistencia', 'Presenta tu DNI en el tatami.')"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
             <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
             <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
@@ -199,11 +200,11 @@
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
 
         function formatTimeSafe(iso) {
-            if(!iso) return { time: "--:--", date: "--/--/----" };
+            if(!iso) return { time: "--:--", date: "--/--/----", hourNum: 0 };
             const [dPart, tPart] = iso.split('T');
             const [y, m, d] = dPart.split('-');
             const [hh, mm] = tPart.split(':');
-            return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}` };
+            return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}`, hourNum: parseInt(hh) };
         }
 
         function updateProgress(actual, total) {
@@ -264,8 +265,25 @@
             } catch (e) {}
         }
 
+        async function loadMonthlyClasses(el) {
+            showView('clases', el);
+            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=40`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+            const json = await res.json();
+            const containerM = document.getElementById('calendar-morning');
+            const containerA = document.getElementById('calendar-afternoon');
+            containerM.innerHTML = '<div class="section-label">Sesiones Mañana</div><div class="grid-container" id="grid-m"></div>';
+            containerA.innerHTML = '<div class="section-label">Sesiones Tarde</div><div class="grid-container" id="grid-a"></div>';
+            const gridM = document.getElementById('grid-m'), gridA = document.getElementById('grid-a');
+            (json.data || []).forEach(c => {
+                const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora);
+                const html = `<div class="class-card"><h4>${f.date}</h4><p>${f.time}</p></div>`;
+                if (f.hourNum < 14) gridM.innerHTML += html; else gridA.innerHTML += html;
+            });
+        }
+
         async function loadSenseiPanel() {
             const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5;'>Buscando...</p>";
             const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
             const json = await res.json();
             listDiv.innerHTML = (json.data?.length === 0) ? "<p style='text-align:center; opacity:0.5; padding:40px;'>Nadie pendiente.</p>" : "";
@@ -301,7 +319,7 @@
         }
 
         function showView(v, el) { 
-            ['dashboard', 'login', 'sensei'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); 
+            ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); 
             document.getElementById(v + '-view').classList.remove('hidden');
             if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
         }
