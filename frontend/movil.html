@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#ef4444">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="img/logo-arashi.png">
+    <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="img/logo-arashi-movil.png">
     <title>Arashi App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -35,8 +35,9 @@
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
-        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
+        .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         input { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
+        input:-webkit-autofill { -webkit-text-fill-color: white !important; -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important; }
 
         /* --- PROGRESS CIRCLE --- */
         .progress-container { display: flex; justify-content: center; align-items: center; position: relative; margin: 10px 0 25px; }
@@ -61,7 +62,7 @@
         }
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* --- SENSEI UI --- */
+        /* --- SENSEI UI (CORREGIDO BOTONES) --- */
         .student-item { 
             background: var(--card-bg); padding: 15px 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; 
             margin: 0 20px 12px; border: 1px solid var(--glass-border); border-left: 4px solid var(--accent); 
@@ -69,12 +70,13 @@
         }
         .student-item.validated { transform: translateX(100px); opacity: 0; pointer-events: none; }
         .student-info { flex: 1; min-width: 0; padding-right: 15px; }
-        .student-info h4 { margin: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* El nombre ahora permite 2 líneas si es muy largo para no cortarse */
+        .student-info h4 { margin: 0; font-size: 14px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         
-        .sensei-actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
-        .mini-btn { border: none; border-radius: 15px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.3s; }
-        .mini-btn.no { width: 50px; background: #334155; color: #ff4444; font-size: 20px; }
-        .mini-btn.ok { width: 150px; background: var(--success); font-weight: 800; font-size: 13px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); }
+        .sensei-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+        .mini-btn { border: none; border-radius: 12px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.3s; }
+        .mini-btn.no { width: 44px; background: #334155; color: #ff4444; font-size: 18px; }
+        .mini-btn.ok { width: 115px; background: var(--success); font-weight: 800; font-size: 11px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); }
         .mini-btn.ok.animating { background: white !important; color: var(--success) !important; transform: scale(1.05); }
 
         /* --- CALENDARIO / GRIDS --- */
@@ -196,7 +198,7 @@
                 <p style="opacity:0.7; font-size:14px;">Bienvenido al tatami digital, Sensei.</p>
             </div>
 
-            <!-- CÍRCULO DE HORAS (Raúl lo verá aquí) -->
+            <!-- CÍRCULO DE HORAS (RESTABLECIDO) -->
             <div class="progress-container hidden" id="student-progress-circle">
                 <svg class="progress-ring" width="120" height="120">
                     <circle stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent" r="54" cx="60" cy="60"/>
@@ -270,6 +272,19 @@
             return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}`, month: monthName, hour: parseInt(hh) };
         }
 
+        function updateProgress(actual, total) {
+            const circle = document.getElementById('progress-bar');
+            if(!circle) return;
+            const radius = circle.r.baseVal.value;
+            const circumference = radius * 2 * Math.PI;
+            const targetTotal = total || 60;
+            const percent = Math.min((actual / targetTotal) * 100, 100);
+            const offset = circumference - (percent / 100 * circumference);
+            circle.style.strokeDashoffset = offset;
+            document.getElementById('stat-hours').innerText = parseFloat(actual || 0).toFixed(1);
+            document.getElementById('stat-label').innerText = `Horas / ${targetTotal}`;
+        }
+
         async function initApp() {
             const token = localStorage.getItem('aikido_jwt'), user = JSON.parse(localStorage.getItem('aikido_user'));
             if(!token || !user) return;
@@ -290,19 +305,12 @@
                 if (json.data?.length > 0) {
                     alumnoGlobal = json.data[0];
                     const p = parseData(alumnoGlobal);
+                    dojoIdGlobal = getID(parseRelation(p.dojo)); 
                     document.getElementById('user-display-name').innerText = p.nombre;
                     document.getElementById('user-initials').innerText = (p.nombre[0] + (p.apellidos?p.apellidos[0]:"")).toUpperCase();
                     if (!user.is_sensei) {
                         document.getElementById('student-progress-circle').classList.remove('hidden');
-                        const circle = document.getElementById('progress-bar');
-                        const radius = circle.r.baseVal.value;
-                        const circumference = radius * 2 * Math.PI;
-                        const actual = parseFloat(p.horas_acumuladas || 0);
-                        const total = parseFloat(p.Horas_Necesarias || 60);
-                        const offset = circumference - (Math.min(actual / total, 1) * circumference);
-                        circle.style.strokeDashoffset = offset;
-                        document.getElementById('stat-hours').innerText = actual.toFixed(1);
-                        document.getElementById('stat-label').innerText = `Horas / ${total}`;
+                        updateProgress(p.horas_acumuladas, p.Horas_Necesarias);
                     }
                 } else if (user.is_sensei) {
                     document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
@@ -337,7 +345,7 @@
         async function loadMonthlyClasses(el) {
             showView('clases', el);
             const container = document.getElementById('calendar-content');
-            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando...</p>";
+            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando calendario...</p>";
             const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=60`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
             const json = await res.json();
             const grouped = {};
@@ -454,7 +462,7 @@
             let gridHtml = `<div class="month-picker-grid">`;
             months.forEach((m, idx) => { gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
             gridHtml += `</div>`;
-            showModal("Generador Arashi", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">AÑO:</label><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MES:</label>${gridHtml}<label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MAÑANA (Mar):</label><input type="time" id="gen-morning" value="10:00" class="modal-field"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">TARDE (Mar/Jue):</label><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><div class="modal-actions-container"><button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button><button class="action-btn" style="background:#1e293b; color:white; margin-top:5px;" onclick="closeModal()">CERRAR</button></div></div>`, false);
+            showModal("Generador Arashi", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">AÑO:</label><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MES:</label>${gridHtml}<label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MAÑANA (Mar):</label><input type="time" id="gen-morning" value="10:00" class="modal-field"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">HORA TARDE (Mar/Jue):</label><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><div class="modal-actions-container"><button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button><button class="action-btn" style="background:#1e293b; color:white; margin-top:5px;" onclick="closeModal()">CERRAR</button></div></div>`, false);
         }
 
         async function processGeneration() {
@@ -512,7 +520,8 @@
                 const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-            } catch (e) { }
+                else { alert("Acceso denegado"); }
+            } catch (e) { alert("Error red"); }
         });
 
         function logout() { localStorage.clear(); location.reload(); }
