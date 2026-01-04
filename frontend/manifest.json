@@ -3,7 +3,7 @@
   "name": "Arashi Group Aikido",
   "icons": [
     {
-      "src": "img/logo-arashi-informe.png",
+      "src": "img/logo-arashi-movil.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any"
@@ -16,7 +16,7 @@
     }
   ],
   "start_url": "/movil.html",
-  "background_color": "#05080f",
+  "background_color": "#000000",
   "display": "standalone",
   "scope": "/",
   "theme_color": "#ef4444"
