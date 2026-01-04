@@ -121,16 +121,15 @@
     </script>
 </head>
 <body>
-    <!-- MURO DE INSTALACIÓN -->
     <div id="install-wall">
         <img src="img/logo-arashi.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
-        <p style="color: var(--text-muted); margin-bottom: 35px; max-width: 280px;">Para acceder al Dojo digital debes instalar la App en tu dispositivo.</p>
+        <p style="color: var(--text-muted); margin-bottom: 35px;">Añade la App a tu pantalla de inicio para continuar.</p>
         <button class="action-btn primary" id="btn-install-pwa" onclick="handleInstallClick()">INSTALAR AHORA</button>
     </div>
 
     <div id="app-content">
-        <!-- MODAL GENÉRICO -->
+        <!-- MODAL -->
         <div id="custom-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
@@ -221,41 +220,42 @@
         let selectedMonthGen = new Date().getMonth();
         let deferredPrompt;
 
-        // --- LÓGICA DE INSTALACIÓN CORREGIDA ---
+        // --- LÓGICA DE INSTALACIÓN CORREGIDA PARA PRUEBAS ---
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
         });
 
         async function handleInstallClick() {
-            // Detección Forzada de iOS
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const ua = navigator.userAgent;
+            // Detección Estricta de iOS (Incluso en simuladores)
+            const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             
-            if (deferredPrompt) {
-                // Lógica Android / Chrome
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') document.documentElement.classList.add('ready-to-show');
-                deferredPrompt = null;
-            } else if (isIOS) {
-                // Lógica iOS Tutorial Paso a Paso
+            // SI ES APPLE -> MOSTRAMOS TUTORIAL SIEMPRE (Ignoramos si Chrome emulado dice que puede instalar)
+            if (isIOS) {
                 showModal("Instalar en iPhone", `
                     <div style="margin-top:20px;">
                         <div class="ios-step">
                             <i class="fa-solid fa-arrow-up-from-bracket"></i>
-                            <p>1. Pulsa el botón <strong>'Compartir'</strong> en la barra inferior de Safari.</p>
+                            <p>1. Pulsa el botón <strong>'Compartir'</strong> en Safari.</p>
                         </div>
                         <div class="ios-step">
                             <i class="fa-solid fa-scroll"></i>
-                            <p>2. Desliza hacia abajo en el menú de opciones.</p>
+                            <p>2. Desliza hacia abajo.</p>
                         </div>
                         <div class="ios-step">
                             <i class="fa-regular fa-square-plus"></i>
                             <p>3. Selecciona <strong>'Añadir a la pantalla de inicio'</strong>.</p>
                         </div>
-                        <p style="font-size:11px; opacity:0.6; margin-top:15px;">Esto creará el icono de Arashi Group en tu móvil.</p>
                     </div>
                 `, true);
+            } 
+            // SI ES ANDROID/CHROME -> USAMOS EL PROMPT NATIVO
+            else if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') document.documentElement.classList.add('ready-to-show');
+                deferredPrompt = null;
             } else {
                 alert("Abre el menú de tu navegador y selecciona 'Instalar' o 'Añadir a pantalla de inicio'.");
             }
@@ -304,7 +304,9 @@
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
+
             await refreshStudentData();
+
             if (user.is_sensei) {
                 document.getElementById('nav-sensei').style.display = 'flex';
                 if (!alumnoGlobal) {
@@ -370,7 +372,7 @@
         async function loadMonthlyClasses(el) {
             showView('clases', el);
             const container = document.getElementById('calendar-content');
-            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando...</p>";
+            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando calendario...</p>";
             const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=60`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
             const json = await res.json();
             const grouped = {};
@@ -458,6 +460,13 @@
             }
         }
 
+        async function checkClassExists(iso) {
+            const token = localStorage.getItem('aikido_jwt');
+            const res = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$eq]=${iso}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const json = await res.json();
+            return json.data.length > 0;
+        }
+
         function uiCreateSingleClass() {
             showModal("Nueva Clase Suelta", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">FECHA:</label><input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">HORA:</label><input type="time" id="single-time" class="modal-field" value="10:00"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">DURACIÓN:</label><select id="single-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select><div class="modal-actions-container"><button class="action-btn primary" onclick="processSingleClass()">CREAR CLASE</button><button class="action-btn" style="background:#1e293b; color:white;" onclick="closeModal()">CERRAR</button></div></div>`, false);
         }
@@ -480,7 +489,7 @@
             let monthGridHtml = `<div class="month-picker-grid">`;
             months.forEach((m, idx) => { monthGridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
             monthGridHtml += `</div>`;
-            showModal("Generador Arashi", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">AÑO:</label><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">SELECCIONA MES:</label>${monthGridHtml}<label style="font-size:11px;color:var(--text-muted);margin-left:10px;">HORA MAÑANA (Martes):</label><input type="time" id="gen-morning" value="10:00" class="modal-field"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">HORA TARDE (Martes y Jueves):</label><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><div class="modal-actions-container"><button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button><button class="action-btn" style="background:#1e293b; color:white;" onclick="closeModal()">CERRAR</button></div></div>`, false);
+            showModal("Generador Arashi", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">AÑO:</label><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">SELECCIONA MES:</label>${monthGridHtml}<label style="font-size:11px;color:var(--text-muted);margin-left:10px;">HORA MAÑANA (Martes):</label><input type="time" id="gen-morning" value="10:00" class="modal-field"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">HORA TARDE (Martes y Jueves):</label><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><div class="modal-actions-container"><button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button><button class="action-btn" style="background:#1e293b; color:white; margin-top:5px;" onclick="closeModal()">CERRAR</button></div></div>`, false);
         }
 
         async function processGeneration() {
