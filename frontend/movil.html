@@ -18,12 +18,12 @@
             accent-color: var(--accent);
         }
         html, body { background-color: var(--bg); margin: 0; padding: 0; height: 100vh; width: 100vw; color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; color-scheme: dark; }
-        body { background-image: radial-gradient(circle at top right, #1e1b4b, transparent); display: flex; flex-direction: column; }
+        body { background-image: radial-gradient(circle at top right, #1e1b4b, transparent); display: flex; flex-direction: column; overflow-y: auto; }
         .hidden { display: none !important; }
         
-        /* --- GESTIÓN DE MURO --- */
         #app-content { display: none; flex-direction: column; flex: 1; height: 100%; width: 100%; overflow-y: auto; padding-bottom: 110px; -webkit-overflow-scrolling: touch; }
-        #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
+        #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
@@ -34,7 +34,6 @@
         .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; font-weight: 300; letter-spacing: 0.5px; }
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
-        /* INPUTS PREMIUM */
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
         .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         input { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
@@ -48,7 +47,7 @@
         .progress-text .val { font-size: 32px; font-weight: 800; display: block; line-height: 1; }
         .progress-text .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* --- UI COMPONENTS --- */
+        /* --- UI --- */
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; padding: 20px 25px 0; box-sizing: border-box; }
         .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid var(--glass-border); color: white; flex-shrink: 0; box-shadow: var(--neon); }
         .action-btn { width: 100%; padding: 18px; background: white; color: black; border: none; border-radius: 22px; font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -99,18 +98,16 @@
         .modal-actions-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
         #modal-ok-btn { margin-top: 35px; }
 
-        /* IOS MURO TUTORIAL */
         .ios-tutorial { display: none; width: 100%; max-width: 320px; margin-top: 20px; }
         .ios-step { display: flex; align-items: center; gap: 15px; text-align: left; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 20px; margin-bottom: 10px; border: 1px solid var(--glass-border); }
         .ios-step i { font-size: 18px; color: var(--accent); width: 25px; text-align: center; }
         .ios-step p { margin: 0; font-size: 13px; line-height: 1.4; }
 
-        /* MONTH PICKER GENERADOR */
         .month-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
         .month-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px 5px; border-radius: 12px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
         .month-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: var(--neon); }
 
-        /* NAV */
+        /* --- NAV --- */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.98); backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
         .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
         .nav-item.active { color: var(--accent); }
@@ -119,18 +116,13 @@
     </style>
     
     <script>
-        /**
-         * LÓGICA DE BLOQUEO Y DETECCIÓN PWA
-         */
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
         const ua = navigator.userAgent;
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
         const isApple = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
         (function() {
-            if (!isMobile || isStandalone) {
-                document.documentElement.classList.add('ready-to-show');
-            }
+            if (!isMobile || isStandalone) document.documentElement.classList.add('ready-to-show');
         })();
 
         window.onload = () => {
@@ -149,7 +141,7 @@
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
-                    alert("¡OSS! Instalación iniciada. Cierra Chrome ahora para usar la App instalada.");
+                    alert("¡OSS! Instalación iniciada. Cierra Chrome ahora para usar la App.");
                     setTimeout(() => { window.location.href = "about:blank"; }, 1000);
                 }
                 deferredPrompt = null;
@@ -158,21 +150,19 @@
     </script>
 </head>
 <body>
-    <!-- MURO DE INSTALACIÓN -->
     <div id="install-wall">
-        <img src="img/logo-arashi.png" class="logo-img">
+        <img src="img/logo-arashi-movil.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
         <p style="color: var(--text-muted); margin-bottom: 25px; max-width: 280px;">Instala la App oficial para acceder al Dojo.</p>
         <div id="android-btn-area"><button class="action-btn primary" onclick="handleAndroidInstall()">INSTALAR AHORA</button></div>
         <div id="ios-instructions" class="ios-tutorial">
-            <div class="ios-step"><i class="fa-solid fa-arrow-up-from-bracket"></i><p>1. Pulsa el botón <strong>'Compartir'</strong> en Safari.</p></div>
-            <div class="ios-step"><i class="fa-solid fa-scroll"></i><p>2. Desliza hacia abajo en el menú.</p></div>
+            <div class="ios-step"><i class="fa-solid fa-arrow-up-from-bracket"></i><p>1. Pulsa <strong>'Compartir'</strong> en Safari.</p></div>
+            <div class="ios-step"><i class="fa-solid fa-scroll"></i><p>2. Desliza hacia abajo.</p></div>
             <div class="ios-step"><i class="fa-regular fa-square-plus"></i><p>3. Selecciona <strong>'Añadir a inicio'</strong>.</p></div>
         </div>
     </div>
 
     <div id="app-content">
-        <!-- MODAL GENÉRICO -->
         <div id="custom-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
@@ -182,9 +172,8 @@
             </div>
         </div>
 
-        <!-- LOGIN -->
         <div id="login-view" class="auth-container">
-            <img src="img/logo-arashi.png" class="logo-img">
+            <img src="img/logo-arashi-movil.png" class="logo-img">
             <div class="auth-card">
                 <h2 style="margin-bottom:30px; font-weight:800;">HOLA, ARASHI!</h2>
                 <form id="login-form">
@@ -196,7 +185,6 @@
             </div>
         </div>
 
-        <!-- DASHBOARD -->
         <div id="dashboard-view" class="hidden">
             <div class="header-app">
                 <div><p style="color:var(--text-muted); margin:0; font-size:12px;">Hola!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
@@ -228,13 +216,11 @@
             </div>
         </div>
 
-        <!-- CALENDARIO -->
         <div id="clases-view" class="hidden">
             <header class="header-app"><h1 style="margin:0; font-weight:800; font-size:22px;">CALENDARIO</h1></header>
             <div id="calendar-content"></div>
         </div>
 
-        <!-- SENSEI PANEL -->
         <div id="sensei-view" class="hidden">
             <header class="header-app"><h1 style="font-weight:800; font-size:22px; margin:0;">SENSEI PANEL</h1></header>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 20px 10px;">
@@ -247,7 +233,6 @@
             <div id="student-list"></div>
         </div>
 
-        <!-- NAV -->
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
             <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
@@ -261,7 +246,6 @@
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null;
         let selectedMonthGen = new Date().getMonth();
-        let selectedYearGen = new Date().getFullYear();
 
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
@@ -284,19 +268,6 @@
             const dateObj = new Date(y, m-1, d);
             const monthName = dateObj.toLocaleString('es-ES', { month: 'long' });
             return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}`, month: monthName, hour: parseInt(hh) };
-        }
-
-        function updateProgress(actual, total) {
-            const circle = document.getElementById('progress-bar');
-            if(!circle) return;
-            const radius = circle.r.baseVal.value;
-            const circumference = radius * 2 * Math.PI;
-            const targetTotal = total || 60;
-            const percent = Math.min((actual / targetTotal) * 100, 100);
-            const offset = circumference - (percent / 100 * circumference);
-            circle.style.strokeDashoffset = offset;
-            document.getElementById('stat-hours').innerText = parseFloat(actual || 0).toFixed(1);
-            document.getElementById('stat-label').innerText = `Horas / ${targetTotal}`;
         }
 
         async function initApp() {
@@ -324,11 +295,22 @@
                     document.getElementById('user-initials').innerText = (p.nombre[0] + (p.apellidos?p.apellidos[0]:"")).toUpperCase();
                     if (!user.is_sensei) {
                         document.getElementById('student-progress-circle').classList.remove('hidden');
-                        updateProgress(p.horas_acumuladas, p.Horas_Necesarias);
+                        document.getElementById('confirm-btn').classList.remove('hidden');
+                        const circle = document.getElementById('progress-bar');
+                        const radius = circle.r.baseVal.value;
+                        const circumference = radius * 2 * Math.PI;
+                        const actual = parseFloat(p.horas_acumuladas || 0);
+                        const total = parseFloat(p.Horas_Necesarias || 60);
+                        const offset = circumference - (Math.min(actual / total, 1) * circumference);
+                        circle.style.strokeDashoffset = offset;
+                        document.getElementById('stat-hours').innerText = actual.toFixed(1);
+                        document.getElementById('stat-label').innerText = `Horas / ${total}`;
                     }
                 } else if (user.is_sensei) {
                     document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
                     document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellidos?.[0] || "");
+                    document.getElementById('student-progress-circle').classList.add('hidden');
+                    document.getElementById('confirm-btn').classList.add('hidden');
                     document.getElementById('sensei-welcome-card').classList.remove('hidden');
                 }
             } catch (e) { }
@@ -359,14 +341,16 @@
         async function loadMonthlyClasses(el) {
             showView('clases', el);
             const container = document.getElementById('calendar-content');
-            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando...</p>";
+            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando calendario...</p>";
             const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=60`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
             const json = await res.json();
             const grouped = {};
             json.data.forEach(c => {
                 const d = parseData(c); const f = formatTimeSafe(d.Fecha_Hora);
+                const dur = d.Duracion || 1.5;
                 if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
-                if (f.hour < 14) grouped[f.month].morning.push({ ...f, dur: d.Duracion }); else grouped[f.month].afternoon.push({ ...f, dur: d.Duracion });
+                const item = { ...f, dur };
+                if (f.hour < 14) grouped[f.month].morning.push(item); else grouped[f.month].afternoon.push(item);
             });
             container.innerHTML = "";
             for (const month in grouped) {
@@ -489,7 +473,7 @@
                 };
                 if(d.getDay() === 2) { await send(hM); await send(hT); } else if (d.getDay() === 4) { await send(hT); }
             }
-            showModal('¡OSS!', `Creadas: ${creadas}. Saltadas: ${saltadas}`, true); checkTodayClass();
+            showModal('¡OSS!', `Generadas ${creadas} clases. Saltadas: ${saltadas}`, true); checkTodayClass();
         }
 
         function openEditClass(id, raw, dur) {
@@ -532,7 +516,8 @@
                 const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-            } catch (e) { }
+                else { alert("Error de acceso"); }
+            } catch (e) { alert("Error red"); }
         });
 
         function logout() { localStorage.clear(); location.reload(); }
