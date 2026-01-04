@@ -63,7 +63,7 @@
         }
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* --- SENSEI UI REDISEÑO --- */
+        /* --- SENSEI UI --- */
         .student-item { 
             background: var(--card-bg); padding: 15px 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; 
             margin: 0 20px 12px; border: 1px solid var(--glass-border); border-left: 4px solid var(--accent); 
@@ -283,7 +283,7 @@
 
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
-        let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null;
+        let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null, requisitosGradoGlobal = [];
         let selectedMonthGen = new Date().getMonth();
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
@@ -308,31 +308,47 @@
             return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}`, month: monthName, hour: parseInt(hh) };
         }
 
-        function getNextGrade(current) {
-            if (!current) return "5º KYU";
-            const c = current.toUpperCase().trim();
-            const map = {
-                "S/G": "5º KYU", "5º KYU": "4º KYU", "4º KYU": "3º KYU", "3º KYU": "2º KYU", 
-                "2º KYU": "1º KYU", "1º KYU": "1º DAN", "1º DAN": "2º DAN", "2º DAN": "3º DAN", 
-                "3º DAN": "4º DAN", "4º DAN": "5º DAN", "5º DAN": "6º DAN"
-            };
-            return map[c] || "PRÓXIMO GRADO";
+        /**
+         * LÓGICA DINÁMICA DE GRADOS DESDE STRAPI
+         */
+        async function fetchRequisitosGrado() {
+            try {
+                const res = await fetch(`${API_URL}/api/requisito-grados?sort=HORAS_NECESARIAS:asc`, { 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+                });
+                const json = await res.json();
+                requisitosGradoGlobal = (json.data || []).map(d => parseData(d));
+            } catch (e) { console.error("Error cargando requisitos de grado"); }
         }
 
-        function updateProgress(actual, total, currentGrade) {
+        function updateProgress(actual, currentGrade) {
             const circle = document.getElementById('progress-bar');
             if(!circle) return;
             const radius = circle.r.baseVal.value;
             const circumference = radius * 2 * Math.PI;
-            const targetTotal = total || 60;
-            const percent = Math.min((actual / targetTotal) * 100, 100);
-            const offset = circumference - (percent / 100 * circumference);
-            circle.style.strokeDashoffset = offset;
-            document.getElementById('stat-hours').innerText = parseFloat(actual || 0).toFixed(1);
-            document.getElementById('stat-label').innerText = `Horas / ${targetTotal}`;
+
+            // Buscamos el grado actual en la lista descargada de Strapi
+            const currentIdx = requisitosGradoGlobal.findIndex(r => r.GRADO.toUpperCase() === (currentGrade || "").toUpperCase());
             
-            const nextGrade = getNextGrade(currentGrade);
-            document.getElementById('next-grade-display').innerText = `CAMINO AL ${nextGrade}`;
+            // El siguiente grado es el siguiente en la lista (que ya viene ordenada por horas desde Strapi)
+            const nextGradeData = requisitosGradoGlobal[currentIdx + 1];
+            
+            if (nextGradeData) {
+                const targetTotal = nextGradeData.HORAS_NECESARIAS;
+                const percent = Math.min((actual / targetTotal) * 100, 100);
+                const offset = circumference - (percent / 100 * circumference);
+                
+                circle.style.strokeDashoffset = offset;
+                document.getElementById('stat-hours').innerText = parseFloat(actual || 0).toFixed(1);
+                document.getElementById('stat-label').innerText = `Horas / ${targetTotal}`;
+                document.getElementById('next-grade-display').innerText = `CAMINO AL ${nextGradeData.GRADO.toUpperCase()}`;
+            } else {
+                // Si no hay más grados (es el último), mostramos el máximo alcanzado
+                circle.style.strokeDashoffset = 0;
+                document.getElementById('stat-hours').innerText = parseFloat(actual || 0).toFixed(1);
+                document.getElementById('stat-label').innerText = `MAESTRO`;
+                document.getElementById('next-grade-display').innerText = `GRADO MÁXIMO ALCANZADO`;
+            }
         }
 
         async function initApp() {
@@ -342,6 +358,8 @@
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
             if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
+            
+            await fetchRequisitosGrado(); // Cargar la tabla de Strapi primero
             await refreshStudentData();
             checkTodayClass();
         }
@@ -359,7 +377,8 @@
                     document.getElementById('user-display-name').innerText = p.nombre;
                     document.getElementById('user-initials').innerText = (p.nombre[0] + (p.apellidos?p.apellidos[0]:"")).toUpperCase();
                     document.getElementById('student-progress-circle').classList.remove('hidden');
-                    updateProgress(p.horas_acumuladas, p.Horas_Necesarias, p.grado);
+                    
+                    updateProgress(p.horas_acumuladas, p.grado);
                 } else if (user.is_sensei) {
                     document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
                     document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellidos?.[0] || "");
@@ -549,7 +568,7 @@
         async function saveClass(id) {
             const token = localStorage.getItem('aikido_jwt'), dVal = document.getElementById('e-d').value, tVal = document.getElementById('e-h').value, dur = document.getElementById('e-dur').value;
             const iso = `${dVal}T${tVal}:00.000Z`;
-            await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) });
+            await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) });
             showModal('¡Éxito!', 'Clase actualizada.', true); loadManageClasses(); checkTodayClass();
         }
 
