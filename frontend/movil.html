@@ -116,6 +116,7 @@
     </style>
     
     <script>
+        const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         const ua = navigator.userAgent;
         const isApple = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
@@ -178,7 +179,6 @@
     </script>
 </head>
 <body>
-    <!-- MURO DE INSTALACIÓN -->
     <div id="install-wall">
         <img src="img/logo-arashi.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
@@ -308,14 +308,14 @@
          */
         async function fetchRequisitosGrado() {
             try {
-                // Intentamos cargar la tabla. He normalizado el nombre para Strapi estándar
-                const res = await fetch(`${API_URL}/api/requisito-grados?sort=HORAS_NECESARIAS:asc&pagination[limit]=50`, { 
+                // Strapi v5 usa el plural de la colección (requisito-grados)
+                const res = await fetch(`${API_URL}/api/requisito-grados?sort=HORAS_NECESARIAS:asc&pagination[limit]=100`, { 
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
                 });
-                if (!res.ok) throw new Error("Error en la petición de metas");
+                if (!res.ok) throw new Error("API Metas no encontrada");
                 const json = await res.json();
                 
-                // Normalizamos los datos (por si Strapi los devuelve en minúsculas)
+                // Normalizamos para manejar mayúsculas/minúsculas de la BD
                 requisitosGradoGlobal = (json.data || []).map(d => {
                     const attr = d.attributes || d;
                     return {
@@ -323,14 +323,16 @@
                         HORAS_NECESARIAS: parseFloat(attr.HORAS_NECESARIAS || attr.horas_necesarias || 0)
                     };
                 });
-                console.log("Metas de Strapi cargadas con éxito.");
             } catch (e) { 
-                console.error("No se pudo cargar Requisito_Grado. Revisa permisos en Strapi.");
+                console.error("Error cargando requisitos");
                 requisitosGradoGlobal = [];
             }
         }
 
-        function updateProgress(studentHours) {
+        // Función para limpiar y comparar grados (ignora o/º y mayúsculas)
+        const normalize = (s) => s ? s.toString().toUpperCase().replace(/[º°O]/g, '').trim() : "";
+
+        function updateProgress(studentHours, studentCurrentGrade) {
             const circle = document.getElementById('progress-bar');
             const nextGradeDisplay = document.getElementById('next-grade-display');
             const statLabel = document.getElementById('stat-label');
@@ -338,7 +340,6 @@
 
             if(!circle) return;
 
-            // Si la tabla no cargó por algún motivo
             if (requisitosGradoGlobal.length === 0) {
                 nextGradeDisplay.innerText = "ESPERANDO METAS DE STRAPI...";
                 return;
@@ -347,24 +348,31 @@
             const radius = circle.r.baseVal.value;
             const circumference = radius * 2 * Math.PI;
 
-            // LÓGICA INFALIBLE: Buscamos el primer grado de la lista cuya "HORA_NECESARIA" sea mayor a las horas del alumno.
-            const nextGoal = requisitosGradoGlobal.find(r => r.HORAS_NECESARIAS > currentHours);
+            // ORDEN OFICIAL (Para saber qué grado viene después de cual)
+            const order = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN"];
+            const cleanCurrent = normalize(studentCurrentGrade);
+            const currentIdx = order.findIndex(g => normalize(g) === cleanCurrent);
             
-            if (nextGoal) {
-                const targetTotal = nextGoal.HORAS_NECESARIAS;
+            // El objetivo es el siguiente grado en la lista oficial
+            const nextGradeName = order[currentIdx + 1];
+            
+            // Buscamos en los requisitos de Strapi cuántas horas se piden para ESE grado
+            const nextGoalData = requisitosGradoGlobal.find(r => normalize(r.GRADO) === normalize(nextGradeName));
+            
+            if (nextGoalData) {
+                const targetTotal = nextGoalData.HORAS_NECESARIAS;
                 const percent = Math.min((currentHours / targetTotal) * 100, 100);
                 const offset = circumference - (percent / 100 * circumference);
                 
                 circle.style.strokeDashoffset = offset;
                 document.getElementById('stat-hours').innerText = currentHours.toFixed(1);
                 statLabel.innerText = `Horas / ${targetTotal}`;
-                nextGradeDisplay.innerText = `CAMINO AL ${nextGoal.GRADO.toUpperCase()}`;
+                nextGradeDisplay.innerText = `CAMINO AL ${nextGoalData.GRADO.toUpperCase()}`;
             } else {
-                // Si ha pasado el máximo registrado (ej: el 4º Dan)
                 circle.style.strokeDashoffset = 0;
                 document.getElementById('stat-hours').innerText = currentHours.toFixed(1);
                 statLabel.innerText = `SENSEI`;
-                nextGradeDisplay.innerText = `MÁXIMO NIVEL REGISTRADO`;
+                nextGradeDisplay.innerText = `GRADO MÁXIMO REGISTRADO`;
             }
         }
 
@@ -376,8 +384,8 @@
             showView('dashboard');
             if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
             
-            await fetchRequisitosGrado(); // 1. Cargamos las metas
-            await refreshStudentData();   // 2. Cargamos al alumno y pintamos el círculo
+            await fetchRequisitosGrado(); // 1. Cargar Metas
+            await refreshStudentData();   // 2. Cargar Alumno y pintar
             checkTodayClass();
         }
 
@@ -395,7 +403,7 @@
                     document.getElementById('user-initials').innerText = (p.nombre[0] + (p.apellidos?p.apellidos[0]:"")).toUpperCase();
                     document.getElementById('student-progress-circle').classList.remove('hidden');
                     
-                    updateProgress(p.horas_acumuladas);
+                    updateProgress(p.horas_acumuladas, p.grado);
                 } else if (user.is_sensei) {
                     document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
                     document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellidos?.[0] || "");
