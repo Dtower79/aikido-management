@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#ef4444">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="img/logo-arashi-movil.png">
+    <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="img/logo-arashi.png">
     <title>Arashi App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
         .hidden { display: none !important; }
         
         #app-content { display: none; flex-direction: column; flex: 1; height: 100%; width: 100%; overflow-y: auto; padding-bottom: 110px; -webkit-overflow-scrolling: touch; }
-        #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
         
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
@@ -35,19 +35,18 @@
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
-        .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
+        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         input { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
-        input:-webkit-autofill { -webkit-text-fill-color: white !important; -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important; }
 
-        /* --- PROGRESS --- */
-        .progress-container { display: flex; justify-content: center; align-items: center; position: relative; margin: 15px 0 25px; }
+        /* --- PROGRESS CIRCLE --- */
+        .progress-container { display: flex; justify-content: center; align-items: center; position: relative; margin: 10px 0 25px; }
         .progress-ring { transform: rotate(-90deg); }
         .progress-ring__circle { transition: stroke-dashoffset 0.8s ease-in-out; stroke-dasharray: 339.29; stroke-dashoffset: 339.29; }
         .progress-text { position: absolute; text-align: center; }
         .progress-text .val { font-size: 32px; font-weight: 800; display: block; line-height: 1; }
         .progress-text .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* --- UI --- */
+        /* --- UI COMPONENTS --- */
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; padding: 20px 25px 0; box-sizing: border-box; }
         .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid var(--glass-border); color: white; flex-shrink: 0; box-shadow: var(--neon); }
         .action-btn { width: 100%; padding: 18px; background: white; color: black; border: none; border-radius: 22px; font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -86,7 +85,14 @@
         .class-card h4 { margin: 0; font-size: 14px; }
         .class-card p { margin: 5px 0 0; font-size: 12px; font-weight: 800; color: var(--text-main); }
 
-        /* --- MODALES --- */
+        /* --- NAV --- */
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.98); backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
+        .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
+        .nav-item.active { color: var(--accent); }
+        .nav-item span { font-size: 10px; font-weight: 600; margin-top: 6px; }
+        .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
+
+        /* --- MODAL --- */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
         .modal-content { 
             background: #0f172a; border: 1px solid var(--glass-border); padding: 35px; border-radius: 40px; 
@@ -106,13 +112,6 @@
         .month-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
         .month-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px 5px; border-radius: 12px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
         .month-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: var(--neon); }
-
-        /* --- NAV --- */
-        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.98); backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
-        .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
-        .nav-item.active { color: var(--accent); }
-        .nav-item span { font-size: 10px; font-weight: 600; margin-top: 6px; }
-        .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
     </style>
     
     <script>
@@ -151,7 +150,7 @@
 </head>
 <body>
     <div id="install-wall">
-        <img src="img/logo-arashi.png" class="logo-img">
+        <img src="img/logo-arashi-movil.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
         <p style="color: var(--text-muted); margin-bottom: 25px; max-width: 280px;">Instala la App oficial para acceder al Dojo.</p>
         <div id="android-btn-area"><button class="action-btn primary" onclick="handleAndroidInstall()">INSTALAR AHORA</button></div>
@@ -173,7 +172,7 @@
         </div>
 
         <div id="login-view" class="auth-container">
-            <img src="img/logo-arashi.png" class="logo-img">
+            <img src="img/logo-arashi-movil.png" class="logo-img">
             <div class="auth-card">
                 <h2 style="margin-bottom:30px; font-weight:800;">HOLA, ARASHI!</h2>
                 <form id="login-form">
@@ -197,6 +196,7 @@
                 <p style="opacity:0.7; font-size:14px;">Bienvenido al tatami digital, Sensei.</p>
             </div>
 
+            <!-- CÍRCULO DE HORAS (Raúl lo verá aquí) -->
             <div class="progress-container hidden" id="student-progress-circle">
                 <svg class="progress-ring" width="120" height="120">
                     <circle stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent" r="54" cx="60" cy="60"/>
@@ -276,8 +276,8 @@
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
-            await refreshStudentData();
             if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
+            await refreshStudentData();
             checkTodayClass();
         }
 
@@ -290,12 +290,10 @@
                 if (json.data?.length > 0) {
                     alumnoGlobal = json.data[0];
                     const p = parseData(alumnoGlobal);
-                    dojoIdGlobal = getID(parseRelation(p.dojo)); 
                     document.getElementById('user-display-name').innerText = p.nombre;
                     document.getElementById('user-initials').innerText = (p.nombre[0] + (p.apellidos?p.apellidos[0]:"")).toUpperCase();
                     if (!user.is_sensei) {
                         document.getElementById('student-progress-circle').classList.remove('hidden');
-                        document.getElementById('confirm-btn').classList.remove('hidden');
                         const circle = document.getElementById('progress-bar');
                         const radius = circle.r.baseVal.value;
                         const circumference = radius * 2 * Math.PI;
@@ -309,11 +307,9 @@
                 } else if (user.is_sensei) {
                     document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
                     document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellidos?.[0] || "");
-                    document.getElementById('student-progress-circle').classList.add('hidden');
-                    document.getElementById('confirm-btn').classList.add('hidden');
                     document.getElementById('sensei-welcome-card').classList.remove('hidden');
                 }
-            } catch (e) { }
+            } catch (e) {}
         }
 
         async function checkTodayClass() {
@@ -341,7 +337,7 @@
         async function loadMonthlyClasses(el) {
             showView('clases', el);
             const container = document.getElementById('calendar-content');
-            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando calendario...</p>";
+            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando...</p>";
             const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=60`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
             const json = await res.json();
             const grouped = {};
@@ -458,7 +454,7 @@
             let gridHtml = `<div class="month-picker-grid">`;
             months.forEach((m, idx) => { gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
             gridHtml += `</div>`;
-            showModal("Generador Arashi", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">AÑO:</label><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MES:</label>${gridHtml}<label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MAÑANA (Mar):</label><input type="time" id="gen-morning" value="10:00" class="modal-field"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">TARDE (Mar/Jue):</label><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><div class="modal-actions-container"><button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button><button class="action-btn" style="background:#1e293b; color:white;" onclick="closeModal()">CERRAR</button></div></div>`, false);
+            showModal("Generador Arashi", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">AÑO:</label><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MES:</label>${gridHtml}<label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MAÑANA (Mar):</label><input type="time" id="gen-morning" value="10:00" class="modal-field"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">TARDE (Mar/Jue):</label><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><div class="modal-actions-container"><button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button><button class="action-btn" style="background:#1e293b; color:white; margin-top:5px;" onclick="closeModal()">CERRAR</button></div></div>`, false);
         }
 
         async function processGeneration() {
@@ -516,8 +512,7 @@
                 const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-                else { alert("Error de acceso"); }
-            } catch (e) { alert("Error red"); }
+            } catch (e) { }
         });
 
         function logout() { localStorage.clear(); location.reload(); }
