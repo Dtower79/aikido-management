@@ -35,7 +35,7 @@
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
-        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
+        .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         input { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
         input:-webkit-autofill { -webkit-text-fill-color: white !important; -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important; }
 
@@ -95,7 +95,7 @@
         .section-label { padding: 0 25px; margin: 10px 0 15px; font-size: 10px; text-transform: uppercase; font-weight: 800; color: var(--accent); letter-spacing: 1px; opacity: 0.8; }
         .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 0 20px 30px; }
         .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 15px; border-radius: 20px; text-align: center; border-bottom: 3px solid var(--accent); }
-        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
+        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
         .modal-actions-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
         #modal-ok-btn { margin-top: 35px; }
 
@@ -105,18 +105,11 @@
     </style>
     
     <script>
-        /**
-         * DETECCIÓN DE DISPOSITIVO Y MURO
-         */
         (function() {
             const ua = navigator.userAgent;
             const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
-            // En PC/Mac, saltamos el muro directamente
-            if (!isMobileOrTablet || isStandalone) {
-                document.documentElement.classList.add('ready-to-show');
-            }
+            if (!isMobileOrTablet || isStandalone) document.documentElement.classList.add('ready-to-show');
         })();
     </script>
 </head>
@@ -135,7 +128,7 @@
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
                 <h3 id="modal-title">...</h3>
                 <div id="modal-body-content" style="margin-bottom:20px;"></div>
-                <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">OK</button>
+                <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">CERRAR</button>
             </div>
         </div>
 
@@ -220,7 +213,7 @@
         let selectedMonthGen = new Date().getMonth();
         let deferredPrompt;
 
-        // --- LÓGICA DE INSTALACIÓN CORREGIDA PARA PRUEBAS ---
+        // --- LÓGICA DE INSTALACIÓN CORREGIDA ---
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -228,11 +221,10 @@
 
         async function handleInstallClick() {
             const ua = navigator.userAgent;
-            // Detección Estricta de iOS (Incluso en simuladores)
-            const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            // Detección Estricta: Si el UA contiene "iPhone", mostramos tutorial sí o sí para pruebas
+            const isIOSLike = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || ua.includes("iPhone");
             
-            // SI ES APPLE -> MOSTRAMOS TUTORIAL SIEMPRE (Ignoramos si Chrome emulado dice que puede instalar)
-            if (isIOS) {
+            if (isIOSLike) {
                 showModal("Instalar en iPhone", `
                     <div style="margin-top:20px;">
                         <div class="ios-step">
@@ -249,15 +241,14 @@
                         </div>
                     </div>
                 `, true);
-            } 
-            // SI ES ANDROID/CHROME -> USAMOS EL PROMPT NATIVO
-            else if (deferredPrompt) {
+                document.getElementById('modal-ok-btn').innerText = "CERRAR";
+            } else if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') document.documentElement.classList.add('ready-to-show');
                 deferredPrompt = null;
             } else {
-                alert("Abre el menú de tu navegador y selecciona 'Instalar' o 'Añadir a pantalla de inicio'.");
+                alert("Abre el menú de tu navegador y selecciona 'Instalar'.");
             }
         }
 
@@ -304,9 +295,7 @@
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
-
             await refreshStudentData();
-
             if (user.is_sensei) {
                 document.getElementById('nav-sensei').style.display = 'flex';
                 if (!alumnoGlobal) {
@@ -372,7 +361,7 @@
         async function loadMonthlyClasses(el) {
             showView('clases', el);
             const container = document.getElementById('calendar-content');
-            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando calendario...</p>";
+            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando...</p>";
             const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=60`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
             const json = await res.json();
             const grouped = {};
@@ -402,7 +391,7 @@
 
         async function loadSenseiPanel() {
             const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Buscando alumnos...</p>";
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Buscando...</p>";
             const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
             const json = await res.json();
             listDiv.innerHTML = (json.data?.length === 0) ? "<p style='text-align:center; opacity:0.5; padding:40px;'>Nadie pendiente.</p>" : "";
