@@ -18,12 +18,12 @@
             accent-color: var(--accent);
         }
         html, body { background-color: var(--bg); margin: 0; padding: 0; height: 100vh; width: 100vw; color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; color-scheme: dark; }
-        body { background-image: radial-gradient(circle at top right, #1e1b4b, transparent); display: flex; flex-direction: column; overflow-y: auto; }
+        body { background-image: radial-gradient(circle at top right, #1e1b4b, transparent); display: flex; flex-direction: column; }
         .hidden { display: none !important; }
         
+        /* --- GESTIÓN DE MURO --- */
         #app-content { display: none; flex-direction: column; flex: 1; height: 100%; width: 100%; overflow-y: auto; padding-bottom: 110px; -webkit-overflow-scrolling: touch; }
-        #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        
+        #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
@@ -34,6 +34,7 @@
         .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; font-weight: 300; letter-spacing: 0.5px; }
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
+        /* INPUTS PREMIUM */
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
         .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         input { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
@@ -47,92 +48,141 @@
         .progress-text .val { font-size: 32px; font-weight: 800; display: block; line-height: 1; }
         .progress-text .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* --- UI --- */
+        /* --- UI COMPONENTS --- */
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; padding: 20px 25px 0; box-sizing: border-box; }
         .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid var(--glass-border); color: white; flex-shrink: 0; box-shadow: var(--neon); }
-        
         .action-btn { width: 100%; padding: 18px; background: white; color: black; border: none; border-radius: 22px; font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; gap: 10px; }
         .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
         .action-btn:disabled { background: #1e293b !important; color: var(--text-muted) !important; cursor: default; box-shadow: none; border: 1px solid var(--glass-border); opacity: 0.8; }
 
         .class-hero { 
             background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
-            padding: 35px 25px; border-radius: 40px; 
-            box-shadow: 0 20px 45px rgba(239,68,68,0.3); 
-            text-align: center; margin: 0 20px 25px;
-            opacity: 0; transform: translateY(20px);
-            animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-            animation-delay: 0.4s;
+            padding: 35px 25px; border-radius: 40px; box-shadow: 0 20px 45px rgba(239,68,68,0.3); 
+            text-align: center; margin: 0 20px 25px; opacity: 0; transform: translateY(20px);
+            animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; animation-delay: 0.4s;
         }
-
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
         /* --- SENSEI UI --- */
-        .student-item { background: var(--card-bg); padding: 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; margin: 0 20px 12px; border: 1px solid var(--glass-border); border-left: 4px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .student-item { 
+            background: var(--card-bg); padding: 15px 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; 
+            margin: 0 20px 12px; border: 1px solid var(--glass-border); border-left: 4px solid var(--accent); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: 0.5s; flex-wrap: nowrap;
+        }
         .student-item.validated { transform: translateX(100px); opacity: 0; pointer-events: none; }
-        .mini-btn { border: none; border-radius: 18px; height: 52px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.3s; }
-        .mini-btn.no { width: 52px; background: #334155; color: #ff4444; font-size: 22px; }
-        .mini-btn.ok { width: 156px; background: var(--success); font-weight: 800; font-size: 13px; text-transform: uppercase; box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4); }
+        .student-info { flex: 1; min-width: 0; padding-right: 15px; }
+        .student-info h4 { margin: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .sensei-actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+        .mini-btn { border: none; border-radius: 15px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.3s; }
+        .mini-btn.no { width: 50px; background: #334155; color: #ff4444; font-size: 20px; }
+        .mini-btn.ok { width: 150px; background: var(--success); font-weight: 800; font-size: 13px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); }
         .mini-btn.ok.animating { background: white !important; color: var(--success) !important; transform: scale(1.05); }
 
-        /* --- NAV --- */
+        /* --- CALENDARIO / GRIDS --- */
+        .month-header { padding: 15px 25px 5px; font-size: 18px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 2px; }
+        .section-label { padding: 0 25px; margin: 10px 0 15px; font-size: 10px; text-transform: uppercase; font-weight: 800; color: var(--accent); letter-spacing: 1px; opacity: 0.8; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 0 20px 30px; }
+        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 15px; border-radius: 20px; text-align: center; border-bottom: 3px solid var(--accent); cursor: pointer; }
+        .class-card h4 { margin: 0; font-size: 14px; }
+        .class-card p { margin: 5px 0 0; font-size: 12px; font-weight: 800; color: var(--text-main); }
+
+        /* --- MODALES --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
+        .modal-content { 
+            background: #0f172a; border: 1px solid var(--glass-border); padding: 35px; border-radius: 40px; 
+            width: 100%; max-width: 380px; text-align: center; box-sizing: border-box; 
+            max-height: 92vh; overflow-y: auto; scrollbar-width: none; 
+        }
+        .modal-content::-webkit-scrollbar { display: none; }
+        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
+        .modal-actions-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        #modal-ok-btn { margin-top: 35px; }
+
+        /* IOS MURO TUTORIAL */
+        .ios-tutorial { display: none; width: 100%; max-width: 320px; margin-top: 20px; }
+        .ios-step { display: flex; align-items: center; gap: 15px; text-align: left; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 20px; margin-bottom: 10px; border: 1px solid var(--glass-border); }
+        .ios-step i { font-size: 18px; color: var(--accent); width: 25px; text-align: center; }
+        .ios-step p { margin: 0; font-size: 13px; line-height: 1.4; }
+
+        /* MONTH PICKER GENERADOR */
+        .month-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+        .month-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px 5px; border-radius: 12px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+        .month-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: var(--neon); }
+
+        /* NAV */
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.98); backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
         .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
         .nav-item.active { color: var(--accent); }
         .nav-item span { font-size: 10px; font-weight: 600; margin-top: 6px; }
         .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
-
-        /* --- MODAL & IOS TUTORIAL --- */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
-        .modal-content { background: #0f172a; border: 1px solid var(--glass-border); padding: 35px; border-radius: 40px; width: 100%; max-width: 380px; text-align: center; box-sizing: border-box; max-height: 92vh; overflow-y: auto; scrollbar-width: none; }
-        .modal-content::-webkit-scrollbar { display: none; }
-        
-        .ios-step { display: flex; align-items: center; gap: 15px; text-align: left; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; margin-bottom: 10px; border: 1px solid var(--glass-border); }
-        .ios-step i { font-size: 20px; color: var(--accent); width: 30px; text-align: center; }
-        .ios-step p { margin: 0; font-size: 13px; line-height: 1.4; }
-
-        .month-header { padding: 15px 25px 5px; font-size: 18px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 2px; }
-        .section-label { padding: 0 25px; margin: 10px 0 15px; font-size: 10px; text-transform: uppercase; font-weight: 800; color: var(--accent); letter-spacing: 1px; opacity: 0.8; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 0 20px 30px; }
-        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 15px; border-radius: 20px; text-align: center; border-bottom: 3px solid var(--accent); }
-        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
-        .modal-actions-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
-        #modal-ok-btn { margin-top: 35px; }
-
-        .month-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
-        .month-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px 5px; border-radius: 12px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
-        .month-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: var(--neon); }
     </style>
     
     <script>
+        /**
+         * LÓGICA DE BLOQUEO Y DETECCIÓN PWA
+         */
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        const ua = navigator.userAgent;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+        const isApple = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
         (function() {
-            const ua = navigator.userAgent;
-            const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            if (!isMobileOrTablet || isStandalone) document.documentElement.classList.add('ready-to-show');
+            if (!isMobile || isStandalone) {
+                document.documentElement.classList.add('ready-to-show');
+            }
         })();
+
+        window.onload = () => {
+            if (isApple && !isStandalone) {
+                document.getElementById('android-btn-area').classList.add('hidden');
+                document.getElementById('ios-instructions').style.display = 'block';
+            }
+            if (localStorage.getItem('aikido_jwt')) initApp();
+        };
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
+
+        async function handleAndroidInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    alert("¡OSS! Instalación iniciada. Cierra Chrome ahora para usar la App instalada.");
+                    setTimeout(() => { window.location.href = "about:blank"; }, 1000);
+                }
+                deferredPrompt = null;
+            }
+        }
     </script>
 </head>
 <body>
+    <!-- MURO DE INSTALACIÓN -->
     <div id="install-wall">
         <img src="img/logo-arashi.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
-        <p style="color: var(--text-muted); margin-bottom: 35px;">Añade la App a tu pantalla de inicio para continuar.</p>
-        <button class="action-btn primary" id="btn-install-pwa" onclick="handleInstallClick()">INSTALAR AHORA</button>
+        <p style="color: var(--text-muted); margin-bottom: 25px; max-width: 280px;">Instala la App oficial para acceder al Dojo.</p>
+        <div id="android-btn-area"><button class="action-btn primary" onclick="handleAndroidInstall()">INSTALAR AHORA</button></div>
+        <div id="ios-instructions" class="ios-tutorial">
+            <div class="ios-step"><i class="fa-solid fa-arrow-up-from-bracket"></i><p>1. Pulsa el botón <strong>'Compartir'</strong> en Safari.</p></div>
+            <div class="ios-step"><i class="fa-solid fa-scroll"></i><p>2. Desliza hacia abajo en el menú.</p></div>
+            <div class="ios-step"><i class="fa-regular fa-square-plus"></i><p>3. Selecciona <strong>'Añadir a inicio'</strong>.</p></div>
+        </div>
     </div>
 
     <div id="app-content">
-        <!-- MODAL -->
+        <!-- MODAL GENÉRICO -->
         <div id="custom-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
                 <h3 id="modal-title">...</h3>
                 <div id="modal-body-content" style="margin-bottom:20px;"></div>
-                <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">CERRAR</button>
+                <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">OK</button>
             </div>
         </div>
 
-        <!-- VISTA LOGIN -->
+        <!-- LOGIN -->
         <div id="login-view" class="auth-container">
             <img src="img/logo-arashi.png" class="logo-img">
             <div class="auth-card">
@@ -146,7 +196,7 @@
             </div>
         </div>
 
-        <!-- VISTA DASHBOARD -->
+        <!-- DASHBOARD -->
         <div id="dashboard-view" class="hidden">
             <div class="header-app">
                 <div><p style="color:var(--text-muted); margin:0; font-size:12px;">Hola!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
@@ -211,46 +261,7 @@
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null;
         let selectedMonthGen = new Date().getMonth();
-        let deferredPrompt;
-
-        // --- LÓGICA DE INSTALACIÓN CORREGIDA ---
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-        });
-
-        async function handleInstallClick() {
-            const ua = navigator.userAgent;
-            // Detección Estricta: Si el UA contiene "iPhone", mostramos tutorial sí o sí para pruebas
-            const isIOSLike = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || ua.includes("iPhone");
-            
-            if (isIOSLike) {
-                showModal("Instalar en iPhone", `
-                    <div style="margin-top:20px;">
-                        <div class="ios-step">
-                            <i class="fa-solid fa-arrow-up-from-bracket"></i>
-                            <p>1. Pulsa el botón <strong>'Compartir'</strong> en Safari.</p>
-                        </div>
-                        <div class="ios-step">
-                            <i class="fa-solid fa-scroll"></i>
-                            <p>2. Desliza hacia abajo.</p>
-                        </div>
-                        <div class="ios-step">
-                            <i class="fa-regular fa-square-plus"></i>
-                            <p>3. Selecciona <strong>'Añadir a la pantalla de inicio'</strong>.</p>
-                        </div>
-                    </div>
-                `, true);
-                document.getElementById('modal-ok-btn').innerText = "CERRAR";
-            } else if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') document.documentElement.classList.add('ready-to-show');
-                deferredPrompt = null;
-            } else {
-                alert("Abre el menú de tu navegador y selecciona 'Instalar'.");
-            }
-        }
+        let selectedYearGen = new Date().getFullYear();
 
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
@@ -277,6 +288,7 @@
 
         function updateProgress(actual, total) {
             const circle = document.getElementById('progress-bar');
+            if(!circle) return;
             const radius = circle.r.baseVal.value;
             const circumference = radius * 2 * Math.PI;
             const targetTotal = total || 60;
@@ -287,8 +299,6 @@
             document.getElementById('stat-label').innerText = `Horas / ${targetTotal}`;
         }
 
-        window.onload = () => { if (localStorage.getItem('aikido_jwt')) initApp(); };
-        
         async function initApp() {
             const token = localStorage.getItem('aikido_jwt'), user = JSON.parse(localStorage.getItem('aikido_user'));
             if(!token || !user) return;
@@ -296,23 +306,7 @@
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
             await refreshStudentData();
-            if (user.is_sensei) {
-                document.getElementById('nav-sensei').style.display = 'flex';
-                if (!alumnoGlobal) {
-                    document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
-                    document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellidos?.[0] || "");
-                    document.getElementById('student-progress-circle').classList.add('hidden');
-                    document.getElementById('confirm-btn').classList.add('hidden');
-                    document.getElementById('sensei-welcome-card').classList.remove('hidden');
-                } else {
-                    document.getElementById('student-progress-circle').classList.remove('hidden');
-                    document.getElementById('confirm-btn').classList.remove('hidden');
-                    document.getElementById('sensei-welcome-card').classList.add('hidden');
-                }
-            } else {
-                document.getElementById('student-progress-circle').classList.remove('hidden');
-                document.getElementById('confirm-btn').classList.remove('hidden');
-            }
+            if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
             checkTodayClass();
         }
 
@@ -328,7 +322,14 @@
                     dojoIdGlobal = getID(parseRelation(p.dojo)); 
                     document.getElementById('user-display-name').innerText = p.nombre;
                     document.getElementById('user-initials').innerText = (p.nombre[0] + (p.apellidos?p.apellidos[0]:"")).toUpperCase();
-                    updateProgress(parseFloat(p.horas_acumuladas || 0), parseFloat(p.Horas_Necesarias || 60));
+                    if (!user.is_sensei) {
+                        document.getElementById('student-progress-circle').classList.remove('hidden');
+                        updateProgress(p.horas_acumuladas, p.Horas_Necesarias);
+                    }
+                } else if (user.is_sensei) {
+                    document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
+                    document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellidos?.[0] || "");
+                    document.getElementById('sensei-welcome-card').classList.remove('hidden');
                 }
             } catch (e) { }
         }
@@ -341,18 +342,15 @@
                 const json = await res.json();
                 const futuras = (json.data || []).filter(c => new Date(parseData(c).Fecha_Hora) > now);
                 if (futuras.length > 0) {
-                    const claseRaw = futuras[0]; claseHoyId = getID(claseRaw);
-                    const f = formatTimeSafe(parseData(claseRaw).Fecha_Hora);
+                    const cRaw = futuras[0]; claseHoyId = getID(cRaw);
+                    const f = formatTimeSafe(parseData(cRaw).Fecha_Hora);
                     document.getElementById('next-class-time').innerText = f.time;
                     document.getElementById('next-class-date').innerText = f.date;
                     if (alumnoGlobal) {
                         const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                        const checkData = await check.json();
-                        if (checkData.data && checkData.data.length > 0) {
-                            btn.innerText = "CONFIRMADO"; btn.disabled = true;
-                        } else {
-                            btn.innerText = "ASISTIR AL KEIKO"; btn.disabled = false;
-                        }
+                        const cData = await check.json();
+                        if (cData.data?.length > 0) { btn.innerText = "CONFIRMADO"; btn.disabled = true; } 
+                        else { btn.innerText = "ASISTIR AL KEIKO"; btn.disabled = false; }
                     }
                 }
             } catch (e) {}
@@ -367,21 +365,19 @@
             const grouped = {};
             json.data.forEach(c => {
                 const d = parseData(c); const f = formatTimeSafe(d.Fecha_Hora);
-                const dur = d.Duracion || 1.5;
                 if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
-                const item = { ...f, dur };
-                if (f.hour < 14) grouped[f.month].morning.push(item); else grouped[f.month].afternoon.push(item);
+                if (f.hour < 14) grouped[f.month].morning.push({ ...f, dur: d.Duracion }); else grouped[f.month].afternoon.push({ ...f, dur: d.Duracion });
             });
             container.innerHTML = "";
             for (const month in grouped) {
                 let html = `<div class="month-header">${month}</div>`;
                 if(grouped[month].morning.length > 0) {
-                    html += `<div class="section-label">Mañana</div><div class="grid-container">`;
+                    html += `<div class="section-label">Sesiones Mañana</div><div class="grid-container">`;
                     grouped[month].morning.forEach(f => html += `<div class="class-card"><h4>${f.date}</h4><p>${f.time} • ${f.dur}h</p></div>`);
                     html += `</div>`;
                 }
                 if(grouped[month].afternoon.length > 0) {
-                    html += `<div class="section-label">Tarde</div><div class="grid-container">`;
+                    html += `<div class="section-label">Sesiones Tarde</div><div class="grid-container">`;
                     grouped[month].afternoon.forEach(f => html += `<div class="class-card"><h4>${f.date}</h4><p>${f.time} • ${f.dur}h</p></div>`);
                     html += `</div>`;
                 }
@@ -391,33 +387,34 @@
 
         async function loadSenseiPanel() {
             const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Buscando...</p>";
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Buscando alumnos...</p>";
             const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
             const json = await res.json();
             listDiv.innerHTML = (json.data?.length === 0) ? "<p style='text-align:center; opacity:0.5; padding:40px;'>Nadie pendiente.</p>" : "";
             json.data.forEach(asist => {
                 const a = parseData(asist), alu = parseRelation(a.alumno), cla = parseRelation(a.clase);
                 const f = formatTimeSafe(cla.Fecha_Hora);
-                listDiv.innerHTML += `<div class="student-item" id="it-${getID(asist)}"><div style="flex:1;"><h4 style="margin:0;">${alu.nombre} ${alu.apellidos || ""}</h4><p style="margin:2px 0; font-size:11px; opacity:0.7;">${alu.grado || 'S/G'} • ${parseFloat(alu.horas_acumuladas || 0).toFixed(1)}h</p><p style="font-size:10px; color:var(--accent); font-weight:800; margin-top:5px;">Keiko: ${f.date} @ ${f.time}</p></div><div class="sensei-actions"><button class="mini-btn no" onclick="validateAttendance('${getID(asist)}', false)"><i class="fa-solid fa-xmark"></i></button><button class="mini-btn ok" onclick="validateAttendance('${getID(asist)}', true, '${getID(a.alumno)}', ${cla.Duracion})">VALIDAR</button></div></div>`;
+                listDiv.innerHTML += `
+                    <div class="student-item" id="it-${getID(asist)}">
+                        <div class="student-info"><h4>${alu.nombre} ${alu.apellidos || ""}</h4><p style="margin:2px 0; font-size:11px; opacity:0.7;">${alu.grado || 'S/G'} • ${parseFloat(alu.horas_acumuladas || 0).toFixed(1)}h</p><p style="font-size:10px; color:var(--accent); font-weight:800; margin-top:5px; text-transform:uppercase;">Keiko: ${f.date} @ ${f.time}</p></div>
+                        <div class="sensei-actions"><button class="mini-btn no" onclick="validateAttendance('${getID(asist)}', false)"><i class="fa-solid fa-xmark"></i></button><button class="mini-btn ok" onclick="validateAttendance('${getID(asist)}', true, '${getID(a.alumno)}', ${cla.Duracion})">VALIDAR</button></div>
+                    </div>`;
             });
         }
 
         async function validateAttendance(asistId, asiste, aluId, dur) {
             const token = localStorage.getItem('aikido_jwt');
             const row = document.getElementById(`it-${asistId}`);
-            const okBtn = row.querySelector('.mini-btn.ok');
-            const estado = asiste ? 'Asistio' : 'No Asistio';
-            if(asiste) { okBtn.classList.add('animating'); okBtn.innerHTML = '<i class="fa-solid fa-heart-pulse fa-beat"></i> ¡OSS!'; }
+            if(asiste) { const b = row.querySelector('.mini-btn.ok'); b.classList.add('animating'); b.innerHTML = '<i class="fa-solid fa-heart-pulse fa-beat"></i> ¡OSS!'; }
             try {
-                await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: estado } }) });
+                await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: asiste?'Asistio':'No Asistio' } }) });
                 if(asiste) {
                     const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                    const alData = await alRes.json();
-                    const actual = parseFloat(parseData(alData.data).horas_acumuladas || 0);
+                    const actual = parseFloat(parseData((await alRes.json()).data).horas_acumuladas || 0);
                     await fetch(`${API_URL}/api/alumnos/${aluId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: actual + parseFloat(dur) } }) });
                 }
                 setTimeout(() => { row.classList.add('validated'); setTimeout(() => row.remove(), 500); }, 400);
-            } catch(e) { okBtn.classList.remove('animating'); }
+            } catch(e) {}
         }
 
         async function loadManageClasses() {
@@ -436,12 +433,12 @@
             for (const month in grouped) {
                 let html = `<div class="month-header">${month}</div>`;
                 if(grouped[month].morning.length > 0) {
-                    html += `<div class="section-label">Mañana</div><div class="grid-container">`;
+                    html += `<div class="section-label">Sesiones Mañana</div><div class="grid-container">`;
                     grouped[month].morning.forEach(item => html += `<div class="class-card" onclick="openEditClass('${item.id}','${item.raw}',${item.dur})"><h4>${item.date}</h4><p>${item.time} • ${item.dur}h</p></div>`);
                     html += `</div>`;
                 }
                 if(grouped[month].afternoon.length > 0) {
-                    html += `<div class="section-label">Tarde</div><div class="grid-container">`;
+                    html += `<div class="section-label">Sesiones Tarde</div><div class="grid-container">`;
                     grouped[month].afternoon.forEach(item => html += `<div class="class-card" onclick="openEditClass('${item.id}','${item.raw}',${item.dur})"><h4>${item.date}</h4><p>${item.time} • ${item.dur}h</p></div>`);
                     html += `</div>`;
                 }
@@ -462,11 +459,10 @@
 
         async function processSingleClass() {
             const token = localStorage.getItem('aikido_jwt');
-            const d = document.getElementById('single-date').value;
-            const t = document.getElementById('single-time').value;
-            const dur = document.getElementById('single-dur').value;
+            const d = document.getElementById('single-date').value, t = document.getElementById('single-time').value, dur = document.getElementById('single-dur').value;
             if(!d || !t || !dojoIdGlobal) return;
             const iso = `${d}T${t}:00.000Z`;
+            if(await checkClassExists(iso)) return showModal("Aviso", "Horario ocupado.", true);
             const res = await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) });
             if(res.ok) { showModal("¡Éxito!", "Clase creada.", true); checkTodayClass(); }
         }
@@ -475,10 +471,10 @@
 
         function uiGenerateMonth() {
             const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-            let monthGridHtml = `<div class="month-picker-grid">`;
-            months.forEach((m, idx) => { monthGridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
-            monthGridHtml += `</div>`;
-            showModal("Generador Arashi", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">AÑO:</label><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">SELECCIONA MES:</label>${monthGridHtml}<label style="font-size:11px;color:var(--text-muted);margin-left:10px;">HORA MAÑANA (Martes):</label><input type="time" id="gen-morning" value="10:00" class="modal-field"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">HORA TARDE (Martes y Jueves):</label><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><div class="modal-actions-container"><button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button><button class="action-btn" style="background:#1e293b; color:white; margin-top:5px;" onclick="closeModal()">CERRAR</button></div></div>`, false);
+            let gridHtml = `<div class="month-picker-grid">`;
+            months.forEach((m, idx) => { gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
+            gridHtml += `</div>`;
+            showModal("Generador Arashi", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">AÑO:</label><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MES:</label>${gridHtml}<label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MAÑANA (Mar):</label><input type="time" id="gen-morning" value="10:00" class="modal-field"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">TARDE (Mar/Jue):</label><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><div class="modal-actions-container"><button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button><button class="action-btn" style="background:#1e293b; color:white;" onclick="closeModal()">CERRAR</button></div></div>`, false);
         }
 
         async function processGeneration() {
@@ -489,11 +485,11 @@
                 const d = new Date(year, month - 1, day);
                 const send = async (h) => {
                     const iso = `${year}-${month.toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}T${h}:00.000Z`;
-                    await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: 1.5, dojo: dojoIdGlobal } }) }); creadas++;
+                    if(!(await checkClassExists(iso))) { await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: 1.5, dojo: dojoIdGlobal } }) }); creadas++; } else saltadas++;
                 };
                 if(d.getDay() === 2) { await send(hM); await send(hT); } else if (d.getDay() === 4) { await send(hT); }
             }
-            showModal('¡OSS!', `Generadas ${creadas} clases.`, true); checkTodayClass();
+            showModal('¡OSS!', `Creadas: ${creadas}. Saltadas: ${saltadas}`, true); checkTodayClass();
         }
 
         function openEditClass(id, raw, dur) {
@@ -531,14 +527,12 @@
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const identifier = document.getElementById('dni-login').value;
-            const password = document.getElementById('password').value;
+            const identifier = document.getElementById('dni-login').value, password = document.getElementById('password').value;
             try {
                 const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-                else { alert("Error"); }
-            } catch (e) { alert("Error red"); }
+            } catch (e) { }
         });
 
         function logout() { localStorage.clear(); location.reload(); }
