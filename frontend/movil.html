@@ -21,7 +21,7 @@
         body { background-image: radial-gradient(circle at top right, #1e1b4b, transparent); display: flex; flex-direction: column; }
         .hidden { display: none !important; }
         
-        /* --- MURO DE INSTALACIÓN --- */
+        /* --- GESTIÓN DE MURO --- */
         #app-content { display: none; flex-direction: column; flex: 1; height: 100%; width: 100%; overflow-y: auto; padding-bottom: 110px; -webkit-overflow-scrolling: touch; }
         #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
         .ready-to-show #app-content { display: flex !important; }
@@ -75,7 +75,7 @@
         .student-info .student-details { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 600; }
         .student-info .keiko-time { font-size: 11px; color: var(--accent); font-weight: 800; margin-top: 6px; text-transform: uppercase; }
         
-        .sensei-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+        .sensei-actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
         .mini-btn { border: none; border-radius: 15px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.3s; }
         .mini-btn.no { width: 50px; background: #334155; color: #ff4444; font-size: 20px; }
         .mini-btn.ok { width: 100px; background: var(--success); font-weight: 800; font-size: 10px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); }
@@ -116,20 +116,15 @@
     </style>
     
     <script>
-        /**
-         * BLOQUEO PWA Y DETECCIÓN
-         */
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
         const ua = navigator.userAgent;
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
         const isApple = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
-        }
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
 
         (function() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
             if (!isMobile || isStandalone) {
                 document.documentElement.classList.add('ready-to-show');
             }
@@ -242,9 +237,9 @@
                 </svg>
                 <div class="progress-text">
                     <span id="stat-hours" class="val">0.0</span>
-                    <span id="stat-label" class="lbl">Cargando...</span>
+                    <span id="stat-label" class="lbl">HORAS / --</span>
                 </div>
-                <div id="next-grade-display" class="next-grade-label">Buscando meta...</div>
+                <div id="next-grade-display" class="next-grade-label">ESPERANDO DATOS...</div>
             </div>
 
             <div class="class-hero" id="class-hero-card">
@@ -309,20 +304,28 @@
         }
 
         /**
-         * CARGA DINÁMICA DE REQUISITOS (SOLUCIÓN ORO)
+         * LÓGICA DINÁMICA DE METAS MEJORADA (SOLUCIÓN ORO)
          */
         async function fetchRequisitosGrado() {
             try {
-                // Strapi v5 suele pluralizar con 's' o el nombre exacto de la tabla
-                // Intenta con requisito-grados o el nombre que definiste
+                // Intentamos cargar la tabla. He normalizado el nombre para Strapi estándar
                 const res = await fetch(`${API_URL}/api/requisito-grados?sort=HORAS_NECESARIAS:asc&pagination[limit]=50`, { 
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
                 });
-                if (!res.ok) throw new Error("API Meta no encontrada");
+                if (!res.ok) throw new Error("Error en la petición de metas");
                 const json = await res.json();
-                requisitosGradoGlobal = (json.data || []).map(d => parseData(d));
+                
+                // Normalizamos los datos (por si Strapi los devuelve en minúsculas)
+                requisitosGradoGlobal = (json.data || []).map(d => {
+                    const attr = d.attributes || d;
+                    return {
+                        GRADO: attr.GRADO || attr.grado,
+                        HORAS_NECESARIAS: parseFloat(attr.HORAS_NECESARIAS || attr.horas_necesarias || 0)
+                    };
+                });
+                console.log("Metas de Strapi cargadas con éxito.");
             } catch (e) { 
-                console.error("Error cargando requisitos");
+                console.error("No se pudo cargar Requisito_Grado. Revisa permisos en Strapi.");
                 requisitosGradoGlobal = [];
             }
         }
@@ -335,21 +338,20 @@
 
             if(!circle) return;
 
-            // Si la tabla no cargó
+            // Si la tabla no cargó por algún motivo
             if (requisitosGradoGlobal.length === 0) {
-                nextGradeDisplay.innerText = "ESPERANDO DATOS...";
-                statLabel.innerText = "HORAS / --";
+                nextGradeDisplay.innerText = "ESPERANDO METAS DE STRAPI...";
                 return;
             }
 
             const radius = circle.r.baseVal.value;
             const circumference = radius * 2 * Math.PI;
 
-            // LÓGICA INFALIBLE: Buscar el primer grado que requiera MÁS de las horas que tengo ahora.
-            const nextGoal = requisitosGradoGlobal.find(r => parseFloat(r.HORAS_NECESARIAS) > currentHours);
+            // LÓGICA INFALIBLE: Buscamos el primer grado de la lista cuya "HORA_NECESARIA" sea mayor a las horas del alumno.
+            const nextGoal = requisitosGradoGlobal.find(r => r.HORAS_NECESARIAS > currentHours);
             
             if (nextGoal) {
-                const targetTotal = parseFloat(nextGoal.HORAS_NECESARIAS);
+                const targetTotal = nextGoal.HORAS_NECESARIAS;
                 const percent = Math.min((currentHours / targetTotal) * 100, 100);
                 const offset = circumference - (percent / 100 * circumference);
                 
@@ -358,11 +360,11 @@
                 statLabel.innerText = `Horas / ${targetTotal}`;
                 nextGradeDisplay.innerText = `CAMINO AL ${nextGoal.GRADO.toUpperCase()}`;
             } else {
-                // Si ha superado todas las horas de la tabla
+                // Si ha pasado el máximo registrado (ej: el 4º Dan)
                 circle.style.strokeDashoffset = 0;
                 document.getElementById('stat-hours').innerText = currentHours.toFixed(1);
                 statLabel.innerText = `SENSEI`;
-                nextGradeDisplay.innerText = `MÁXIMO GRADO REGISTRADO`;
+                nextGradeDisplay.innerText = `MÁXIMO NIVEL REGISTRADO`;
             }
         }
 
@@ -374,8 +376,8 @@
             showView('dashboard');
             if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
             
-            await fetchRequisitosGrado(); // Cargar la tabla de metas primero
-            await refreshStudentData();
+            await fetchRequisitosGrado(); // 1. Cargamos las metas
+            await refreshStudentData();   // 2. Cargamos al alumno y pintamos el círculo
             checkTodayClass();
         }
 
@@ -393,7 +395,6 @@
                     document.getElementById('user-initials').innerText = (p.nombre[0] + (p.apellidos?p.apellidos[0]:"")).toUpperCase();
                     document.getElementById('student-progress-circle').classList.remove('hidden');
                     
-                    // Solo pasamos las horas acumuladas para que el sistema decida la meta
                     updateProgress(p.horas_acumuladas);
                 } else if (user.is_sensei) {
                     document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
@@ -419,7 +420,7 @@
                         const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                         const cData = await check.json();
                         if (cData.data?.length > 0) { 
-                            btn.innerText = "CONFIRMADO"; btn.disabled = true; btn.style.background = "white"; btn.style.color = "black";
+                            btn.innerText = "CONFIRMADO"; btn.disabled = true; btn.style.background = "rgba(255,255,255,0.1)"; btn.style.color = "var(--text-muted)";
                         } else { 
                             btn.innerText = "ASISTIR AL KEIKO"; btn.disabled = false; btn.style.background = "white"; btn.style.color = "black";
                         }
