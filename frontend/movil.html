@@ -22,7 +22,7 @@
         .hidden { display: none !important; }
         
         /* --- GESTIÓN DE MURO --- */
-        #app-content { display: none; flex-direction: column; flex: 1; height: 100%; width: 100%; padding-bottom: 110px; -webkit-overflow-scrolling: touch; }
+        #app-content { display: none; flex-direction: column; flex: 1; height: 100%; width: 100%; overflow-y: auto; padding-bottom: 110px; -webkit-overflow-scrolling: touch; }
         #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
@@ -63,7 +63,7 @@
         }
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* --- SENSEI UI --- */
+        /* --- SENSEI UI REDISEÑO COMPACTO --- */
         .student-item { 
             background: var(--card-bg); padding: 15px 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; 
             margin: 0 20px 12px; border: 1px solid var(--glass-border); border-left: 4px solid var(--accent); 
@@ -309,45 +309,51 @@
         }
 
         /**
-         * LÓGICA DINÁMICA DE GRADOS DESDE STRAPI
+         * LÓGICA DINÁMICA DE GRADOS MEJORADA
          */
         async function fetchRequisitosGrado() {
             try {
-                const res = await fetch(`${API_URL}/api/requisito-grados?sort=HORAS_NECESARIAS:asc`, { 
+                // Strapi v5 usa el plural de la colección
+                const res = await fetch(`${API_URL}/api/requisito-grados?sort=HORAS_NECESARIAS:asc&pagination[limit]=50`, { 
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
                 });
                 const json = await res.json();
                 requisitosGradoGlobal = (json.data || []).map(d => parseData(d));
-            } catch (e) { console.error("Error cargando requisitos de grado"); }
+                console.log("Requisitos cargados:", requisitosGradoGlobal);
+            } catch (e) { console.error("Error cargando requisitos"); }
         }
 
-        function updateProgress(actual, currentGrade) {
+        // Función para limpiar y comparar grados (ignora o/º y mayúsculas)
+        const normalize = (s) => s ? s.toString().toUpperCase().replace(/[º°O]/g, '').trim() : "";
+
+        function updateProgress(studentHours, currentGradeName) {
             const circle = document.getElementById('progress-bar');
+            const nextGradeDisplay = document.getElementById('next-grade-display');
             if(!circle) return;
+
             const radius = circle.r.baseVal.value;
             const circumference = radius * 2 * Math.PI;
+            const currentHours = parseFloat(studentHours || 0);
 
-            // Buscamos el grado actual en la lista descargada de Strapi
-            const currentIdx = requisitosGradoGlobal.findIndex(r => r.GRADO.toUpperCase() === (currentGrade || "").toUpperCase());
-            
-            // El siguiente grado es el siguiente en la lista (que ya viene ordenada por horas desde Strapi)
-            const nextGradeData = requisitosGradoGlobal[currentIdx + 1];
+            // LOGICA MEJORADA: El siguiente grado es el PRIMERO en la lista que tiene MÁS horas de las que tiene el alumno ahora.
+            // Esto resuelve el problema de si el grado actual no está en la tabla o está mal escrito.
+            const nextGradeData = requisitosGradoGlobal.find(r => parseFloat(r.HORAS_NECESARIAS) > currentHours);
             
             if (nextGradeData) {
-                const targetTotal = nextGradeData.HORAS_NECESARIAS;
-                const percent = Math.min((actual / targetTotal) * 100, 100);
+                const targetTotal = parseFloat(nextGradeData.HORAS_NECESARIAS);
+                const percent = Math.min((currentHours / targetTotal) * 100, 100);
                 const offset = circumference - (percent / 100 * circumference);
                 
                 circle.style.strokeDashoffset = offset;
-                document.getElementById('stat-hours').innerText = parseFloat(actual || 0).toFixed(1);
+                document.getElementById('stat-hours').innerText = currentHours.toFixed(1);
                 document.getElementById('stat-label').innerText = `Horas / ${targetTotal}`;
-                document.getElementById('next-grade-display').innerText = `CAMINO AL ${nextGradeData.GRADO.toUpperCase()}`;
+                nextGradeDisplay.innerText = `CAMINO AL ${nextGradeData.GRADO.toUpperCase()}`;
             } else {
-                // Si no hay más grados (es el último), mostramos el máximo alcanzado
+                // Si ya superó todas las horas de la tabla
                 circle.style.strokeDashoffset = 0;
-                document.getElementById('stat-hours').innerText = parseFloat(actual || 0).toFixed(1);
+                document.getElementById('stat-hours').innerText = currentHours.toFixed(1);
                 document.getElementById('stat-label').innerText = `MAESTRO`;
-                document.getElementById('next-grade-display').innerText = `GRADO MÁXIMO ALCANZADO`;
+                nextGradeDisplay.innerText = `GRADO MÁXIMO ALCANZADO`;
             }
         }
 
@@ -568,7 +574,7 @@
         async function saveClass(id) {
             const token = localStorage.getItem('aikido_jwt'), dVal = document.getElementById('e-d').value, tVal = document.getElementById('e-h').value, dur = document.getElementById('e-dur').value;
             const iso = `${dVal}T${tVal}:00.000Z`;
-            await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) });
+            await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) });
             showModal('¡Éxito!', 'Clase actualizada.', true); loadManageClasses(); checkTodayClass();
         }
 
