@@ -24,7 +24,6 @@
         #app-content { display: none; flex-direction: column; flex: 1; height: 100%; width: 100%; overflow-y: auto; padding-bottom: 110px; -webkit-overflow-scrolling: touch; }
         #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
         
-        /* Control de Muro */
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
@@ -35,11 +34,9 @@
         .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; font-weight: 300; letter-spacing: 0.5px; }
         .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
 
-        /* INPUTS PREMIUM ARASHI */
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
         .input-group i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         input { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
-        input:-webkit-autofill { -webkit-text-fill-color: white !important; -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important; }
 
         /* --- PROGRESS --- */
         .progress-container { display: flex; justify-content: center; align-items: center; position: relative; margin: 15px 0 25px; }
@@ -57,7 +54,6 @@
         .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
         .action-btn:disabled { background: #1e293b !important; color: var(--text-muted) !important; cursor: default; box-shadow: none; border: 1px solid var(--glass-border); opacity: 0.8; }
 
-        /* RECTANGULO ROJO SMOOTH */
         .class-hero { 
             background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
             padding: 35px 25px; border-radius: 40px; 
@@ -70,18 +66,9 @@
 
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* --- GRIDS & CARDS --- */
-        .month-header { padding: 15px 25px 5px; font-size: 18px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 2px; }
-        .section-label { padding: 0 25px; margin: 10px 0 15px; font-size: 10px; text-transform: uppercase; font-weight: 800; color: var(--accent); letter-spacing: 1px; opacity: 0.8; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 0 20px 30px; }
-        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 15px; border-radius: 20px; text-align: center; border-bottom: 3px solid var(--accent); }
-        .class-card h4 { margin: 0; font-size: 14px; }
-        .class-card p { margin: 5px 0 0; font-size: 12px; font-weight: 800; color: var(--text-main); }
-
         /* --- SENSEI UI --- */
         .student-item { background: var(--card-bg); padding: 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; margin: 0 20px 12px; border: 1px solid var(--glass-border); border-left: 4px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
         .student-item.validated { transform: translateX(100px); opacity: 0; pointer-events: none; }
-        .sensei-actions { display: flex; gap: 15px; align-items: center; }
         .mini-btn { border: none; border-radius: 18px; height: 52px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.3s; }
         .mini-btn.no { width: 52px; background: #334155; color: #ff4444; font-size: 22px; }
         .mini-btn.ok { width: 156px; background: var(--success); font-weight: 800; font-size: 13px; text-transform: uppercase; box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4); }
@@ -94,55 +81,37 @@
         .nav-item span { font-size: 10px; font-weight: 600; margin-top: 6px; }
         .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
 
-        /* --- MODAL --- */
+        /* --- MODAL & IOS TUTORIAL --- */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
         .modal-content { background: #0f172a; border: 1px solid var(--glass-border); padding: 35px; border-radius: 40px; width: 100%; max-width: 380px; text-align: center; box-sizing: border-box; max-height: 92vh; overflow-y: auto; scrollbar-width: none; }
         .modal-content::-webkit-scrollbar { display: none; }
-        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
-        .modal-actions-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
-        #modal-ok-btn { margin-top: 35px; }
+        
+        .ios-step { display: flex; align-items: center; gap: 15px; text-align: left; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; margin-bottom: 10px; border: 1px solid var(--glass-border); }
+        .ios-step i { font-size: 20px; color: var(--accent); width: 30px; text-align: center; }
+        .ios-step p { margin: 0; font-size: 13px; line-height: 1.4; }
 
         .month-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
         .month-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px 5px; border-radius: 12px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
         .month-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: var(--neon); }
+        
+        .month-header { padding: 15px 25px 5px; font-size: 18px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 2px; }
+        .section-label { padding: 0 25px; margin: 10px 0 15px; font-size: 10px; text-transform: uppercase; font-weight: 800; color: var(--accent); letter-spacing: 1px; opacity: 0.8; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 0 20px 30px; }
+        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 15px; border-radius: 20px; text-align: center; border-bottom: 3px solid var(--accent); }
+        .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
+        .modal-actions-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
     </style>
     
     <script>
         /**
-         * LÓGICA DE INSTALACIÓN PWA
+         * DETECCIÓN DE DISPOSITIVO Y MURO
          */
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // Solo se activa en Android/Chrome
-        });
-
-        async function handleInstallClick() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    document.documentElement.classList.add('ready-to-show');
-                }
-                deferredPrompt = null;
-            } else {
-                // Si es iOS o no hay prompt, damos instrucciones
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-                if (isIOS) {
-                    alert("En iOS: Pulsa el botón 'Compartir' (cuadrado con flecha) y selecciona 'Añadir a pantalla de inicio'.");
-                } else {
-                    alert("Añade esta página a tu pantalla de inicio desde el menú de tu navegador.");
-                }
-            }
-        }
-
         (function() {
             const ua = navigator.userAgent;
             const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-            // PC/Mac saltan el muro automáticamente
+            // En PC/Mac, saltamos el muro directamente
             if (!isMobileOrTablet || isStandalone) {
                 document.documentElement.classList.add('ready-to-show');
             }
@@ -150,10 +119,11 @@
     </script>
 </head>
 <body>
+    <!-- MURO DE INSTALACIÓN -->
     <div id="install-wall">
         <img src="img/logo-arashi.png" class="logo-img">
         <h1 style="font-weight: 800; margin: 0;">¡OSS!</h1>
-        <p style="color: var(--text-muted); margin-bottom: 35px;">Añade la App a tu pantalla de inicio para continuar.</p>
+        <p style="color: var(--text-muted); margin-bottom: 35px; max-width: 280px;">Para acceder al Dojo digital debes instalar la App en tu dispositivo.</p>
         <button class="action-btn primary" id="btn-install-pwa" onclick="handleInstallClick()">INSTALAR AHORA</button>
     </div>
 
@@ -168,7 +138,7 @@
             </div>
         </div>
 
-        <!-- VISTA LOGIN -->
+        <!-- LOGIN -->
         <div id="login-view" class="auth-container">
             <img src="img/logo-arashi.png" class="logo-img">
             <div class="auth-card">
@@ -182,7 +152,7 @@
             </div>
         </div>
 
-        <!-- VISTA DASHBOARD -->
+        <!-- DASHBOARD -->
         <div id="dashboard-view" class="hidden">
             <div class="header-app">
                 <div><p style="color:var(--text-muted); margin:0; font-size:12px;">Hola!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
@@ -247,7 +217,47 @@
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null;
         let selectedMonthGen = new Date().getMonth();
-        let selectedYearGen = new Date().getFullYear();
+        let deferredPrompt;
+
+        // --- LÓGICA DE INSTALACIÓN ---
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        async function handleInstallClick() {
+            if (deferredPrompt) {
+                // Lógica Android / Chrome
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') document.documentElement.classList.add('ready-to-show');
+                deferredPrompt = null;
+            } else {
+                // Lógica iOS Paso a Paso
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                if (isIOS) {
+                    showModal("Instalar en iPhone", `
+                        <div style="margin-top:20px;">
+                            <div class="ios-step">
+                                <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                                <p>1. Pulsa el botón <strong>'Compartir'</strong> en la barra inferior de Safari.</p>
+                            </div>
+                            <div class="ios-step">
+                                <i class="fa-solid fa-scroll"></i>
+                                <p>2. Desliza hacia abajo en el menú de opciones.</p>
+                            </div>
+                            <div class="ios-step">
+                                <i class="fa-regular fa-square-plus"></i>
+                                <p>3. Selecciona <strong>'Añadir a la pantalla de inicio'</strong>.</p>
+                            </div>
+                            <p style="font-size:11px; opacity:0.6; margin-top:15px;">Esto creará el icono de Arashi Group en tu móvil.</p>
+                        </div>
+                    `, true);
+                } else {
+                    alert("Abre el menú de tu navegador y selecciona 'Instalar' o 'Añadir a pantalla de inicio'.");
+                }
+            }
+        }
 
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
@@ -310,7 +320,6 @@
         async function refreshStudentData() {
             const token = localStorage.getItem('aikido_jwt'), user = JSON.parse(localStorage.getItem('aikido_user'));
             if (!token || !user || user.is_sensei) return;
-            
             try {
                 const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const json = await res.json();
@@ -351,7 +360,7 @@
         async function loadMonthlyClasses(el) {
             showView('clases', el);
             const container = document.getElementById('calendar-content');
-            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando calendario...</p>";
+            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando...</p>";
             const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=60`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
             const json = await res.json();
             const grouped = {};
@@ -395,9 +404,7 @@
             const row = document.getElementById(`it-${asistId}`);
             const okBtn = row.querySelector('.mini-btn.ok');
             const estado = asiste ? 'Asistio' : 'No Asistio';
-
             if(asiste) { okBtn.classList.add('animating'); okBtn.innerHTML = '<i class="fa-solid fa-heart-pulse fa-beat"></i> ¡OSS!'; }
-
             try {
                 await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: estado } }) });
                 if(asiste) {
@@ -412,7 +419,7 @@
 
         async function loadManageClasses() {
             const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando keikos...</p>";
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando...</p>";
             const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=60`, { headers: { 'Authorization': `Bearer ${token}` } });
             const json = await res.json();
             const grouped = {};
@@ -426,12 +433,12 @@
             for (const month in grouped) {
                 let html = `<div class="month-header">${month}</div>`;
                 if(grouped[month].morning.length > 0) {
-                    html += `<div class="section-label">Sesiones Mañana</div><div class="grid-container">`;
+                    html += `<div class="section-label">Mañana</div><div class="grid-container">`;
                     grouped[month].morning.forEach(item => html += `<div class="class-card" onclick="openEditClass('${item.id}','${item.raw}',${item.dur})"><h4>${item.date}</h4><p>${item.time} • ${item.dur}h</p></div>`);
                     html += `</div>`;
                 }
                 if(grouped[month].afternoon.length > 0) {
-                    html += `<div class="section-label">Sesiones Tarde</div><div class="grid-container">`;
+                    html += `<div class="section-label">Tarde</div><div class="grid-container">`;
                     grouped[month].afternoon.forEach(item => html += `<div class="class-card" onclick="openEditClass('${item.id}','${item.raw}',${item.dur})"><h4>${item.date}</h4><p>${item.time} • ${item.dur}h</p></div>`);
                     html += `</div>`;
                 }
@@ -457,7 +464,7 @@
             const dur = document.getElementById('single-dur').value;
             if(!d || !t || !dojoIdGlobal) return;
             const iso = `${d}T${t}:00.000Z`;
-            if(await checkClassExists(iso)) return showModal("Aviso", "Horario ocupado.", true);
+            if(await checkClassExists(iso)) return showModal("Aviso", "Ese horario ya está ocupado.", true);
             const res = await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) });
             if(res.ok) { showModal("¡Éxito!", "Clase creada.", true); checkTodayClass(); }
         }
@@ -528,7 +535,7 @@
                 const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-                else { alert("Acceso denegado"); }
+                else { alert("Error de acceso"); }
             } catch (e) { alert("Error red"); }
         });
 
