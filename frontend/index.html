@@ -92,15 +92,14 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group"><label>DNI</label><input type="text" id="new-dni" maxlength="9" placeholder="12345678X" required></div>
-                            <div class="form-group"><label>F. Nacimiento</label><input type="date" id="new-nacimiento"></div>
-                            <div class="form-group"><label>Fecha Alta</label><input type="date" id="new-alta"></div>
-                        </div>
-                        <div class="form-row">
+                            <div class="form-group"><label>Fecha Nacimiento</label><input type="date" id="new-nacimiento"></div>
                             <div class="form-group"><label>Email</label><input type="email" id="new-email"></div>
-                            <div class="form-group"><label>Teléfono</label><input type="tel" id="new-telefono"></div>
                         </div>
                         <div class="form-row">
+                            <div class="form-group"><label>Teléfono</label><input type="tel" id="new-telefono"></div>
                             <div class="form-group" style="flex:2"><label>Dirección</label><input type="text" id="new-direccion"></div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group"><label>Población</label><input type="text" id="new-poblacion" list="ciudades-list"><datalist id="ciudades-list"></datalist></div>
                             <div class="form-group"><label>CP</label><input type="text" id="new-cp" maxlength="5"></div>
                         </div>
@@ -138,20 +137,14 @@
                     </div>
                 </header>
                 <div class="table-container drag-scroll">
-                    <table id="table-alumnos"><thead><tr><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Alta</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table>
+                    <table id="table-alumnos"><thead><tr><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table>
                 </div>
             </div>
 
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header"><h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2></header>
-                <div class="toolbar" style="margin-bottom:15px; justify-content:flex-start;">
-                    <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES BAJAS</button>
-                    <div class="font-tool"><button onclick="changeFontSize('table-bajas', -1)">A-</button><button onclick="changeFontSize('table-bajas', 1)">A+</button></div>
-                    <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-baja" placeholder="Buscar baja..."></div>
-                </div>
-                <div class="table-container drag-scroll">
-                    <table id="table-bajas"><thead><tr><th class="txt-accent">Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Alta</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-bajas-body"></tbody></table>
-                </div>
+                <div class="toolbar" style="margin-bottom:15px; justify-content:flex-start;"><div class="font-tool"><button onclick="changeFontSize('table-bajas', -1)">A-</button><button onclick="changeFontSize('table-bajas', 1)">A+</button></div><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-baja" placeholder="Buscar baja..."></div></div>
+                <div class="table-container drag-scroll"><table id="table-bajas"><thead><tr><th class="txt-accent">Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-bajas-body"></tbody></table></div>
             </div>
 
             <div id="sec-status" class="section hidden">
@@ -204,54 +197,7 @@
 
     <!-- MODALES -->
     <div id="custom-modal" class="modal-overlay hidden"><div class="modal-box"><h3 id="modal-title">Título</h3><p id="modal-message">Mensaje</p><div class="modal-actions"><button id="modal-btn-cancel" class="action-btn secondary">Cancelar</button><button id="modal-btn-ok" class="action-btn">Aceptar</button></div></div></div>
-    
-    <!-- Busca el div id="report-modal" en tu index.html y déjalo así -->
-<div id="report-modal" class="modal-overlay hidden">
-    <div class="modal-box" style="width:500px;">
-        <h3><i class="fa-solid fa-file-pdf"></i> Generar Informe</h3>
-        
-        <div style="margin: 15px 0; text-align:left;">
-            <label style="color: var(--text-muted); font-size:0.9rem; display:block; margin-bottom:5px;">Filtrar por Dojo (Opcional):</label>
-            <select id="report-dojo-filter" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;">
-                <option value="">-- Todos los Dojos --</option>
-            </select>
-        </div>
-
-        <!-- NUEVO: Selector de fecha para el informe de asistencia -->
-        <div style="margin: 15px 0; text-align:left; border-top: 1px solid var(--border); padding-top: 15px;">
-            <label style="color: var(--text-muted); font-size:0.9rem; display:block; margin-bottom:5px;">Fecha para Informe de Asistencia:</label>
-            <input type="date" id="report-attendance-date" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;">
-        </div>
-        
-        <div class="report-grid">
-            <div class="report-col">
-                <h4 style="color:var(--primary); margin-bottom:10px; font-size:0.85rem; text-transform:uppercase;">Listados Generales</h4>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <button class="menu-btn sm" onclick="generateReport('surname')"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos</button>
-                    <button class="menu-btn sm" onclick="generateReport('grade')"><i class="fa-solid fa-medal"></i> Por Grado</button>
-                    <button class="menu-btn sm" onclick="generateReport('insurance')" style="border-color:#22c55e; color:#22c55e;"><i class="fa-solid fa-file-invoice-dollar"></i> Por Seguro</button>
-                    
-                    <!-- NUEVO BOTÓN: Informe de Asistencia -->
-                    <button class="menu-btn sm" onclick="generateReport('attendance')" style="border-color:#3b82f6; color:#3b82f6; margin-top:5px; background: rgba(59, 130, 246, 0.1);">
-                        <i class="fa-solid fa-clipboard-user"></i> ASISTENCIA DIARIA
-                    </button>
-                </div>
-            </div>
-            <div class="report-col">
-                <h4 style="color:var(--accent); margin-bottom:10px; font-size:0.85rem; text-transform:uppercase;">Histórico Bajas</h4>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <button class="menu-btn sm" onclick="generateReport('bajas_surname')" style="border-color:var(--accent);"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos</button>
-                    <button class="menu-btn sm" onclick="generateReport('bajas_date')" style="border-color:var(--accent);"><i class="fa-solid fa-calendar-days"></i> Últimas Bajas</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="modal-actions">
-            <button class="action-btn secondary" onclick="document.getElementById('report-modal').classList.add('hidden')">Cerrar</button>
-        </div>
-    </div>
-</div>
-
+    <div id="report-modal" class="modal-overlay hidden"><div class="modal-box"><h3><i class="fa-solid fa-file-pdf"></i> Generar Informe</h3><div style="margin: 15px 0; text-align:left;"><label style="color: var(--text-muted); font-size:0.9rem; display:block; margin-bottom:5px;">Filtrar por Dojo (Opcional):</label><select id="report-dojo-filter" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;"><option value="">-- Todos los Dojos --</option></select></div><p>Selecciona el tipo de ordenación:</p><div style="margin: 20px 0; display:flex; flex-direction:column; gap:10px;"><button class="menu-btn" onclick="generateReport('surname')"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos</button><button class="menu-btn" onclick="generateReport('grade')"><i class="fa-solid fa-medal"></i> Por Grado</button><button class="menu-btn" onclick="generateReport('dojo')"><i class="fa-solid fa-torii-gate"></i> Por Dojo</button><button class="menu-btn" onclick="generateReport('age')"><i class="fa-solid fa-cake-candles"></i> Por Edad</button><button class="menu-btn" onclick="generateReport('group')"><i class="fa-solid fa-users-line"></i> Por Grupo</button><button class="menu-btn" onclick="generateReport('insurance')" style="border-color:#22c55e; color:#22c55e;"><i class="fa-solid fa-file-invoice-dollar"></i> Por Estado de Seguro</button></div><div class="modal-actions"><button class="action-btn secondary" onclick="document.getElementById('report-modal').classList.add('hidden')">Cerrar</button></div></div></div>
     <div id="recover-modal" class="modal-overlay hidden"><div class="modal-box"><h3><i class="fa-solid fa-lock"></i> Recuperar Contraseña</h3><p style="font-size:0.9rem; margin-bottom:15px; color:#aaa;">Introduce tu email.</p><div class="input-group"><i class="fa-solid fa-envelope"></i><input type="email" id="recover-email" placeholder="Tu email" required style="width:100%;"></div><div class="modal-actions"><button class="action-btn secondary" onclick="document.getElementById('recover-modal').classList.add('hidden')">Cancelar</button><button class="action-btn" onclick="sendRecoveryEmail()">Enviar</button></div></div></div>
     <div id="change-pass-modal" class="modal-overlay hidden"><div class="modal-box"><h3><i class="fa-solid fa-key"></i> Cambiar Contraseña</h3><form id="change-pass-form"><div class="input-group" style="margin-bottom:15px;"><i class="fa-solid fa-lock"></i><input type="password" id="cp-current" placeholder="Contraseña Actual" required style="width:100%;"><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-current', this)"></i></div><div class="input-group" style="margin-bottom:15px;"><i class="fa-solid fa-lock"></i><input type="password" id="cp-new" placeholder="Nueva Contraseña" required style="width:100%;"><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-new', this)"></i></div><div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="cp-confirm" placeholder="Repetir Nueva Contraseña" required style="width:100%;"><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-confirm', this)"></i></div><div class="modal-actions"><button type="button" class="action-btn secondary" onclick="document.getElementById('change-pass-modal').classList.add('hidden')">Cancelar</button><button type="submit" class="action-btn">Actualizar</button></div></form></div></div>
 
