@@ -496,32 +496,23 @@
         }
 
         // --- LÓGICA DE GRADOS ROBUSTA (Normalización y búsqueda) ---
-        
-        // Orden oficial de grados para determinar "cuál va después"
         const GRADOS_ORDER = [
             "S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", 
             "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"
         ];
         
-        // RED DE SEGURIDAD: Si Strapi falla, usamos esto para que no salga 60
         const GRADOS_FALLBACK = {
             "5º KYU": 40, "4º KYU": 50, "3º KYU": 60, "2º KYU": 70, "1º KYU": 90,
             "1º DAN": 120, "2º DAN": 200, "3º DAN": 300, "4º DAN": 400, "5º DAN": 500, "6º DAN": 600
         };
 
-        // Función normalizadora: "4º Dan", "4o Dan", "4Dan" -> "4DAN"
         function normalize(g) {
             if (!g) return "";
-            return g.toString().toUpperCase()
-                .replace(/[º°Oª]/g, '')
-                .replace(/\s+/g, '') // Quitar espacios
-                .replace(/[^0-9A-Z]/g, ''); // Limpieza final
+            return g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, '');
         }
 
-        // Carga la tabla de requisitos desde Strapi al inicio
         async function fetchRequisitosGrado() {
             try {
-                // Strapi v5
                 const res = await fetch(`${API_URL}/api/requisito-grados?pagination[limit]=100&populate=*`, { 
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
                 });
@@ -534,11 +525,7 @@
                         NORM: normalize(attr.GRADO || attr.grado || attr.Grado) 
                     };
                 });
-                console.log("Requisitos cargados:", requisitosGradoGlobal);
-            } catch (e) { 
-                console.warn("No se pudieron cargar requisitos de Strapi. Usando fallback.", e);
-                requisitosGradoGlobal = []; 
-            }
+            } catch (e) { requisitosGradoGlobal = []; }
         }
 
         function updateProgress(studentHours, studentCurrentGrade) {
@@ -549,39 +536,26 @@
 
             if(!circle) return;
 
-            // Lógica de cálculo del siguiente grado
-            let targetTotal = 60; // Default de emergencia absoluta
+            let targetTotal = 60;
             let nextGradeName = "PRÓXIMO NIVEL";
-
             const cleanCurrent = normalize(studentCurrentGrade);
-            
-            // 1. Buscar en qué posición está el alumno
             const currentIdx = GRADOS_ORDER.findIndex(g => normalize(g) === cleanCurrent);
             
             if (currentIdx !== -1 && currentIdx < GRADOS_ORDER.length - 1) {
-                const nextGradeOfficial = GRADOS_ORDER[currentIdx + 1]; // Ej: "5º DAN"
+                const nextGradeOfficial = GRADOS_ORDER[currentIdx + 1];
                 nextGradeName = nextGradeOfficial;
-                
-                // 2. Intentar buscar en datos de Strapi
                 const req = requisitosGradoGlobal.find(r => r.NORM === normalize(nextGradeOfficial));
-                
                 if (req && req.HORAS > 0) {
                     targetTotal = req.HORAS;
-                } else {
-                    // 3. Si Strapi falló o devolvió 0, buscar en Fallback local
-                    if (GRADOS_FALLBACK[nextGradeOfficial]) {
-                        targetTotal = GRADOS_FALLBACK[nextGradeOfficial];
-                    }
+                } else if (GRADOS_FALLBACK[nextGradeOfficial]) {
+                    targetTotal = GRADOS_FALLBACK[nextGradeOfficial];
                 }
             } else if (currentIdx >= GRADOS_ORDER.length - 1) {
-                nextGradeName = "MAESTRÍA";
-                targetTotal = currentHours;
+                nextGradeName = "MAESTRÍA"; targetTotal = currentHours;
             }
 
-            // Pintar Círculo
             const percent = Math.min((currentHours / targetTotal) * 100, 100);
             circle.style.strokeDashoffset = 339.29 - (percent / 100 * 339.29);
-            
             document.getElementById('stat-hours').innerText = currentHours.toFixed(1);
             statLabel.innerText = `Horas / ${targetTotal}`;
             display.innerText = `CAMINO AL ${nextGradeName.toUpperCase()}`;
@@ -594,9 +568,8 @@
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
             if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
-            
-            await fetchRequisitosGrado(); // Cargar reglas
-            await refreshStudentData();   // Cargar alumno
+            await fetchRequisitosGrado();
+            await refreshStudentData();
             checkTodayClass();
         }
 
@@ -612,40 +585,29 @@
             const initialsDisplay = document.getElementById('user-initials');
 
             try {
-                // 1. Intentamos buscar si existe como alumno
                 const res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, { 
                     headers: { 'Authorization': `Bearer ${token}` } 
                 });
                 const json = await res.json();
 
                 if (json.data?.length > 0) {
-                    // --- ES UN ALUMNO ---
                     alumnoGlobal = json.data[0];
                     const p = parseData(alumnoGlobal);
                     dojoIdGlobal = getID(parseRelation(p.dojo)); 
-
-                    // Mostrar Círculo, Ocultar Sensei Card
                     progressCircle.classList.remove('hidden');
                     senseiCard.classList.add('hidden');
-
                     nameDisplay.innerText = p.nombre;
                     initialsDisplay.innerText = (p.nombre[0] + (p.apellidos ? p.apellidos[0] : "")).toUpperCase();
-                    
                     updateProgress(p.horas_acumuladas, p.grado);
-
                 } else if (user.is_sensei) {
-                    // --- ES UN SENSEI ---
                     progressCircle.classList.add('hidden');
                     senseiCard.classList.remove('hidden');
-
                     nameDisplay.innerText = user.nombre || "Sensei"; 
                     const letraNombre = user.nombre ? user.nombre[0] : "S";
                     const letraApellido = user.apellidos ? user.apellidos[0] : "";
                     initialsDisplay.innerText = (letraNombre + letraApellido).toUpperCase();
                 }
-            } catch (e) {
-                console.error("Error cargando datos:", e);
-            }
+            } catch (e) { console.error("Error cargando datos:", e); }
         }
 
         async function checkTodayClass() {
@@ -705,9 +667,15 @@
         async function loadSenseiPanel() {
             const token = localStorage.getItem('aikido_jwt'), listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Buscando alumnos...</p>";
-            const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
+            
+            // --- GRACE PERIOD LOGIC (7 DAYS) ---
+            const limitDate = new Date();
+            limitDate.setDate(limitDate.getDate() - 7);
+            const isoLimit = limitDate.toISOString();
+
+            const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&filters[clase][Fecha_Hora][$gte]=${isoLimit}&populate[alumno][populate]=*&populate[clase][populate]=*&sort=createdAt:desc`, { headers: { 'Authorization': `Bearer ${token}` } });
             const json = await res.json();
-            listDiv.innerHTML = (json.data?.length === 0) ? "<p style='text-align:center; opacity:0.5; padding:40px;'>Nadie pendiente.</p>" : "";
+            listDiv.innerHTML = (json.data?.length === 0) ? "<p style='text-align:center; opacity:0.5; padding:40px;'>Nadie pendiente (últimos 7 días).</p>" : "";
             json.data.forEach(asist => {
                 const a = parseData(asist), alu = parseRelation(a.alumno), cla = parseRelation(a.clase);
                 const f = formatTimeSafe(cla.Fecha_Hora);
@@ -850,7 +818,7 @@
             e.preventDefault();
             const identifier = document.getElementById('dni-login').value, password = document.getElementById('password').value;
             try {
-                const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
+                const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ identifier, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
                 else { alert("Acceso denegado"); }
