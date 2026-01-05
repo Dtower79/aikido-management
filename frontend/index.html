@@ -175,6 +175,15 @@
                         <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Resetea todos los seguros a "NO PAGADO".</p>
                         <button onclick="confirmResetInsurance()" class="action-btn" style="width:100%; background:#ef4444;"><i class="fa-solid fa-rotate-right"></i> RESETEAR SEGUROS</button>
                     </div>
+                    <!-- TARJETA RECUPERADA DE MI CUENTA -->
+                    <div class="card" style="border-color:#3b82f6;">
+                        <h3 style="color:#3b82f6;"><i class="fa-solid fa-user-shield"></i> Mi Cuenta</h3>
+                        <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Gestión de seguridad y acceso.</p>
+                        <div style="display:flex; gap:10px; margin-top:auto;">
+                            <button onclick="openChangePasswordModal()" class="action-btn secondary" style="flex:1;"><i class="fa-solid fa-key"></i> Cambiar Clave</button>
+                            <button onclick="logout()" class="action-btn" style="flex:1; background:#334155;"><i class="fa-solid fa-power-off"></i> Salir</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="console-wrapper">
                     <div class="console-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="console-title">root@aikido-system:~# ./diagnostico.sh</span></div>
@@ -191,7 +200,7 @@
                         &copy; <span id="year"></span> <strong>Arashi Group Aikido</strong>
                         <img src="img/logo-arashi.png" class="footer-logo-mini" alt="Logo">
                     </div>
-                    <span class="version">Sistema de Gestión de Alumnos v5.2</span>
+                    <span class="version">Sistema de Gestión de Alumnos v5.3</span>
                 </div>
             </footer>
         </main>
@@ -200,7 +209,7 @@
     <!-- MODAL GENERICO -->
     <div id="custom-modal" class="modal-overlay hidden"><div class="modal-box"><h3 id="modal-title">Título</h3><p id="modal-message">Mensaje</p><div class="modal-actions"><button id="modal-btn-cancel" class="action-btn secondary">Cancelar</button><button id="modal-btn-ok" class="action-btn">Aceptar</button></div></div></div>
     
-    <!-- MODAL CENTRO DE INFORMES (RESTAURADO) -->
+    <!-- MODAL CENTRO DE INFORMES -->
     <div id="report-modal" class="modal-overlay hidden">
         <div class="modal-box" style="width:650px; max-width: 95vw;">
             <h3><i class="fa-solid fa-file-pdf"></i> Centro de Informes Arashi</h3>
@@ -252,6 +261,34 @@
             <div class="modal-actions" style="margin-top: 30px;">
                 <button class="action-btn secondary" onclick="document.getElementById('report-modal').classList.add('hidden')">Cerrar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL CAMBIO DE CONTRASEÑA (RESTAURADO) -->
+    <div id="change-pass-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3><i class="fa-solid fa-key"></i> Cambiar Contraseña</h3>
+            <form id="change-pass-form">
+                <div class="input-group" style="margin-bottom:15px;">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="cp-current" placeholder="Contraseña Actual" required style="width:100%;">
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-current', this)"></i>
+                </div>
+                <div class="input-group" style="margin-bottom:15px;">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="cp-new" placeholder="Nueva Contraseña" required style="width:100%;">
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-new', this)"></i>
+                </div>
+                <div class="input-group" style="margin-bottom:15px;">
+                    <i class="fa-solid fa-lock"></i>
+                    <input type="password" id="cp-confirm" placeholder="Repetir Nueva Contraseña" required style="width:100%;">
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-confirm', this)"></i>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="action-btn secondary" onclick="document.getElementById('change-pass-modal').classList.add('hidden')">Cancelar</button>
+                    <button type="submit" class="action-btn">Actualizar</button>
+                </div>
+            </form>
         </div>
     </div>
 
