@@ -28,24 +28,7 @@
                     <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('password', this)"></i>
                 </div>
                 <button type="submit" class="login-btn">ENTRAR <i class="fa-solid fa-arrow-right"></i></button>
-                <div class="login-footer">
-                    <a href="#" onclick="openRecoverModal()">¿Has olvidado la contraseña?</a>
-                </div>
                 <p id="login-error" class="error-msg"></p>
-            </form>
-        </div>
-    </div>
-
-    <div id="reset-screen" class="login-container hidden">
-        <div class="login-box">
-            <div class="logo-area"><img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-login"></div>
-            <h3 style="margin-bottom: 20px;">Restablecer Contraseña</h3>
-            <form id="reset-password-form">
-                <input type="hidden" id="reset-code">
-                <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="new-password-reset" placeholder="Nueva Contraseña" required><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('new-password-reset', this)"></i></div>
-                <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="confirm-password-reset" placeholder="Confirmar Contraseña" required><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('confirm-password-reset', this)"></i></div>
-                <button type="submit" class="login-btn">GUARDAR NUEVA CONTRASEÑA</button>
-                <p id="reset-error" class="error-msg"></p>
             </form>
         </div>
     </div>
@@ -60,12 +43,12 @@
             </div>
             
             <nav class="menu" id="main-menu">
-                <button class="menu-btn" onclick="showSection('nuevo-alumno', true)"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
-                <button class="menu-btn" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
-                <button class="menu-btn" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos</button>
-                <button class="menu-btn" onclick="showSection('bajas')"><i class="fa-solid fa-user-xmark"></i> Histórico Bajas</button>
+                <button class="menu-btn" id="btn-nav-nuevo" onclick="showSection('nuevo-alumno')"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
+                <button class="menu-btn" id="btn-nav-dojos" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
+                <button class="menu-btn" id="btn-nav-alumnos" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos</button>
+                <button class="menu-btn" id="btn-nav-bajas" onclick="showSection('bajas')"><i class="fa-solid fa-user-xmark"></i> Histórico Bajas</button>
                 <div class="sidebar-sep">Área Técnica</div>
-                <button class="menu-btn" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
+                <button class="menu-btn" id="btn-nav-status" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
                 <div class="sidebar-footer-mobile">
                     <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
                 </div>
@@ -81,6 +64,7 @@
                 <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-welcome">
             </div>
 
+            <!-- GESTIÓN ALUMNO -->
             <div id="sec-nuevo-alumno" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-user-plus"></i> Gestión de Alumno</h2></header>
                 <div class="card form-card">
@@ -123,37 +107,56 @@
                 </div>
             </div>
 
+            <!-- DOJOS -->
             <div id="sec-dojos" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-torii-gate"></i> Nuestros Dojos</h2></header>
                 <div id="grid-dojos" class="dojo-grid"></div>
             </div>
 
+            <!-- ALUMNOS -->
             <div id="sec-alumnos" class="section hidden">
                 <header class="section-header">
                     <h2><i class="fa-solid fa-users"></i> Alumnos</h2>
                     <div class="toolbar">
-                        <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES</button>
+                        <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> CENTRO INFORMES</button>
                         <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
                         <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI..."></div>
                     </div>
                 </header>
                 <div class="table-container drag-scroll">
-                    <table id="table-alumnos"><thead><tr><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Alta</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-alumnos-body"></tbody></table>
+                    <table id="table-alumnos">
+                        <thead>
+                            <tr>
+                                <th>Apellidos</th>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Grado</th>
+                                <th>Horas</th>
+                                <th>Seguro</th>
+                                <th>Teléfono</th>
+                                <th>Dojo</th>
+                                <th>Alta</th>
+                                <th class="sticky-col">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-alumnos-body"></tbody>
+                    </table>
                 </div>
             </div>
 
+            <!-- BAJAS -->
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header"><h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2></header>
                 <div class="toolbar" style="margin-bottom:15px; justify-content:flex-start;">
-                    <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES BAJAS</button>
                     <div class="font-tool"><button onclick="changeFontSize('table-bajas', -1)">A-</button><button onclick="changeFontSize('table-bajas', 1)">A+</button></div>
                     <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-baja" placeholder="Buscar baja..."></div>
                 </div>
                 <div class="table-container drag-scroll">
-                    <table id="table-bajas"><thead><tr><th class="txt-accent">Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Email</th><th>Nacimiento</th><th>Dojo</th><th>Alta</th><th>Dirección</th><th>Población</th><th>CP</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-bajas-body"></tbody></table>
+                    <table id="table-bajas"><thead><tr><th class="txt-accent">Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Dojo</th><th class="sticky-col">Acciones</th></tr></thead><tbody id="lista-bajas-body"></tbody></table>
                 </div>
             </div>
 
+            <!-- STATUS / ADMIN -->
             <div id="sec-status" class="section hidden">
                 <header class="section-header"><h2><i class="fa-solid fa-heart-pulse"></i> Área Técnica y Gestión</h2></header>
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-bottom:30px;">
@@ -172,14 +175,6 @@
                         <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Resetea todos los seguros a "NO PAGADO".</p>
                         <button onclick="confirmResetInsurance()" class="action-btn" style="width:100%; background:#ef4444;"><i class="fa-solid fa-rotate-right"></i> RESETEAR SEGUROS</button>
                     </div>
-                    <div class="card" style="border-color:#3b82f6;">
-                        <h3 style="color:#3b82f6;"><i class="fa-solid fa-user-shield"></i> Mi Cuenta</h3>
-                        <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Gestión de seguridad y acceso.</p>
-                        <div style="display:flex; gap:10px; margin-top:auto;">
-                            <button onclick="openChangePasswordModal()" class="action-btn secondary" style="flex:1;"><i class="fa-solid fa-key"></i> Cambiar Clave</button>
-                            <button onclick="logout()" class="action-btn" style="flex:1; background:#334155;"><i class="fa-solid fa-power-off"></i> Salir</button>
-                        </div>
-                    </div>
                 </div>
                 <div class="console-wrapper">
                     <div class="console-header"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="console-title">root@aikido-system:~# ./diagnostico.sh</span></div>
@@ -196,64 +191,69 @@
                         &copy; <span id="year"></span> <strong>Arashi Group Aikido</strong>
                         <img src="img/logo-arashi.png" class="footer-logo-mini" alt="Logo">
                     </div>
-                    <span class="version">Sistema de Gestión de Alumnos</span>
+                    <span class="version">Sistema de Gestión de Alumnos v5.2</span>
                 </div>
             </footer>
         </main>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODAL GENERICO -->
     <div id="custom-modal" class="modal-overlay hidden"><div class="modal-box"><h3 id="modal-title">Título</h3><p id="modal-message">Mensaje</p><div class="modal-actions"><button id="modal-btn-cancel" class="action-btn secondary">Cancelar</button><button id="modal-btn-ok" class="action-btn">Aceptar</button></div></div></div>
     
-    <!-- Busca el div id="report-modal" en tu index.html y déjalo así -->
-<div id="report-modal" class="modal-overlay hidden">
-    <div class="modal-box" style="width:500px;">
-        <h3><i class="fa-solid fa-file-pdf"></i> Generar Informe</h3>
-        
-        <div style="margin: 15px 0; text-align:left;">
-            <label style="color: var(--text-muted); font-size:0.9rem; display:block; margin-bottom:5px;">Filtrar por Dojo (Opcional):</label>
-            <select id="report-dojo-filter" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;">
-                <option value="">-- Todos los Dojos --</option>
-            </select>
-        </div>
+    <!-- MODAL CENTRO DE INFORMES (RESTAURADO) -->
+    <div id="report-modal" class="modal-overlay hidden">
+        <div class="modal-box" style="width:650px; max-width: 95vw;">
+            <h3><i class="fa-solid fa-file-pdf"></i> Centro de Informes Arashi</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; text-align: left;">
+                <div>
+                    <label style="color: var(--text-muted); font-size:0.8rem; display:block; margin-bottom:5px;">1. Filtrar por Dojo:</label>
+                    <select id="report-dojo-filter" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;">
+                        <option value="">-- Todos los Dojos --</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color: var(--text-muted); font-size:0.8rem; display:block; margin-bottom:5px;">2. Fecha (Solo para Asistencia):</label>
+                    <input type="date" id="report-attendance-date" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;">
+                </div>
+            </div>
+            
+            <div class="report-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; border-top: 1px solid var(--border); padding-top: 20px; text-align: left;">
+                <div class="report-col">
+                    <h4 style="color:var(--primary); font-size:0.75rem; text-transform:uppercase; margin-bottom:10px;">Alumnos Activos</h4>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button class="menu-btn sm" onclick="generateReport('surname')">Por Apellidos</button>
+                        <button class="menu-btn sm" onclick="generateReport('grade')">Por Grado</button>
+                        <button class="menu-btn sm" onclick="generateReport('age')">Por Edad</button>
+                        <button class="menu-btn sm" onclick="generateReport('group')">Por Grupo</button>
+                        <button class="menu-btn sm" onclick="generateReport('dojo')">Por Dojo</button>
+                    </div>
+                </div>
 
-        <!-- NUEVO: Selector de fecha para el informe de asistencia -->
-        <div style="margin: 15px 0; text-align:left; border-top: 1px solid var(--border); padding-top: 15px;">
-            <label style="color: var(--text-muted); font-size:0.9rem; display:block; margin-bottom:5px;">Fecha para Informe de Asistencia:</label>
-            <input type="date" id="report-attendance-date" style="width:100%; padding:10px; background:var(--bg-dark); border:1px solid var(--border); color:white; border-radius:6px;">
-        </div>
-        
-        <div class="report-grid">
-            <div class="report-col">
-                <h4 style="color:var(--primary); margin-bottom:10px; font-size:0.85rem; text-transform:uppercase;">Listados Generales</h4>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <button class="menu-btn sm" onclick="generateReport('surname')"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos</button>
-                    <button class="menu-btn sm" onclick="generateReport('grade')"><i class="fa-solid fa-medal"></i> Por Grado</button>
-                    <button class="menu-btn sm" onclick="generateReport('insurance')" style="border-color:#22c55e; color:#22c55e;"><i class="fa-solid fa-file-invoice-dollar"></i> Por Seguro</button>
-                    
-                    <!-- NUEVO BOTÓN: Informe de Asistencia -->
-                    <button class="menu-btn sm" onclick="generateReport('attendance')" style="border-color:#3b82f6; color:#3b82f6; margin-top:5px; background: rgba(59, 130, 246, 0.1);">
-                        <i class="fa-solid fa-clipboard-user"></i> ASISTENCIA DIARIA
-                    </button>
+                <div class="report-col">
+                    <h4 style="color:#22c55e; font-size:0.75rem; text-transform:uppercase; margin-bottom:10px;">Control Tatami</h4>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button class="menu-btn sm" onclick="generateReport('insurance')" style="border-color:#22c55e; color:#22c55e;">Estado Seguros</button>
+                        <button class="menu-btn sm" onclick="generateReport('attendance')" style="border-color:#3b82f6; color:#3b82f6; background: rgba(59, 130, 246, 0.1); font-weight: bold;">
+                            ASISTENCIA DÍA
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-col">
+                    <h4 style="color:var(--accent); font-size:0.75rem; text-transform:uppercase; margin-bottom:10px;">Bajas</h4>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button class="menu-btn sm" onclick="generateReport('bajas_surname')" style="border-color:var(--accent);">Por Apellidos</button>
+                        <button class="menu-btn sm" onclick="generateReport('bajas_date')" style="border-color:var(--accent);">Por Fecha</button>
+                    </div>
                 </div>
             </div>
-            <div class="report-col">
-                <h4 style="color:var(--accent); margin-bottom:10px; font-size:0.85rem; text-transform:uppercase;">Histórico Bajas</h4>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <button class="menu-btn sm" onclick="generateReport('bajas_surname')" style="border-color:var(--accent);"><i class="fa-solid fa-arrow-down-a-z"></i> Por Apellidos</button>
-                    <button class="menu-btn sm" onclick="generateReport('bajas_date')" style="border-color:var(--accent);"><i class="fa-solid fa-calendar-days"></i> Últimas Bajas</button>
-                </div>
+            
+            <div class="modal-actions" style="margin-top: 30px;">
+                <button class="action-btn secondary" onclick="document.getElementById('report-modal').classList.add('hidden')">Cerrar</button>
             </div>
-        </div>
-        
-        <div class="modal-actions">
-            <button class="action-btn secondary" onclick="document.getElementById('report-modal').classList.add('hidden')">Cerrar</button>
         </div>
     </div>
-</div>
-
-    <div id="recover-modal" class="modal-overlay hidden"><div class="modal-box"><h3><i class="fa-solid fa-lock"></i> Recuperar Contraseña</h3><p style="font-size:0.9rem; margin-bottom:15px; color:#aaa;">Introduce tu email.</p><div class="input-group"><i class="fa-solid fa-envelope"></i><input type="email" id="recover-email" placeholder="Tu email" required style="width:100%;"></div><div class="modal-actions"><button class="action-btn secondary" onclick="document.getElementById('recover-modal').classList.add('hidden')">Cancelar</button><button class="action-btn" onclick="sendRecoveryEmail()">Enviar</button></div></div></div>
-    <div id="change-pass-modal" class="modal-overlay hidden"><div class="modal-box"><h3><i class="fa-solid fa-key"></i> Cambiar Contraseña</h3><form id="change-pass-form"><div class="input-group" style="margin-bottom:15px;"><i class="fa-solid fa-lock"></i><input type="password" id="cp-current" placeholder="Contraseña Actual" required style="width:100%;"><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-current', this)"></i></div><div class="input-group" style="margin-bottom:15px;"><i class="fa-solid fa-lock"></i><input type="password" id="cp-new" placeholder="Nueva Contraseña" required style="width:100%;"><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-new', this)"></i></div><div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="cp-confirm" placeholder="Repetir Nueva Contraseña" required style="width:100%;"><i class="fa-solid fa-eye toggle-password" onclick="togglePassword('cp-confirm', this)"></i></div><div class="modal-actions"><button type="button" class="action-btn secondary" onclick="document.getElementById('change-pass-modal').classList.add('hidden')">Cancelar</button><button type="submit" class="action-btn">Actualizar</button></div></form></div></div>
 
     <script src="app.js"></script>
     <script>document.getElementById('year').textContent = new Date().getFullYear();</script>

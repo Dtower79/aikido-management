@@ -1,5 +1,4 @@
 const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
-
 let jwtToken = localStorage.getItem('aikido_jwt');
 let userData = JSON.parse(localStorage.getItem('aikido_user'));
 
@@ -10,20 +9,13 @@ const GRADE_WEIGHTS = {
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('code')) { showResetScreen(urlParams.get('code')); return; }
-
-    const loginTimeStr = localStorage.getItem('aikido_login_time');
-    if (jwtToken && loginTimeStr && (Date.now() - parseInt(loginTimeStr) < 20 * 60 * 1000)) {
-        localStorage.setItem('aikido_login_time', Date.now().toString());
-        showDashboard();
-    } else { logout(); }
-
-    setupDniInput('dni-login'); setupDniInput('new-dni');
+    if (jwtToken) showDashboard();
+    setupDniInput('dni-login'); 
+    setupDniInput('new-dni');
     document.getElementById('search-alumno')?.addEventListener('keyup', () => filtrarTabla('table-alumnos', 'search-alumno'));
     document.getElementById('search-baja')?.addEventListener('keyup', () => filtrarTabla('table-bajas', 'search-baja'));
     setupDragScroll();
-
+    
     const yearLabel = document.getElementById('current-year-lbl');
     if (yearLabel) yearLabel.textContent = new Date().getFullYear();
 
@@ -31,42 +23,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (seguroSwitch) {
         seguroSwitch.addEventListener('change', (e) => {
             const txt = document.getElementById('seguro-status-text');
-            if (e.target.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; }
-            else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
+            txt.innerText = e.target.checked ? "PAGADO" : "NO PAGADO";
+            txt.style.color = e.target.checked ? "#22c55e" : "#ef4444";
         });
     }
 });
 
 // --- SESIÓN ---
-const loginForm = document.getElementById('login-form');
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const identifier = document.getElementById('dni-login').value;
-        const password = document.getElementById('password').value;
-        try {
-            const response = await fetch(`${API_URL}/api/auth/local`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ identifier, password })
-            });
-            const data = await response.json();
-            if (response.ok) {
-                jwtToken = data.jwt;
-                localStorage.setItem('aikido_jwt', jwtToken);
-                localStorage.setItem('aikido_user', JSON.stringify(data.user));
-                localStorage.setItem('aikido_login_time', Date.now().toString());
-                showDashboard();
-            } else { document.getElementById('login-error').innerText = "❌ Error Credenciales"; }
-        } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
-    });
-}
+document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const identifier = document.getElementById('dni-login').value;
+    const password = document.getElementById('password').value;
+    try {
+        const res = await fetch(`${API_URL}/api/auth/local`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            jwtToken = data.jwt;
+            localStorage.setItem('aikido_jwt', jwtToken);
+            localStorage.setItem('aikido_user', JSON.stringify(data.user));
+            showDashboard();
+        } else { document.getElementById('login-error').innerText = "❌ Credenciales incorrectas"; }
+    } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
+});
 
-function logout() {
-    localStorage.clear();
-    document.getElementById('dashboard').classList.add('hidden');
-    document.getElementById('login-screen').classList.remove('hidden');
-    if (window.location.search) window.history.replaceState({}, document.title, window.location.pathname);
-}
+function logout() { localStorage.clear(); location.reload(); }
 
 function showDashboard() {
     document.getElementById('login-screen').classList.add('hidden');
@@ -76,10 +59,12 @@ function showDashboard() {
 
 function showSection(id) {
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
-    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`sec-${id}`).classList.remove('hidden');
-    const btn = document.querySelector(`button[onclick="showSection('${id}', true)"]`) || document.querySelector(`button[onclick="showSection('${id}')"]`);
-    if (btn) btn.classList.add('active');
+    
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.getElementById(`btn-nav-${id}`);
+    if(activeBtn) activeBtn.classList.add('active');
+
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
@@ -88,78 +73,35 @@ function showSection(id) {
 }
 
 // --- UTILS ---
+const parseRelation = (obj) => { if(!obj || !obj.data) return obj; return obj.data.attributes || obj.data; };
+const getID = (obj) => obj?.documentId || obj?.id;
+
 function getDojoName(dojoObj) {
-    let name = "NO DISP";
-    if (dojoObj) {
-        if (dojoObj.nombre) name = dojoObj.nombre;
-        else if (dojoObj.data && dojoObj.data.attributes) name = dojoObj.data.attributes.nombre;
-        else if (dojoObj.attributes) name = dojoObj.attributes.nombre;
-    }
-    return name === "NO DISP" ? name : name.replace(/Aikido\s+/gi, '').trim();
+    const d = parseRelation(dojoObj);
+    return d && d.nombre ? d.nombre.replace(/Aikido\s+/gi, '').trim() : "NO DISP";
 }
 
 function normalizeGrade(g) {
     if (!g) return 'NO DISP';
     let s = g.toUpperCase().trim();
-    const match = s.match(/(\d+)/);
-    if (match) { const num = match[1]; const type = s.includes('DAN') ? 'DAN' : (s.includes('KYU') ? 'KYU' : ''); if (type) return `${num}º ${type}`; }
+    if (s.includes('DAN') || s.includes('KYU')) {
+        const match = s.match(/(\d+)/);
+        if (match) return `${match[1]}º ${s.includes('DAN') ? 'DAN' : 'KYU'}`;
+    }
     return s;
 }
 
 function getGradeWeight(g) { return GRADE_WEIGHTS[normalizeGrade(g)] || 0; }
+function formatDateDisplay(d) { if (!d) return 'NO DISP'; const p = d.split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; }
+function formatDateExcel(d) { if (!d) return ""; const p = d.split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; }
+function calculateAge(d) { if (!d) return 'NO DISP'; const t = new Date(), b = new Date(d); let a = t.getFullYear() - b.getFullYear(); if (t.getMonth() - b.getMonth() < 0 || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; return isNaN(a) ? 'NO DISP' : a; }
+function normalizePhone(t) { if (!t || t === "-") return 'NO DISP'; return t.toString().replace(/^(\+?34)/, '').trim(); }
+function togglePassword(i, icon) { const x = document.getElementById(i); if (x.type === "password") { x.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } }
 
-function normalizeAddress(a) { 
-    if (!a || a.trim() === "") return 'NO DISP';
-    return a.replace(/\b(Carrer|Calle)\b/gi, 'C/').replace(/\b(Avinguda|Avenida)\b/gi, 'Avda').trim(); 
-}
-
-function normalizeCity(c) {
-    if (!c || c.trim() === "") return 'NO DISP';
-    let s = c.toString().toUpperCase();
-    s = s.replace(/\s*\(.*?\)\s*/g, ' ');
-    s = s.replace(/\bSTA\b/g, 'SANTA');
-    s = s.replace(/\bST\b/g, 'SANT');
-    s = s.replace(/[.,\-\s]+$/, '').replace(/^[.,\-\s]+/, '');
-    if (s.match(/SAN.*ADRI/i)) return 'SANT ADRIÀ DE BESÒS';
-    return s.trim();
-}
-
-function normalizePhone(t) { 
-    if (!t || t.toString().trim() === "" || t === "-") return 'NO DISP';
-    return t.toString().trim().replace(/^(\+?34)/, '').trim(); 
-}
-
-// FORMATEADOR DE FECHAS DD/MM/AAAA PARA PANTALLA E INFORMES
-function formatDateDisplay(d) { 
-    if (!d || d === "" || d === null) return 'NO DISP'; 
-    const p = d.split('-'); 
-    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; 
-}
-
-function formatDateExcel(d) {
-    if (!d) return "";
-    const p = d.split('-');
-    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
-}
-
-function calculateAge(d) { 
-    if (!d) return 'NO DISP'; 
-    const t = new Date(), b = new Date(d); 
-    let a = t.getFullYear() - b.getFullYear(); 
-    if (t.getMonth() - b.getMonth() < 0 || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--; 
-    return isNaN(a) ? 'NO DISP' : a; 
-}
-
-function togglePassword(i, icon) { 
-    const x = document.getElementById(i); 
-    if (x.type === "password") { x.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } 
-    else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } 
-}
-
-// --- CARGA ---
+// --- CARGA ALUMNOS ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    tbody.innerHTML = `<tr><td colspan="15">Cargando...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12">Cargando...</td></tr>`;
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
     try {
@@ -170,31 +112,39 @@ async function loadAlumnos(activos) {
         data.forEach(a => {
             const p = a.attributes || a;
             const id = a.documentId;
-            const badgeSeguro = p.seguro_pagado ? `<span class="badge-ok">PAGADO</span>` : `<span class="badge-no">PENDIENTE</span>`;
+            const horas = parseFloat(p.horas_acumuladas || 0).toFixed(1);
             
-            const rowContent = `
-                <td><span class="cell-data"><strong>${p.apellidos || "NO DISP"}</strong></span></td>
-                <td><span class="cell-data">${p.nombre || "NO DISP"}</span></td>
-                <td><span class="cell-data" style="font-family:monospace">${p.dni || "NO DISP"}</span></td>
-                <td><span class="cell-data"><span class="badge">${normalizeGrade(p.grado)}</span></span></td>
-                <td><span class="cell-data">${badgeSeguro}</span></td>
-                <td><span class="cell-data">${normalizePhone(p.telefono)}</span></td>
-                <td><span class="cell-data">${p.email || 'NO DISP'}</span></td>
-                <td><span class="cell-data">${formatDateDisplay(p.fecha_nacimiento)}</span></td>
-                <td><span class="cell-data">${getDojoName(p.dojo)}</span></td>
-                <td><span class="cell-data" style="font-weight:bold">${formatDateDisplay(p.fecha_inicio)}</span></td>
-                <td><span class="cell-data">${p.direccion || 'NO DISP'}</span></td>
-                <td><span class="cell-data">${p.poblacion || 'NO DISP'}</span></td>
-                <td><span class="cell-data">${p.cp || 'NO DISP'}</span></td>
+            let rowHTML = `
+                ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
+                <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
+                <td>${p.nombre || ''}</td>
+                <td>${p.dni || ''}</td>
+                <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
+                ${activos ? `<td style="font-weight:bold; color:var(--primary)">${horas}h</td>` : ''}
+                <td><span class="${p.seguro_pagado ? 'badge-ok' : 'badge-no'}">${p.seguro_pagado ? 'SÍ' : 'NO'}</span></td>
+                <td>${normalizePhone(p.telefono)}</td>
+                <td>${getDojoName(p.dojo)}</td>
             `;
-
+            
             if (activos) {
-                tbody.innerHTML += `<tr>${rowContent}<td class="sticky-col"><button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button><button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button></td></tr>`;
+                rowHTML += `<td>${formatDateDisplay(p.fecha_inicio)}</td>`;
+                // BOTÓN DE HISTORIAL AÑADIDO AQUÍ
+                rowHTML += `
+                    <td class="sticky-col">
+                        <button class="action-btn-icon" title="Ver Historial" onclick="generateIndividualHistory('${id}', '${p.nombre}', '${p.apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                        <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+                    </td>`;
             } else {
-                tbody.innerHTML += `<tr><td><span class="cell-data txt-accent" style="font-weight:bold">${formatDateDisplay(p.fecha_baja)}</span></td>${rowContent}<td class="sticky-col"><button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button><button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
+                rowHTML += `
+                    <td class="sticky-col">
+                        <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
+                        <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>`;
             }
+            tbody.innerHTML += `<tr>${rowHTML}</tr>`;
         });
-    } catch { tbody.innerHTML = `<tr><td colspan="15">Error de carga.</td></tr>`; }
+    } catch { tbody.innerHTML = `<tr><td colspan="12">Error de carga.</td></tr>`; }
 }
 
 const formAlumno = document.getElementById('form-nuevo-alumno');
@@ -231,23 +181,206 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         const chk = document.getElementById('new-seguro'); const txt = document.getElementById('seguro-status-text'); chk.checked = p.seguro_pagado === true; if (chk.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; } else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
         let dojoId = "";
-        if (p.dojo) {
-            if (p.dojo.documentId) { dojoId = p.dojo.documentId; } 
-            else if (p.dojo.data) { dojoId = p.dojo.data.documentId || p.dojo.data.id; }
-        }
-        const selectDojo = document.getElementById('new-dojo');
-        if (dojoId && selectDojo) { selectDojo.value = dojoId; }
-        document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; document.getElementById('btn-cancelar-edit').classList.remove('hidden'); document.querySelectorAll('.section').forEach(s => s.classList.add('hidden')); document.getElementById('sec-nuevo-alumno').classList.remove('hidden');
+        if (p.dojo) { if (p.dojo.documentId) { dojoId = p.dojo.documentId; } else if (p.dojo.data) { dojoId = p.dojo.data.documentId || p.dojo.data.id; } }
+        const selectDojo = document.getElementById('new-dojo'); if (dojoId && selectDojo) { selectDojo.value = dojoId; }
+        document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; document.getElementById('btn-cancelar-edit').classList.remove('hidden'); showSection('nuevo-alumno');
     } catch { showModal("Error", "Error al cargar datos."); }
 }
 
 function resetForm() { const f = document.getElementById('form-nuevo-alumno'); if (f) f.reset(); document.getElementById('seguro-status-text').innerText = "NO PAGADO"; document.getElementById('seguro-status-text').style.color = "#ef4444"; document.getElementById('edit-id').value = ""; document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO"; document.getElementById('btn-cancelar-edit').classList.add('hidden'); }
-
 function confirmarEstado(id, activo, nombre) { showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => { const fecha = activo ? null : new Date().toISOString().split('T')[0]; await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) }); showSection(activo ? 'alumnos' : 'bajas'); }); }
-
 function eliminarDefinitivo(id, nombre) { showModal("¡PELIGRO!", `¿Borrar físicamente a ${nombre}?`, () => { setTimeout(() => { showModal("ÚLTIMO AVISO", "Irreversible.", async () => { await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } }); loadAlumnos(false); }); }, 500); }); }
 
-async function loadDojosCards() { const grid = document.getElementById('grid-dojos'); if (!grid) return; grid.innerHTML = 'Cargando...'; try { const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const json = await res.json(); grid.innerHTML = ''; (json.data || []).forEach(d => { const p = d.attributes || d; const cleanName = (p.nombre || 'Dojo').replace(/Aikido\s+/gi, '').trim(); const addr = p.direccion ? p.direccion.replace(/\n/g, '<br>') : 'NO DISP'; grid.innerHTML += `<div class="dojo-card"><div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${cleanName}</h3></div><div class="dojo-body"><div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${addr}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span></div><div class="dojo-info-row"><i class="fa-solid fa-phone"></i><span>${p.telefono || 'NO DISP'}</span></div><div class="dojo-info-row"><i class="fa-solid fa-envelope"></i><span>${p.email || 'NO DISP'}</span></div><a href="${p.web || '#'}" target="_blank" class="dojo-link-btn">WEB OFICIAL</a></div></div>`; }); } catch { grid.innerHTML = 'Error.'; } }
+// --- INFORMES ---
+function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
+
+// 1. INFORME HISTÓRICO INDIVIDUAL (Nuevo)
+async function generateIndividualHistory(id, nombre, apellidos) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    
+    try {
+        const res = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${id}&populate=clase&sort=createdAt:desc&pagination[limit]=200`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const json = await res.json();
+        const data = json.data || [];
+
+        const headRow = ['Fecha', 'Hora', 'Tipo', 'Duración', 'Estado'];
+        let totalHoras = 0;
+
+        const body = data.map(item => {
+            const a = item.attributes || item;
+            const c = parseRelation(a.clase);
+            
+            let fechaStr = "NO DISP", horaStr = "--", duracion = 0, tipo = "General";
+            if (c && c.Fecha_Hora) {
+                const dateObj = new Date(c.Fecha_Hora);
+                fechaStr = dateObj.toLocaleDateString('es-ES');
+                horaStr = dateObj.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+                duracion = parseFloat(c.Duracion || 0);
+                tipo = c.Tipo || "General";
+            }
+            
+            // Sumar solo si asistió
+            if(a.Estado === 'Asistio') totalHoras += duracion;
+
+            return [fechaStr, horaStr, tipo, duracion + 'h', a.Estado === 'Asistio' ? 'ASISTIÓ' : 'NO VINO'];
+        });
+
+        doc.setFontSize(16); doc.text(`HISTORIAL DE ASISTENCIA`, 105, 15, { align: 'center' });
+        doc.setFontSize(12); doc.text(`Alumno: ${apellidos.toUpperCase()}, ${nombre}`, 105, 22, { align: 'center' });
+        doc.setFontSize(10); doc.text(`Total Horas Registradas: ${totalHoras.toFixed(1)}h`, 105, 28, { align: 'center' });
+
+        doc.autoTable({
+            startY: 35, head: [headRow], body: body, theme: 'grid',
+            headStyles: { fillColor: [190, 0, 0] },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 4) {
+                    data.cell.styles.textColor = data.cell.raw === 'ASISTIÓ' ? [0, 128, 0] : [190, 0, 0];
+                }
+            }
+        });
+
+        doc.save(`Historial_${apellidos}_${nombre}.pdf`);
+
+    } catch (e) { alert("Error generando historial."); console.error(e); }
+}
+
+// 2. GENERADOR DE INFORMES GENERALES
+async function generateReport(type) {
+    document.getElementById('report-modal').classList.add('hidden');
+    const dojoSelect = document.getElementById('report-dojo-filter');
+    const dojoFilterId = dojoSelect.value;
+    const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
+    const attendanceDate = document.getElementById('report-attendance-date').value;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape para que quepa todo
+    const logoImg = new Image();
+    logoImg.src = 'img/logo-arashi-informe.png';
+
+    const subtitleMap = {
+        'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro',
+        'bajas_surname': 'Histórico Bajas (Por Apellidos)', 'bajas_date': 'Histórico Bajas (Por Fecha)',
+        'attendance': 'Asistencia Diaria'
+    };
+
+    logoImg.onload = async function () {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        let headRow = [], body = [], title = "", subText = "";
+
+        try {
+            // --- INFORME DE ASISTENCIA (POR FECHA) ---
+            if (type === 'attendance') {
+                if (!attendanceDate) { alert("Selecciona una fecha."); return; }
+                title = "ASISTENCIA DIARIA - TATAMI";
+                subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
+                
+                // Filtro "Profundo" a través de la relación clase.Fecha_Hora
+                let apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
+                if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
+
+                const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+                const json = await res.json();
+                
+                headRow = ['Alumno', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
+                body = (json.data || []).map(item => {
+                    const a = item.attributes || item;
+                    const alu = parseRelation(a.alumno);
+                    const cla = parseRelation(a.clase);
+                    let horaStr = "--:--";
+                    if(cla?.Fecha_Hora) {
+                        const d = new Date(cla.Fecha_Hora);
+                        horaStr = d.getUTCHours().toString().padStart(2, '0') + ":" + d.getUTCMinutes().toString().padStart(2, '0') + "h";
+                    }
+                    return [
+                        alu ? `${(alu.apellidos||'').toUpperCase()}, ${alu.nombre||''}` : 'DESCONOCIDO',
+                        alu?.dni || '-',
+                        getDojoName(alu?.dojo),
+                        cla?.Tipo || 'General',
+                        horaStr,
+                        a.Estado === 'Asistio' ? 'ASISTIÓ' : 'NO SE PRESENTÓ'
+                    ];
+                });
+
+            } else {
+                // --- INFORMES GENERALES (AMPLIADOS CON DIRECCIÓN/CP/HORAS) ---
+                const isBaja = type.startsWith('bajas_');
+                title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO COMPLETO ALUMNOS";
+                if (!isBaja && type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
+                else if (!isBaja) title += ` POR ${subtitleMap[type].toUpperCase()}`;
+
+                subText = `${isBaja ? 'Alumnos Inactivos' : 'Alumnos Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'} | ${new Date().toLocaleDateString()}`;
+
+                let url = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
+                if (dojoFilterId) url += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+                const json = await res.json();
+                let list = json.data || [];
+
+                // Ordenación
+                list.sort((a, b) => {
+                    const pA = a.attributes || a; const pB = b.attributes || b;
+                    if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
+                    if (type === 'age') return new Date(pA.fecha_nacimiento || '0') - new Date(pB.fecha_nacimiento || '0');
+                    if (type === 'group') return (pA.grupo || '').localeCompare(pB.grupo || '');
+                    if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
+                    return (pA.apellidos || '').localeCompare(pB.apellidos || '');
+                });
+
+                headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
+                if (isBaja) headRow.unshift('Baja');
+
+                body = list.map(item => {
+                    const p = item.attributes || item;
+                    const ciudadFull = `${p.cp || ''} ${p.poblacion || ''}`.trim();
+                    const row = [
+                        (p.apellidos || '').toUpperCase(),
+                        p.nombre || '',
+                        p.dni || '',
+                        normalizeGrade(p.grado),
+                        parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
+                        p.seguro_pagado ? 'PAGADO' : 'NO',
+                        normalizePhone(p.telefono),
+                        p.email || '-',
+                        (p.direccion || '').substring(0, 30), // Truncar si es muy larga
+                        ciudadFull
+                    ];
+                    if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
+                    return row;
+                });
+            }
+
+            // Renderizado Tabla (Fuente 6 para que quepa todo)
+            doc.autoTable({
+                startY: 25, head: [headRow], body: body, theme: 'grid',
+                styles: { fontSize: 6, cellPadding: 1.5, overflow: 'linebreak' },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: 25 }, // Apellidos
+                    4: { cellWidth: 10, halign: 'center' }, // Horas
+                    5: { cellWidth: 12, halign: 'center' }  // Seguro
+                },
+                didParseCell: (data) => {
+                    if (data.section === 'body') {
+                        const t = data.cell.raw;
+                        if (t === 'ASISTIÓ' || t === 'PAGADO') data.cell.styles.textColor = [0, 128, 0];
+                        if (t === 'NO SE PRESENTÓ' || t === 'NO') data.cell.styles.textColor = [190, 0, 0];
+                    }
+                },
+                didDrawPage: (d) => {
+                    doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                    doc.setFontSize(14); doc.setFont("helvetica", "bold");
+                    doc.text(title, pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(9); doc.setFont("helvetica", "normal");
+                    doc.text(subText, pageWidth / 2, 18, { align: 'center' });
+                }
+            });
+            doc.save(`Informe_Arashi_${type}.pdf`);
+        } catch (e) { alert("Error PDF"); console.error(e); }
+    };
+}
 
 // --- EXPORTAR EXCEL ---
 async function exportBackupExcel() {
@@ -278,80 +411,26 @@ async function exportBackupExcel() {
         titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-        sheet.mergeCells('A4:M4');
-        const totalCell = sheet.getCell('A4');
-        totalCell.value = `TOTAL ALUMNOS: ${data.length}`;
-        totalCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
-        totalCell.alignment = { vertical: 'middle', horizontal: 'center' };
-
-        sheet.mergeCells('A5:M5');
-        const genCell = sheet.getCell('A5');
-        genCell.value = `GENERADO EL: ${new Date().toLocaleString('es-ES')}`;
-        genCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FFCCCCCC' } };
-        genCell.alignment = { vertical: 'middle', horizontal: 'center' };
-
-        try {
-            const logoRes = await fetch('img/logo-arashi.png');
-            const logoBlob = await logoRes.blob();
-            const logoBuffer = await logoBlob.arrayBuffer();
-            const logoId = workbook.addImage({ buffer: logoBuffer, extension: 'png' });
-            sheet.addImage(logoId, { tl: { col: 2.2, row: 1.2 }, ext: { width: 110, height: 60 } });
-        } catch (e) { console.warn("Logo no encontrado", e); }
-
-        const columns = [
-            { key: 'apellidos' }, { key: 'nombre' }, { key: 'dni' },
-            { key: 'nac' }, { key: 'dir' }, { key: 'pob' },
-            { key: 'cp' }, { key: 'email' }, { key: 'dojo' },
-            { key: 'grupo' }, { key: 'alta' }, { key: 'grau' }, { key: 'seguro' }
-        ];
-        sheet.columns = columns;
-
-        const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA\nNACIMIENTO', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'FECHA\nALTA', 'GRADO', 'SEGURO'];
+        const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA NAC', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'ALTA', 'GRADO', 'SEGURO', 'HORAS'];
         const headerRow = sheet.getRow(8);
         headerRow.values = headers;
-        headerRow.height = 45;
-
+        
         headerRow.eachCell((cell) => {
-            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } };
-            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { horizontal: 'center' };
         });
-
-        let maxLengths = new Array(headers.length).fill(8);
 
         data.forEach(item => {
             const p = item.attributes || item;
-            const rowValues = {
-                apellidos: (p.apellidos || 'NO DISP').toUpperCase().trim(),
-                nombre: (p.nombre || 'NO DISP').trim(),
-                dni: p.dni || "NO DISP",
-                nac: formatDateExcel(p.fecha_nacimiento),
-                dir: p.direccion || "NO DISP",
-                pob: normalizeCity(p.poblacion),
-                cp: (p.cp || "NO DISP").trim(),
-                email: p.email || "NO DISP",
-                dojo: getDojoName(p.dojo),
-                grupo: p.grupo || "Full Time",
-                alta: formatDateExcel(p.fecha_inicio),
-                grau: p.grado || "NO DISP",
-                seguro: p.seguro_pagado ? "SI" : "NO"
-            };
-
-            const row = sheet.addRow(rowValues);
-            row.eachCell((cell, colNumber) => {
-                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-                cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                if ([1, 2, 5, 8].includes(colNumber)) cell.alignment = { vertical: 'middle', horizontal: 'left' };
-                const len = cell.value ? cell.value.toString().length : 0;
-                if (len > maxLengths[colNumber - 1]) maxLengths[colNumber - 1] = len;
-            });
-            const segCell = row.getCell(13);
-            if (p.seguro_pagado) { segCell.font = { color: { argb: 'FF065F46' }, bold: true }; }
-            else { segCell.font = { color: { argb: 'FF991B1B' }, bold: true }; }
+            sheet.addRow([
+                (p.apellidos || '').toUpperCase(), p.nombre || '', p.dni || '',
+                formatDateExcel(p.fecha_nacimiento), p.direccion || '', p.poblacion || '', p.cp || '',
+                p.email || '', getDojoName(p.dojo), p.grupo || 'Full Time',
+                formatDateExcel(p.fecha_inicio), p.grado || '',
+                p.seguro_pagado ? 'SI' : 'NO', p.horas_acumuladas || 0
+            ]);
         });
-
-        sheet.columns.forEach((col, index) => { col.width = maxLengths[index] + 2; });
 
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -360,183 +439,24 @@ async function exportBackupExcel() {
         a.href = url; a.download = `Arashi_Listado_${new Date().getFullYear()}.xlsx`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
-        showModal("Excel Generado", "Descarga completada.");
-
-    } catch (e) { console.error(e); showModal("Error", "Falló la exportación."); }
+    } catch (e) { showModal("Error", "Falló exportación."); }
     finally { btn.innerHTML = originalText; }
 }
 
 function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TODOS los seguros?", () => runResetProcess()); }
-async function runResetProcess() { const out = document.getElementById('console-output'); out.innerHTML = "<div>Iniciando...</div>"; try { const r = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const j = await r.json(); const l = j.data || []; if (l.length === 0) { out.innerHTML += "<div>Nada que resetear.</div>"; return; } for (const i of l) { await fetch(`${API_URL}/api/alumnos/${i.documentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { seguro_pagado: false } }) }); } out.innerHTML += "<div style='color:#33ff00'>COMPLETADO.</div>"; } catch (e) { out.innerHTML += `<div>ERROR: ${e.message}</div>`; } }
-function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
-
-// --- GENERACIÓN PDF ---
-async function generateReport(type) {
-    document.getElementById('report-modal').classList.add('hidden');
-    const dojoSelect = document.getElementById('report-dojo-filter');
-    const dojoFilterId = dojoSelect.value;
-    const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
-    
-    // Para el informe de asistencia
-    const attendanceDate = document.getElementById('report-attendance-date').value;
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    const logoImg = new Image();
-    logoImg.src = 'img/logo-arashi-informe.png';
-
-    const subtitleMap = {
-        'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro',
-        'bajas_surname': 'Histórico Bajas (Por Apellidos)', 'bajas_date': 'Histórico Bajas (Por Fecha)',
-        'attendance': 'Asistencia Diaria'
-    };
-
-    logoImg.onload = async function () {
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        
-        let title = "";
-        let subText = "";
-        let headRow = [];
-        let body = [];
-        let list = [];
-
-        // --- LÓGICA ESPECIAL PARA INFORME DE ASISTENCIA ---
-        if (type === 'attendance') {
-            if (!attendanceDate) { alert("Por favor, selecciona una fecha para el informe de asistencia."); return; }
-            
-            title = "INFORME DE ASISTENCIA DIARIA";
-            subText = `Día: ${formatDateDisplay(attendanceDate)} | Arashi Group Aikido`;
-            if (dojoFilterId) subText += ` (${dojoFilterName})`;
-
-            // Query a asistencias filtrando por la fecha de la clase
-            let apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
-            if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
-
-            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-            const json = await res.json();
-            list = json.data || [];
-
-            headRow = ['Alumno', 'DNI', 'Dojo', 'Clase', 'Hora Clase', 'Estado Final'];
-
-            body = list.map(item => {
-                const a = item.attributes || item;
-                const alumno = parseRelation(a.alumno);
-                const clase = parseRelation(a.clase);
-                
-                const nombreAlumno = alumno ? `${(alumno.apellidos || '').toUpperCase()}, ${alumno.nombre || ''}` : 'NO DISP';
-                const dojoAlumno = alumno ? getDojoName(alumno.dojo) : 'NO DISP';
-                const tipoClase = clase ? clase.Tipo : 'NO DISP';
-                const horaClase = clase ? (clase.Fecha_Hora ? clase.Fecha_Hora.split('T')[1].substring(0,5)+'h' : 'NO DISP') : 'NO DISP';
-                
-                // ESTADO CRÍTICO: "Asistio" (OK) vs "Confirmado" (PENDIENTE)
-                const estado = a.Estado === 'Asistio' ? 'ASISTIÓ' : 'NO SE PRESENTÓ / PENDIENTE';
-
-                return [nombreAlumno, alumno ? alumno.dni : 'NO DISP', dojoAlumno, tipoClase, horaClase, estado];
-            });
-
-        } else {
-            // --- LÓGICA PARA INFORMES ESTÁNDAR (ALUMNOS / BAJAS) ---
-            const isBaja = type.startsWith('bajas_');
-            title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO DE ALUMNOS";
-            if (!isBaja && type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
-            else if (!isBaja) title += ` POR ${subtitleMap[type].toUpperCase()}`;
-
-            subText = `Arashi Group Aikido | Alumnos ${isBaja ? 'Inactivos' : 'Activos'}`;
-            if (dojoFilterId) subText += ` (${dojoFilterName})`;
-
-            let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
-            if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
-
-            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-            const json = await res.json();
-            list = json.data || [];
-
-            // Sorteo de lista
-            list.sort((a, b) => {
-                const pA = a.attributes || a; const pB = b.attributes || b;
-                if (type === 'bajas_date') return new Date(pB.fecha_baja || '1900-01-01') - new Date(pA.fecha_baja || '1900-01-01');
-                if (type === 'bajas_surname' || type === 'surname') return (pA.apellidos || '').localeCompare(pB.apellidos || '');
-                if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
-                if (type === 'age') return new Date(pA.fecha_nacimiento || '2000-01-01') - new Date(pB.fecha_nacimiento || '2000-01-01');
-                return (pA.apellidos || '').localeCompare(pB.apellidos || '');
-            });
-
-            headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Seguro', 'Teléfono'];
-            if (isBaja) headRow.unshift('Fecha Baja');
-            headRow.push('Email', 'Dojo', 'Alta');
-            if (type === 'age') headRow.push('Edad');
-
-            body = list.map(a => {
-                const p = a.attributes || a;
-                const row = [(p.apellidos || 'NO DISP').toUpperCase(), p.nombre || 'NO DISP', p.dni || 'NO DISP', normalizeGrade(p.grado), p.seguro_pagado ? 'PAGADO' : 'PENDIENTE', normalizePhone(p.telefono)];
-                if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
-                row.push(p.email || 'NO DISP', getDojoName(p.dojo), formatDateDisplay(p.fecha_inicio));
-                if (type === 'age') row.push(calculateAge(p.fecha_nacimiento));
-                return row;
-            });
-        }
-
-        // --- RENDERIZADO COMÚN DE LA TABLA ---
-        doc.autoTable({
-            startY: 25, head: [headRow], body: body, theme: 'grid',
-            margin: { top: 30, left: 10, right: 10, bottom: 15 },
-            styles: { fontSize: 7, cellPadding: 1.5, valign: 'middle' },
-            headStyles: { fillColor: [190, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-            didParseCell: function(data) {
-                // Colorización de estados
-                if (data.section === 'body') {
-                    const cellText = data.cell.raw;
-                    if (cellText === 'ASISTIÓ' || cellText === 'PAGADO') {
-                        data.cell.styles.textColor = [0, 128, 0]; data.cell.styles.fontStyle = 'bold';
-                    }
-                    if (cellText === 'NO SE PRESENTÓ / PENDIENTE' || cellText === 'PENDIENTE') {
-                        data.cell.styles.textColor = [190, 0, 0]; data.cell.styles.fontStyle = 'bold';
-                    }
-                }
-            },
-            didDrawPage: (data) => {
-                doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-                doc.setFontSize(16); doc.setFont("helvetica", "bold");
-                doc.text(title, pageWidth / 2, 12, { align: "center" });
-                doc.setFontSize(10); doc.setFont("helvetica", "normal");
-                doc.text(subText, pageWidth / 2, 18, { align: "center" });
-                
-                const footerY = pageHeight - 10;
-                doc.setFontSize(8); doc.setTextColor(150);
-                doc.text(`Generado: ${new Date().toLocaleString()}`, 10, footerY);
-                doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth / 2, footerY, { align: 'center' });
-            }
-        });
-
-        doc.save(`Informe_Arashi_${type}_${attendanceDate || ''}.pdf`);
-    };
-}
-
-// Auxiliar para manejar relaciones en reportes
-function parseRelation(obj) {
-    if(!obj || !obj.data) return obj;
-    return obj.data.attributes || obj.data;
-}
-
-function changeFontSize(t, d) { const table = document.getElementById(t); if (!table) return; table.querySelectorAll('th, td').forEach(c => { const s = parseFloat(window.getComputedStyle(c).fontSize); const p = parseFloat(window.getComputedStyle(c).paddingTop); c.style.fontSize = (Math.max(8, s + d)) + "px"; c.style.padding = `${Math.max(2, p + (d * 0.5))}px 5px`; }); }
-function setupDragScroll() { const s = document.querySelector('.drag-scroll'); if (!s) return; let d = false, x, l; s.addEventListener('mousedown', e => { d = true; x = e.pageX - s.offsetLeft; l = s.scrollLeft; }); s.addEventListener('mouseleave', () => d = false); s.addEventListener('mouseup', () => d = false); s.addEventListener('mousemove', e => { if (!d) return; e.preventDefault(); const p = e.pageX - s.offsetLeft; s.scrollLeft = l - (p - x) * 2; }); }
-async function runDiagnostics() { const o = document.getElementById('console-output'); if (o) { o.innerHTML = ''; const l = ["Iniciando...", "> Conectando DB... [OK]", "> Verificando API... [OK]", "SISTEMA ONLINE 100%"]; for (const x of l) { await new Promise(r => setTimeout(r, 400)); o.innerHTML += `<div>${x}</div>`; } o.innerHTML += '<div style="padding:15px; border-top:1px solid #33ff00;"><a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="action-btn secondary" style="text-decoration:none; display:inline-block; border-color:#33ff00; color:#33ff00;">Ver Estado de Strapi</a></div>'; } }
-function showModal(t, m, ok) { const d = document.getElementById('custom-modal'); if (!d) return; document.getElementById('modal-title').innerText = t; document.getElementById('modal-message').innerHTML = m; document.getElementById('modal-btn-cancel').onclick = () => d.classList.add('hidden'); document.getElementById('modal-btn-ok').onclick = () => { if (ok) ok(); d.classList.add('hidden'); }; d.classList.remove('hidden'); }
+async function runResetProcess() { const out = document.getElementById('console-output'); out.innerHTML = "<div>Iniciando...</div>"; try { const r = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const j = await r.json(); const l = j.data || []; for (const i of l) { await fetch(`${API_URL}/api/alumnos/${i.documentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { seguro_pagado: false } }) }); } out.innerHTML += "<div style='color:#33ff00'>COMPLETADO.</div>"; } catch (e) { out.innerHTML += `<div>ERROR: ${e.message}</div>`; } }
 
 async function loadDojosSelect() {
     const s = document.getElementById('new-dojo');
-    if (!s) return;
     try {
         const r = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const j = await r.json();
-        s.innerHTML = '<option value="">Selecciona Dojo...</option>';
-        (j.data || []).forEach(d => {
+        s.innerHTML = '<option value="">Selecciona...</option>';
+        (j.data || []).forEach(d => { 
             const docId = d.documentId || d.id;
-            const nombre = d.nombre || (d.attributes ? d.attributes.nombre : 'NO DISP');
-            s.innerHTML += `<option value="${docId}">${nombre}</option>`;
+            s.innerHTML += `<option value="${docId}">${d.nombre || d.attributes.nombre}</option>`; 
         });
-    } catch (err) { console.error("Error al cargar selector de dojos:", err); }
+    } catch {}
 }
 
 async function loadReportDojos() {
@@ -545,21 +465,18 @@ async function loadReportDojos() {
     try {
         const r = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const j = await r.json();
-        const options = (j.data || []).map(d => {
-            const docId = d.documentId || d.id;
-            const nombre = d.nombre || (d.attributes ? d.attributes.nombre : 'NO DISP');
-            return `<option value="${docId}">${nombre}</option>`;
-        }).join('');
-
+        const options = (j.data || []).map(d => `<option value="${d.documentId || d.id}">${d.nombre || d.attributes.nombre}</option>`).join('');
         const html = '<option value="">-- Todos los Dojos --</option>' + options;
-        if (s) s.innerHTML = html;
-        if (e) e.innerHTML = html;
-    } catch (err) { console.error("Error al cargar filtros de dojos:", err); }
+        if (s) s.innerHTML = html; if (e) e.innerHTML = html;
+    } catch {}
 }
 
 async function loadCiudades() { const d = document.getElementById('ciudades-list'); if (d) { try { const r = await fetch(`${API_URL}/api/alumnos?fields[0]=poblacion`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const j = await r.json(); d.innerHTML = ''; [...new Set((j.data || []).map(a => (a.attributes ? a.attributes.poblacion : a.poblacion)).filter(Boolean))].sort().forEach(c => d.innerHTML += `<option value="${c}">`); } catch { } } }
+async function runDiagnostics() { const o = document.getElementById('console-output'); if (o) { o.innerHTML = ''; const l = ["Iniciando...", "> Conectando DB... [OK]", "> Verificando API... [OK]", "SISTEMA ONLINE 100%"]; for (const x of l) { await new Promise(r => setTimeout(r, 400)); o.innerHTML += `<div>${x}</div>`; } } }
 function setupDniInput(id) { document.getElementById(id)?.addEventListener('input', e => e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '')); }
 function filtrarTabla(t, i) { const input = document.getElementById(i); if (!input) return; const f = input.value.toUpperCase(); const rows = document.getElementById(t).getElementsByTagName('tr'); for (let j = 1; j < rows.length; j++) rows[j].style.display = rows[j].textContent.toUpperCase().includes(f) ? "" : "none"; }
+function changeFontSize(t, d) { const table = document.getElementById(t); if (!table) return; table.querySelectorAll('th, td').forEach(c => { const s = parseFloat(window.getComputedStyle(c).fontSize); c.style.fontSize = (Math.max(8, s + d)) + "px"; }); }
+function setupDragScroll() { const s = document.querySelector('.drag-scroll'); if (!s) return; let d = false, x, l; s.addEventListener('mousedown', e => { d = true; x = e.pageX - s.offsetLeft; l = s.scrollLeft; }); s.addEventListener('mouseleave', () => d = false); s.addEventListener('mouseup', () => d = false); s.addEventListener('mousemove', e => { if (!d) return; e.preventDefault(); const p = e.pageX - s.offsetLeft; s.scrollLeft = l - (p - x) * 2; }); }
 function toggleMobileMenu() { document.querySelector('.sidebar').classList.toggle('open'); }
 function scrollToTop() { const c = document.querySelector('.content'); if (c) c.scrollTo({ top: 0, behavior: 'smooth' }); else window.scrollTo({ top: 0, behavior: 'smooth' }); }
 const ca = document.querySelector('.content'); if (ca) { ca.addEventListener('scroll', () => { const b = document.getElementById('btn-scroll-top'); if (ca.scrollTop > 300) b.classList.add('visible'); else b.classList.remove('visible'); }); }
