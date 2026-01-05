@@ -17,82 +17,265 @@
             --text-muted: #94a3b8; --success: #22c55e; --neon: 0 0 20px rgba(239, 68, 68, 0.4);
             accent-color: var(--accent);
         }
-        html, body { background-color: var(--bg); margin: 0; padding: 0; min-height: 100vh; width: 100vw; color: var(--text-main); font-family: 'Inter', sans-serif; overflow-x: hidden; overflow-y: auto; color-scheme: dark; }
-        body { background-image: radial-gradient(circle at top right, #1e1b4b, transparent); display: flex; flex-direction: column; }
+
+        /* --- ESTRUCTURA BASE --- */
+        html, body { 
+            background-color: var(--bg); 
+            margin: 0; 
+            padding: 0; 
+            min-height: 100vh; 
+            width: 100vw; 
+            color: var(--text-main); 
+            font-family: 'Inter', sans-serif; 
+            overflow-x: hidden; 
+            overflow-y: auto; 
+            color-scheme: dark; 
+        }
+
+        body { 
+            background-image: radial-gradient(circle at top right, #1e1b4b, transparent); 
+            display: flex; 
+            flex-direction: column; 
+        }
+
         .hidden { display: none !important; }
-        
-        /* --- GESTIÓN DE MURO --- */
-        #app-content { display: none; flex-direction: column; flex: 1; height: 100%; width: 100%; padding-bottom: 110px; -webkit-overflow-scrolling: touch; }
-        #install-wall { display: flex; position: fixed; inset: 0; background: var(--bg); z-index: 10000; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
+
+        /* --- MURO DE INSTALACIÓN --- */
+        #app-content { 
+            display: none; 
+            flex-direction: column; 
+            flex: 1; 
+            height: 100%; 
+            width: 100%; 
+            overflow-y: auto; 
+            padding-bottom: 110px; 
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        #install-wall { 
+            display: flex; 
+            min-height: 100vh; 
+            background: var(--bg); 
+            z-index: 10000; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 30px; 
+            text-align: center; 
+            box-sizing: border-box; 
+        }
+
+        /* El interruptor que apaga el muro */
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
         /* --- AUTH --- */
-        .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
-        .logo-img { width: 140px !important; height: auto; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
-        .auth-card { width: 100%; max-width: 350px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
-        .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; font-weight: 300; letter-spacing: 0.5px; }
-        .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
+        .auth-container { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px; 
+            box-sizing: border-box; 
+        }
+
+        .logo-img { 
+            width: 140px !important; 
+            height: auto; 
+            margin-bottom: 25px; 
+            filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); 
+        }
+
+        .auth-card { 
+            width: 100%; 
+            max-width: 350px; 
+            background: var(--card-bg); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid var(--glass-border); 
+            padding: 40px 30px; 
+            border-radius: 35px; 
+            text-align: center; 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5); 
+        }
+
+        .auth-footer { 
+            margin-top: 25px; 
+            font-size: 14px; 
+            color: #ffffff; 
+            font-weight: 300; 
+            letter-spacing: 0.5px; 
+        }
+        .auth-footer a { 
+            color: var(--accent); 
+            text-decoration: underline; 
+            font-weight: 800; 
+            margin-left: 5px; 
+        }
 
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
         .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
-        input { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
-        input:-webkit-autofill { -webkit-text-fill-color: white !important; -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important; }
+
+        input, select { 
+            width: 100%; 
+            padding: 16px 16px 16px 52px; 
+            background: rgba(15, 23, 42, 0.9) !important; 
+            border: 1px solid var(--glass-border); 
+            border-radius: 18px; 
+            color: white !important; 
+            font-size: 16px; 
+            box-sizing: border-box; 
+            outline: none; 
+            transition: 0.3s; 
+        }
+        
+        input:-webkit-autofill {
+            -webkit-text-fill-color: white !important;
+            -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
 
         /* --- PROGRESS --- */
-        .progress-container { display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; margin: 15px 0 25px; }
+        .progress-container { 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            position: relative; 
+            margin: 15px 0 25px; 
+        }
+
         .progress-ring { transform: rotate(-90deg); }
         .progress-ring__circle { transition: stroke-dashoffset 0.8s ease-in-out; stroke-dasharray: 339.29; stroke-dashoffset: 339.29; }
-        .progress-text { position: absolute; text-align: center; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        
+        .progress-text { 
+            position: absolute; 
+            text-align: center; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+        }
+
         .progress-text .val { font-size: 32px; font-weight: 800; display: block; line-height: 1; }
         .progress-text .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-        .next-grade-label { margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; }
+
+        .next-grade-label { 
+            margin-top: 10px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            color: var(--accent); 
+            letter-spacing: 1px; 
+            text-transform: uppercase; 
+            text-align: center;
+        }
 
         /* --- UI COMPONENTS --- */
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; padding: 20px 25px 0; box-sizing: border-box; }
         .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid var(--glass-border); color: white; flex-shrink: 0; box-shadow: var(--neon); }
-        .action-btn { width: 100%; padding: 18px; background: white; color: black; border: none; border-radius: 22px; font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        
+        .action-btn { 
+            width: 100%; 
+            padding: 18px; 
+            background: white; 
+            color: black; 
+            border: none; 
+            border-radius: 22px; 
+            font-size: 15px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+        }
+
         .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
-        .action-btn:disabled { background: #1e293b !important; color: var(--text-muted) !important; cursor: default; box-shadow: none; border: 1px solid var(--glass-border); opacity: 0.8; }
+        
+        .action-btn:disabled { 
+            background: rgba(30, 41, 59, 0.8) !important; 
+            color: var(--text-muted) !important; 
+            cursor: default; 
+            box-shadow: none; 
+            border: 1px solid var(--glass-border); 
+            opacity: 0.8; 
+        }
 
         .class-hero { 
             background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
             padding: 35px 25px; border-radius: 40px; box-shadow: 0 20px 45px rgba(239,68,68,0.3); 
-            text-align: center; margin: 0 20px 25px; opacity: 0; transform: translateY(20px);
+            text-align: center; margin: 0 20px 25px;
+            opacity: 0; transform: translateY(20px);
             animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; animation-delay: 0.4s;
         }
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* --- SENSEI UI REDISEÑO --- */
+        /* --- SENSEI UI REDISEÑO COMPACTO --- */
         .student-item { 
-            background: var(--card-bg); padding: 15px 20px; border-radius: 25px; display: flex; justify-content: space-between; align-items: center; 
-            margin: 0 20px 12px; border: 1px solid var(--glass-border); border-left: 4px solid var(--accent); 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: 0.5s; flex-wrap: nowrap;
+            background: var(--card-bg); 
+            padding: 15px 20px; 
+            border-radius: 25px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin: 0 20px 12px; 
+            border: 1px solid var(--glass-border); 
+            border-left: 4px solid var(--accent); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+            transition: 0.5s; 
+            flex-wrap: nowrap;
         }
+
         .student-item.validated { transform: translateX(100px); opacity: 0; pointer-events: none; }
+        
         .student-info { flex: 1; min-width: 0; padding-right: 15px; }
         .student-info h4 { margin: 0; font-size: 15px; white-space: normal; line-height: 1.2; font-weight: 800; color: white; }
         .student-info .student-details { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 600; }
         .student-info .keiko-time { font-size: 11px; color: var(--accent); font-weight: 800; margin-top: 6px; text-transform: uppercase; }
         
         .sensei-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-        .mini-btn { border: none; border-radius: 15px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.3s; }
+        
+        .mini-btn { 
+            border: none; 
+            border-radius: 15px; 
+            height: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            color: white; 
+            transition: 0.3s; 
+        }
+
         .mini-btn.no { width: 50px; background: #334155; color: #ff4444; font-size: 20px; }
         .mini-btn.ok { width: 100px; background: var(--success); font-weight: 800; font-size: 10px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); }
         .mini-btn.ok.animating { background: white !important; color: var(--success) !important; transform: scale(1.05); }
 
-        /* --- IOS TUTORIAL --- */
-        .ios-tutorial { display: none; width: 100%; max-width: 320px; margin-top: 20px; }
-        .ios-step { display: flex; align-items: center; gap: 15px; text-align: left; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 20px; margin-bottom: 10px; border: 1px solid var(--glass-border); }
-        .ios-step i { font-size: 18px; color: var(--accent); width: 25px; text-align: center; }
-        .ios-step p { margin: 0; font-size: 13px; line-height: 1.4; }
-
-        /* --- CALENDARIO / GRIDS --- */
+        /* --- CALENDARIO / GRIDS ESTRECHOS --- */
         .month-header { padding: 15px 25px 5px; font-size: 18px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 2px; }
         .section-label { padding: 0 25px; margin: 10px 0 15px; font-size: 10px; text-transform: uppercase; font-weight: 800; color: var(--accent); letter-spacing: 1px; opacity: 0.8; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 0 20px 30px; }
-        .class-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 15px; border-radius: 20px; text-align: center; border-bottom: 3px solid var(--accent); cursor: pointer; }
-        .class-card h4 { margin: 0; font-size: 14px; }
+        
+        .grid-container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+            gap: 12px; 
+            padding: 0 20px 30px; 
+        }
+
+        .class-card { 
+            background: rgba(255,255,255,0.03); 
+            border: 1px solid var(--glass-border); 
+            padding: 15px; 
+            border-radius: 20px; 
+            text-align: center; 
+            border-bottom: 3px solid var(--accent); 
+            cursor: pointer; 
+            transition: 0.2s; 
+        }
+        .class-card h4 { margin: 0; font-size: 14px; font-weight: 800; color: white; }
         .class-card p { margin: 5px 0 0; font-size: 12px; font-weight: 800; color: var(--text-main); }
 
         /* --- NAV --- */
@@ -109,31 +292,36 @@
         .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
         .modal-actions-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
         #modal-ok-btn { margin-top: 35px; }
-
+        
         .month-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
         .month-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px 5px; border-radius: 12px; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
         .month-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: var(--neon); }
+        
+        /* --- IOS TUTORIAL --- */
+        .ios-tutorial { display: none; width: 100%; max-width: 320px; margin-top: 20px; }
+        .ios-step { display: flex; align-items: center; gap: 15px; text-align: left; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 20px; margin-bottom: 10px; border: 1px solid var(--glass-border); }
+        .ios-step i { font-size: 18px; color: var(--accent); width: 25px; text-align: center; }
+        .ios-step p { margin: 0; font-size: 13px; line-height: 1.4; }
     </style>
     
     <script>
-        /**
-         * BLOQUEO PWA Y DETECCIÓN
-         */
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
         const ua = navigator.userAgent;
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
         const isApple = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
-        }
-
+        // --- DETECCIÓN PC VS MÓVIL ---
         (function() {
             if (!isMobile || isStandalone) {
                 document.documentElement.classList.add('ready-to-show');
             }
         })();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
 
         window.onload = () => {
             const wall = document.getElementById('install-wall');
@@ -146,8 +334,7 @@
                         <div style="background:rgba(255,255,255,0.05); padding:20px; border-radius:25px; border:1px solid var(--glass-border); width:100%; box-sizing:border-box;">
                             <input type="text" id="link-to-copy" value="${window.location.href}" readonly style="padding:15px; width:100%; background:#000; border:1px solid var(--accent); color:white; border-radius:15px; text-align:center; margin-bottom:15px; font-size:12px;">
                             <button class="action-btn primary" onclick="copyAppURL()">COPIAR ENLACE</button>
-                        </div>
-                    `;
+                        </div>`;
                 } else {
                     document.getElementById('android-btn-area').classList.add('hidden');
                     document.getElementById('ios-instructions').style.display = 'block';
@@ -157,10 +344,10 @@
         };
 
         function copyAppURL() {
-            const copyText = document.getElementById("link-to-copy");
-            copyText.select();
-            navigator.clipboard.writeText(copyText.value);
-            alert("¡Enlace copiado! Ábrelo en Safari.");
+            const input = document.getElementById("link-to-copy");
+            input.select();
+            document.execCommand("copy");
+            alert("¡Enlace copiado! Pégalo en Safari.");
         }
 
         let deferredPrompt;
@@ -198,13 +385,15 @@
     </div>
 
     <div id="app-content">
-        <!-- MODAL -->
+        <!-- MODAL GENERICO -->
         <div id="custom-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
-                <h3 id="modal-title">...</h3>
+                <h3 id="modal-title" style="margin-top:0;">...</h3>
                 <div id="modal-body-content" style="margin-bottom:20px;"></div>
-                <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">OK</button>
+                <div id="modal-footer-actions">
+                    <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">OK</button>
+                </div>
             </div>
         </div>
 
@@ -224,10 +413,10 @@
 
         <!-- DASHBOARD -->
         <div id="dashboard-view" class="hidden">
-            <div class="header-app">
+            <header class="header-app">
                 <div><p style="color:var(--text-muted); margin:0; font-size:12px;">Hola!</p><h1 style="margin:2px 0 0; font-size:24px; font-weight:800;" id="user-display-name">...</h1></div>
                 <div class="profile-circle" id="user-initials">??</div>
-            </div>
+            </header>
             
             <!-- TARJETA SENSEI (Por defecto oculta) -->
             <div id="sensei-welcome-card" class="class-hero hidden" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid var(--glass-border); margin-bottom: 20px;">
@@ -243,9 +432,9 @@
                 </svg>
                 <div class="progress-text">
                     <span id="stat-hours" class="val">0.0</span>
-                    <span id="stat-label" class="lbl">Horas / 0</span>
+                    <span id="stat-label" class="lbl">HORAS / --</span>
                 </div>
-                <div id="next-grade-display" class="next-grade-label"></div>
+                <div id="next-grade-display" class="next-grade-label">Cargando meta...</div>
             </div>
 
             <div class="class-hero" id="class-hero-card">
@@ -261,6 +450,7 @@
             <div id="calendar-content"></div>
         </div>
 
+        <!-- SENSEI PANEL -->
         <div id="sensei-view" class="hidden">
             <header class="header-app"><h1 style="font-weight:800; font-size:22px; margin:0;">SENSEI PANEL</h1></header>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 20px 10px;">
@@ -273,6 +463,7 @@
             <div id="student-list"></div>
         </div>
 
+        <!-- NAV BAR -->
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
             <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
@@ -283,57 +474,111 @@
     </div>
 
     <script>
-        const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
-        let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null;
+        let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null, requisitosGradoGlobal = [];
         let selectedMonthGen = new Date().getMonth();
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
         const getID = (o) => o.documentId || o.id;
 
-        function showModal(t, htmlContent, showOk = true) { 
+        function showModal(t, htmlContent, ok = true) { 
             document.getElementById('modal-title').innerText = t;
             document.getElementById('modal-body-content').innerHTML = htmlContent || "";
             const okBtn = document.getElementById('modal-ok-btn');
-            if(showOk) okBtn.classList.remove('hidden'); else okBtn.classList.add('hidden');
+            if(ok) okBtn.style.display = 'block'; else okBtn.style.display = 'none';
             document.getElementById('custom-modal').classList.remove('hidden'); 
         }
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); }
 
         function formatTimeSafe(iso) {
             if(!iso) return { time: "--:--", date: "--/--/----", month: "" };
-            const [dPart, tPart] = iso.split('T');
-            const [y, m, d] = dPart.split('-');
-            const [hh, mm] = tPart.split(':');
+            const [dPart, tPart] = iso.split('T'); const [y, m, d] = dPart.split('-'); const [hh, mm] = tPart.split(':');
             const dateObj = new Date(y, m-1, d);
-            const monthName = dateObj.toLocaleString('es-ES', { month: 'long' });
-            return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}`, month: monthName, hour: parseInt(hh) };
+            return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}`, month: dateObj.toLocaleString('es-ES', { month: 'long' }), hour: parseInt(hh) };
         }
 
-        function getNextGrade(current) {
-            if (!current) return "5º KYU";
-            const c = current.toUpperCase().trim();
-            const map = {
-                "S/G": "5º KYU", "5º KYU": "4º KYU", "4º KYU": "3º KYU", "3º KYU": "2º KYU", 
-                "2º KYU": "1º KYU", "1º KYU": "1º DAN", "1º DAN": "2º DAN", "2º DAN": "3º DAN", 
-                "3º DAN": "4º DAN", "4º DAN": "5º DAN", "5º DAN": "6º DAN"
-            };
-            return map[c] || "PRÓXIMO GRADO";
+        // --- LÓGICA DE GRADOS ROBUSTA (Normalización y búsqueda) ---
+        
+        // Orden oficial de grados para determinar "cuál va después"
+        const GRADOS_ORDER = [
+            "S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", 
+            "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"
+        ];
+
+        // Función normalizadora: "4º Dan", "4o Dan", "4Dan" -> "4DAN"
+        function normalize(g) {
+            if (!g) return "";
+            // 1. Eliminar 'º', 'o', 'er', 'to' y espacios
+            // 2. Quedarse solo con números y letras mayúsculas
+            return g.toString().toUpperCase()
+                .replace(/[º°Oª]/g, '')
+                .replace(/\s+/g, '') // Quitar espacios
+                .replace(/[^0-9A-Z]/g, ''); // Limpieza final
         }
 
-        function updateProgress(actual, total, currentGrade) {
+        // Carga la tabla de requisitos desde Strapi al inicio
+        async function fetchRequisitosGrado() {
+            try {
+                // Strapi v5 simple sort
+                const res = await fetch(`${API_URL}/api/requisito-grados?pagination[limit]=100`, { 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+                });
+                const json = await res.json();
+                requisitosGradoGlobal = (json.data || []).map(d => {
+                    const attr = d.attributes || d;
+                    return { 
+                        GRADO: attr.GRADO || attr.grado, 
+                        HORAS: parseFloat(attr.HORAS_NECESARIAS || attr.horas_necesarias || 0),
+                        NORM: normalize(attr.GRADO || attr.grado) // Guardamos versión normalizada para comparar
+                    };
+                });
+            } catch (e) { requisitosGradoGlobal = []; }
+        }
+
+        function updateProgress(studentHours, studentCurrentGrade) {
             const circle = document.getElementById('progress-bar');
+            const display = document.getElementById('next-grade-display');
+            const statLabel = document.getElementById('stat-label');
+            const currentHours = parseFloat(studentHours || 0);
+
             if(!circle) return;
             const radius = circle.r.baseVal.value;
             const circumference = radius * 2 * Math.PI;
-            const targetTotal = total || 60;
-            const percent = Math.min((actual / targetTotal) * 100, 100);
-            const offset = circumference - (percent / 100 * circumference);
-            circle.style.strokeDashoffset = offset;
-            document.getElementById('stat-hours').innerText = parseFloat(actual || 0).toFixed(1);
-            document.getElementById('stat-label').innerText = `Horas / ${targetTotal}`;
+
+            // Lógica de cálculo del siguiente grado
+            let targetTotal = 60; // Default de seguridad
+            let nextGradeName = "PRÓXIMO NIVEL";
+
+            if (requisitosGradoGlobal.length > 0) {
+                const cleanCurrent = normalize(studentCurrentGrade);
+                
+                // Buscar índice actual en la lista ordenada
+                // Comparamos versiones normalizadas (ej: "4DAN" == "4DAN")
+                const currentIdx = GRADOS_ORDER.findIndex(g => normalize(g) === cleanCurrent);
+                
+                if (currentIdx !== -1 && currentIdx < GRADOS_ORDER.length - 1) {
+                    // El siguiente grado es el índice + 1
+                    const nextGradeOfficial = GRADOS_ORDER[currentIdx + 1]; // Ej: "5º DAN"
+                    nextGradeName = nextGradeOfficial;
+                    
+                    // Buscar cuántas horas pide ese grado en la tabla de Strapi
+                    const req = requisitosGradoGlobal.find(r => r.NORM === normalize(nextGradeOfficial));
+                    if (req) {
+                        targetTotal = req.HORAS;
+                    }
+                } else if (currentIdx >= GRADOS_ORDER.length - 1) {
+                    // Nivel máximo alcanzado
+                    nextGradeName = "MAESTRÍA";
+                    targetTotal = currentHours; // Círculo lleno
+                }
+            }
+
+            // Pintar Círculo
+            const percent = Math.min((currentHours / targetTotal) * 100, 100);
+            circle.style.strokeDashoffset = 339.29 - (percent / 100 * 339.29);
             
-            const nextGrade = getNextGrade(currentGrade);
-            document.getElementById('next-grade-display').innerText = `CAMINO AL ${nextGrade}`;
+            document.getElementById('stat-hours').innerText = currentHours.toFixed(1);
+            statLabel.innerText = `Horas / ${targetTotal}`;
+            display.innerText = `CAMINO AL ${nextGradeName.toUpperCase()}`;
         }
 
         async function initApp() {
@@ -343,6 +588,10 @@
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
             if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
+            
+            // 1. Cargar reglas de grados primero
+            await fetchRequisitosGrado();
+            // 2. Luego cargar alumno
             await refreshStudentData();
             checkTodayClass();
         }
@@ -378,7 +627,8 @@
                     nameDisplay.innerText = p.nombre;
                     initialsDisplay.innerText = (p.nombre[0] + (p.apellidos ? p.apellidos[0] : "")).toUpperCase();
                     
-                    updateProgress(p.horas_acumuladas, p.Horas_Necesarias, p.grado);
+                    // Pasamos horas actuales y grado actual a la función inteligente
+                    updateProgress(p.horas_acumuladas, p.grado);
 
                 } else if (user.is_sensei) {
                     // --- ES UN SENSEI (y no tiene ficha de alumno) ---
