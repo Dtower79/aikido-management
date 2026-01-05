@@ -65,7 +65,6 @@
             box-sizing: border-box; 
         }
 
-        /* El interruptor que apaga el muro */
         .ready-to-show #app-content { display: flex !important; }
         .ready-to-show #install-wall { display: none !important; }
 
@@ -213,7 +212,7 @@
         }
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* --- SENSEI UI REDISEÑO COMPACTO --- */
+        /* --- SENSEI UI --- */
         .student-item { 
             background: var(--card-bg); 
             padding: 15px 20px; 
@@ -254,7 +253,7 @@
         .mini-btn.ok { width: 100px; background: var(--success); font-weight: 800; font-size: 10px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); }
         .mini-btn.ok.animating { background: white !important; color: var(--success) !important; transform: scale(1.05); }
 
-        /* --- CALENDARIO / GRIDS ESTRECHOS --- */
+        /* --- CALENDARIO --- */
         .month-header { padding: 15px 25px 5px; font-size: 18px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 2px; }
         .section-label { padding: 0 25px; margin: 10px 0 15px; font-size: 10px; text-transform: uppercase; font-weight: 800; color: var(--accent); letter-spacing: 1px; opacity: 0.8; }
         
@@ -503,12 +502,16 @@
             "S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", 
             "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"
         ];
+        
+        // RED DE SEGURIDAD: Si Strapi falla, usamos esto para que no salga 60
+        const GRADOS_FALLBACK = {
+            "5º KYU": 40, "4º KYU": 50, "3º KYU": 60, "2º KYU": 70, "1º KYU": 90,
+            "1º DAN": 120, "2º DAN": 200, "3º DAN": 300, "4º DAN": 400, "5º DAN": 500, "6º DAN": 600
+        };
 
         // Función normalizadora: "4º Dan", "4o Dan", "4Dan" -> "4DAN"
         function normalize(g) {
             if (!g) return "";
-            // 1. Eliminar 'º', 'o', 'er', 'to' y espacios
-            // 2. Quedarse solo con números y letras mayúsculas
             return g.toString().toUpperCase()
                 .replace(/[º°Oª]/g, '')
                 .replace(/\s+/g, '') // Quitar espacios
@@ -518,20 +521,24 @@
         // Carga la tabla de requisitos desde Strapi al inicio
         async function fetchRequisitosGrado() {
             try {
-                // Strapi v5 simple sort
-                const res = await fetch(`${API_URL}/api/requisito-grados?pagination[limit]=100`, { 
+                // Strapi v5
+                const res = await fetch(`${API_URL}/api/requisito-grados?pagination[limit]=100&populate=*`, { 
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
                 });
                 const json = await res.json();
                 requisitosGradoGlobal = (json.data || []).map(d => {
                     const attr = d.attributes || d;
                     return { 
-                        GRADO: attr.GRADO || attr.grado, 
-                        HORAS: parseFloat(attr.HORAS_NECESARIAS || attr.horas_necesarias || 0),
-                        NORM: normalize(attr.GRADO || attr.grado) // Guardamos versión normalizada para comparar
+                        GRADO: attr.GRADO || attr.grado || attr.Grado, 
+                        HORAS: parseFloat(attr.HORAS_NECESARIAS || attr.horas_necesarias || attr.Horas_Necesarias || 0),
+                        NORM: normalize(attr.GRADO || attr.grado || attr.Grado) 
                     };
                 });
-            } catch (e) { requisitosGradoGlobal = []; }
+                console.log("Requisitos cargados:", requisitosGradoGlobal);
+            } catch (e) { 
+                console.warn("No se pudieron cargar requisitos de Strapi. Usando fallback.", e);
+                requisitosGradoGlobal = []; 
+            }
         }
 
         function updateProgress(studentHours, studentCurrentGrade) {
@@ -541,35 +548,34 @@
             const currentHours = parseFloat(studentHours || 0);
 
             if(!circle) return;
-            const radius = circle.r.baseVal.value;
-            const circumference = radius * 2 * Math.PI;
 
             // Lógica de cálculo del siguiente grado
-            let targetTotal = 60; // Default de seguridad
+            let targetTotal = 60; // Default de emergencia absoluta
             let nextGradeName = "PRÓXIMO NIVEL";
 
-            if (requisitosGradoGlobal.length > 0) {
-                const cleanCurrent = normalize(studentCurrentGrade);
+            const cleanCurrent = normalize(studentCurrentGrade);
+            
+            // 1. Buscar en qué posición está el alumno
+            const currentIdx = GRADOS_ORDER.findIndex(g => normalize(g) === cleanCurrent);
+            
+            if (currentIdx !== -1 && currentIdx < GRADOS_ORDER.length - 1) {
+                const nextGradeOfficial = GRADOS_ORDER[currentIdx + 1]; // Ej: "5º DAN"
+                nextGradeName = nextGradeOfficial;
                 
-                // Buscar índice actual en la lista ordenada
-                // Comparamos versiones normalizadas (ej: "4DAN" == "4DAN")
-                const currentIdx = GRADOS_ORDER.findIndex(g => normalize(g) === cleanCurrent);
+                // 2. Intentar buscar en datos de Strapi
+                const req = requisitosGradoGlobal.find(r => r.NORM === normalize(nextGradeOfficial));
                 
-                if (currentIdx !== -1 && currentIdx < GRADOS_ORDER.length - 1) {
-                    // El siguiente grado es el índice + 1
-                    const nextGradeOfficial = GRADOS_ORDER[currentIdx + 1]; // Ej: "5º DAN"
-                    nextGradeName = nextGradeOfficial;
-                    
-                    // Buscar cuántas horas pide ese grado en la tabla de Strapi
-                    const req = requisitosGradoGlobal.find(r => r.NORM === normalize(nextGradeOfficial));
-                    if (req) {
-                        targetTotal = req.HORAS;
+                if (req && req.HORAS > 0) {
+                    targetTotal = req.HORAS;
+                } else {
+                    // 3. Si Strapi falló o devolvió 0, buscar en Fallback local
+                    if (GRADOS_FALLBACK[nextGradeOfficial]) {
+                        targetTotal = GRADOS_FALLBACK[nextGradeOfficial];
                     }
-                } else if (currentIdx >= GRADOS_ORDER.length - 1) {
-                    // Nivel máximo alcanzado
-                    nextGradeName = "MAESTRÍA";
-                    targetTotal = currentHours; // Círculo lleno
                 }
+            } else if (currentIdx >= GRADOS_ORDER.length - 1) {
+                nextGradeName = "MAESTRÍA";
+                targetTotal = currentHours;
             }
 
             // Pintar Círculo
@@ -589,10 +595,8 @@
             showView('dashboard');
             if (user.is_sensei) document.getElementById('nav-sensei').style.display = 'flex';
             
-            // 1. Cargar reglas de grados primero
-            await fetchRequisitosGrado();
-            // 2. Luego cargar alumno
-            await refreshStudentData();
+            await fetchRequisitosGrado(); // Cargar reglas
+            await refreshStudentData();   // Cargar alumno
             checkTodayClass();
         }
 
@@ -627,19 +631,14 @@
                     nameDisplay.innerText = p.nombre;
                     initialsDisplay.innerText = (p.nombre[0] + (p.apellidos ? p.apellidos[0] : "")).toUpperCase();
                     
-                    // Pasamos horas actuales y grado actual a la función inteligente
                     updateProgress(p.horas_acumuladas, p.grado);
 
                 } else if (user.is_sensei) {
-                    // --- ES UN SENSEI (y no tiene ficha de alumno) ---
-                    
-                    // Ocultar Círculo, Mostrar Sensei Card
+                    // --- ES UN SENSEI ---
                     progressCircle.classList.add('hidden');
                     senseiCard.classList.remove('hidden');
 
-                    // Poner datos directos de la tabla USER (Login)
                     nameDisplay.innerText = user.nombre || "Sensei"; 
-                    
                     const letraNombre = user.nombre ? user.nombre[0] : "S";
                     const letraApellido = user.apellidos ? user.apellidos[0] : "";
                     initialsDisplay.innerText = (letraNombre + letraApellido).toUpperCase();
