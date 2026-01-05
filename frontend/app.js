@@ -76,6 +76,12 @@ function showSection(id) {
 const parseRelation = (obj) => { if(!obj || !obj.data) return obj; return obj.data.attributes || obj.data; };
 const getID = (obj) => obj?.documentId || obj?.id;
 
+// SEGURIDAD PARA BOTONES: Escapar comillas simples en nombres (ej: O'Connor)
+function escapeQuotes(str) {
+    if (!str) return "";
+    return str.replace(/'/g, "\\'");
+}
+
 function getDojoName(dojoObj) {
     const d = parseRelation(dojoObj);
     return d && d.nombre ? d.nombre.replace(/Aikido\s+/gi, '').trim() : "NO DISP";
@@ -98,7 +104,7 @@ function calculateAge(d) { if (!d) return 'NO DISP'; const t = new Date(), b = n
 function normalizePhone(t) { if (!t || t === "-") return 'NO DISP'; return t.toString().replace(/^(\+?34)/, '').trim(); }
 function togglePassword(i, icon) { const x = document.getElementById(i); if (x.type === "password") { x.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } }
 
-// --- CARGA ALUMNOS ---
+// --- CARGA ALUMNOS (Corrección Botón Borrar) ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
     tbody.innerHTML = `<tr><td colspan="12">Cargando...</td></tr>`;
@@ -113,6 +119,8 @@ async function loadAlumnos(activos) {
             const p = a.attributes || a;
             const id = a.documentId;
             const horas = parseFloat(p.horas_acumuladas || 0).toFixed(1);
+            const safeNombre = escapeQuotes(p.nombre || '');
+            const safeApellidos = escapeQuotes(p.apellidos || '');
             
             let rowHTML = `
                 ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
@@ -128,23 +136,23 @@ async function loadAlumnos(activos) {
             
             if (activos) {
                 rowHTML += `<td>${formatDateDisplay(p.fecha_inicio)}</td>`;
-                // BOTÓN DE HISTORIAL AÑADIDO AQUÍ
+                // Usamos safeNombre y safeApellidos para que no rompa el HTML
                 rowHTML += `
                     <td class="sticky-col">
-                        <button class="action-btn-icon" title="Ver Historial" onclick="generateIndividualHistory('${id}', '${p.nombre}', '${p.apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                        <button class="action-btn-icon" title="Ver Historial" onclick="generateIndividualHistory('${id}', '${safeNombre}', '${safeApellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
                         <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-                        <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${p.nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+                        <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${safeNombre}')"><i class="fa-solid fa-user-xmark"></i></button>
                     </td>`;
             } else {
                 rowHTML += `
                     <td class="sticky-col">
-                        <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${p.nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
-                        <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${p.nombre}')"><i class="fa-solid fa-trash-can"></i></button>
+                        <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${safeNombre}')"><i class="fa-solid fa-rotate-left"></i></button>
+                        <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${safeNombre}')"><i class="fa-solid fa-trash-can"></i></button>
                     </td>`;
             }
             tbody.innerHTML += `<tr>${rowHTML}</tr>`;
         });
-    } catch { tbody.innerHTML = `<tr><td colspan="12">Error de carga.</td></tr>`; }
+    } catch (e) { console.error(e); tbody.innerHTML = `<tr><td colspan="12">Error de carga.</td></tr>`; }
 }
 
 const formAlumno = document.getElementById('form-nuevo-alumno');
@@ -191,10 +199,39 @@ function resetForm() { const f = document.getElementById('form-nuevo-alumno'); i
 function confirmarEstado(id, activo, nombre) { showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => { const fecha = activo ? null : new Date().toISOString().split('T')[0]; await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) }); showSection(activo ? 'alumnos' : 'bajas'); }); }
 function eliminarDefinitivo(id, nombre) { showModal("¡PELIGRO!", `¿Borrar físicamente a ${nombre}?`, () => { setTimeout(() => { showModal("ÚLTIMO AVISO", "Irreversible.", async () => { await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } }); loadAlumnos(false); }); }, 500); }); }
 
+// --- LOGICA CAMBIO DE CONTRASEÑA ---
+function openChangePasswordModal() {
+    document.getElementById('change-pass-form').reset();
+    document.getElementById('change-pass-modal').classList.remove('hidden');
+}
+
+document.getElementById('change-pass-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = document.getElementById('cp-current').value;
+    const password = document.getElementById('cp-new').value;
+    const passwordConfirmation = document.getElementById('cp-confirm').value;
+
+    if (password !== passwordConfirmation) { showModal("Error", "Las contraseñas nuevas no coinciden."); return; }
+
+    try {
+        const res = await fetch(`${API_URL}/api/auth/change-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
+            body: JSON.stringify({ currentPassword, password, passwordConfirmation })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showModal("Éxito", "Contraseña actualizada. Inicia sesión de nuevo.", () => logout());
+        } else {
+            showModal("Error", data.error ? data.error.message : "No se pudo cambiar la contraseña.");
+        }
+    } catch { showModal("Error", "Fallo de conexión."); }
+});
+
 // --- INFORMES ---
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
-// 1. INFORME HISTÓRICO INDIVIDUAL (Nuevo)
+// 1. INFORME HISTÓRICO INDIVIDUAL
 async function generateIndividualHistory(id, nombre, apellidos) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -312,7 +349,7 @@ async function generateReport(type) {
 
                 subText = `${isBaja ? 'Alumnos Inactivos' : 'Alumnos Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'} | ${new Date().toLocaleDateString()}`;
 
-                let url = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
+                let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
                 if (dojoFilterId) url += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
 
                 const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
@@ -446,6 +483,38 @@ async function exportBackupExcel() {
 function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TODOS los seguros?", () => runResetProcess()); }
 async function runResetProcess() { const out = document.getElementById('console-output'); out.innerHTML = "<div>Iniciando...</div>"; try { const r = await fetch(`${API_URL}/api/alumnos?filters[activo][$eq]=true&filters[seguro_pagado][$eq]=true&pagination[limit]=2000`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const j = await r.json(); const l = j.data || []; for (const i of l) { await fetch(`${API_URL}/api/alumnos/${i.documentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { seguro_pagado: false } }) }); } out.innerHTML += "<div style='color:#33ff00'>COMPLETADO.</div>"; } catch (e) { out.innerHTML += `<div>ERROR: ${e.message}</div>`; } }
 
+// --- FUNCIONES ARREGLADAS DOJOS ---
+async function loadDojosCards() { 
+    const grid = document.getElementById('grid-dojos'); 
+    if (!grid) return; 
+    grid.innerHTML = '<p style="color:#aaa;">Cargando dojos...</p>'; 
+    try { 
+        const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); 
+        const json = await res.json(); 
+        const data = json.data || [];
+        grid.innerHTML = ''; 
+        if(data.length === 0) { grid.innerHTML = '<p>No hay dojos.</p>'; return; }
+
+        data.forEach(d => { 
+            // FIX: Normalizar lectura de Strapi v5
+            const p = d.attributes || d; 
+            const cleanName = (p.nombre || 'Dojo Desconocido').replace(/Aikido\s+/gi, '').trim(); 
+            const addr = p.direccion ? p.direccion.replace(/\n/g, '<br>') : 'NO DISP'; 
+            
+            grid.innerHTML += `
+                <div class="dojo-card">
+                    <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${cleanName}</h3></div>
+                    <div class="dojo-body">
+                        <div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${addr}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span></div>
+                        <div class="dojo-info-row"><i class="fa-solid fa-phone"></i><span>${p.telefono || 'NO DISP'}</span></div>
+                        <div class="dojo-info-row"><i class="fa-solid fa-envelope"></i><span>${p.email || 'NO DISP'}</span></div>
+                        <a href="${p.web || '#'}" target="_blank" class="dojo-link-btn">WEB OFICIAL</a>
+                    </div>
+                </div>`; 
+        }); 
+    } catch(e) { console.error(e); grid.innerHTML = '<p style="color:red">Error al cargar dojos.</p>'; } 
+}
+
 async function loadDojosSelect() {
     const s = document.getElementById('new-dojo');
     try {
@@ -454,7 +523,9 @@ async function loadDojosSelect() {
         s.innerHTML = '<option value="">Selecciona...</option>';
         (j.data || []).forEach(d => { 
             const docId = d.documentId || d.id;
-            s.innerHTML += `<option value="${docId}">${d.nombre || d.attributes.nombre}</option>`; 
+            // FIX: Nombre seguro
+            const p = d.attributes || d;
+            s.innerHTML += `<option value="${docId}">${p.nombre}</option>`; 
         });
     } catch {}
 }
@@ -465,18 +536,44 @@ async function loadReportDojos() {
     try {
         const r = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const j = await r.json();
-        const options = (j.data || []).map(d => `<option value="${d.documentId || d.id}">${d.nombre || d.attributes.nombre}</option>`).join('');
+        const options = (j.data || []).map(d => {
+            const docId = d.documentId || d.id;
+            const p = d.attributes || d;
+            return `<option value="${docId}">${p.nombre}</option>`;
+        }).join('');
         const html = '<option value="">-- Todos los Dojos --</option>' + options;
         if (s) s.innerHTML = html; if (e) e.innerHTML = html;
     } catch {}
 }
 
 async function loadCiudades() { const d = document.getElementById('ciudades-list'); if (d) { try { const r = await fetch(`${API_URL}/api/alumnos?fields[0]=poblacion`, { headers: { 'Authorization': `Bearer ${jwtToken}` } }); const j = await r.json(); d.innerHTML = ''; [...new Set((j.data || []).map(a => (a.attributes ? a.attributes.poblacion : a.poblacion)).filter(Boolean))].sort().forEach(c => d.innerHTML += `<option value="${c}">`); } catch { } } }
-async function runDiagnostics() { const o = document.getElementById('console-output'); if (o) { o.innerHTML = ''; const l = ["Iniciando...", "> Conectando DB... [OK]", "> Verificando API... [OK]", "SISTEMA ONLINE 100%"]; for (const x of l) { await new Promise(r => setTimeout(r, 400)); o.innerHTML += `<div>${x}</div>`; } } }
+async function runDiagnostics() { const o = document.getElementById('console-output'); if (o) { o.innerHTML = ''; const l = ["Iniciando...", "> Conectando DB... [OK]", "> Verificando API... [OK]", "SISTEMA ONLINE 100%"]; for (const x of l) { await new Promise(r => setTimeout(r, 400)); o.innerHTML += `<div>${x}</div>`; } o.innerHTML += '<div style="padding:15px; border-top:1px solid #33ff00;"><a href="https://stats.uptimerobot.com/xWW61g5At6" target="_blank" class="action-btn secondary" style="text-decoration:none; display:inline-block; border-color:#33ff00; color:#33ff00;">Ver Estado de Strapi</a></div>'; } }
 function setupDniInput(id) { document.getElementById(id)?.addEventListener('input', e => e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '')); }
 function filtrarTabla(t, i) { const input = document.getElementById(i); if (!input) return; const f = input.value.toUpperCase(); const rows = document.getElementById(t).getElementsByTagName('tr'); for (let j = 1; j < rows.length; j++) rows[j].style.display = rows[j].textContent.toUpperCase().includes(f) ? "" : "none"; }
 function changeFontSize(t, d) { const table = document.getElementById(t); if (!table) return; table.querySelectorAll('th, td').forEach(c => { const s = parseFloat(window.getComputedStyle(c).fontSize); c.style.fontSize = (Math.max(8, s + d)) + "px"; }); }
-function setupDragScroll() { const s = document.querySelector('.drag-scroll'); if (!s) return; let d = false, x, l; s.addEventListener('mousedown', e => { d = true; x = e.pageX - s.offsetLeft; l = s.scrollLeft; }); s.addEventListener('mouseleave', () => d = false); s.addEventListener('mouseup', () => d = false); s.addEventListener('mousemove', e => { if (!d) return; e.preventDefault(); const p = e.pageX - s.offsetLeft; s.scrollLeft = l - (p - x) * 2; }); }
+
+// FIX SCROLL: Prevenir default para que no seleccione texto
+function setupDragScroll() { 
+    const s = document.querySelector('.drag-scroll'); 
+    if (!s) return; 
+    let d = false, x, l; 
+    s.addEventListener('mousedown', e => { 
+        d = true; 
+        s.classList.add('active'); // Activa cursor grabbing y user-select:none
+        x = e.pageX - s.offsetLeft; 
+        l = s.scrollLeft; 
+        e.preventDefault(); // CLAVE: Evita selección de texto
+    }); 
+    s.addEventListener('mouseleave', () => { d = false; s.classList.remove('active'); }); 
+    s.addEventListener('mouseup', () => { d = false; s.classList.remove('active'); }); 
+    s.addEventListener('mousemove', e => { 
+        if (!d) return; 
+        e.preventDefault(); 
+        const p = e.pageX - s.offsetLeft; 
+        s.scrollLeft = l - (p - x) * 2; 
+    }); 
+}
+
 function toggleMobileMenu() { document.querySelector('.sidebar').classList.toggle('open'); }
 function scrollToTop() { const c = document.querySelector('.content'); if (c) c.scrollTo({ top: 0, behavior: 'smooth' }); else window.scrollTo({ top: 0, behavior: 'smooth' }); }
 const ca = document.querySelector('.content'); if (ca) { ca.addEventListener('scroll', () => { const b = document.getElementById('btn-scroll-top'); if (ca.scrollTop > 300) b.classList.add('visible'); else b.classList.remove('visible'); }); }
