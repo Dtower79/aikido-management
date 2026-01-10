@@ -1,39 +1,15 @@
-const config = {
-  locales: [
-    // 'ar',
-    // 'fr',
-    // 'cs',
-    // 'de',
-    // 'dk',
-    // 'es',
-    // 'he',
-    // 'id',
-    // 'it',
-    // 'ja',
-    // 'ko',
-    // 'ms',
-    // 'nl',
-    // 'no',
-    // 'pl',
-    // 'pt-BR',
-    // 'pt',
-    // 'ru',
-    // 'sk',
-    // 'sv',
-    // 'th',
-    // 'tr',
-    // 'uk',
-    // 'vi',
-    // 'zh-Hans',
-    // 'zh',
-  ],
-};
-
-const bootstrap = (app) => {
-  console.log(app);
-};
-
 export default {
-  config,
-  bootstrap,
+  config: {
+    // DESACTIVAR TUTORIALES AQUÍ ES MÁS EFECTIVO PARA ESTE BUG
+    tutorials: false, 
+    // Opcional: Desactiva notificaciones de nuevas versiones
+    notifications: { releases: false },
+    locales: [
+      // 'es',
+      // 'fr',
+    ],
+  },
+  bootstrap(app) {
+    console.log(app);
+  },
 };
