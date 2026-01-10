@@ -1,7 +1,7 @@
 export default {
   config: {
     locales: [
-      // 'es',
+       'es',
       // 'fr',
     ],
     // ESTA ES LA LÍNEA MÁGICA QUE ARREGLA EL ERROR VISUAL
