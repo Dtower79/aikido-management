@@ -17,5 +17,5 @@ module.exports = ({ env }) => ({
   tours: {
     enabled: false,
   },
-  // ------------------
+  
 });
