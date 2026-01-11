@@ -50,8 +50,11 @@
         .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .logo-img { width: 140px !important; height: auto; margin-bottom: 25px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
         .auth-card { width: 100%; max-width: 350px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px 30px; border-radius: 35px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        
+        /* TEXTO RECUPERADO */
         .auth-footer { margin-top: 25px; font-size: 14px; color: #ffffff; font-weight: 300; letter-spacing: 0.5px; }
-        .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; }
+        .auth-footer a { color: var(--accent); text-decoration: underline; font-weight: 800; margin-left: 5px; cursor: pointer; }
+        
         .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
         .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         input, select { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
@@ -164,6 +167,10 @@
                     <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="password" placeholder="Contraseña" required></div>
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
+                <!-- TEXTO RECUPERADO -->
+                <div class="auth-footer">
+                    ¿Usuario Nuevo? <a href="#" onclick="alert('Contacta con el Sensei para activar tu cuenta.')">Activa tu cuenta</a>
+                </div>
             </div>
         </div>
 
@@ -275,7 +282,7 @@
         function normalize(g) { return (!g) ? "" : g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, ''); }
 
         async function fetchRequisitosGrado() {
-            // Actualizado a 20 días (480h) como pediste
+            // Actualizado a 20 días (480h)
             const json = await fetchSmart('/api/requisito-grados?pagination[limit]=100&populate=*', 'requisitos', 480); 
             if(json) requisitosGradoGlobal = (json.data || []).map(d => { const a = parseData(d); return { GRADO: a.GRADO || a.grado, HORAS: parseFloat(a.HORAS_NECESARIAS || a.horas_necesarias || 0), NORM: normalize(a.GRADO || a.grado) }; });
         }
@@ -511,13 +518,28 @@
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const identifier = document.getElementById('dni-login').value, password = document.getElementById('password').value;
+            // CORRECCION: TRIM para quitar espacios
+            const identifier = document.getElementById('dni-login').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerText;
+            btn.innerText = "VERIFICANDO...";
+            btn.disabled = true;
+
             try {
-                const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ identifier, password }) });
+                const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-                else { alert("Acceso denegado"); }
-            } catch (e) { alert("Error red"); }
+                else { 
+                    // USO DEL MODAL MEJORADO EN LUGAR DE ALERT
+                    showModal("Acceso Denegado", "DNI o contraseña incorrectos.<br>Verifica que tu cuenta esté activa.", false); 
+                }
+            } catch (e) { showModal("Error", "No hay conexión.", false); }
+            finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
         });
 
         function logout() { localStorage.clear(); location.reload(); }
