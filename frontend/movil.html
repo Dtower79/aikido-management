@@ -278,7 +278,7 @@
         }
 
         const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
-        const GRADOS_FALLBACK = { "5º KYU": 40, "4º KYU": 50, "3º KYU": 60, "2º KYU": 70, "1º KYU": 90, "1º DAN": 120, "2º DAN": 200, "3º DAN": 300, "4º DAN": 400, "5º DAN": 500 };
+        const GRADOS_FALLBACK = { "5º KYU": 30, "4º KYU": 40, "3º KYU": 50, "2º KYU": 50, "1º KYU": 60, "1º DAN": 70, "2º DAN": 200, "3º DAN": 300, "4º DAN": 400, "5º DAN": 500 };
         function normalize(g) { return (!g) ? "" : g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, ''); }
 
         async function fetchRequisitosGrado() {
@@ -322,20 +322,34 @@
 
         async function refreshStudentData() {
             const user = JSON.parse(localStorage.getItem('aikido_user'));
+            // Forzamos cache 1 hora
             const json = await fetchSmart(`/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, 'perfil_alumno', 1); 
             
             if (json && json.data.length > 0) {
-                alumnoGlobal = json.data[0]; const p = parseData(alumnoGlobal); dojoIdGlobal = getID(parseRelation(p.dojo));
+                // --- ES UN ALUMNO ---
+                alumnoGlobal = json.data[0]; 
+                const p = parseData(alumnoGlobal); 
+                dojoIdGlobal = getID(parseRelation(p.dojo));
+
                 document.getElementById('student-progress-circle').classList.remove('hidden');
                 document.getElementById('sensei-welcome-card').classList.add('hidden');
                 document.getElementById('user-display-name').innerText = p.nombre;
                 document.getElementById('user-initials').innerText = (p.nombre[0]+(p.apellidos?p.apellidos[0]:"")).toUpperCase();
                 updateProgress(p.horas_acumuladas, p.grado);
             } else if (user.is_sensei) {
+                // --- ES UN SENSEI ---
                 document.getElementById('student-progress-circle').classList.add('hidden');
                 document.getElementById('sensei-welcome-card').classList.remove('hidden');
                 document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
                 document.getElementById('user-initials').innerText = (user.nombre?user.nombre[0]:"S").toUpperCase();
+                
+                // CORRECCIÓN QUIRÚRGICA: Obtener ID del Dojo para que funcionen los botones de crear clase
+                try {
+                    const dojos = await fetchSmart('/api/dojos', 'lista_dojos', 168);
+                    if(dojos && dojos.data.length > 0) {
+                        dojoIdGlobal = getID(dojos.data[0]); // Asigna el primer dojo encontrado
+                    }
+                } catch(e) { console.error("No se pudo asignar Dojo al Sensei"); }
             }
         }
 
@@ -556,6 +570,7 @@
         }
 
         async function processGeneration() {
+            if(!dojoIdGlobal) { alert("Error: No se ha detectado el Dojo. Recarga la página."); return; }
             const token = localStorage.getItem('aikido_jwt'), year = parseInt(document.getElementById('gen-year-select').value), month = selectedMonthGen + 1, hM = document.getElementById('gen-morning').value, hT = document.getElementById('gen-afternoon').value;
             if(!dojoIdGlobal) return;
             let creadas = 0; let ultimo = new Date(year, month, 0).getDate();
@@ -599,6 +614,7 @@
         }
 
         async function processSingleClass() {
+            if(!dojoIdGlobal) { alert("Error: No se ha detectado el Dojo. Recarga la página."); return; }
             const token = localStorage.getItem('aikido_jwt');
             const d = document.getElementById('single-date').value, t = document.getElementById('single-time').value, dur = document.getElementById('single-dur').value;
             const iso = `${d}T${t}:00.000Z`;
