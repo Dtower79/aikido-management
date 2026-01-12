@@ -556,30 +556,51 @@
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            // CORRECCION: TRIM para quitar espacios
-            const identifier = document.getElementById('dni-login').value.trim();
-            const password = document.getElementById('password').value.trim();
-            
-            const btn = e.target.querySelector('button');
-            const originalText = btn.innerText;
-            btn.innerText = "VERIFICANDO...";
-            btn.disabled = true;
+    e.preventDefault();
+    
+    // Capturamos el valor puro
+    let rawId = document.getElementById('dni-login').value;
+    let rawPass = document.getElementById('password').value;
 
-            try {
-                const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ identifier, password }) });
-                const data = await res.json();
-                if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
-                else { 
-                    const msg = data.error ? data.error.message : "Credenciales incorrectas";
-                    showModal("Acceso Denegado", `<div style="color:#ff4444; font-weight:bold;">${msg}</div><p>Revisa DNI y contraseña.</p>`, true); 
-                }
-            } catch (e) { showModal("Error", "No hay conexión.", false); }
-            finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
+    console.log("--- DEBUG LOGIN ---");
+    console.log("DNI escrito: '" + rawId + "'"); // Las comillas simples te mostrarán si hay espacios
+    console.log("Pass escrita: '" + rawPass + "'");
+
+    // Limpiamos
+    const identifier = rawId.trim();
+    const password = rawPass.trim();
+    
+    console.log("Enviando DNI limpio: '" + identifier + "'");
+
+    const btn = e.target.querySelector('button');
+    btn.innerText = "VERIFICANDO...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/api/auth/local`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ identifier, password }) 
         });
+        
+        const data = await res.json();
+        
+        if (res.ok) { 
+            console.log("✅ LOGIN ÉXITO:", data);
+            localStorage.setItem('aikido_jwt', data.jwt); 
+            localStorage.setItem('aikido_user', JSON.stringify(data.user)); 
+            initApp(); 
+        } else { 
+            console.error("❌ ERROR LOGIN:", data);
+            const msg = data.error ? data.error.message : "Credenciales incorrectas";
+            showModal("Acceso Denegado", `Error: ${msg}<br>Revisa la consola (F12) para ver qué se envió.`, true); 
+        }
+    } catch (e) { showModal("Error", "No hay conexión.", true); }
+    finally {
+        btn.innerText = "ENTRAR AL DOJO";
+        btn.disabled = false;
+    }
+});
 
         function logout() { localStorage.clear(); location.reload(); }
         
