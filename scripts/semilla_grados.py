@@ -13,12 +13,12 @@ HEADERS = {
 
 # CORRECCIÓN: Claves idénticas a la captura de pantalla
 GRADOS = [
-    {"Grado": "5º KYU", "Horas_Necesarias": 40},
-    {"Grado": "4º KYU", "Horas_Necesarias": 50},
-    {"Grado": "3º KYU", "Horas_Necesarias": 60},
-    {"Grado": "2º KYU", "Horas_Necesarias": 70},
-    {"Grado": "1º KYU", "Horas_Necesarias": 90},
-    {"Grado": "1º DAN", "Horas_Necesarias": 120},
+    {"Grado": "5º KYU", "Horas_Necesarias": 30},
+    {"Grado": "4º KYU", "Horas_Necesarias": 40},
+    {"Grado": "3º KYU", "Horas_Necesarias": 50},
+    {"Grado": "2º KYU", "Horas_Necesarias": 50},
+    {"Grado": "1º KYU", "Horas_Necesarias": 60},
+    {"Grado": "1º DAN", "Horas_Necesarias": 70},
     {"Grado": "2º DAN", "Horas_Necesarias": 200},
     {"Grado": "3º DAN", "Horas_Necesarias": 300},
     {"Grado": "4º DAN", "Horas_Necesarias": 400},
