@@ -574,7 +574,7 @@
                     const msg = data.error ? data.error.message : "Credenciales incorrectas";
                     showModal("Acceso Denegado", `<div style="color:#ff4444; font-weight:bold;">${msg}</div><p>Revisa DNI y contraseña.</p>`, true); 
                 }
-            } catch (e) { showModal("Error de Conexión", "No se puede contactar con el servidor.", true); }
+            } catch (e) { showModal("Error", "No hay conexión.", false); }
             finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
