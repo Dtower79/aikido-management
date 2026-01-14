@@ -120,7 +120,18 @@
         .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
 
         /* --- MODALES PREMIUM --- */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(8, 11, 20, 0.85); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
+        /* --- MODALES (CORREGIDO VISUAL) --- */
+        .modal-overlay { 
+            position: fixed; 
+            inset: 0; 
+            /* Aplicamos el degradado exacto de la pantalla de login */
+            background: radial-gradient(circle at top right, #1e1b4b, #05080f);
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 9999; 
+            padding: 20px; 
+        }
         .modal-content { background: #0f172a; border: 1px solid var(--glass-border); padding: 35px 30px; border-radius: 35px; width: 100%; max-width: 400px; text-align: center; box-sizing: border-box; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.6); }
         .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 12px; outline: none; box-sizing: border-box; transition: 0.3s; }
         .modal-field:focus { border-color: var(--accent); }
@@ -540,13 +551,20 @@
 
         // --- AUTH LOGIC (CORREGIDO ERROR 400) ---
         document.getElementById('activate-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const dni = document.getElementById('act-dni').value.trim().toUpperCase();
-            const p1 = document.getElementById('act-pass').value.trim();
-            const p2 = document.getElementById('act-pass2').value.trim();
+    e.preventDefault();
+        const dni = document.getElementById('act-dni').value.trim().toUpperCase();
+        const p1 = document.getElementById('act-pass').value.trim();
+        const p2 = document.getElementById('act-pass2').value.trim();
 
-            if(p1 !== p2) return showModal("Aviso", "Las contraseñas no coinciden.");
-            if(p1.length < 6) return showModal("Aviso", "La contraseña debe tener al menos 6 caracteres.");
+        // --- CORRECCIÓN: VALIDACIÓN VISUAL ---
+        if (p1 !== p2) {
+            showModal("Error", "Las contraseñas no coinciden. Por favor, revísalas.");
+            return; // Detiene la ejecución aquí
+        }
+
+        if (p1.length < 6) {
+            showModal("Seguridad", "La contraseña debe tener al menos 6 caracteres.");
+            return;
 
             const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.innerText;
