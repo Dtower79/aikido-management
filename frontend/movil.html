@@ -507,7 +507,7 @@
         .modal-content { 
             background: #0f172a; 
             border: 1px solid var(--glass-border); 
-            padding: 35px 30px; 
+            padding: 45px 30px 35px; /* Más espacio arriba (45px) */
             border-radius: 35px; 
             width: 100%; 
             max-width: 400px; 
@@ -515,7 +515,13 @@
             box-sizing: border-box; 
             max-height: 90vh; 
             overflow-y: auto; 
-            box-shadow: 0 25px 50px rgba(0,0,0,0.6); 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+            /* Ocultar barra de desplazamiento */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+        .modal-content::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
         }
 
         .modal-field { 
@@ -535,9 +541,12 @@
         }
         
         /* Corregir color del icono del reloj y calendario en navegadores móviles */
-        input[type="time"]::-webkit-calendar-picker-indicator,
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            /* Color gris azulado suave que combina con el diseño */
+            filter: invert(0.7) sepia(0) saturate(1) hue-rotate(200deg);
+            cursor: pointer;
+            font-size: 18px;
         }
 
         .modal-label { 
@@ -1038,7 +1047,7 @@
             months.forEach((m, idx) => { gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
             gridHtml += `</div>`;
             showModal("Generar Mes", `
-                <div style="text-align:left;">
+                <div style="text-align:left;margin-top:10px;">
                     <span class="modal-label">AÑO:</span>
                     <select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
                     <span class="modal-label">MES:</span>
@@ -1125,7 +1134,7 @@
         function openEditClass(id, raw, dur) { 
             const [d, t] = raw.split('T'); 
             showModal("Editar Clase", `
-                <div style="text-align:left;">
+                <div style="text-align:left;margin-top:10px;">
                     <span class="modal-label">FECHA:</span>
                     <input type="date" id="e-d" value="${d}" class="modal-field">
                     <span class="modal-label">HORA:</span>
