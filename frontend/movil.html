@@ -10,6 +10,7 @@
     <link rel="apple-touch-icon" href="img/logo-arashi-movil.png">
     <title>Arashi App</title>
     
+    <!-- Fuente Inter con peso 800 forzado -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     
@@ -32,7 +33,13 @@
             overflow-x: hidden; overflow-y: auto; color-scheme: dark; 
         }
 
-        h1, h2, h3, .val, .action-btn { font-weight: 800 !important; text-transform: uppercase; letter-spacing: -0.5px; }
+        /* TIPOGRAFÍA REDONDITA Y MARCADA (INTER 800) */
+        h1, h2, h3, .val, .action-btn, .next-grade-label, .month-header, .section-label { 
+            font-family: 'Inter', sans-serif; 
+            font-weight: 800 !important; 
+            text-transform: uppercase; 
+            letter-spacing: -0.5px; 
+        }
 
         .hidden { display: none !important; }
 
@@ -53,7 +60,6 @@
         .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         
         input, select { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
-        input[type="text"] { text-transform: uppercase; }
 
         /* --- DASHBOARD --- */
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; padding: 20px 25px 0; box-sizing: border-box; }
@@ -61,18 +67,26 @@
         
         .action-btn { width: 100%; padding: 18px; background: white; color: black; border: none; border-radius: 22px; font-size: 15px; cursor: pointer; transition: 0.2s; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; gap: 10px; }
         .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
+        .action-btn:disabled { background: #1e293b !important; color: white !important; opacity: 0.6; cursor: default; }
         
         .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 35px 25px; border-radius: 40px; box-shadow: 0 20px 45px rgba(239,68,68,0.3); text-align: center; margin: 0 20px 25px; border: 1px solid rgba(255,255,255,0.2); opacity: 0; transform: translateY(20px); animation: fadeInUp 0.8s forwards; }
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* --- PROGRESO DASHBOARD --- */
-        .progress-container { display: flex; justify-content: center; align-items: center; position: relative; margin: 20px auto 5px; width: 140px; height: 140px; }
+        /* --- PROGRESO DASHBOARD (CENTRADITO) --- */
+        .progress-container { 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            position: relative; margin: 20px auto 5px; width: 140px; height: 140px;
+        }
         .progress-ring { transform: rotate(-90deg); width: 140px; height: 140px; }
         .progress-ring__circle { transition: stroke-dashoffset 0.8s ease-in-out; stroke-dasharray: 339.29; stroke-dashoffset: 339.29; }
-        .progress-text { position: absolute; text-align: center; top: 48%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; width: 100%; }
+        .progress-text { 
+            position: absolute; text-align: center; 
+            top: 48%; left: 50%; transform: translate(-50%, -50%); 
+            display: flex; flex-direction: column; width: 100%;
+        }
         .progress-text .val { font-size: 34px; display: block; line-height: 1; margin: 0; color: white; }
         .progress-text .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-top: 2px; }
-        .next-grade-label { font-size: 13px; color: var(--accent); text-align: center; font-weight: 800; text-transform: uppercase; margin-bottom: 25px; display: block; letter-spacing: 1px; }
+        .next-grade-label { margin-top: 5px; font-size: 13px; color: var(--accent); text-align: center; font-weight: 800; text-transform: uppercase; margin-bottom: 25px; display: block; letter-spacing: 1px; }
 
         /* --- SENSEI UI --- */
         .class-group-card { background: rgba(30, 41, 59, 0.6); border: 1px solid var(--glass-border); border-radius: 25px; margin: 0 20px 20px; overflow: hidden; }
@@ -157,7 +171,7 @@
                     <input type="password" id="act-pass" class="modal-field" placeholder="Nueva Contraseña" required>
                     <input type="password" id="act-pass2" class="modal-field" placeholder="Repetir Contraseña" required>
                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
-                        <button type="submit" class="action-btn primary">ACTIVAR</button>
+                        <button type="submit" class="action-btn primary" id="btn-activate-submit">ACTIVAR</button>
                         <button type="button" class="action-btn" style="background:#334155; color:white;" onclick="document.getElementById('activate-modal').classList.add('hidden')">CANCELAR</button>
                     </div>
                 </form>
@@ -200,14 +214,13 @@
             <div id="next-grade-display" class="next-grade-label hidden">Cargando meta...</div>
 
             <div class="class-hero" id="class-hero-card">
-                <p style="margin:0; font-size:13px; font-weight:800; opacity:0.8;">Siguiente Keiko</p>
+                <p style="margin:0; font-size:15px; font-weight:800; opacity:0.8;">Siguiente Keiko</p>
                 <h2 id="next-class-time" style="margin:12px 0 4px; font-size:36px;">--:--</h2>
                 <p id="next-class-date" style="margin:0 0 15px; font-size:16px;">--/--/----</p>
                 <button class="action-btn" id="confirm-btn" onclick="confirmAttendance()">ASISTIR AL KEIKO</button>
             </div>
         </div>
 
-        <!-- CALENDARIO -->
         <div id="clases-view" class="hidden">
             <header class="header-app"><h1 style="margin:0; font-size:22px;">CALENDARIO</h1></header>
             <div id="calendar-content"></div>
@@ -245,7 +258,7 @@
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
         const getID = (o) => o.documentId || o.id;
 
-        // --- CORE FETCH ---
+        // --- SMART CACHE ---
         async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
             if (cacheKey) {
                 const cached = localStorage.getItem(`cache_${cacheKey}`);
@@ -262,7 +275,6 @@
             } catch (e) { return null; }
         }
 
-        // --- UTILS ---
         function showModal(t, htmlContent, showCloseBtn = true) { 
             document.getElementById('modal-title').innerText = t;
             document.getElementById('modal-body-content').innerHTML = htmlContent || "";
@@ -278,11 +290,11 @@
             return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}`, month: dateObj.toLocaleString('es-ES', { month: 'long' }), hour: parseInt(hh) };
         }
 
+        // --- GRADOS ---
         const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
         const GRADOS_FALLBACK = { "5º KYU": 30, "4º KYU": 40, "3º KYU": 50, "2º KYU": 50, "1º KYU": 60, "1º DAN": 70 };
         function normalize(g) { return (!g) ? "" : g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, ''); }
 
-        // --- INIT ---
         async function initApp() {
             const token = localStorage.getItem('aikido_jwt'), user = JSON.parse(localStorage.getItem('aikido_user'));
             if(!token || !user) return;
@@ -526,21 +538,64 @@
             localStorage.removeItem('cache_calendario_clases'); closeModal(); loadManageClasses(); checkTodayClass();
         }
 
-        // --- AUTH LOGIC ---
+        // --- AUTH LOGIC (CORREGIDO ERROR 400) ---
         document.getElementById('activate-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const dni = document.getElementById('act-dni').value.trim().toUpperCase(), p1 = document.getElementById('act-pass').value.trim(), p2 = document.getElementById('act-pass2').value.trim();
-            if(p1 !== p2) return alert("Las contraseñas no coinciden");
-            const btn = e.target.querySelector('button[type="submit"]'); btn.innerText = "PROCESANDO..."; btn.disabled = true;
+            const dni = document.getElementById('act-dni').value.trim().toUpperCase();
+            const p1 = document.getElementById('act-pass').value.trim();
+            const p2 = document.getElementById('act-pass2').value.trim();
+
+            if(p1 !== p2) return showModal("Aviso", "Las contraseñas no coinciden.");
+            if(p1.length < 6) return showModal("Aviso", "La contraseña debe tener al menos 6 caracteres.");
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerText = "PROCESANDO..."; btn.disabled = true;
+
             try {
-                const check = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
-                const json = await check.json();
-                if(json.data && json.data.length > 0) {
-                    const reg = await fetch(`${API_URL}/api/auth/local/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: dni, email: `${dni.toLowerCase()}@arashi.com`, password: p1, nombre: parseData(json.data[0]).nombre }) });
-                    if(reg.ok) { document.getElementById('activate-modal').classList.add('hidden'); showModal("OSS!", "Tu cuenta ha sido activada."); }
-                    else { const err = await reg.json(); showModal("Aviso", err.error.message.includes("taken") ? "Ya estás activo." : "Error de registro."); }
-                } else showModal("No encontrado", "DNI no registrado como alumno.");
-            } catch(e) { showModal("Error", "Error de red."); } finally { btn.innerText = "ACTIVAR"; btn.disabled = false; }
+                // 1. Verificar Alumno
+                const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
+                const checkData = await checkRes.json();
+
+                if (!checkData.data || checkData.data.length === 0) {
+                    showModal("DNI No Encontrado", "Este DNI no consta como alumno. Habla con el Sensei.");
+                    return;
+                }
+
+                const alu = checkData.data[0];
+                const nombreParaUser = parseData(alu).nombre || "Alumno";
+
+                // 2. Registrar en Strapi auth
+                const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: dni,
+                        email: `${dni.toLowerCase()}@arashi.com`, // Email único generado
+                        password: p1
+                        // Quitamos campo 'nombre' si Strapi v5 da 400 por no tenerlo en el User Content Type
+                    })
+                });
+
+                const regData = await regRes.json();
+
+                if (regRes.ok) {
+                    document.getElementById('activate-modal').classList.add('hidden');
+                    showModal("¡OSS!", "Cuenta activada. Ya puedes entrar con tu DNI.");
+                    e.target.reset();
+                } else {
+                    let msg = "Error de registro.";
+                    if(regData.error && regData.error.message) {
+                        if(regData.error.message.includes("taken")) msg = "Este DNI ya está activo en el sistema.";
+                        else msg = `Error: ${regData.error.message}`;
+                    }
+                    showModal("Aviso", msg);
+                }
+            } catch(e) {
+                showModal("Error", "Fallo de conexión.");
+            } finally {
+                btn.innerText = originalText; btn.disabled = false;
+            }
         });
 
         // --- COMMON ---
