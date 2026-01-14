@@ -15,6 +15,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 
     <style>
         /* --- VARIABLES DE DISEÑO --- */
@@ -507,7 +510,7 @@
         .modal-content { 
             background: #0f172a; 
             border: 1px solid var(--glass-border); 
-            padding: 45px 30px 35px; /* Más espacio arriba (45px) */
+            padding: 45px 30px 35px; /* Margen superior elegante */
             border-radius: 35px; 
             width: 100%; 
             max-width: 400px; 
@@ -516,13 +519,11 @@
             max-height: 90vh; 
             overflow-y: auto; 
             box-shadow: 0 25px 50px rgba(0,0,0,0.6);
-            /* Ocultar barra de desplazamiento */
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none; /* IE/Edge */
+            /* Ocultar barra de desplazamiento visualmente */
+            scrollbar-width: none; 
+            -ms-overflow-style: none; 
         }
-        .modal-content::-webkit-scrollbar {
-            display: none; /* Chrome/Safari */
-        }
+        .modal-content::-webkit-scrollbar { display: none; }
 
         .modal-field { 
             width: 100%; 
@@ -536,8 +537,8 @@
             outline: none; 
             box-sizing: border-box; 
             transition: 0.3s; 
-            font-family: 'Inter', sans-serif !important; /* Forzamos Inter */
-            font-weight: 800; /* Inter 800 */
+            font-family: 'Inter', sans-serif !important; 
+            font-weight: 800; 
         }
 
         .sensei-select {
@@ -558,15 +559,12 @@
             background-size: 15px;
             transition: 0.3s;
         }
-        .sensei-select:focus { border-color: var(--accent); background: rgba(30, 41, 59, 0.8); }
 
-        /* Corregir color del icono del reloj y calendario en navegadores móviles */
+        /* Color de iconos en campos fecha/hora */
         input[type="date"]::-webkit-calendar-picker-indicator,
         input[type="time"]::-webkit-calendar-picker-indicator {
-            /* Color gris azulado suave que combina con el diseño */
-            filter: invert(0.7) sepia(0) saturate(1) hue-rotate(200deg);
+            filter: invert(0.8) sepia(1) saturate(5) hue-rotate(175deg);
             cursor: pointer;
-            font-size: 18px;
         }
 
         .modal-label { 
@@ -605,33 +603,6 @@
             border-color: var(--accent); 
             box-shadow: var(--neon); 
         }
-
-        /* --- IOS TUTORIAL --- */
-        .ios-tutorial { 
-            display: none; 
-            width: 100%; 
-            max-width: 320px; 
-            margin-top: 20px; 
-        }
-
-        .ios-step { 
-            display: flex; 
-            align-items: center; 
-            gap: 15px; 
-            text-align: left; 
-            background: rgba(255,255,255,0.05); 
-            padding: 12px 15px; 
-            border-radius: 20px; 
-            margin-bottom: 10px; 
-            border: 1px solid var(--glass-border); 
-        }
-
-        .ios-step i { 
-            font-size: 18px; 
-            color: var(--accent); 
-            width: 25px; 
-            text-align: center; 
-        }
     </style>
 </head>
 <body>
@@ -643,32 +614,27 @@
         <div id="android-btn-area">
             <button class="action-btn primary" onclick="handleAndroidInstall()">INSTALAR AHORA</button>
         </div>
-        <div id="ios-instructions" class="ios-tutorial">
-            <div class="ios-step"><i class="fa-solid fa-arrow-up-from-bracket"></i><p>1. Pulsa <strong>'Compartir'</strong> en Safari.</p></div>
-            <div class="ios-step"><i class="fa-solid fa-scroll"></i><p>2. Desliza hacia abajo.</p></div>
-            <div class="ios-step"><i class="fa-regular fa-square-plus"></i><p>3. Selecciona <strong>'Añadir a inicio'</strong>.</p></div>
-        </div>
     </div>
 
     <div id="app-content">
-        <!-- MODAL DE MENSAJES DEL SISTEMA -->
+        <!-- MODAL SISTEMA -->
         <div id="custom-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
                 <h3 id="modal-title">...</h3>
-                <div id="modal-body-content" style="margin-bottom:20px; font-size:14px; color: #ddd; line-height:1.5; font-family:'Inter'"></div>
+                <div id="modal-body-content" style="margin-bottom:20px; font-size:14px; color: #ddd; line-height:1.5;"></div>
                 <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">CERRAR</button>
             </div>
         </div>
 
-        <!-- MODAL ACTIVAR CUENTA -->
+        <!-- ACTIVAR CUENTA -->
         <div id="activate-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <h3 style="margin-top:0">Activar Cuenta</h3>
-                <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px; font-family:'Inter'">Introduce tu DNI y crea una contraseña.</p>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Introduce tu DNI y crea una contraseña.</p>
                 <form id="activate-form">
                     <input type="text" id="act-dni" class="modal-field" placeholder="DNI (12345678X)" required maxlength="9" oninput="this.value = this.value.toUpperCase()">
-                    <input type="password" id="act-pass" class="modal-field" placeholder="Nueva Contraseña (mín 6)" required>
+                    <input type="password" id="act-pass" class="modal-field" placeholder="Nueva Contraseña" required>
                     <input type="password" id="act-pass2" class="modal-field" placeholder="Repetir Contraseña" required>
                     <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px;">
                         <button type="submit" class="action-btn primary" id="btn-activate-submit">ACTIVAR</button>
@@ -737,12 +703,8 @@
         <!-- SENSEI PANEL VIEW -->
         <div id="sensei-view" class="hidden">
             <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
-
-            <div id="sensei-view" class="hidden">
-            <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
             
-            <!-- ESTE ES EL BLOQUE QUE TE FALTA Y POR EL QUE DA ERROR -->
-            <div style="padding: 0 25px; margin-bottom: 25px;">
+            <div style="padding: 0 25px; margin-bottom: 25px; margin-top: 10px;">
                 <p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">FILTRAR TATAMI POR DOJO:</p>
                 <select id="sensei-dojo-filter" class="sensei-select" onchange="loadSenseiPanel()">
                     <option value="all">-- TODOS LOS DOJOS --</option>
@@ -756,8 +718,6 @@
             <div style="margin:0 20px 25px;">
                 <button class="action-btn" style="padding:18px; font-size:12px; background:var(--accent); color:white; width:100%;" onclick="uiCreateSingleClass()">+ NUEVA CLASE SUELTA</button>
             </div>
-            <div id="student-list" style="padding-bottom: 40px;"></div>
-        </div>
 
             <!-- Contenedor de Clases con alumnos pendientes -->
             <div id="student-list" style="padding-bottom: 40px;"></div>
@@ -776,147 +736,110 @@
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
 
-        /* --- REGLA DE ORO: BYPASS DE ESCRITORIO --- */
+        /* --- DETECTOR STANDALONE / BYPASS PC --- */
         (function() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
-            // Si NO es móvil O ya está instalado (Standalone), entramos directo.
-            if (!isMobile || isStandalone) {
-                document.documentElement.classList.add('ready-to-show');
-            }
+            if (!isMobile || isStandalone) document.documentElement.classList.add('ready-to-show');
         })();
 
         let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null, requisitosGradoGlobal = [];
         let selectedMonthGen = new Date().getMonth();
         let html5QrCode = null;
 
+        /* --- UTILS --- */
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
         const getID = (o) => o.documentId || o.id;
 
-        // --- SMART CACHE SYSTEM ---
+        /* --- SISTEMA DE CACHÉ Y DEBUG --- */
         async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
+            console.log(`🔍 [API] Consultando: ${endpoint}`);
             if (cacheKey) {
                 const cached = localStorage.getItem(`cache_${cacheKey}`);
                 if (cached) {
                     const { time, data } = JSON.parse(cached);
-                    const diff = (Date.now() - time) / (1000 * 60 * 60);
-                    if (diff < durationHours) return data; 
+                    if ((Date.now() - time) / (1000 * 60 * 60) < durationHours) return data; 
                 }
             }
             try {
-                const res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+                const res = await fetch(`${API_URL}${endpoint}`, { 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+                });
                 const json = await res.json();
                 if (cacheKey && json) {
                     localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({ time: Date.now(), data: json }));
                 }
                 return json;
-            } catch (e) { return null; }
+            } catch (e) { console.error("❌ Fallo API:", e); return null; }
         }
 
-        // --- MODAL UTILS ---
+        /* --- MODALES --- */
         function showModal(t, htmlContent, showCloseBtn = true) { 
             document.getElementById('modal-title').innerText = t;
             document.getElementById('modal-body-content').innerHTML = htmlContent || "";
             document.getElementById('modal-ok-btn').style.display = showCloseBtn ? 'block' : 'none';
             document.getElementById('custom-modal').classList.remove('hidden'); 
         }
-
         function closeModal() { 
             document.getElementById('custom-modal').classList.add('hidden'); 
-            if(html5QrCode) { 
-                html5QrCode.stop().catch(()=>{}); 
-                html5QrCode = null; 
-            } 
+            if(html5QrCode) { html5QrCode.stop().catch(()=>{}); html5QrCode = null; } 
         }
 
-        // --- FECHAS ---
+        /* --- FECHAS Y GRADOS --- */
         function formatTimeSafe(iso) {
             if(!iso) return { time: "--:--", date: "--/--/----", month: "" };
-            const [dPart, tPart] = iso.split('T'); 
-            const [y, m, d] = dPart.split('-'); 
-            const [hh, mm] = tPart.split(':');
-            const dateObj = new Date(y, m-1, d);
-            return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}`, month: dateObj.toLocaleString('es-ES', { month: 'long' }), hour: parseInt(hh) };
+            const dateObj = new Date(iso);
+            return { 
+                time: dateObj.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'}) + "H", 
+                date: dateObj.toLocaleDateString('es-ES'), 
+                month: dateObj.toLocaleString('es-ES', { month: 'long' }), 
+                hour: dateObj.getHours() 
+            };
         }
 
-        // --- GRADOS ---
         const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
         const GRADOS_FALLBACK = { "5º KYU": 30, "4º KYU": 40, "3º KYU": 50, "2º KYU": 50, "1º KYU": 60, "1º DAN": 70 };
         function normalize(g) { return (!g) ? "" : g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, ''); }
 
-        // --- CORE INIT ---
+        /* --- CORE INIT --- */
         async function initApp() {
             console.log("🚀 [INIT] Arrancando aplicación...");
-            const token = localStorage.getItem('aikido_jwt');
-            const user = JSON.parse(localStorage.getItem('aikido_user'));
-            
-            if (!token || !user) {
-                console.warn("⚠️ [INIT] No hay sesión activa. Redirigiendo a login.");
-                return;
-            }
+            const token = localStorage.getItem('aikido_jwt'), user = JSON.parse(localStorage.getItem('aikido_user'));
+            if(!token || !user) return;
 
-            // 1. Preparar Interfaz Base
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
 
-            // 2. Check de Instructor (Basado en tu captura de 'User')
-            // Comprobamos si es sensei en la cuenta de usuario
-            if (user.is_sensei === true) {
-                console.log("🥋 [AUTH] Usuario identificado como SENSEI.");
-                document.getElementById('nav-sensei').style.display = 'flex';
-                if (user.is_sensei === true) {
-                document.getElementById('nav-sensei').style.display = 'flex';
-                await loadDojosFilter(); // <--- AÑADE ESTO AQUÍ
-                }
-            }
-
-            // 3. Cargar Requisitos de Grado (Caché de 20 días)
-            // Esto es vital para que el círculo de horas no salga con "--"
-            try {
-                const jsonReq = await fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480);
-                if (jsonReq && jsonReq.data) {
-                    requisitosGradoGlobal = jsonReq.data.map(d => { 
-                        const a = d.attributes || d; 
-                        return { 
-                            NORM: normalize(a.GRADO || a.grado), 
-                            HORAS: parseFloat(a.HORAS_NECESARIAS || a.horas_necesarias || 0) 
-                        }; 
-                    });
-                    console.log("📚 [DATA] Requisitos de grado cargados:", requisitosGradoGlobal.length);
-                }
-            } catch (e) {
-                console.error("❌ [DATA] Error cargando requisitos:", e);
+            // Carga de requisitos
+            const jsonReq = await fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480);
+            if(jsonReq && jsonReq.data) {
+                requisitosGradoGlobal = jsonReq.data.map(d => { 
+                    const a = d.attributes || d; 
+                    return { NORM: normalize(a.GRADO || a.grado), HORAS: parseFloat(a.HORAS_NECESARIAS || a.horas_necesarias || 0) }; 
+                });
             }
             
-            // 4. Cargar Perfil y Keikos
-            // Primero el perfil para tener el documentId del alumno para la asistencia
             await refreshStudentData(); 
-            
-            // Si después de cargar el perfil el alumno es instructor, también mostramos el panel
-            if (alumnoGlobal) {
-                const p = alumnoGlobal.attributes || alumnoGlobal;
-                if (p.es_instructor === true) {
-                    console.log("🥋 [AUTH] Alumno identificado como INSTRUCTOR.");
-                    document.getElementById('nav-sensei').style.display = 'flex';
-                }
-            }
 
+            // Doble Check Instructor (User o Alumno)
+            const esSensei = user.is_sensei === true;
+            const esInstructor = alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor) === true;
+            if (esSensei || esInstructor) {
+                document.getElementById('nav-sensei').style.display = 'flex';
+                await loadDojosFilter(); 
+            }
             checkTodayClass();
         }
 
+        /* --- REFRESH DATA (Sincronización v5) --- */
         async function refreshStudentData() {
-            const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             if (!user) return;
-
-            console.log("🔍 [DEBUG] Buscando ficha vinculada al User ID:", user.id);
             
-            // Filtro v5: Prioridad Relación -> Fallback DNI
             let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-            let json = await fetchSmart(endpoint, 'perfil_alumno', 0.05); 
+            let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
 
             if (!json || !json.data || json.data.length === 0) {
                 endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
@@ -927,18 +850,14 @@
                 alumnoGlobal = json.data[0]; 
                 const p = alumnoGlobal.attributes || alumnoGlobal;
                 
-                // UI: Nombre e Iniciales (Inter 800 por CSS)
-                const nombre = p.nombre || user.nombre || "Alumno";
-                const apellidos = p.apellidos || user.apellidos || "";
-                document.getElementById('user-display-name').innerText = nombre.toUpperCase();
-                document.getElementById('user-initials').innerText = (nombre[0] + (apellidos[0] || "")).toUpperCase();
+                document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
+                document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
 
                 if (p.dojo) {
                     const d = p.dojo.data ? p.dojo.data : p.dojo;
                     dojoIdGlobal = d.documentId || d.id;
                 }
 
-                // Lógica de Horas y Círculo
                 const horas = parseFloat(p.horas_acumuladas || 0);
                 document.getElementById('stat-hours').innerText = horas.toFixed(1);
                 document.getElementById('student-progress-circle').classList.remove('hidden');
@@ -950,61 +869,20 @@
                 }
                 
                 const req = requisitosGradoGlobal.find(r => r.NORM === normalize(meta));
-                const horasTarget = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
+                const target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
 
                 const circle = document.getElementById('progress-bar');
-                const pct = Math.min((horas / horasTarget) * 100, 100);
+                const pct = Math.min((horas / target) * 100, 100);
                 circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
                 
-                document.getElementById('stat-label').innerText = `HORAS / ${horasTarget}`;
+                document.getElementById('stat-label').innerText = `HORAS / ${target}`;
                 const lblMeta = document.getElementById('next-grade-display');
                 lblMeta.innerText = `CAMINO AL ${meta.toUpperCase()}`;
                 lblMeta.classList.remove('hidden');
-
-                console.log("✅ [DEBUG] Ficha sincronizada.");
             }
         }
 
-        async function checkTodayClass() {
-            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
-            const json = await res.json(); 
-            const ahora = new Date();
-            const futuras = (json.data||[]).filter(c => new Date(parseData(c).Fecha_Hora) >= ahora);
-            const btn = document.getElementById('confirm-btn');
-
-            if (futuras.length > 0) {
-                const cRaw = futuras[0]; 
-                claseHoyId = getID(cRaw);
-                const f = formatTimeSafe(parseData(cRaw).Fecha_Hora);
-                document.getElementById('next-class-time').innerText = f.time;
-                document.getElementById('next-class-date').innerText = f.date;
-                btn.classList.remove('hidden');
-                
-                if(alumnoGlobal) {
-                    const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
-                    const chkJ = await chk.json();
-                    if(chkJ.data.length > 0) { 
-                        btn.innerText = "CONFIRMADO"; 
-                        btn.disabled = true; 
-                        btn.style.background = "#1e293b"; 
-                        btn.style.color = "white"; 
-                        btn.style.opacity = "0.7";
-                    } else { 
-                        btn.innerText = "ASISTIR AL KEIKO"; 
-                        btn.disabled = false; 
-                        btn.style.background = "white"; 
-                        btn.style.color = "black"; 
-                        btn.style.opacity = "1";
-                    }
-                }
-            } else {
-                document.getElementById('next-class-time').innerText = "--:--";
-                document.getElementById('next-class-date').innerText = "Sin clases previstas"; 
-                btn.classList.add('hidden');
-            }
-        }
-
-        // --- SENSEI LOGIC ---
+        /* --- SENSEI PANEL (Agrupación y 7 días) --- */
         async function loadSenseiPanel() {
             const listDiv = document.getElementById('student-list');
             const filterEl = document.getElementById('sensei-dojo-filter');
@@ -1013,19 +891,10 @@
             
             const limitDate = new Date();
             limitDate.setDate(limitDate.getDate() - 7);
-            const isoLimit = limitDate.toISOString();
 
             try {
-                // Simplificamos la consulta para evitar el Error 400 de Strapi v5
-                // Quitamos el sort por relación que es lo que suele fallar
-                let url = `/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate]=dojo&pagination[limit]=100`;
-                
-                const res = await fetch(`${API_URL}${url}`, { 
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-                });
-
-                if (!res.ok) throw new Error("Error en la petición");
-
+                let url = `/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno]=*&populate[clase][populate]=dojo&pagination[limit]=100`;
+                const res = await fetch(`${API_URL}${url}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
                 const json = await res.json();
                 const groups = {};
 
@@ -1033,24 +902,19 @@
                     const a = asist.attributes || asist;
                     const cla = parseRelation(a.clase);
                     const alu = parseRelation(a.alumno);
-                    
                     if (!cla || !alu) return;
 
                     const fechaClase = new Date(cla.Fecha_Hora);
-                    const cid = getID(a.clase);
-                    const dojoClaseId = getID(cla.dojo);
+                    const cid = getID(a.clase), dojoId = getID(cla.dojo);
 
-                    // Filtro de 7 días y Dojo
                     if (fechaClase < limitDate) return;
-                    if (dojoFilter !== 'all' && dojoClaseId !== dojoFilter) return;
+                    if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
 
                     if (!groups[cid]) groups[cid] = { info: cla, students: [] };
                     groups[cid].students.push({ 
                         asistId: asist.documentId || asist.id, 
                         alumnoId: getID(a.alumno),
-                        nombre: alu.nombre,
-                        apellidos: alu.apellidos,
-                        grado: alu.grado
+                        nombre: alu.nombre, apellidos: alu.apellidos, grado: alu.grado
                     });
                 });
 
@@ -1060,132 +924,82 @@
                     return;
                 }
 
-                // Ordenar los grupos localmente por fecha (ya que Strapi fallaba al hacerlo)
                 keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
-
                 listDiv.innerHTML = "";
                 keys.forEach(cid => {
-                    const g = groups[cid];
-                    const f = formatTimeSafe(g.info.Fecha_Hora);
-                    let studentRows = "";
-
+                    const g = groups[cid], f = formatTimeSafe(g.info.Fecha_Hora);
+                    let sRows = "";
                     g.students.forEach(s => {
-                        studentRows += `
-                        <div class="student-item" id="it-${s.asistId}" style="margin: 8px 0; width: 100%; box-sizing: border-box;">
-                            <div class="student-info">
-                                <h4>${s.nombre} ${s.apellidos || ""}</h4>
-                                <p>${s.grado || 'S/G'}</p>
-                            </div>
+                        sRows += `
+                        <div class="student-item" id="it-${s.asistId}" style="margin: 8px 0; width: 100%;">
+                            <div class="student-info"><h4>${s.nombre} ${s.apellidos || ""}</h4><p>${s.grado || 'S/G'}</p></div>
                             <div class="sensei-actions">
                                 <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
                                 <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
                             </div>
                         </div>`;
                     });
-
                     listDiv.innerHTML += `
                     <div class="class-group-card" style="margin: 0 20px 20px;">
                         <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                            <div style="text-align:left;">
-                                <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
-                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
-                            </div>
+                            <div style="text-align:left;"><h3 style="font-size:16px;">${f.date} - ${f.time}</h3><p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} PENDIENTES</p></div>
                             <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                         </div>
-                        <div class="class-group-body" style="padding: 10px 15px;">
-                            ${studentRows}
-                        </div>
+                        <div class="class-group-body" style="padding: 10px 15px;">${sRows}</div>
                     </div>`;
                 });
-            } catch (e) {
-                console.error("❌ Error cargando panel:", e);
-                listDiv.innerHTML = "<p style='text-align:center; color:var(--accent); padding:40px;'>Error al conectar con el tatami.</p>";
-            }
+            } catch (e) { console.error(e); listDiv.innerHTML = "<p style='padding:40px; text-align:center;'>Fallo de conexión.</p>"; }
         }
 
+        /* --- VALIDACIÓN Y ASISTENCIA --- */
         async function validateAttendance(asistId, asiste, aluId, dur) {
             const token = localStorage.getItem('aikido_jwt');
-            await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: asiste ? 'Asistio' : 'No Asistio' } }) });
+            await fetch(`${API_URL}/api/asistencias/${asistId}`, { 
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                body: JSON.stringify({ data: { Estado: asiste ? 'Asistio' : 'No Asistio' } }) 
+            });
             if(asiste) {
                 const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const actual = parseFloat(parseData(await alRes.json()).data.horas_acumuladas || 0);
-                await fetch(`${API_URL}/api/alumnos/${aluId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: actual + parseFloat(dur) } }) });
+                const actual = parseFloat((await alRes.json()).data.attributes?.horas_acumuladas || 0);
+                await fetch(`${API_URL}/api/alumnos/${aluId}`, { 
+                    method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                    body: JSON.stringify({ data: { horas_acumuladas: actual + parseFloat(dur) } }) 
+                });
             }
             document.getElementById(`it-${asistId}`).remove(); 
-            localStorage.removeItem('cache_perfil_alumno'); 
-            refreshStudentData(); 
-            checkTodayClass();
+            localStorage.removeItem('cache_perfil_alumno'); refreshStudentData();
         }
 
-        function generateClassQR(classId) {
-            showModal("Código QR", `<div class="qr-display-container"><div id="qr-gen"></div></div><p style="font-size:12px;color:#aaa;margin-top:10px;">Apunta a los alumnos para validar.</p>`, true);
-            new QRCode(document.getElementById('qr-gen'), { text: classId, width: 200, height: 200 });
+        async function checkTodayClass() {
+            if (!alumnoGlobal) return;
+            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+            const json = await res.json(), ahora = new Date();
+            const futuras = (json.data||[]).filter(c => new Date(parseData(c).Fecha_Hora) >= ahora);
+            const btn = document.getElementById('confirm-btn');
+
+            if (futuras.length > 0) {
+                const cProx = futuras[0]; claseHoyId = getID(cProx);
+                const f = formatTimeSafe(parseData(cProx).Fecha_Hora);
+                document.getElementById('next-class-time').innerText = f.time;
+                document.getElementById('next-class-date').innerText = f.date;
+                btn.classList.remove('hidden');
+                
+                const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+                const chkJ = await chk.json();
+                if(chkJ.data.length > 0) { 
+                    const est = chkJ.data[0].attributes?.Estado || chkJ.data[0].Estado;
+                    btn.innerText = (est === 'Confirmado') ? "CONFIRMADO" : "CLASE OK";
+                    btn.disabled = true; btn.style.background = "#1e293b"; btn.style.opacity = "0.7";
+                } else { btn.innerText = "ASISTIR AL KEIKO"; btn.disabled = false; btn.style.background = "white"; }
+            } else { document.getElementById('next-class-date').innerText = "Sin keikos hoy"; btn.classList.add('hidden'); }
         }
 
-        // --- SENSEI GESTIÓN CLASES ---
-        async function checkClassExists(iso) {
-            const res = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$eq]=${iso}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
-            const json = await res.json();
-            return json.data && json.data.length > 0;
-        }
-
-        function setGenMonth(m, btn) { 
-            selectedMonthGen = m; 
-            document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active')); 
-            btn.classList.add('active'); 
-        }
-
-        function uiGenerateMonth() {
-            const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-            let gridHtml = `<div class="month-picker-grid">`;
-            months.forEach((m, idx) => { gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
-            gridHtml += `</div>`;
-            showModal("Generar Mes", `
-                <div style="text-align:left;margin-top:10px;">
-                    <span class="modal-label">AÑO:</span>
-                    <select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
-                    <span class="modal-label">MES:</span>
-                    ${gridHtml}
-                    <span class="modal-label">HORA MAÑANA (Mar):</span>
-                    <input type="time" id="gen-morning" value="10:00" class="modal-field">
-                    <span class="modal-label">HORA TARDE (Mar/Jue):</span>
-                    <input type="time" id="gen-afternoon" value="19:00" class="modal-field">
-                    <button class="action-btn primary" onclick="processGeneration()" style="margin-top:10px;">GENERAR CALENDARIO</button>
-                </div>`, true);
-        }
-
-        async function processGeneration() {
-            const token = localStorage.getItem('aikido_jwt');
-            const year = parseInt(document.getElementById('gen-year-select').value), month = selectedMonthGen;
-            const hM = document.getElementById('gen-morning').value, hT = document.getElementById('gen-afternoon').value;
-            let creadas = 0, ultimo = new Date(year, month + 1, 0).getDate();
-            const btn = document.querySelector('#custom-modal .action-btn.primary'); 
-            btn.innerText = "GENERANDO..."; 
-            btn.disabled = true;
-
-            for(let d = 1; d <= ultimo; d++) {
-                const dateObj = new Date(year, month, d), day = dateObj.getDay();
-                const send = async (h) => {
-                    const iso = `${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}T${h}:00.000`;
-                    if(!(await checkClassExists(iso))) {
-                        await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: 1.5, dojo: dojoIdGlobal } }) });
-                        creadas++;
-                    }
-                };
-                if(day === 2) { await send(hM); await send(hT); } else if(day === 4) { await send(hT); }
-            }
-            localStorage.removeItem('cache_calendario_clases'); 
-            showModal("ÉXITO", `Se han creado ${creadas} clases.`); 
-            checkTodayClass();
-        }
-
+        /* --- GESTIÓN CALENDARIO --- */
         async function loadManageClasses() {
-            const token = localStorage.getItem('aikido_jwt'); 
             const listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando Editor...</p>";
-            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100`, { headers: { 'Authorization': `Bearer ${token}` } });
-            const json = await res.json(); 
-            const grouped = {};
+            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+            const json = await res.json(), grouped = {};
             json.data.filter(c => new Date(parseData(c).Fecha_Hora) > new Date()).forEach(c => {
                 const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora);
                 if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
@@ -1195,162 +1009,105 @@
             listDiv.innerHTML = ""; 
             for (const month in grouped) {
                 let html = `<div class="month-header">${month}</div>`;
-                if(grouped[month].morning.length) { html += `<div class="section-label">Mañana</div><div class="grid-container">`; grouped[month].morning.forEach(item => html += `<div class="class-card" onclick="openEditClass('${item.id}','${item.raw}',${item.dur})"><h4>${item.date}</h4><p>${item.time} • ${item.dur}h</p></div>`); html += `</div>`; }
-                if(grouped[month].afternoon.length) { html += `<div class="section-label">Tarde</div><div class="grid-container">`; grouped[month].afternoon.forEach(item => html += `<div class="class-card" onclick="openEditClass('${item.id}','${item.raw}',${item.dur})"><h4>${item.date}</h4><p>${item.time} • ${item.dur}h</p></div>`); html += `</div>`; }
+                if(grouped[month].morning.length) { 
+                    html += `<div class="section-label">Mañana</div><div class="grid-container">`; 
+                    grouped[month].morning.forEach(i => html += `<div class="class-card" onclick="openEditClass('${i.id}','${i.raw}',${i.dur})"><h4>${i.date}</h4><p>${i.time} • ${i.dur}h</p></div>`); 
+                    html += `</div>`; 
+                }
+                if(grouped[month].afternoon.length) { 
+                    html += `<div class="section-label">Tarde</div><div class="grid-container">`; 
+                    grouped[month].afternoon.forEach(i => html += `<div class="class-card" onclick="openEditClass('${i.id}','${i.raw}',${i.dur})"><h4>${i.date}</h4><p>${i.time} • ${i.dur}h</p></div>`); 
+                    html += `</div>`; 
+                }
                 listDiv.innerHTML += html;
             }
         }
 
-        function uiCreateSingleClass() { 
-            showModal("Nueva Clase Suelta", `
-                <div style="text-align:left;">
-                    <span class="modal-label">FECHA:</span>
-                    <input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}">
-                    <span class="modal-label">HORA:</span>
-                    <input type="time" id="single-time" class="modal-field" value="10:00">
-                    <span class="modal-label">DURACIÓN:</span>
-                    <select id="single-dur" class="modal-field">
-                        <option value="1">1.0h</option>
-                        <option value="1.5" selected>1.5h</option>
-                    </select>
-                    <button class="action-btn primary" onclick="processSingleClass()" style="margin-top:10px;">CREAR KEIKO</button>
-                </div>`, true); 
-        }
-
-        async function processSingleClass() { 
-            const token = localStorage.getItem('aikido_jwt'), d = document.getElementById('single-date').value, t = document.getElementById('single-time').value, dur = document.getElementById('single-dur').value; 
-            await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: `${d}T${t}:00.000Z`, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) }); 
-            localStorage.removeItem('cache_calendario_clases'); 
-            closeModal(); 
-            checkTodayClass(); 
-        }
-
         function openEditClass(id, raw, dur) { 
             const [d, t] = raw.split('T'); 
-            showModal("Editar Clase", `
-                <div style="text-align:left;margin-top:10px;">
-                    <span class="modal-label">FECHA:</span>
-                    <input type="date" id="e-d" value="${d}" class="modal-field">
-                    <span class="modal-label">HORA:</span>
-                    <input type="time" id="e-h" value="${t.substring(0,5)}" class="modal-field">
-                    <span class="modal-label">DURACIÓN:</span>
-                    <select id="e-dur" class="modal-field">
-                        <option value="1" ${dur==1?'selected':''}>1.0h</option>
-                        <option value="1.5" ${dur==1.5?'selected':''}>1.5h</option>
-                    </select>
+            showModal("EDITAR CLASE", `
+                <div style="text-align:left; margin-top:10px;">
+                    <span class="modal-label">FECHA:</span><input type="date" id="e-d" value="${d}" class="modal-field">
+                    <span class="modal-label">HORA:</span><input type="time" id="e-h" value="${t.substring(0,5)}" class="modal-field">
+                    <span class="modal-label">DURACIÓN:</span><select id="e-dur" class="modal-field"><option value="1" ${dur==1?'selected':''}>1.0h</option><option value="1.5" ${dur==1.5?'selected':''}>1.5h</option></select>
                     <button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR CAMBIOS</button>
                     <button class="action-btn" style="background:#ef4444; color:white; margin-top:10px;" onclick="deleteClass('${id}')">ELIMINAR KEIKO</button>
                 </div>`, true); 
         }
 
         async function saveClass(id) { 
-            const token = localStorage.getItem('aikido_jwt'), dVal = document.getElementById('e-d').value, tVal = document.getElementById('e-h').value, dur = document.getElementById('e-dur').value; 
-            await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: `${dVal}T${tVal}:00.000Z`, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) }); 
-            localStorage.removeItem('cache_calendario_clases'); 
-            closeModal(); 
-            loadManageClasses(); 
-            checkTodayClass(); 
+            const dVal = document.getElementById('e-d').value, tVal = document.getElementById('e-h').value, dur = document.getElementById('e-dur').value; 
+            await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { Fecha_Hora: `${dVal}T${tVal}:00.000Z`, Duracion: parseFloat(dur) } }) }); 
+            localStorage.removeItem('cache_calendario_clases'); closeModal(); loadManageClasses(); 
         }
 
         async function deleteClass(id) { 
             await fetch(`${API_URL}/api/clases/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } }); 
-            localStorage.removeItem('cache_calendario_clases'); 
-            closeModal(); 
-            loadManageClasses(); 
-            checkTodayClass(); 
+            localStorage.removeItem('cache_calendario_clases'); closeModal(); loadManageClasses(); 
         }
 
-        // --- AUTH LOGIC ---
+        /* --- GENERACIÓN AUTOMÁTICA --- */
+        function setGenMonth(m, btn) { selectedMonthGen = m; document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+        function uiGenerateMonth() {
+            const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            let gridHtml = `<div class="month-picker-grid">`;
+            months.forEach((m, idx) => { gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
+            gridHtml += `</div>`;
+            showModal("GENERAR MES", `<div style="text-align:left; margin-top:10px;"><span class="modal-label">AÑO:</span><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><span class="modal-label">MES:</span>${gridHtml}<span class="modal-label">HORA MAÑANA (Mar):</span><input type="time" id="gen-morning" value="10:00" class="modal-field"><span class="modal-label">HORA TARDE (Mar/Jue):</span><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><button class="action-btn primary" onclick="processGeneration()" style="margin-top:10px;">GENERAR CALENDARIO</button></div>`, true);
+        }
+
+        async function processGeneration() {
+            const token = localStorage.getItem('aikido_jwt'), year = parseInt(document.getElementById('gen-year-select').value), month = selectedMonthGen;
+            const hM = document.getElementById('gen-morning').value, hT = document.getElementById('gen-afternoon').value;
+            let creadas = 0, ultimo = new Date(year, month + 1, 0).getDate();
+            const btn = document.querySelector('#custom-modal .action-btn.primary'); btn.innerText = "GENERANDO..."; btn.disabled = true;
+            for(let d = 1; d <= ultimo; d++) {
+                const dateObj = new Date(year, month, d), day = dateObj.getDay();
+                const send = async (h) => {
+                    const iso = `${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}T${h}:00.000Z`;
+                    await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: 1.5, dojo: dojoIdGlobal } }) }); creadas++;
+                };
+                if(day === 2) { await send(hM); await send(hT); } else if(day === 4) { await send(hT); }
+            }
+            localStorage.removeItem('cache_calendario_clases'); showModal("ÉXITO", `Se han creado ${creadas} clases.`); 
+        }
+
+        function uiCreateSingleClass() { 
+            showModal("NUEVA CLASE SUELTA", `<div style="text-align:left; margin-top:10px;"><span class="modal-label">FECHA:</span><input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}"><span class="modal-label">HORA:</span><input type="time" id="single-time" class="modal-field" value="10:00"><span class="modal-label">DURACIÓN:</span><select id="single-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select><button class="action-btn primary" onclick="processSingleClass()" style="margin-top:10px;">CREAR KEIKO</button></div>`, true); 
+        }
+
+        async function processSingleClass() { 
+            const token = localStorage.getItem('aikido_jwt'), d = document.getElementById('single-date').value, t = document.getElementById('single-time').value, dur = document.getElementById('single-dur').value; 
+            await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: `${d}T${t}:00.000Z`, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) }); 
+            localStorage.removeItem('cache_calendario_clases'); closeModal(); checkTodayClass(); 
+        }
+
+        /* --- AUTH Y ACTIVACIÓN --- */
         document.getElementById('activate-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const dni = document.getElementById('act-dni').value.trim().toUpperCase();
-            const p1 = document.getElementById('act-pass').value.trim();
-            const p2 = document.getElementById('act-pass2').value.trim();
-            if (p1 !== p2) { showModal("Error", "Las contraseñas no coinciden."); return; }
-
-            const btn = document.getElementById('btn-activate-submit');
-            btn.innerText = "PROCESANDO..."; btn.disabled = true;
-
+            const dni = document.getElementById('act-dni').value.trim().toUpperCase(), p1 = document.getElementById('act-pass').value.trim(), p2 = document.getElementById('act-pass2').value.trim();
+            if (p1 !== p2) { showModal("Aviso", "Contraseñas no coinciden."); return; }
+            if (p1.length < 6) { showModal("Aviso", "Mínimo 6 caracteres."); return; }
+            const btn = document.getElementById('btn-activate-submit'); btn.innerText = "PROCESANDO..."; btn.disabled = true;
             try {
-                // 1. VALIDACIÓN LOCAL (Castellano original)
-                if (p1 !== p2) { 
-                    showModal("Aviso", "Las contraseñas no coinciden. Por favor, revísalas."); 
-                    btn.innerText = "ACTIVAR"; btn.disabled = false; return; 
-                }
-                if (p1.length < 6) { 
-                    showModal("Seguridad", "La contraseña debe tener al menos 6 caracteres por seguridad."); 
-                    btn.innerText = "ACTIVAR"; btn.disabled = false; return; 
-                }
-
-                // 2. BUSCAR ALUMNO
                 const resSearch = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
                 const dataSearch = await resSearch.json();
-                
-                if (!dataSearch.data || dataSearch.data.length === 0) {
-                    showModal("Error", "DNI no encontrado en el sistema. Habla con el Sensei.");
-                    btn.innerText = "ACTIVAR"; btn.disabled = false; return;
-                }
-
-                const alu = dataSearch.data[0];
-                const alumnoDocId = alu.documentId; 
-                const p = alu.attributes || alu;
-
-                // 3. CALCULAR GRADO OBJETIVO
+                if (!dataSearch.data || dataSearch.data.length === 0) { showModal("Error", "DNI no registrado."); btn.innerText = "ACTIVAR"; btn.disabled = false; return; }
+                const alu = dataSearch.data[0], alumnoDocId = alu.documentId, p = alu.attributes || alu;
                 let gradoObj = "S/G";
-                const gradoActual = p.grado || "S/G";
-                const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(gradoActual));
+                const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
                 if(idx !== -1 && idx < GRADOS_ORDER.length - 1) gradoObj = GRADOS_ORDER[idx+1];
-
-                // 4. REGISTRAR USUARIO (Solo campos estándar para evitar el error "Invalid parameters")
-                const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        username: dni, 
-                        email: `${dni.toLowerCase()}@arashi.com`, 
-                        password: p1
-                        // Eliminamos nombre/apellidos de aquí para que Strapi no de error 400
-                    })
-                });
-                
+                const regRes = await fetch(`${API_URL}/api/auth/local/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: dni, email: `${dni.toLowerCase()}@arashi.com`, password: p1 }) });
                 const regData = await regRes.json();
-
                 if (regRes.ok) {
-                    // 5. VINCULACIÓN (PUT): Aquí es donde se llenan los campos de tu captura
-                    await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, {
-                        method: 'PUT',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${regData.jwt}`
-                        },
-                        body: JSON.stringify({
-                            data: {
-                                cuenta_usuario: regData.user.id, // Esto llena la relación que veías vacía
-                                grado_objetivo: gradoObj        // Esto llena el grado objetivo
-                            }
-                        })
-                    });
-
-                    document.getElementById('activate-modal').classList.add('hidden');
-                    showModal("¡OSS!", "Cuenta activada correctamente. Ya puedes entrar con tu DNI.");
-                    e.target.reset();
-                } else {
-                    // Mensajes de error del servidor en castellano
-                    let msg = regData.error.message;
-                    if (msg.includes("taken")) msg = "Este DNI ya tiene una cuenta activa.";
-                    showModal("Aviso", msg);
-                }
-            } catch (err) {
-                console.error(err);
-                showModal("Error", "Fallo de conexión con el servidor.");
-            } finally {
-                btn.innerText = "ACTIVAR"; btn.disabled = false;
-            }
+                    await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${regData.jwt}` }, body: JSON.stringify({ data: { cuenta_usuario: regData.user.id, grado_objetivo: gradoObj } }) });
+                    document.getElementById('activate-modal').classList.add('hidden'); showModal("¡OSS!", "Cuenta activada. Ya puedes entrar."); e.target.reset();
+                } else { showModal("Aviso", regData.error.message.includes("taken") ? "Ya estás activo." : regData.error.message); }
+            } catch (err) { showModal("Error", "Fallo servidor."); } finally { btn.innerText = "ACTIVAR"; btn.disabled = false; }
         });
 
-        // --- COMMON ---
         async function loadMonthlyClasses(el) {
-            showView('clases', el); const container = document.getElementById('calendar-content'); container.innerHTML = "<p style='text-align:center;opacity:0.5;padding:20px;'>Cargando...</p>";
+            showView('clases', el); const container = document.getElementById('calendar-content'); container.innerHTML = "<p style='text-align:center;padding:20px;'>Cargando...</p>";
             const json = await fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 24);
             const grouped = {}; const hoyCorte = new Date(); hoyCorte.setHours(0,0,0,0);
             (json.data||[]).forEach(c => {
@@ -1368,8 +1125,8 @@
 
         async function confirmAttendance() {
             if (!claseHoyId || !alumnoGlobal) return;
-            const res = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
-            if(res.ok) { localStorage.removeItem('cache_perfil_alumno'); checkTodayClass(); }
+            await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
+            localStorage.removeItem('cache_perfil_alumno'); checkTodayClass();
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -1380,49 +1137,20 @@
         });
 
         function startQRScanner() {
-            showModal("Escanear Asistencia", `<div id="qr-reader"></div>`, true); html5QrCode = new Html5Qrcode("qr-reader");
+            showModal("VALIDAR ASISTENCIA", `<div id="qr-reader"></div>`, true); html5QrCode = new Html5Qrcode("qr-reader");
             html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (decodedText) => {
                 await html5QrCode.stop().catch(()=>{}); closeModal(); const token = localStorage.getItem('aikido_jwt');
                 const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${decodedText}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const checkJ = await check.json(); let asistId = (checkJ.data.length > 0) ? getID(checkJ.data[0]) : null;
-                if(!asistId) { const newAs = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: decodedText, Estado: 'Asistio' } }) }); const nJ = await newAs.json(); asistId = getID(nJ.data); }
+                if(!asistId) { const newAs = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: decodedText, Estado: 'Asistio' } }) }); asistId = getID((await newAs.json()).data); }
                 else { await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: 'Asistio' } }) }); }
-                const claseRes = await fetch(`${API_URL}/api/clases/${decodedText}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const dur = parseFloat(parseData(await claseRes.json()).Duracion || 0); const actual = parseFloat(parseData(alumnoGlobal).horas_acumuladas || 0);
+                const clR = await fetch(`${API_URL}/api/clases/${decodedText}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const dur = parseFloat(parseData(await clR.json()).Duracion || 0), actual = parseFloat(parseData(alumnoGlobal).horas_acumuladas || 0);
                 await fetch(`${API_URL}/api/alumnos/${getID(alumnoGlobal)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: actual + dur } }) });
-                localStorage.removeItem('cache_perfil_alumno'); showModal("OSS!", "Asistencia validada."); refreshStudentData(); checkTodayClass();
+                localStorage.removeItem('cache_perfil_alumno'); showModal("OSS!", "Asistencia validada."); refreshStudentData();
             }, () => {});
         }
 
-        function showView(v, el) { 
-            ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); 
-            document.getElementById(v + '-view').classList.remove('hidden');
-            if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
-            if(v === 'dashboard') { refreshStudentData(); checkTodayClass(); }
-        }
-        function logout() { localStorage.clear(); location.reload(); }
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
-        }
-
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const btnArea = document.getElementById('android-btn-area');
-            if (btnArea) btnArea.style.display = 'block';
-        });
-
-        async function handleAndroidInstall() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') console.log('User accepted install');
-                deferredPrompt = null;
-            } else {
-                showModal("Info", "La App ya está instalada o estás en modo escritorio.");
-            }
-        }
         async function loadDojosFilter() {
             const select = document.getElementById('sensei-dojo-filter');
             if(!select) return;
@@ -1438,11 +1166,26 @@
             }
         }
 
-        window.onload = () => { 
-            if (localStorage.getItem('aikido_jwt')) {
-                initApp().catch(err => console.error("Error en Init:", err));
-            } 
-        };
+        function showView(v, el) { 
+            ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); 
+            document.getElementById(v + '-view').classList.remove('hidden');
+            if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
+            if (v === 'dashboard') { refreshStudentData(); checkTodayClass(); }
+            if (v === 'sensei') loadSenseiPanel();
+        }
+        
+        function logout() { localStorage.clear(); location.reload(); }
+
+        /* --- PWA LOGIC --- */
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const b = document.getElementById('android-btn-area'); if (b) b.style.display = 'block'; });
+        async function handleAndroidInstall() {
+            if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; deferredPrompt = null; }
+            else showModal("Info", "Ya instalada o en escritorio.");
+        }
+
+        window.onload = () => { if(localStorage.getItem('aikido_jwt')) initApp(); };
     </script>
 </body>
 </html>
