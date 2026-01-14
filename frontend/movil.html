@@ -743,6 +743,7 @@
         </div>
 
         <!-- SENSEI PANEL VIEW -->
+        <!-- SENSEI PANEL VIEW -->
         <div id="sensei-view" class="hidden">
             <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
             
@@ -761,7 +762,6 @@
                 <button class="action-btn" style="padding:18px; font-size:12px; background:var(--accent); color:white; width:100%;" onclick="uiCreateSingleClass()">+ NUEVA CLASE SUELTA</button>
             </div>
 
-            <!-- Contenedor de Clases con alumnos pendientes -->
             <div id="student-list" style="padding-bottom: 40px;"></div>
         </div>
 
@@ -862,23 +862,21 @@
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
 
-            // Cargamos todo en paralelo para ganar velocidad
             await Promise.all([
                 fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480),
                 refreshStudentData()
             ]);
 
-            // Doble Check Instructor
             const esSensei = user.is_sensei === true;
             const esInstructor = alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor) === true;
+            
             if (esSensei || esInstructor) {
+                console.log("🥋 [AUTH] Acceso Sensei Concedido.");
                 document.getElementById('nav-sensei').style.display = 'flex';
                 await loadDojosFilter(); 
             }
 
-            await checkTodayClass(); // Buscamos la clase ideal para mostrar
-
-            // LA CLAVE: Una vez cargado todo, disparamos el efecto visual
+            await checkTodayClass();
             document.documentElement.classList.add('app-loaded');
         }
 
@@ -1025,7 +1023,9 @@
                             <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                         </div>
                         <div class="class-group-body" style="padding: 15px 20px;">
-                            <button class="action-btn" style="width:100%; background:var(--text-main)
+                            <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
+                                <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
+                            </button>
                             <div style="border-top:1px solid var(--glass-border); padding-top:15px;">
                                 ${sRows}
                             </div>
