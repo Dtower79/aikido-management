@@ -523,45 +523,85 @@
         }
 
         function startQRScanner() {
-            showModal("Escanear Asistencia", `<div id="qr-reader"></div><p style="font-size:11px;">Apunta al QR del Sensei</p>`, false);
+            // Cambiamos el tercer parámetro a 'true' para que aparezca el botón CERRAR/OK
+            showModal("Escanear Asistencia", `
+                <div id="qr-reader" style="margin-bottom:15px;"></div>
+                <p style="font-size:12px; color:var(--text-muted);">Apunta la cámara al código QR del Sensei para validar tu asistencia.</p>
+            `, true);
+
             html5QrCode = new Html5Qrcode("qr-reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: 250 }, 
                 async (decodedText) => {
-                    html5QrCode.stop(); closeModal();
-                    if (!alumnoGlobal) return alert("Error: No se encuentra tu perfil.");
+                    // Al detectar código, detenemos cámara y cerramos el modal del lector
+                    await html5QrCode.stop().catch(()=>{});
+                    closeModal();
+                    
+                    if (!alumnoGlobal) return showModal("Error", "No se encuentra tu perfil de alumno.", true);
                     
                     const token = localStorage.getItem('aikido_jwt');
                     try {
-                        const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${decodedText}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                        // 1. Verificar si ya existe la asistencia
+                        const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${decodedText}`, { 
+                            headers: { 'Authorization': `Bearer ${token}` } 
+                        });
                         const checkJ = await check.json();
                         
                         let asistId = null;
-                        if(checkJ.data.length > 0) asistId = getID(checkJ.data[0]);
-                        else {
-                            const newAs = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: decodedText, Estado: 'Asistio' } }) });
+                        if(checkJ.data.length > 0) {
+                            asistId = getID(checkJ.data[0]);
+                        } else {
+                            // Si no existe (no pulsó el botón de asistir antes), la creamos directamente
+                            const newAs = await fetch(`${API_URL}/api/asistencias`, { 
+                                method: 'POST', 
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                                body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: decodedText, Estado: 'Asistio' } }) 
+                            });
                             const newJ = await newAs.json();
                             if(newAs.ok) asistId = getID(newJ.data);
                         }
 
                         if(asistId) {
-                            await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: 'Asistio' } }) });
+                            // 2. Marcar como Asistio (Validación)
+                            await fetch(`${API_URL}/api/asistencias/${asistId}`, { 
+                                method: 'PUT', 
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                                body: JSON.stringify({ data: { Estado: 'Asistio' } }) 
+                            });
                             
+                            // 3. Obtener duración de la clase para sumar horas
                             const claseRes = await fetch(`${API_URL}/api/clases/${decodedText}`, { headers: { 'Authorization': `Bearer ${token}` } });
                             const claseJ = await claseRes.json();
-                            const dur = parseFloat(parseData(claseJ.data).Duracion);
+                            const dur = parseFloat(parseData(claseJ.data).Duracion || 0);
                             
+                            // 4. Actualizar horas del alumno
                             const aluId = getID(alumnoGlobal);
                             const actualHoras = parseFloat(parseData(alumnoGlobal).horas_acumuladas || 0);
-                            await fetch(`${API_URL}/api/alumnos/${aluId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: actualHoras + dur } }) });
+                            await fetch(`${API_URL}/api/alumnos/${aluId}`, { 
+                                method: 'PUT', 
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                                body: JSON.stringify({ data: { horas_acumuladas: actualHoras + dur } }) 
+                            });
                             
-                            alert("¡OSS! Asistencia Validada.");
-                            localStorage.removeItem('cache_perfil_alumno'); 
-                            refreshStudentData();
+                            // 5. MODAL DE ÉXITO (Sustituye al alert)
+                            localStorage.removeItem('cache_perfil_alumno'); // Limpiar caché para ver reflejadas las horas
+                            showModal("¡OSS!", `
+                                <i class="fa-solid fa-circle-check" style="font-size:50px; color:var(--success); margin-bottom:15px; display:block;"></i>
+                                <p style="font-size:16px; font-weight:800;">Asistencia Validada</p>
+                                <p>Se han sumado <b>${dur}h</b> a tu historial. Sigue entrenando duro.</p>
+                            `, true);
+                            
+                            refreshStudentData(); // Recargar Dashboard
                         }
-                    } catch(e) { alert("Error al validar QR"); }
+                    } catch(e) { 
+                        showModal("Error", "No se pudo validar el código QR. Inténtalo de nuevo.", true); 
+                    }
                 },
-                (errorMessage) => { /* ignore */ }
-            );
+                (errorMessage) => { /* Silenciar errores de escaneo continuo */ }
+            ).catch(err => {
+                showModal("Cámara", "No se pudo acceder a la cámara. Asegúrate de dar permisos.", true);
+            });
         }
 
         async function validateAttendance(asistId, asiste, aluId, dur) {
@@ -702,6 +742,22 @@
             showModal("Generar Mes", `<div style="text-align:left;"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">AÑO:</label><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MES:</label>${gridHtml}<label style="font-size:11px;color:var(--text-muted);margin-left:10px;">MAÑANA (Mar):</label><input type="time" id="gen-morning" value="10:00" class="modal-field"><label style="font-size:11px;color:var(--text-muted);margin-left:10px;">HORA TARDE (Mar/Jue):</label><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><div class="modal-actions-container"><button class="action-btn primary" onclick="processGeneration()">GENERAR CALENDARIO</button><button class="action-btn" style="background:#1e293b; color:white; margin-top:5px;" onclick="closeModal()">CERRAR</button></div></div>`, false);
         }
 
+        // --- FUNCIÓN DE VERIFICACIÓN (FIX ERROR IMAGEN) ---
+        async function checkClassExists(iso) {
+            const token = localStorage.getItem('aikido_jwt');
+            try {
+                // Buscamos clases que coincidan exactamente con la fecha y hora ISO
+                const res = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$eq]=${iso}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const json = await res.json();
+                return json.data && json.data.length > 0;
+            } catch (e) { 
+                console.error("Error verificando clase:", e);
+                return false; 
+            }
+        }
+        
         async function processGeneration() {
             if(!dojoIdGlobal) return alert("Error CRÍTICO: No se ha detectado el ID del Dojo. Sal y vuelve a entrar.");
             
