@@ -539,7 +539,7 @@
             font-family: 'Inter', sans-serif !important; /* Forzamos Inter */
             font-weight: 800; /* Inter 800 */
         }
-        
+
         /* Corregir color del icono del reloj y calendario en navegadores móviles */
         input[type="date"]::-webkit-calendar-picker-indicator,
         input[type="time"]::-webkit-calendar-picker-indicator {
@@ -717,6 +717,15 @@
         <!-- SENSEI PANEL VIEW -->
         <div id="sensei-view" class="hidden">
             <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
+            
+            <!-- Selector de Dojo para el Sensei -->
+            <div style="margin: 0 20px 20px;">
+                <span class="modal-label">VER TATAMI DE:</span>
+                <select id="sensei-dojo-filter" class="modal-field" onchange="loadSenseiPanel()" style="margin-bottom:0;">
+                    <option value="all">-- TODOS LOS DOJOS --</option>
+                </select>
+            </div>
+
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 20px 12px;">
                 <button class="action-btn" style="padding:18px; font-size:12px; background:#1e293b; color:white;" onclick="uiGenerateMonth()">GENERAR MES</button>
                 <button class="action-btn" style="padding:18px; font-size:12px; background:#1e293b; color:white;" onclick="loadManageClasses()">EDITAR CLASES</button>
@@ -724,6 +733,8 @@
             <div style="margin:0 20px 25px;">
                 <button class="action-btn" style="padding:18px; font-size:12px; background:var(--accent); color:white; width:100%;" onclick="uiCreateSingleClass()">+ NUEVA CLASE SUELTA</button>
             </div>
+
+            <!-- Contenedor de Clases con alumnos pendientes -->
             <div id="student-list" style="padding-bottom: 40px;"></div>
         </div>
 
@@ -831,6 +842,10 @@
             if (user.is_sensei === true) {
                 console.log("🥋 [AUTH] Usuario identificado como SENSEI.");
                 document.getElementById('nav-sensei').style.display = 'flex';
+                if (user.is_sensei === true) {
+                document.getElementById('nav-sensei').style.display = 'flex';
+                await loadDojosFilter(); // <--- AÑADE ESTO AQUÍ
+                }
             }
 
             // 3. Cargar Requisitos de Grado (Caché de 20 días)
@@ -967,46 +982,86 @@
         // --- SENSEI LOGIC ---
         async function loadSenseiPanel() {
             const listDiv = document.getElementById('student-list');
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Cargando...</p>";
+            const dojoFilter = document.getElementById('sensei-dojo-filter').value;
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Cargando tatami...</p>";
             
-            const res = await fetch(`${API_URL}/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno]=*&populate[clase]=*&sort=clase.Fecha_Hora:asc`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
-            const json = await res.json();
-            
-            const groups = {};
-            (json.data||[]).forEach(asist => {
-                const a = parseData(asist); 
-                const cla = parseRelation(a.clase); 
-                const cid = getID(a.clase);
-                if (!groups[cid]) groups[cid] = { info: cla, students: [] };
-                groups[cid].students.push({ asistId: getID(asist), data: a, alumno: parseRelation(a.alumno) });
+            // 1. Calculamos la fecha límite (Hace 7 días)
+            const limitDate = new Date();
+            limitDate.setDate(limitDate.getDate() - 7);
+
+            // 2. Traer asistencias confirmadas
+            let url = `/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno]=*&populate[clase][populate]=dojo&sort=clase.Fecha_Hora:asc`;
+            const res = await fetch(`${API_URL}${url}`, { 
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
             });
-            
-            listDiv.innerHTML = Object.keys(groups).length === 0 ? "<p style='text-align:center; opacity:0.5; padding:40px;'>Todo validado.</p>" : "";
-            for (const [cid, g] of Object.entries(groups)) {
+            const json = await res.json();
+            const groups = {};
+
+            (json.data || []).forEach(asist => {
+                const a = asist.attributes || asist;
+                const cla = a.clase?.data?.attributes || a.clase;
+                const alu = a.alumno?.data?.attributes || a.alumno;
+                
+                if (!cla || !alu) return;
+
+                const fechaClase = new Date(cla.Fecha_Hora);
+                const cid = asist.clase?.data?.documentId || a.clase?.documentId;
+                const dojoClaseId = cla.dojo?.data?.documentId || cla.dojo?.documentId;
+
+                // FILTROS: 1. Que no sea más vieja de 7 días. 2. Filtro de Dojo seleccionado.
+                if (fechaClase < limitDate) return;
+                if (dojoFilter !== 'all' && dojoClaseId !== dojoFilter) return;
+
+                if (!groups[cid]) groups[cid] = { info: cla, students: [] };
+                groups[cid].students.push({ 
+                    asistId: asist.documentId || asist.id, 
+                    alumnoId: a.alumno?.data?.documentId || a.alumno?.documentId,
+                    nombre: alu.nombre,
+                    apellidos: alu.apellidos,
+                    grado: alu.grado
+                });
+            });
+
+            const keys = Object.keys(groups);
+            if (keys.length === 0) {
+                listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Todo validado.</p>";
+                return;
+            }
+
+            listDiv.innerHTML = "";
+            keys.forEach(cid => {
+                const g = groups[cid];
                 const f = formatTimeSafe(g.info.Fecha_Hora);
-                let stHtml = "";
+                let studentRows = "";
+
                 g.students.forEach(s => {
-                    stHtml += `
-                    <div class="student-item" id="it-${s.asistId}">
-                        <div class="student-info"><h4>${s.alumno.nombre} ${s.alumno.apellidos||""}</h4><p>${s.alumno.grado||'S/G'}</p></div>
+                    studentRows += `
+                    <div class="student-item" id="it-${s.asistId}" style="margin: 8px 0; width: 100%; box-sizing: border-box;">
+                        <div class="student-info">
+                            <h4>${s.nombre} ${s.apellidos || ""}</h4>
+                            <p>${s.grado || 'S/G'}</p>
+                        </div>
                         <div class="sensei-actions">
-                            <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${getID(s.data.alumno)}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
-                            <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${getID(s.data.alumno)}', ${g.info.Duracion})">OK</button>
+                            <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
+                            <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
                         </div>
                     </div>`;
                 });
+
                 listDiv.innerHTML += `
-                <div class="class-group-card">
+                <div class="class-group-card" style="margin: 0 20px 20px;">
                     <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                        <h3>${f.date} - ${f.time} (${g.info.Duracion}h)</h3>
-                        <span>${g.students.length} PEN</span>
+                        <div style="text-align:left;">
+                            <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
+                            <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-down" style="opacity:0.5;"></i>
                     </div>
-                    <div class="class-group-body open">
-                        <button class="class-qr-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> MOSTRAR QR CLASE</button>
-                        ${stHtml}
+                    <div class="class-group-body" style="padding: 10px 15px;">
+                        ${studentRows}
                     </div>
                 </div>`;
-            }
+            });
         }
 
         async function validateAttendance(asistId, asiste, aluId, dur) {
@@ -1327,6 +1382,20 @@
                 deferredPrompt = null;
             } else {
                 showModal("Info", "La App ya está instalada o estás en modo escritorio.");
+            }
+        }
+        async function loadDojosFilter() {
+            const select = document.getElementById('sensei-dojo-filter');
+            if(!select) return;
+            const res = await fetchSmart('/api/dojos', 'lista_dojos_sensei', 24);
+            if(res && res.data) {
+                res.data.forEach(d => {
+                    const info = d.attributes || d;
+                    const opt = document.createElement('option');
+                    opt.value = d.documentId || d.id;
+                    opt.innerText = info.nombre.replace("Aikido Arashi ", "").toUpperCase();
+                    select.appendChild(opt);
+                });
             }
         }
 
