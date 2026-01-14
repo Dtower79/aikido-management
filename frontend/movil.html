@@ -789,12 +789,19 @@
         /* --- FECHAS Y GRADOS --- */
         function formatTimeSafe(iso) {
             if(!iso) return { time: "--:--", date: "--/--/----", month: "" };
-            const dateObj = new Date(iso);
+            // Dividimos la cadena ISO para evitar que el navegador aplique el Timezone local
+            const [fecha, resto] = iso.split('T');
+            const [y, m, d] = fecha.split('-');
+            const [hh, mm] = resto.split(':');
+            
+            const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+            const nombreMes = meses[parseInt(m) - 1];
+
             return { 
-                time: dateObj.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'}) + "H", 
-                date: dateObj.toLocaleDateString('es-ES'), 
-                month: dateObj.toLocaleString('es-ES', { month: 'long' }), 
-                hour: dateObj.getHours() 
+                time: `${hh}:${mm}H`, 
+                date: `${d}/${m}/${y}`, 
+                month: nombreMes, 
+                hour: parseInt(hh) 
             };
         }
 
@@ -905,7 +912,9 @@
                     if (!cla || !alu) return;
 
                     const fechaClase = new Date(cla.Fecha_Hora);
-                    const cid = getID(a.clase), dojoId = getID(cla.dojo);
+                    // Aseguramos capturar el ID de la clase tanto si viene plano como en .data
+                    const cid = a.clase?.documentId || a.clase?.data?.documentId;
+                    const dojoId = cla.dojo?.documentId || cla.dojo?.data?.documentId;
 
                     if (fechaClase < limitDate) return;
                     if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
@@ -997,8 +1006,17 @@
         /* --- GESTIÓN CALENDARIO --- */
         async function loadManageClasses() {
             const listDiv = document.getElementById('student-list');
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Cargando Editor...</p>";
-            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+            // Añadimos botón para volver a ver las validaciones de alumnos
+            listDiv.innerHTML = `
+                <button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">
+                    ← VOLVER A VALIDACIONES
+                </button>
+                <p style='text-align:center; opacity:0.5; padding:10px;'>Cargando Editor...</p>
+            `;
+            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100`, { 
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+            });
+            // ... resto de la función igual ...
             const json = await res.json(), grouped = {};
             json.data.filter(c => new Date(parseData(c).Fecha_Hora) > new Date()).forEach(c => {
                 const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora);
