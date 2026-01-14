@@ -1000,20 +1000,53 @@
         /* --- VALIDACIÓN Y ASISTENCIA --- */
         async function validateAttendance(asistId, asiste, aluId, dur) {
             const token = localStorage.getItem('aikido_jwt');
-            await fetch(`${API_URL}/api/asistencias/${asistId}`, { 
-                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                body: JSON.stringify({ data: { Estado: asiste ? 'Asistio' : 'No Asistio' } }) 
-            });
-            if(asiste) {
-                const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const actual = parseFloat((await alRes.json()).data.attributes?.horas_acumuladas || 0);
-                await fetch(`${API_URL}/api/alumnos/${aluId}`, { 
-                    method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                    body: JSON.stringify({ data: { horas_acumuladas: actual + parseFloat(dur) } }) 
+            console.log(`📡 [SENSEI] Validando Asistencia: ${asistId} | Alumno: ${aluId}`);
+
+            try {
+                // 1. Cambiamos el estado de la asistencia
+                const resAsist = await fetch(`${API_URL}/api/asistencias/${asistId}`, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                    body: JSON.stringify({ data: { Estado: asiste ? 'Asistio' : 'No Asistio' } }) 
                 });
+
+                if (!resAsist.ok) throw new Error("Error al actualizar estado de asistencia");
+
+                // 2. Si el alumno ha venido, sumamos horas
+                if(asiste) {
+                    // Pedimos la ficha del alumno para ver sus horas actuales
+                    const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const alJson = await alRes.json();
+                    
+                    // EXTRACCIÓN BLINDADA (Compatible con Strapi v4 y v5)
+                    const dataRoot = alJson.data;
+                    const attributes = dataRoot.attributes || dataRoot; // Si no hay attributes, los datos están en la raíz (v5)
+                    
+                    const horasPrevias = parseFloat(attributes.horas_acumuladas) || 0;
+                    const horasASumar = parseFloat(dur) || 0;
+                    const totalNuevo = horasPrevias + horasASumar;
+
+                    console.log(`📈 [SENSEI] Horas previas: ${horasPrevias} | Sumando: ${horasASumar} | Total: ${totalNuevo}`);
+
+                    // Actualizamos el perfil del alumno con el nuevo total
+                    await fetch(`${API_URL}/api/alumnos/${aluId}`, { 
+                        method: 'PUT', 
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                        body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } }) 
+                    });
+                }
+
+                // 3. Refrescar la interfaz
+                await loadSenseiPanel(); // Recarga la lista del sensei
+                localStorage.removeItem('cache_perfil_alumno'); // Limpia caché para que el alumno vea el cambio
+                refreshStudentData(); // Refresca tu propio círculo si tú eres el alumno
+
+                console.log("✅ [SENSEI] Proceso completado.");
+
+            } catch (e) {
+                console.error("❌ [SENSEI] Error crítico:", e);
+                showModal("Error", "Fallo al contabilizar horas. Revisa la consola.");
             }
-            document.getElementById(`it-${asistId}`).remove(); 
-            localStorage.removeItem('cache_perfil_alumno'); refreshStudentData();
         }
 
         async function checkTodayClass() {
