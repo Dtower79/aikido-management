@@ -33,7 +33,6 @@
             overflow-x: hidden; overflow-y: auto; color-scheme: dark; 
         }
 
-        /* TIPOGRAFÍA REDONDITA Y MARCADA (INTER 800) */
         h1, h2, h3, .val, .action-btn, .next-grade-label, .month-header, .section-label { 
             font-family: 'Inter', sans-serif; 
             font-weight: 800 !important; 
@@ -130,6 +129,9 @@
             z-index: 9999; 
             padding: 20px; 
         }
+        /* EL MODAL DE MENSAJES DEBE ESTAR POR ENCIMA DE TODO */
+        #custom-modal { z-index: 10001 !important; }
+
         .modal-content { background: #0f172a; border: 1px solid var(--glass-border); padding: 35px 30px; border-radius: 35px; width: 100%; max-width: 400px; text-align: center; box-sizing: border-box; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.6); }
         .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 12px; outline: none; box-sizing: border-box; transition: 0.3s; }
         .modal-field:focus { border-color: var(--accent); }
@@ -161,7 +163,7 @@
     </div>
 
     <div id="app-content">
-        <!-- MODALES -->
+        <!-- MODAL DE MENSAJES (SISTEMA) -->
         <div id="custom-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
@@ -555,14 +557,14 @@
             localStorage.removeItem('cache_calendario_clases'); closeModal(); loadManageClasses(); checkTodayClass();
         }
 
-        // --- AUTH LOGIC (CORREGIDO ERROR 400 Y TOKEN) ---
+        // --- AUTH LOGIC (CORREGIDO EVENT BUBBLING Y Z-INDEX) ---
         document.getElementById('activate-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const dni = document.getElementById('act-dni').value.trim().toUpperCase();
             const p1 = document.getElementById('act-pass').value.trim();
             const p2 = document.getElementById('act-pass2').value.trim();
 
-            // 1. Validaciones inmediatas
+            // Validaciones inmediatas
             if (p1 !== p2) {
                 showModal("Error", "Las contraseñas no coinciden. Por favor, revísalas.");
                 return;
@@ -579,19 +581,17 @@
             btn.disabled = true;
 
             try {
-                // 2. Verificar existencia del Alumno
+                // 1. Verificar Alumno
                 const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
                 const checkData = await checkRes.json();
 
                 if (!checkData.data || checkData.data.length === 0) {
-                    showModal("DNI No Encontrado", "Este DNI no consta como alumno activo. Habla con el Sensei.");
+                    showModal("DNI No Encontrado", "Este DNI no consta como alumno. Habla con el Sensei.");
+                    btn.innerText = originalText; btn.disabled = false;
                     return;
                 }
 
-                const alu = checkData.data[0];
-                const nombreParaUser = parseData(alu).nombre || "Alumno";
-
-                // 3. Registrar usuario
+                // 2. Intentar registro
                 const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -606,24 +606,20 @@
 
                 if (regRes.ok) {
                     document.getElementById('activate-modal').classList.add('hidden');
-                    showModal("¡OSS!", "Cuenta activada correctamente. Ya puedes entrar con tu DNI.");
+                    showModal("¡OSS!", "Cuenta activada. Ya puedes entrar con tu DNI.");
                     e.target.reset();
                 } else {
-                    let msg = "No se pudo realizar el registro.";
+                    let msg = "Error de registro.";
                     if (regData.error && regData.error.message) {
-                        if (regData.error.message.includes("taken")) {
-                            msg = "Este DNI ya tiene una cuenta activa.";
-                        } else {
-                            msg = regData.error.message;
-                        }
+                        if (regData.error.message.includes("taken")) msg = "Este DNI ya tiene una cuenta activa.";
+                        else msg = regData.error.message;
                     }
                     showModal("Aviso", msg);
                 }
             } catch(e) {
-                showModal("Error", "Fallo de conexión con el Dojo digital.");
+                showModal("Error", "Fallo de conexión.");
             } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
+                btn.innerText = originalText; btn.disabled = false;
             }
         });
 
@@ -688,6 +684,8 @@
             if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
         }
         function logout() { localStorage.clear(); location.reload(); }
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+        window.onload = () => { if(localStorage.getItem('aikido_jwt')) initApp(); };
     </script>
 </body>
 </html>
