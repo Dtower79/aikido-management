@@ -812,31 +812,37 @@
         /* --- CORE INIT --- */
         async function initApp() {
             console.log("🚀 [INIT] Arrancando aplicación...");
-            const token = localStorage.getItem('aikido_jwt'), user = JSON.parse(localStorage.getItem('aikido_user'));
-            if(!token || !user) return;
+            const token = localStorage.getItem('aikido_jwt');
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+            
+            if (!token || !user) return;
 
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
 
-            // Carga de requisitos
+            // Cargar requisitos
             const jsonReq = await fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480);
             if(jsonReq && jsonReq.data) {
                 requisitosGradoGlobal = jsonReq.data.map(d => { 
                     const a = d.attributes || d; 
                     return { NORM: normalize(a.GRADO || a.grado), HORAS: parseFloat(a.HORAS_NECESARIAS || a.horas_necesarias || 0) }; 
                 });
+                console.log("📚 [DATA] Requisitos cargados.");
             }
             
             await refreshStudentData(); 
 
-            // Doble Check Instructor (User o Alumno)
+            // Verificar Instructor
             const esSensei = user.is_sensei === true;
             const esInstructor = alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor) === true;
+
             if (esSensei || esInstructor) {
+                console.log("🥋 [AUTH] Acceso Sensei Concedido.");
                 document.getElementById('nav-sensei').style.display = 'flex';
                 await loadDojosFilter(); 
             }
+
             checkTodayClass();
         }
 
@@ -894,36 +900,53 @@
             const listDiv = document.getElementById('student-list');
             const filterEl = document.getElementById('sensei-dojo-filter');
             const dojoFilter = filterEl ? filterEl.value : 'all';
+            
             listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Cargando tatami...</p>";
             
             const limitDate = new Date();
             limitDate.setDate(limitDate.getDate() - 7);
 
             try {
-                let url = `/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno]=*&populate[clase][populate]=dojo&pagination[limit]=100`;
-                const res = await fetch(`${API_URL}${url}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+                // CONSULTA OPTIMIZADA PARA V5: Evita el Error 400 simplificando el populate
+                let url = `/api/asistencias?filters[Estado][$eq]=Confirmado&populate=alumno&populate[clase][populate]=dojo&pagination[limit]=100`;
+                
+                const res = await fetch(`${API_URL}${url}`, { 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+                });
+
+                if (!res.ok) {
+                    const errorDetails = await res.json();
+                    console.error("❌ Error de Strapi:", errorDetails);
+                    throw new Error("Fallo en la consulta");
+                }
+
                 const json = await res.json();
                 const groups = {};
 
                 (json.data || []).forEach(asist => {
-                    const a = asist.attributes || asist;
+                    // Strapi v5 entrega los datos planos, sin el wrapper .attributes
+                    const a = asist; 
                     const cla = parseRelation(a.clase);
                     const alu = parseRelation(a.alumno);
+                    
                     if (!cla || !alu) return;
 
                     const fechaClase = new Date(cla.Fecha_Hora);
-                    // Aseguramos capturar el ID de la clase tanto si viene plano como en .data
-                    const cid = a.clase?.documentId || a.clase?.data?.documentId;
-                    const dojoId = cla.dojo?.documentId || cla.dojo?.data?.documentId;
+                    const cid = getID(a.clase);
+                    const dojoId = getID(cla.dojo);
 
+                    // Filtros de lógica
                     if (fechaClase < limitDate) return;
                     if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
 
                     if (!groups[cid]) groups[cid] = { info: cla, students: [] };
+                    
                     groups[cid].students.push({ 
-                        asistId: asist.documentId || asist.id, 
+                        asistId: getID(asist), 
                         alumnoId: getID(a.alumno),
-                        nombre: alu.nombre, apellidos: alu.apellidos, grado: alu.grado
+                        nombre: alu.nombre,
+                        apellidos: alu.apellidos,
+                        grado: alu.grado
                     });
                 });
 
@@ -933,31 +956,47 @@
                     return;
                 }
 
+                // Ordenar localmente por fecha
                 keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
+
                 listDiv.innerHTML = "";
                 keys.forEach(cid => {
-                    const g = groups[cid], f = formatTimeSafe(g.info.Fecha_Hora);
-                    let sRows = "";
+                    const g = groups[cid];
+                    const f = formatTimeSafe(g.info.Fecha_Hora);
+                    let studentRows = "";
+
                     g.students.forEach(s => {
-                        sRows += `
+                        studentRows += `
                         <div class="student-item" id="it-${s.asistId}" style="margin: 8px 0; width: 100%;">
-                            <div class="student-info"><h4>${s.nombre} ${s.apellidos || ""}</h4><p>${s.grado || 'S/G'}</p></div>
+                            <div class="student-info">
+                                <h4>${s.nombre} ${s.apellidos || ""}</h4>
+                                <p>${s.grado || 'S/G'}</p>
+                            </div>
                             <div class="sensei-actions">
                                 <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
                                 <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
                             </div>
                         </div>`;
                     });
+
                     listDiv.innerHTML += `
                     <div class="class-group-card" style="margin: 0 20px 20px;">
                         <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                            <div style="text-align:left;"><h3 style="font-size:16px;">${f.date} - ${f.time}</h3><p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} PENDIENTES</p></div>
+                            <div style="text-align:left;">
+                                <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
+                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
+                            </div>
                             <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                         </div>
-                        <div class="class-group-body" style="padding: 10px 15px;">${sRows}</div>
+                        <div class="class-group-body" style="padding: 10px 15px;">
+                            ${studentRows}
+                        </div>
                     </div>`;
                 });
-            } catch (e) { console.error(e); listDiv.innerHTML = "<p style='padding:40px; text-align:center;'>Fallo de conexión.</p>"; }
+            } catch (e) {
+                console.error("❌ Fallo crítico en el panel:", e);
+                listDiv.innerHTML = "<p style='text-align:center; color:var(--accent); padding:40px;'>Error 400: Consulta rechazada por el servidor.</p>";
+            }
         }
 
         /* --- VALIDACIÓN Y ASISTENCIA --- */
