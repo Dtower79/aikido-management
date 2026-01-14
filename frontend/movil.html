@@ -530,6 +530,14 @@
             outline: none; 
             box-sizing: border-box; 
             transition: 0.3s; 
+            font-family: 'Inter', sans-serif !important; /* Forzamos Inter */
+            font-weight: 800; /* Inter 800 */
+        }
+        
+        /* Corregir color del icono del reloj y calendario en navegadores móviles */
+        input[type="time"]::-webkit-calendar-picker-indicator,
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
         }
 
         .modal-label { 
@@ -1096,9 +1104,12 @@
                     <span class="modal-label">FECHA:</span>
                     <input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}">
                     <span class="modal-label">HORA:</span>
-                    <input type="time" id="single-time" class="modal-label" value="10:00">
+                    <input type="time" id="single-time" class="modal-field" value="10:00">
                     <span class="modal-label">DURACIÓN:</span>
-                    <select id="single-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select>
+                    <select id="single-dur" class="modal-field">
+                        <option value="1">1.0h</option>
+                        <option value="1.5" selected>1.5h</option>
+                    </select>
                     <button class="action-btn primary" onclick="processSingleClass()" style="margin-top:10px;">CREAR KEIKO</button>
                 </div>`, true); 
         }
@@ -1120,7 +1131,10 @@
                     <span class="modal-label">HORA:</span>
                     <input type="time" id="e-h" value="${t.substring(0,5)}" class="modal-field">
                     <span class="modal-label">DURACIÓN:</span>
-                    <select id="e-dur" class="modal-field"><option value="1" ${dur==1?'selected':''}>1.0h</option><option value="1.5" ${dur==1.5?'selected':''}>1.5h</option></select>
+                    <select id="e-dur" class="modal-field">
+                        <option value="1" ${dur==1?'selected':''}>1.0h</option>
+                        <option value="1.5" ${dur==1.5?'selected':''}>1.5h</option>
+                    </select>
                     <button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR CAMBIOS</button>
                     <button class="action-btn" style="background:#ef4444; color:white; margin-top:10px;" onclick="deleteClass('${id}')">ELIMINAR KEIKO</button>
                 </div>`, true); 
