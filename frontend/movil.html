@@ -907,48 +907,44 @@
             limitDate.setDate(limitDate.getDate() - 7);
 
             try {
-                // ESTRATEGIA DE EMERGENCIA: Pedimos asistencias sin filtros para evitar el Error 500 del servidor
-                // Strapi v5 es más estable así. Filtraremos "Confirmado" aquí mismo en el código.
-                let url = `/api/asistencias?populate[alumno]=*&populate[clase][populate]=dojo&pagination[limit]=100`;
-                
-                const res = await fetch(`${API_URL}${url}`, { 
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-                });
+                // Sintaxis optimizada para v5: populate plano y sin filtros complejos en URL
+                const endpoint = `/api/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100`;
+                const json = await fetchSmart(endpoint, null, 0); 
 
-                if (!res.ok) {
-                    throw new Error("El servidor ha rechazado la conexión (Error " + res.status + ")");
+                if (!json || !json.data) {
+                    console.error("❌ [SENSEI] Respuesta inválida del servidor:", json);
+                    throw new Error("No hay datos disponibles");
                 }
 
-                const json = await res.json();
-                console.log("📊 [SENSEI-DEBUG] Datos brutos recibidos:", json.data?.length || 0, "registros.");
-
+                console.log(`📊 [SENSEI] Analizando ${json.data.length} asistencias...`);
                 const groups = {};
 
-                (json.data || []).forEach(asist => {
-                    // Extraer datos (maneja tanto v4 como v5)
-                    const a = asist.attributes || asist; 
-                    const cla = parseRelation(a.clase);
+                json.data.forEach(item => {
+                    const a = item.attributes || item; 
+                    const estado = (a.Estado || a.estado || "").trim();
+
+                    // Solo procesamos los que están en "Confirmado"
+                    if (estado.toLowerCase() !== 'confirmado') return;
+
                     const alu = parseRelation(a.alumno);
+                    const cla = parseRelation(a.clase);
                     
-                    // FILTRO MANUAL 1: Solo queremos los que están en estado "Confirmado"
-                    const estado = a.Estado || a.estado;
-                    if (estado !== 'Confirmado') return;
+                    if (!alu || !cla) return;
 
-                    if (!cla || !alu) return;
+                    const dojo = parseRelation(cla.dojo);
+                    const dojoId = getID(dojo);
+                    const classDate = new Date(cla.Fecha_Hora);
 
-                    const fechaClase = new Date(cla.Fecha_Hora);
-                    const cid = getID(a.clase);
-                    const dojoId = getID(cla.dojo);
-
-                    // FILTRO MANUAL 2: Ventana de 7 días y filtro por Dojo
-                    if (fechaClase < limitDate) return;
+                    // Filtros manuales (más seguro que en URL)
+                    if (classDate < limitDate) return;
                     if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
 
+                    const cid = getID(cla);
                     if (!groups[cid]) groups[cid] = { info: cla, students: [] };
                     
                     groups[cid].students.push({ 
-                        asistId: getID(asist), 
-                        alumnoId: getID(a.alumno),
+                        asistId: getID(item), 
+                        alumnoId: getID(alu),
                         nombre: alu.nombre,
                         apellidos: alu.apellidos,
                         grado: alu.grado
@@ -961,17 +957,16 @@
                     return;
                 }
 
-                // Ordenamos las tarjetas por fecha más cercana
+                // Ordenar por fecha
                 keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
 
                 listDiv.innerHTML = "";
                 keys.forEach(cid => {
                     const g = groups[cid];
                     const f = formatTimeSafe(g.info.Fecha_Hora);
-                    let studentRows = "";
-
+                    let sRows = "";
                     g.students.forEach(s => {
-                        studentRows += `
+                        sRows += `
                         <div class="student-item" id="it-${s.asistId}" style="margin: 8px 0; width: 100%;">
                             <div class="student-info">
                                 <h4>${s.nombre} ${s.apellidos || ""}</h4>
@@ -989,24 +984,16 @@
                         <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
                             <div style="text-align:left;">
                                 <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
-                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} PENDIENTES</p>
+                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
                             </div>
                             <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                         </div>
-                        <div class="class-group-body" style="padding: 10px 15px;">
-                            ${studentRows}
-                        </div>
+                        <div class="class-group-body" style="padding: 10px 15px;">${sRows}</div>
                     </div>`;
                 });
-
-                console.log("✅ [SENSEI-DEBUG] Panel generado con éxito.");
-
             } catch (e) {
-                console.error("❌ Fallo en loadSenseiPanel:", e);
-                listDiv.innerHTML = `<div style="text-align:center; padding:40px; color:var(--accent);">
-                    <i class="fa-solid fa-triangle-exclamation" style="font-size:30px; margin-bottom:10px;"></i>
-                    <p>Error 500: El servidor de Strapi no responde correctamente. Inténtalo de nuevo en unos minutos.</p>
-                </div>`;
+                console.error("❌ Fallo crítico en Panel Sensei:", e);
+                listDiv.innerHTML = `<p style='text-align:center; color:var(--accent); padding:40px;'>Error 400: El servidor no permite esta consulta. Revisa los permisos en Strapi.</p>`;
             }
         }
 
@@ -1031,26 +1018,47 @@
 
         async function checkTodayClass() {
             if (!alumnoGlobal) return;
-            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
-            const json = await res.json(), ahora = new Date();
+            const aluId = getID(alumnoGlobal);
+
+            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { 
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+            });
+            const json = await res.json(); 
+            const ahora = new Date();
             const futuras = (json.data||[]).filter(c => new Date(parseData(c).Fecha_Hora) >= ahora);
             const btn = document.getElementById('confirm-btn');
 
             if (futuras.length > 0) {
-                const cProx = futuras[0]; claseHoyId = getID(cProx);
+                const cProx = futuras[0]; 
+                claseHoyId = getID(cProx);
                 const f = formatTimeSafe(parseData(cProx).Fecha_Hora);
                 document.getElementById('next-class-time').innerText = f.time;
                 document.getElementById('next-class-date').innerText = f.date;
                 btn.classList.remove('hidden');
                 
-                const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
-                const chkJ = await chk.json();
-                if(chkJ.data.length > 0) { 
+                // Filtro optimizado para v5
+                const endpoint = `/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${claseHoyId}`;
+                const chkRes = await fetch(`${API_URL}${endpoint}`, { 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+                });
+                const chkJ = await chkRes.json();
+
+                if (chkJ.data && chkJ.data.length > 0) {
                     const est = chkJ.data[0].attributes?.Estado || chkJ.data[0].Estado;
                     btn.innerText = (est === 'Confirmado') ? "CONFIRMADO" : "CLASE OK";
-                    btn.disabled = true; btn.style.background = "#1e293b"; btn.style.opacity = "0.7";
-                } else { btn.innerText = "ASISTIR AL KEIKO"; btn.disabled = false; btn.style.background = "white"; }
-            } else { document.getElementById('next-class-date').innerText = "Sin keikos hoy"; btn.classList.add('hidden'); }
+                    btn.disabled = true; 
+                    btn.style.background = "#1e293b"; 
+                    btn.style.opacity = "0.7";
+                } else {
+                    btn.innerText = "ASISTIR AL KEIKO"; 
+                    btn.disabled = false; 
+                    btn.style.background = "white"; 
+                    btn.style.color = "black";
+                }
+            } else {
+                document.getElementById('next-class-date').innerText = "Sin keikos hoy"; 
+                btn.classList.add('hidden');
+            }
         }
 
         /* --- GESTIÓN CALENDARIO --- */
