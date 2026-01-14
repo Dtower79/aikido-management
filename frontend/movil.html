@@ -736,6 +736,18 @@
 
         <!-- SENSEI PANEL VIEW -->
         <div id="sensei-view" class="hidden">
+            <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
+
+            <div id="sensei-view" class="hidden">
+            <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
+            
+            <!-- ESTE ES EL BLOQUE QUE TE FALTA Y POR EL QUE DA ERROR -->
+            <div style="padding: 0 25px; margin-bottom: 25px;">
+                <p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">FILTRAR TATAMI POR DOJO:</p>
+                <select id="sensei-dojo-filter" class="sensei-select" onchange="loadSenseiPanel()">
+                    <option value="all">-- TODOS LOS DOJOS --</option>
+                </select>
+            </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 20px 12px;">
                 <button class="action-btn" style="padding:18px; font-size:12px; background:#1e293b; color:white;" onclick="uiGenerateMonth()">GENERAR MES</button>
@@ -744,6 +756,8 @@
             <div style="margin:0 20px 25px;">
                 <button class="action-btn" style="padding:18px; font-size:12px; background:var(--accent); color:white; width:100%;" onclick="uiCreateSingleClass()">+ NUEVA CLASE SUELTA</button>
             </div>
+            <div id="student-list" style="padding-bottom: 40px;"></div>
+        </div>
 
             <!-- Contenedor de Clases con alumnos pendientes -->
             <div id="student-list" style="padding-bottom: 40px;"></div>
@@ -993,7 +1007,8 @@
         // --- SENSEI LOGIC ---
         async function loadSenseiPanel() {
             const listDiv = document.getElementById('student-list');
-            const dojoFilter = document.getElementById('sensei-dojo-filter').value;
+            const filterEl = document.getElementById('sensei-dojo-filter');
+            const dojoFilter = filterEl ? filterEl.value : 'all';
             listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Cargando tatami...</p>";
             
             const limitDate = new Date();
