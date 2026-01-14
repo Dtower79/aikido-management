@@ -901,41 +901,46 @@
             const filterEl = document.getElementById('sensei-dojo-filter');
             const dojoFilter = filterEl ? filterEl.value : 'all';
             
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Cargando tatami...</p>";
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Conectando con el Tatami...</p>";
             
             const limitDate = new Date();
             limitDate.setDate(limitDate.getDate() - 7);
 
             try {
-                // CONSULTA OPTIMIZADA PARA V5: Evita el Error 400 simplificando el populate
-                let url = `/api/asistencias?filters[Estado][$eq]=Confirmado&populate=alumno&populate[clase][populate]=dojo&pagination[limit]=100`;
+                // ESTRATEGIA DE EMERGENCIA: Pedimos asistencias sin filtros para evitar el Error 500 del servidor
+                // Strapi v5 es más estable así. Filtraremos "Confirmado" aquí mismo en el código.
+                let url = `/api/asistencias?populate[alumno]=*&populate[clase][populate]=dojo&pagination[limit]=100`;
                 
                 const res = await fetch(`${API_URL}${url}`, { 
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
                 });
 
                 if (!res.ok) {
-                    const errorDetails = await res.json();
-                    console.error("❌ Error de Strapi:", errorDetails);
-                    throw new Error("Fallo en la consulta");
+                    throw new Error("El servidor ha rechazado la conexión (Error " + res.status + ")");
                 }
 
                 const json = await res.json();
+                console.log("📊 [SENSEI-DEBUG] Datos brutos recibidos:", json.data?.length || 0, "registros.");
+
                 const groups = {};
 
                 (json.data || []).forEach(asist => {
-                    // Strapi v5 entrega los datos planos, sin el wrapper .attributes
-                    const a = asist; 
+                    // Extraer datos (maneja tanto v4 como v5)
+                    const a = asist.attributes || asist; 
                     const cla = parseRelation(a.clase);
                     const alu = parseRelation(a.alumno);
                     
+                    // FILTRO MANUAL 1: Solo queremos los que están en estado "Confirmado"
+                    const estado = a.Estado || a.estado;
+                    if (estado !== 'Confirmado') return;
+
                     if (!cla || !alu) return;
 
                     const fechaClase = new Date(cla.Fecha_Hora);
                     const cid = getID(a.clase);
                     const dojoId = getID(cla.dojo);
 
-                    // Filtros de lógica
+                    // FILTRO MANUAL 2: Ventana de 7 días y filtro por Dojo
                     if (fechaClase < limitDate) return;
                     if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
 
@@ -952,11 +957,11 @@
 
                 const keys = Object.keys(groups);
                 if (keys.length === 0) {
-                    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Todo validado.</p>";
+                    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes de validar.</p>";
                     return;
                 }
 
-                // Ordenar localmente por fecha
+                // Ordenamos las tarjetas por fecha más cercana
                 keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
 
                 listDiv.innerHTML = "";
@@ -984,7 +989,7 @@
                         <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
                             <div style="text-align:left;">
                                 <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
-                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
+                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} PENDIENTES</p>
                             </div>
                             <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                         </div>
@@ -993,9 +998,15 @@
                         </div>
                     </div>`;
                 });
+
+                console.log("✅ [SENSEI-DEBUG] Panel generado con éxito.");
+
             } catch (e) {
-                console.error("❌ Fallo crítico en el panel:", e);
-                listDiv.innerHTML = "<p style='text-align:center; color:var(--accent); padding:40px;'>Error 400: Consulta rechazada por el servidor.</p>";
+                console.error("❌ Fallo en loadSenseiPanel:", e);
+                listDiv.innerHTML = `<div style="text-align:center; padding:40px; color:var(--accent);">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:30px; margin-bottom:10px;"></i>
+                    <p>Error 500: El servidor de Strapi no responde correctamente. Inténtalo de nuevo en unos minutos.</p>
+                </div>`;
             }
         }
 
