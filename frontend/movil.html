@@ -795,65 +795,116 @@
 
         // --- CORE INIT ---
         async function initApp() {
-            const token = localStorage.getItem('aikido_jwt'), user = JSON.parse(localStorage.getItem('aikido_user'));
-            if(!token || !user) return;
+            console.log("🚀 [INIT] Arrancando aplicación...");
+            const token = localStorage.getItem('aikido_jwt');
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+            
+            if (!token || !user) {
+                console.warn("⚠️ [INIT] No hay sesión activa. Redirigiendo a login.");
+                return;
+            }
+
+            // 1. Preparar Interfaz Base
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
-            if (user.is_sensei || user.es_instructor) document.getElementById('nav-sensei').style.display = 'flex';
+
+            // 2. Check de Instructor (Basado en tu captura de 'User')
+            // Comprobamos si es sensei en la cuenta de usuario
+            if (user.is_sensei === true) {
+                console.log("🥋 [AUTH] Usuario identificado como SENSEI.");
+                document.getElementById('nav-sensei').style.display = 'flex';
+            }
+
+            // 3. Cargar Requisitos de Grado (Caché de 20 días)
+            // Esto es vital para que el círculo de horas no salga con "--"
+            try {
+                const jsonReq = await fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480);
+                if (jsonReq && jsonReq.data) {
+                    requisitosGradoGlobal = jsonReq.data.map(d => { 
+                        const a = d.attributes || d; 
+                        return { 
+                            NORM: normalize(a.GRADO || a.grado), 
+                            HORAS: parseFloat(a.HORAS_NECESARIAS || a.horas_necesarias || 0) 
+                        }; 
+                    });
+                    console.log("📚 [DATA] Requisitos de grado cargados:", requisitosGradoGlobal.length);
+                }
+            } catch (e) {
+                console.error("❌ [DATA] Error cargando requisitos:", e);
+            }
             
-            const jsonReq = await fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480);
-            if(jsonReq) requisitosGradoGlobal = jsonReq.data.map(d => { 
-                const a = parseData(d); 
-                return { NORM: normalize(a.GRADO || a.grado), HORAS: parseFloat(a.HORAS_NECESARIAS || a.horas_necesarias || 0) }; 
-            });
+            // 4. Cargar Perfil y Keikos
+            // Primero el perfil para tener el documentId del alumno para la asistencia
+            await refreshStudentData(); 
             
-            await refreshStudentData();
+            // Si después de cargar el perfil el alumno es instructor, también mostramos el panel
+            if (alumnoGlobal) {
+                const p = alumnoGlobal.attributes || alumnoGlobal;
+                if (p.es_instructor === true) {
+                    console.log("🥋 [AUTH] Alumno identificado como INSTRUCTOR.");
+                    document.getElementById('nav-sensei').style.display = 'flex';
+                }
+            }
+
             checkTodayClass();
         }
 
         async function refreshStudentData() {
-            const token = localStorage.getItem('aikido_jwt'), user = JSON.parse(localStorage.getItem('aikido_user'));
-            
-            // Buscamos al alumno que tenga vinculada esta ID de usuario
-            let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-            let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
+            const token = localStorage.getItem('aikido_jwt');
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+            if (!user) return;
 
-            // Fallback: Si la relación aún no existe (usuarios antiguos), buscamos por DNI
-            if (!json || json.data.length === 0) {
-                const cleanUsername = user.username.trim().toUpperCase();
-                endpoint = `/api/alumnos?filters[dni][$eq]=${cleanUsername}&populate=*`;
-                json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
+            console.log("🔍 [DEBUG] Buscando ficha vinculada al User ID:", user.id);
+            
+            // Filtro v5: Prioridad Relación -> Fallback DNI
+            let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+            let json = await fetchSmart(endpoint, 'perfil_alumno', 0.05); 
+
+            if (!json || !json.data || json.data.length === 0) {
+                endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
+                json = await fetchSmart(endpoint, null, 0); 
             }
 
-            if (json && json.data.length > 0) {
+            if (json && json.data && json.data.length > 0) {
                 alumnoGlobal = json.data[0]; 
-                const p = alumnoGlobal.attributes || alumnoGlobal; 
-                dojoIdGlobal = (p.dojo && p.dojo.data) ? p.dojo.data.documentId : (p.dojo ? p.dojo.documentId : null);
+                const p = alumnoGlobal.attributes || alumnoGlobal;
                 
+                // UI: Nombre e Iniciales (Inter 800 por CSS)
+                const nombre = p.nombre || user.nombre || "Alumno";
+                const apellidos = p.apellidos || user.apellidos || "";
+                document.getElementById('user-display-name').innerText = nombre.toUpperCase();
+                document.getElementById('user-initials').innerText = (nombre[0] + (apellidos[0] || "")).toUpperCase();
+
+                if (p.dojo) {
+                    const d = p.dojo.data ? p.dojo.data : p.dojo;
+                    dojoIdGlobal = d.documentId || d.id;
+                }
+
+                // Lógica de Horas y Círculo
+                const horas = parseFloat(p.horas_acumuladas || 0);
+                document.getElementById('stat-hours').innerText = horas.toFixed(1);
                 document.getElementById('student-progress-circle').classList.remove('hidden');
-                document.getElementById('next-grade-display').classList.remove('hidden');
-                document.getElementById('user-display-name').innerText = p.nombre || user.nombre;
-                document.getElementById('user-initials').innerText = (p.nombre[0]+(p.apellidos?p.apellidos[0]:"")).toUpperCase();
-                
-                const current = parseFloat(p.horas_acumuladas || 0);
-                const circle = document.getElementById('progress-bar');
-                
-                let target = 60;
-                let next = "PRÓXIMO NIVEL";
-                
-                const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
-                if(idx !== -1 && idx < GRADOS_ORDER.length - 1) {
-                    next = GRADOS_ORDER[idx+1]; 
-                    const req = requisitosGradoGlobal.find(r => r.NORM === normalize(next));
-                    if(req) target = req.HORAS; else if(GRADOS_FALLBACK[next]) target = GRADOS_FALLBACK[next];
+
+                let meta = p.grado_objetivo;
+                if (!meta) {
+                    const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
+                    meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
                 }
                 
-                const pct = Math.min((current/target)*100, 100);
-                circle.style.strokeDashoffset = 339.29 - (pct/100 * 339.29);
-                document.getElementById('stat-hours').innerText = current.toFixed(1);
-                document.getElementById('stat-label').innerText = `Horas / ${target}`;
-                document.getElementById('next-grade-display').innerText = `CAMINO AL ${next.toUpperCase()}`;
+                const req = requisitosGradoGlobal.find(r => r.NORM === normalize(meta));
+                const horasTarget = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
+
+                const circle = document.getElementById('progress-bar');
+                const pct = Math.min((horas / horasTarget) * 100, 100);
+                circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
+                
+                document.getElementById('stat-label').innerText = `HORAS / ${horasTarget}`;
+                const lblMeta = document.getElementById('next-grade-display');
+                lblMeta.innerText = `CAMINO AL ${meta.toUpperCase()}`;
+                lblMeta.classList.remove('hidden');
+
+                console.log("✅ [DEBUG] Ficha sincronizada.");
             }
         }
 
@@ -1098,61 +1149,79 @@
             const dni = document.getElementById('act-dni').value.trim().toUpperCase();
             const p1 = document.getElementById('act-pass').value.trim();
             const p2 = document.getElementById('act-pass2').value.trim();
-
-            if (p1 !== p2) { showModal("Error", "Las contraseñas no coinciden. Por favor, revísalas."); return; }
-            if (p1.length < 6) { showModal("Seguridad", "La contraseña debe tener al menos 6 caracteres."); return; }
+            if (p1 !== p2) { showModal("Error", "Las contraseñas no coinciden."); return; }
 
             const btn = document.getElementById('btn-activate-submit');
-            const originalText = btn.innerText;
-            btn.innerText = "PROCESANDO..."; 
-            btn.disabled = true;
+            btn.innerText = "PROCESANDO..."; btn.disabled = true;
 
             try {
-                // 1. Buscar al alumno por DNI para obtener su DocumentId
-                const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
-                const checkData = await checkRes.json();
-                if (!checkData.data || checkData.data.length === 0) { 
-                    showModal("Error", "DNI no registrado."); btn.innerText = "ACTIVAR"; btn.disabled = false; return; 
-                }
+                // 1. Buscar el Alumno para obtener su documentId
+                const resSearch = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
+                const dataSearch = await resSearch.json();
                 
-                const alumnoDocId = checkData.data[0].documentId; // Importante: documentId para Strapi v5
-                const alumnoActual = checkData.data[0].attributes || checkData.data[0];
+                if (!dataSearch.data || dataSearch.data.length === 0) {
+                    showModal("Error", "DNI no encontrado en el sistema.");
+                    btn.innerText = "ACTIVAR"; btn.disabled = false; return;
+                }
 
-                // 2. Calcular Grado Objetivo para que no suba vacío
+                const alu = dataSearch.data[0];
+                const alumnoDocId = alu.documentId; 
+                const p = alu.attributes || alu;
+
+                // 2. Cálculo Inteligente de Grado Objetivo
                 let gradoObj = "S/G";
-                const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(alumnoActual.grado));
-                if(idx !== -1 && idx < GRADOS_ORDER.length - 1) gradoObj = GRADOS_ORDER[idx+1];
-
-                // 3. Registrar el usuario en Strapi Auth
-                const regRes = await fetch(`${API_URL}/api/auth/local/register`, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ username: dni, email: `${dni.toLowerCase()}@arashi.com`, password: p1 }) 
-                });
-                const regData = await regRes.json();
+                const gradoActual = p.grado || "S/G";
+                const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(gradoActual));
                 
-                if (regRes.ok) {
-                    // 4. VINCULACIÓN: Aquí llenamos los 2 campos que te salen vacíos
-                    await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { 
-                        method: 'PUT', 
-                        headers: { 
-                            'Content-Type': 'application/json', 
-                            'Authorization': `Bearer ${regData.jwt}` 
-                        }, 
-                        body: JSON.stringify({ 
-                            data: { 
-                                cuenta_usuario: regData.user.id, // Vincula la cuenta
-                                grado_objetivo: gradoObj        // Llena el grado objetivo
-                            } 
-                        }) 
-                    });
-                    document.getElementById('activate-modal').classList.add('hidden'); 
-                    showModal("¡OSS!", "Activado con éxito. Ya puedes entrar."); 
-                    e.target.reset();
-                } else { 
-                    showModal("Error", regData.error.message); 
+                if(idx !== -1 && idx < GRADOS_ORDER.length - 1) {
+                    gradoObj = GRADOS_ORDER[idx+1]; // Asigna el siguiente nivel de la lista
+                } else {
+                    gradoObj = gradoActual; // Si no hay más (8º Dan) o no se encuentra, mantiene el actual
                 }
-            } catch(e) { showModal("Error", "Fallo de conexión."); } finally { btn.innerText = "ACTIVAR"; btn.disabled = false; }
+
+                // 3. Registrar Usuario en la tabla Auth
+                const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: dni, 
+                        email: `${dni.toLowerCase()}@arashi.com`, 
+                        password: p1,
+                        nombre: p.nombre,    
+                        apellidos: p.apellidos 
+                    })
+                });
+                
+                const regData = await regRes.json();
+
+                if (regRes.ok) {
+                    // 4. VINCULACIÓN DEFINITIVA (PUT): Llenamos cuenta_usuario y grado_objetivo
+                    await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, {
+                        method: 'PUT',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${regData.jwt}`
+                        },
+                        body: JSON.stringify({
+                            data: {
+                                cuenta_usuario: regData.user.id,
+                                grado_objetivo: gradoObj
+                            }
+                        })
+                    });
+
+                    document.getElementById('activate-modal').classList.add('hidden');
+                    showModal("¡OSS!", "Cuenta activada y vinculada. Ya puedes entrar con tu DNI.");
+                    e.target.reset();
+                } else {
+                    showModal("Aviso", regData.error.message.includes("taken") ? "Este usuario ya está activo." : regData.error.message);
+                }
+            } catch (err) {
+                console.error(err);
+                showModal("Error", "Fallo crítico en la activación.");
+            } finally {
+                btn.innerText = "ACTIVAR"; btn.disabled = false;
+            }
         });
 
         // --- COMMON ---
@@ -1208,8 +1277,34 @@
             if(v === 'dashboard') { refreshStudentData(); checkTodayClass(); }
         }
         function logout() { localStorage.clear(); location.reload(); }
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
-        window.onload = () => { if(localStorage.getItem('aikido_jwt')) initApp(); };
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btnArea = document.getElementById('android-btn-area');
+            if (btnArea) btnArea.style.display = 'block';
+        });
+
+        async function handleAndroidInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') console.log('User accepted install');
+                deferredPrompt = null;
+            } else {
+                showModal("Info", "La App ya está instalada o estás en modo escritorio.");
+            }
+        }
+
+        window.onload = () => { 
+            if (localStorage.getItem('aikido_jwt')) {
+                initApp().catch(err => console.error("Error en Init:", err));
+            } 
+        };
     </script>
 </body>
 </html>
