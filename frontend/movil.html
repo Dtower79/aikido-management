@@ -261,6 +261,19 @@
 
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
+         // --- REGLA DE ORO PARA EL FUTURO: BYPASS DE ESCRITORIO ---
+        // Esta lógica debe ir al inicio para evitar que el muro de instalación 
+        // se quede bloqueado en PC si hay errores en funciones inferiores.
+        (function() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            // Si NO es móvil O ya está instalado (Standalone), entramos directo.
+            if (!isMobile || isStandalone) {
+                document.documentElement.classList.add('ready-to-show');
+            }
+        })();
+        // -------------------------------------------------------
         let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null, requisitosGradoGlobal = [];
         let selectedMonthGen = new Date().getMonth();
         let html5QrCode = null;
