@@ -57,18 +57,10 @@
         .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 10; font-size: 15px; }
         
         /* INPUT MEJORADO */
-        input, select { 
-            width: 100%; padding: 16px 16px 16px 52px; 
-            background: rgba(15, 23, 42, 0.9) !important; 
-            border: 1px solid var(--glass-border); border-radius: 18px; 
-            color: white !important; font-size: 16px; 
-            box-sizing: border-box; outline: none; transition: 0.3s; 
-            text-transform: uppercase; /* Fuerza visualmente mayúsculas */
-        }
-        /* Excepción para password (no mayúsculas) */
-        input[type="password"] { text-transform: none; }
-        
+        input, select { width: 100%; padding: 16px 16px 16px 52px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; box-sizing: border-box; outline: none; transition: 0.3s; }
         input:-webkit-autofill { -webkit-text-fill-color: white !important; -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important; transition: background-color 5000s ease-in-out 0s; }
+        /* Forzar mayúsculas visuales en inputs de texto normal */
+        input[type="text"] { text-transform: uppercase; }
 
         /* --- DASHBOARD ELEMENTS --- */
         .header-app { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; padding: 20px 25px 0; box-sizing: border-box; }
@@ -125,15 +117,21 @@
         .nav-item span { font-size: 10px; font-weight: 600; margin-top: 6px; }
         .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
 
-        /* --- MODALES (CORREGIDO FONDO) --- */
+        /* --- MODALES (CORREGIDO VISUAL) --- */
         .modal-overlay { 
             position: fixed; inset: 0; 
-            background: rgba(5, 8, 15, 0.9); /* Fondo Arashi con transparencia */
-            backdrop-filter: blur(8px); 
+            background: rgba(8, 11, 20, 0.85); /* Fondo oscuro con transparencia elegante */
+            backdrop-filter: blur(10px); 
             display: flex; justify-content: center; align-items: center; 
             z-index: 9999; padding: 20px; 
         }
-        .modal-content { background: #0f172a; border: 1px solid var(--glass-border); padding: 30px; border-radius: 35px; width: 100%; max-width: 380px; text-align: center; box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
+        .modal-content { 
+            background: #0f172a; 
+            border: 1px solid var(--glass-border); 
+            padding: 30px; border-radius: 35px; width: 100%; max-width: 380px; 
+            text-align: center; box-sizing: border-box; max-height: 90vh; overflow-y: auto; 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+        }
         .modal-field { width: 100%; padding: 16px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 18px; color: white !important; font-size: 16px; margin-bottom: 15px; outline: none; box-sizing: border-box; }
         .modal-actions-container { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
         
@@ -168,7 +166,7 @@
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
                 <h3 id="modal-title">...</h3>
-                <div id="modal-body-content" style="margin-bottom:20px;"></div>
+                <div id="modal-body-content" style="margin-bottom:20px; font-size:14px; color: #ddd; line-height:1.5;"></div>
                 <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">OK</button>
             </div>
         </div>
@@ -199,7 +197,7 @@
                 <form id="login-form">
                     <div class="input-group">
                         <i class="fa-solid fa-id-card"></i>
-                        <!-- INPUT DNI BLINDADO -->
+                        <!-- INPUT DNI BLINDADO: Solo permite letras/nums y mayúsculas -->
                         <input type="text" id="dni-login" placeholder="DNI" required maxlength="9" 
                                oninput="this.value = this.value.toUpperCase().replace(/[^0-9A-Z]/g, '')">
                     </div>
@@ -209,6 +207,7 @@
                     </div>
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
+                <!-- TEXTO RECUPERADO -->
                 <div class="auth-footer">
                     ¿Usuario Nuevo? <a href="#" onclick="document.getElementById('activate-modal').classList.remove('hidden')">Activa tu cuenta</a>
                 </div>
@@ -314,6 +313,7 @@
             } else {
                 btn.style.display = 'none';
             }
+            
             document.getElementById('custom-modal').classList.remove('hidden'); 
         }
         function closeModal() { document.getElementById('custom-modal').classList.add('hidden'); if(html5QrCode) { html5QrCode.stop().catch(()=>{}); html5QrCode = null; } }
@@ -325,16 +325,25 @@
             return { time: `${hh}:${mm}h`, date: `${d}/${m}/${y}`, month: dateObj.toLocaleString('es-ES', { month: 'long' }), hour: parseInt(hh) };
         }
 
+        // --- LÓGICA DE GRADOS CORREGIDA (1 DÍA = 1 HORA) ---
         const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
         
         const GRADOS_FALLBACK = { 
-            "5º KYU": 30, "4º KYU": 40, "3º KYU": 50, "2º KYU": 50, "1º KYU": 60, 
-            "1º DAN": 70, "2º DAN": 200, "3º DAN": 300, "4º DAN": 400 
+            "5º KYU": 30, 
+            "4º KYU": 40, 
+            "3º KYU": 50, 
+            "2º KYU": 50, 
+            "1º KYU": 60, 
+            "1º DAN": 70, 
+            "2º DAN": 200, 
+            "3º DAN": 300, 
+            "4º DAN": 400 
         };
 
         function normalize(g) { return (!g) ? "" : g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, ''); }
 
         async function fetchRequisitosGrado() {
+            // Actualizado a 20 días (480h)
             const json = await fetchSmart('/api/requisito-grados?pagination[limit]=100&populate=*', 'requisitos', 480); 
             if(json) requisitosGradoGlobal = (json.data || []).map(d => { const a = parseData(d); return { GRADO: a.GRADO || a.grado, HORAS: parseFloat(a.HORAS_NECESARIAS || a.horas_necesarias || 0), NORM: normalize(a.GRADO || a.grado) }; });
         }
@@ -376,32 +385,42 @@
             const token = localStorage.getItem('aikido_jwt'); 
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             
+            // Perfil de alumno (con caché 1h)
             const json = await fetchSmart(`/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, 'perfil_alumno', 1); 
             
             if (json && json.data.length > 0) {
-                alumnoGlobal = json.data[0]; const p = parseData(alumnoGlobal); dojoIdGlobal = getID(parseRelation(p.dojo));
+                // --- ES UN ALUMNO ---
+                alumnoGlobal = json.data[0]; 
+                const p = parseData(alumnoGlobal); 
+                dojoIdGlobal = getID(parseRelation(p.dojo));
+
                 document.getElementById('student-progress-circle').classList.remove('hidden');
                 document.getElementById('sensei-welcome-card').classList.add('hidden');
                 document.getElementById('user-display-name').innerText = p.nombre;
                 document.getElementById('user-initials').innerText = (p.nombre[0]+(p.apellidos?p.apellidos[0]:"")).toUpperCase();
                 updateProgress(p.horas_acumuladas, p.grado);
             } else if (user.is_sensei) {
+                // --- ES UN SENSEI ---
                 document.getElementById('student-progress-circle').classList.add('hidden');
                 document.getElementById('sensei-welcome-card').classList.remove('hidden');
                 document.getElementById('user-display-name').innerText = user.nombre || "Sensei";
                 document.getElementById('user-initials').innerText = (user.nombre?user.nombre[0]:"S").toUpperCase();
                 
+                // FIX: Pedir Dojo explícitamente sin caché para asegurar que tenemos ID
                 try {
                     const res = await fetch(`${API_URL}/api/dojos`, { headers: { 'Authorization': `Bearer ${token}` } });
                     const dojos = await res.json();
                     if(dojos.data && dojos.data.length > 0) {
-                        dojoIdGlobal = getID(dojos.data[0]); 
+                        dojoIdGlobal = getID(dojos.data[0]); // Asigna el primer dojo
+                    } else {
+                        console.warn("Aviso: No se ha encontrado ningún Dojo en el sistema.");
                     }
                 } catch(e) { console.error("Error asignando Dojo", e); }
             }
         }
 
         async function checkTodayClass() {
+            // Sin cache para status real
             const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=5`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
             const json = await res.json();
             const now = new Date();
@@ -424,8 +443,10 @@
         async function loadMonthlyClasses(el) {
             showView('clases', el);
             document.getElementById('calendar-content').innerHTML = "<p style='text-align:center;opacity:0.5;padding:20px;'>Cargando...</p>";
+            // Cache 24h
             const json = await fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 24);
             const grouped = {};
+            // Limpieza automática: Ocultar clases anteriores a ayer
             const yesterday = new Date(); yesterday.setHours(0,0,0,0); yesterday.setDate(yesterday.getDate()-1);
 
             (json.data||[]).forEach(c => {
@@ -446,6 +467,7 @@
             document.getElementById('calendar-content').innerHTML = html;
         }
 
+        // --- SENSEI PANEL AGRUPADO + QR ---
         async function loadSenseiPanel() {
             const listDiv = document.getElementById('student-list');
             listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Cargando...</p>";
@@ -493,6 +515,7 @@
             }
         }
 
+        // --- SISTEMA QR ---
         function generateClassQR(classId) {
             showModal("QR de Clase", `<div class="qr-display-container"><div id="qr-gen"></div></div><p style="font-size:12px;color:#aaa;">Pide a los alumnos que escaneen esto.</p>`, false);
             document.getElementById('qr-gen').innerHTML = "";
@@ -590,7 +613,7 @@
                 const data = await res.json();
                 if (res.ok) { localStorage.setItem('aikido_jwt', data.jwt); localStorage.setItem('aikido_user', JSON.stringify(data.user)); initApp(); }
                 else { 
-                    const msg = data.error ? data.error.message : "Error desconocido";
+                    const msg = data.error ? data.error.message : "Credenciales incorrectas";
                     showModal("Acceso Denegado", `DNI o contraseña incorrectos.<br><br><small style='color:#aaa'>${msg}</small>`, true); 
                 }
             } catch (e) { showModal("Error de Conexión", "No se puede contactar con el servidor.", true); }
