@@ -6,10 +6,11 @@
     <meta name="theme-color" content="#ef4444">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="img/logo-arashi-movil.png">
-    <title>Arashi App</title>
     
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="img/logo-arashi.png">
+    <title>Arashi App</title>
+    <link rel="icon" href="img/logo-arashi.png" type="image/png">
     <!-- FUENTES Y LIBRERÍAS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -59,15 +60,14 @@
         .hidden { display: none !important; }
 
         /* --- MURO DE INSTALACIÓN --- */
-        #app-content { 
-            display: none; 
-            flex-direction: column; 
-            flex: 1; 
-            height: 100%; 
-            width: 100%; 
-            overflow-y: auto; 
-            padding-bottom: 110px; 
-            -webkit-overflow-scrolling: touch; 
+        #app-content {
+            opacity: 0;
+            transition: opacity 0.6s ease-in-out;
+        }
+        /* Si la App está cargada O si estamos en la pantalla de login, mostramos */
+        .app-loaded #app-content, 
+        body:not(.user-logged) #app-content {
+            opacity: 1;
         }
 
         #install-wall { 
@@ -868,10 +868,18 @@
             console.log("🚀 [INIT] Arrancando aplicación...");
             const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
-            if (!token || !user) return;
+            
+            if (!token || !user) {
+                // Si no hay usuario, mostramos la pantalla de login y activamos visibilidad
+                document.documentElement.classList.add('app-loaded');
+                return;
+            }
 
+            // Si hay usuario, añadimos una clase al body para el CSS
+            document.body.classList.add('user-logged');
+            
             document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('main-nav').classList.remove('hidden');
+            // ... resto del código igual ...
             showView('dashboard');
 
             await Promise.all([
