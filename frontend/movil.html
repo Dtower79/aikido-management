@@ -177,7 +177,7 @@
                 <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Introduce tu DNI y crea una contraseña.</p>
                 <form id="activate-form">
                     <input type="text" id="act-dni" class="modal-field" placeholder="DNI (12345678X)" required maxlength="9" oninput="this.value = this.value.toUpperCase()">
-                    <input type="password" id="act-pass" class="modal-field" placeholder="Nueva Contraseña" required>
+                    <input type="password" id="act-pass" class="modal-field" placeholder="Nueva Contraseña (mín 6)" required>
                     <input type="password" id="act-pass2" class="modal-field" placeholder="Repetir Contraseña" required>
                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
                         <button type="submit" class="action-btn primary" id="btn-activate-submit">ACTIVAR</button>
@@ -443,7 +443,7 @@
         }
 
         function generateClassQR(classId) {
-            showModal("Validar Asistencia", `<div class="qr-display-container"><div id="qr-gen"></div></div>`, true);
+            showModal("Código QR", `<div class="qr-display-container"><div id="qr-gen"></div></div><p style="font-size:12px;color:#aaa;margin-top:10px;">Apunta a los alumnos para validar.</p>`, true);
             new QRCode(document.getElementById('qr-gen'), { text: classId, width: 200, height: 200 });
         }
 
@@ -555,13 +555,14 @@
             localStorage.removeItem('cache_calendario_clases'); closeModal(); loadManageClasses(); checkTodayClass();
         }
 
-        // --- AUTH LOGIC (CORREGIDO ERROR 400 Y TOKEN ) ---
+        // --- AUTH LOGIC (CORREGIDO ERROR 400 Y TOKEN) ---
         document.getElementById('activate-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const dni = document.getElementById('act-dni').value.trim().toUpperCase();
             const p1 = document.getElementById('act-pass').value.trim();
             const p2 = document.getElementById('act-pass2').value.trim();
 
+            // 1. Validaciones inmediatas
             if (p1 !== p2) {
                 showModal("Error", "Las contraseñas no coinciden. Por favor, revísalas.");
                 return;
@@ -572,20 +573,25 @@
                 return;
             }
 
-            const btn = e.target.querySelector('button[type="submit"]');
+            const btn = document.getElementById('btn-activate-submit');
             const originalText = btn.innerText;
-            btn.innerText = "PROCESANDO..."; btn.disabled = true;
+            btn.innerText = "PROCESANDO..."; 
+            btn.disabled = true;
 
             try {
+                // 2. Verificar existencia del Alumno
                 const checkRes = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
                 const checkData = await checkRes.json();
 
                 if (!checkData.data || checkData.data.length === 0) {
-                    showModal("DNI No Encontrado", "Este DNI no consta como alumno. Habla con el Sensei.");
+                    showModal("DNI No Encontrado", "Este DNI no consta como alumno activo. Habla con el Sensei.");
                     return;
                 }
 
                 const alu = checkData.data[0];
+                const nombreParaUser = parseData(alu).nombre || "Alumno";
+
+                // 3. Registrar usuario
                 const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -600,20 +606,24 @@
 
                 if (regRes.ok) {
                     document.getElementById('activate-modal').classList.add('hidden');
-                    showModal("¡OSS!", "Cuenta activada. Ya puedes entrar con tu DNI.");
+                    showModal("¡OSS!", "Cuenta activada correctamente. Ya puedes entrar con tu DNI.");
                     e.target.reset();
                 } else {
-                    let msg = "Error de registro.";
-                    if(regData.error && regData.error.message) {
-                        if(regData.error.message.includes("taken")) msg = "Este DNI ya está activo en el sistema.";
-                        else msg = regData.error.message;
+                    let msg = "No se pudo realizar el registro.";
+                    if (regData.error && regData.error.message) {
+                        if (regData.error.message.includes("taken")) {
+                            msg = "Este DNI ya tiene una cuenta activa.";
+                        } else {
+                            msg = regData.error.message;
+                        }
                     }
                     showModal("Aviso", msg);
                 }
             } catch(e) {
-                showModal("Error", "Fallo de conexión.");
+                showModal("Error", "Fallo de conexión con el Dojo digital.");
             } finally {
-                btn.innerText = originalText; btn.disabled = false;
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
         });
 
@@ -678,7 +688,6 @@
             if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
         }
         function logout() { localStorage.clear(); location.reload(); }
-        window.onload = () => { if(localStorage.getItem('aikido_jwt')) initApp(); };
     </script>
 </body>
 </html>
