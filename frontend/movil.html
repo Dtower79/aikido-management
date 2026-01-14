@@ -1169,12 +1169,22 @@
             btn.innerText = "PROCESANDO..."; btn.disabled = true;
 
             try {
-                // 1. Buscar el Alumno para obtener su documentId
+                // 1. VALIDACIÓN LOCAL (Castellano original)
+                if (p1 !== p2) { 
+                    showModal("Aviso", "Las contraseñas no coinciden. Por favor, revísalas."); 
+                    btn.innerText = "ACTIVAR"; btn.disabled = false; return; 
+                }
+                if (p1.length < 6) { 
+                    showModal("Seguridad", "La contraseña debe tener al menos 6 caracteres por seguridad."); 
+                    btn.innerText = "ACTIVAR"; btn.disabled = false; return; 
+                }
+
+                // 2. BUSCAR ALUMNO
                 const resSearch = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
                 const dataSearch = await resSearch.json();
                 
                 if (!dataSearch.data || dataSearch.data.length === 0) {
-                    showModal("Error", "DNI no encontrado en el sistema.");
+                    showModal("Error", "DNI no encontrado en el sistema. Habla con el Sensei.");
                     btn.innerText = "ACTIVAR"; btn.disabled = false; return;
                 }
 
@@ -1182,34 +1192,28 @@
                 const alumnoDocId = alu.documentId; 
                 const p = alu.attributes || alu;
 
-                // 2. Cálculo Inteligente de Grado Objetivo
+                // 3. CALCULAR GRADO OBJETIVO
                 let gradoObj = "S/G";
                 const gradoActual = p.grado || "S/G";
                 const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(gradoActual));
-                
-                if(idx !== -1 && idx < GRADOS_ORDER.length - 1) {
-                    gradoObj = GRADOS_ORDER[idx+1]; // Asigna el siguiente nivel de la lista
-                } else {
-                    gradoObj = gradoActual; // Si no hay más (8º Dan) o no se encuentra, mantiene el actual
-                }
+                if(idx !== -1 && idx < GRADOS_ORDER.length - 1) gradoObj = GRADOS_ORDER[idx+1];
 
-                // 3. Registrar Usuario en la tabla Auth
+                // 4. REGISTRAR USUARIO (Solo campos estándar para evitar el error "Invalid parameters")
                 const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         username: dni, 
                         email: `${dni.toLowerCase()}@arashi.com`, 
-                        password: p1,
-                        nombre: p.nombre,    
-                        apellidos: p.apellidos 
+                        password: p1
+                        // Eliminamos nombre/apellidos de aquí para que Strapi no de error 400
                     })
                 });
                 
                 const regData = await regRes.json();
 
                 if (regRes.ok) {
-                    // 4. VINCULACIÓN DEFINITIVA (PUT): Llenamos cuenta_usuario y grado_objetivo
+                    // 5. VINCULACIÓN (PUT): Aquí es donde se llenan los campos de tu captura
                     await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, {
                         method: 'PUT',
                         headers: { 
@@ -1218,21 +1222,24 @@
                         },
                         body: JSON.stringify({
                             data: {
-                                cuenta_usuario: regData.user.id,
-                                grado_objetivo: gradoObj
+                                cuenta_usuario: regData.user.id, // Esto llena la relación que veías vacía
+                                grado_objetivo: gradoObj        // Esto llena el grado objetivo
                             }
                         })
                     });
 
                     document.getElementById('activate-modal').classList.add('hidden');
-                    showModal("¡OSS!", "Cuenta activada y vinculada. Ya puedes entrar con tu DNI.");
+                    showModal("¡OSS!", "Cuenta activada correctamente. Ya puedes entrar con tu DNI.");
                     e.target.reset();
                 } else {
-                    showModal("Aviso", regData.error.message.includes("taken") ? "Este usuario ya está activo." : regData.error.message);
+                    // Mensajes de error del servidor en castellano
+                    let msg = regData.error.message;
+                    if (msg.includes("taken")) msg = "Este DNI ya tiene una cuenta activa.";
+                    showModal("Aviso", msg);
                 }
             } catch (err) {
                 console.error(err);
-                showModal("Error", "Fallo crítico en la activación.");
+                showModal("Error", "Fallo de conexión con el servidor.");
             } finally {
                 btn.innerText = "ACTIVAR"; btn.disabled = false;
             }
