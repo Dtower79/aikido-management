@@ -342,13 +342,19 @@
 
         .student-item { 
             background: rgba(255,255,255,0.03); 
-            padding: 12px 15px; 
+            padding: 12px 18px; /* Aumentamos un poco el padding lateral */
             border-radius: 18px; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            margin: 8px 15px; 
+            margin: 10px 0; /* Solo margen vertical, el horizontal lo dará el contenedor */
             border: 1px solid var(--glass-border); 
+            box-sizing: border-box;
+        }
+        .sensei-actions { 
+            display: flex; 
+            gap: 12px; 
+            margin-left: 10px; /* Separación mínima con el nombre */
         }
 
         .student-info h4 { 
@@ -967,7 +973,7 @@
                     let sRows = "";
                     g.students.forEach(s => {
                         sRows += `
-                        <div class="student-item" id="it-${s.asistId}" style="margin: 8px 0; width: 100%;">
+                        <div class="student-item" id="it-${s.asistId}">
                             <div class="student-info">
                                 <h4>${s.nombre} ${s.apellidos || ""}</h4>
                                 <p>${s.grado || 'S/G'}</p>
@@ -988,7 +994,9 @@
                             </div>
                             <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                         </div>
-                        <div class="class-group-body" style="padding: 10px 15px;">${sRows}</div>
+                        <div class="class-group-body" style="padding: 15px 20px;"> <!-- ESTE PADDING ES LA CLAVE -->
+                            ${sRows}
+                        </div>
                     </div>`;
                 });
             } catch (e) {
