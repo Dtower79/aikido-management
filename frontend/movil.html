@@ -28,9 +28,10 @@
 
         /* --- ESTRUCTURA BASE --- */
         html, body { 
-            background-color: var(--bg); margin: 0; padding: 0; min-height: 100vh; width: 100vw; 
-            color: var(--text-main); font-family: 'Inter', sans-serif; 
-            overflow-x: hidden; overflow-y: auto; color-scheme: dark; 
+            /* Fondo unificado: más azulado y menos negro absoluto para que no sea tan oscuro */
+            background-color: #080c15; 
+            background-image: radial-gradient(circle at top right, #1e1b4b, #080c15); 
+            display: flex; flex-direction: column; 
         }
 
         body { 
@@ -420,38 +421,67 @@
         }
 
         async function checkTodayClass() {
-            // Sin cache para status real
-            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=5`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+            // Forzamos petición fresca para no tener líos de caché con la clase siguiente
+            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { 
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+            });
             const json = await res.json();
-            const now = new Date();
-            const futuras = (json.data||[]).filter(c => new Date(parseData(c).Fecha_Hora) > now);
+            
+            const ahora = new Date();
+            // Buscamos la primera clase que sea hoy (más tarde de ahora) o cualquier día en el futuro
+            const futuras = (json.data||[]).filter(c => {
+                const fechaClase = new Date(parseData(c).Fecha_Hora);
+                return fechaClase >= ahora;
+            });
+
             if (futuras.length > 0) {
-                const cRaw = futuras[0]; claseHoyId = getID(cRaw);
+                const cRaw = futuras[0]; 
+                claseHoyId = getID(cRaw);
                 const f = formatTimeSafe(parseData(cRaw).Fecha_Hora);
+                
                 document.getElementById('next-class-time').innerText = f.time;
                 document.getElementById('next-class-date').innerText = f.date;
+                
+                // Verificar si ya ha confirmado asistencia
                 if(alumnoGlobal) {
-                    const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+                    const aluId = getID(alumnoGlobal);
+                    const token = localStorage.getItem('aikido_jwt');
+                    const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${claseHoyId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                     const chkJ = await chk.json();
                     const btn = document.getElementById('confirm-btn');
-                    if(chkJ.data.length > 0) { btn.innerText = "CONFIRMADO"; btn.disabled = true; btn.style.background = "white"; btn.style.color = "black"; }
-                    else { btn.innerText = "ASISTIR AL KEIKO"; btn.disabled = false; btn.style.background = "white"; btn.style.color = "black"; }
-                } else { document.getElementById('confirm-btn').classList.add('hidden'); }
+                    
+                    if(chkJ.data.length > 0) { 
+                        btn.innerText = "CONFIRMADO"; btn.disabled = true; btn.style.opacity = "0.7";
+                    } else { 
+                        btn.innerText = "ASISTIR AL KEIKO"; btn.disabled = false; btn.style.opacity = "1";
+                    }
+                }
+            } else {
+                // No hay clases programadas
+                document.getElementById('next-class-time').innerText = "--:--";
+                document.getElementById('next-class-date').innerText = "Sin clases previstas";
+                document.getElementById('confirm-btn').classList.add('hidden');
             }
         }
-
         async function loadMonthlyClasses(el) {
             showView('clases', el);
-            document.getElementById('calendar-content').innerHTML = "<p style='text-align:center;opacity:0.5;padding:20px;'>Cargando...</p>";
-            // Cache 24h
+            const container = document.getElementById('calendar-content');
+            container.innerHTML = "<p style='text-align:center;opacity:0.5;padding:20px;'>Cargando calendario...</p>";
+
             const json = await fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 24);
             const grouped = {};
-            // Limpieza automática: Ocultar clases anteriores a ayer
-            const yesterday = new Date(); yesterday.setHours(0,0,0,0); yesterday.setDate(yesterday.getDate()-1);
+            
+            // CORRECCIÓN: Fecha de corte es hoy a las 00:00:00
+            const hoyCorte = new Date(); 
+            hoyCorte.setHours(0,0,0,0);
 
             (json.data||[]).forEach(c => {
                 const d = parseData(c); 
-                if (new Date(d.Fecha_Hora) < yesterday) return; 
+                const fechaClase = new Date(d.Fecha_Hora);
+                
+                // Si la clase es anterior a hoy, la ignoramos
+                if (fechaClase < hoyCorte) return; 
+
                 const f = formatTimeSafe(d.Fecha_Hora);
                 if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
                 const item = { ...f, dur: d.Duracion };
@@ -665,7 +695,6 @@
                     localStorage.setItem('aikido_user', JSON.stringify(data.user)); 
                     initApp(); 
                 } else { 
-                    const msg = data.error ? data.error.message : "Credenciales incorrectas";
                     showModal("Acceso Denegado", `DNI o contraseña incorrectos.<br><br><small style='color:#aaa'>${msg}</small>`, true); 
                 }
             } catch (e) { 
@@ -687,16 +716,13 @@
             if(p1.length < 6) return showModal("Error", "La contraseña debe tener al menos 6 caracteres.", true);
 
             const btn = e.target.querySelector('button[type="submit"]');
-            btn.innerText = "BUSCANDO..."; btn.disabled = true;
+            btn.innerText = "PROCESANDO..."; btn.disabled = true;
 
             try {
-                // 1. Buscar si existe el alumno (Requiere permiso Public > Alumno > Find)
-                const check = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`, { headers: { 'Content-Type': 'application/json' } });
+                const check = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
                 const json = await check.json();
 
                 if(json.data && json.data.length > 0) {
-                    // El alumno existe. Intentamos registrar el usuario.
-                    btn.innerText = "ACTIVANDO...";
                     const alumnoData = json.data[0];
                     const nombre = parseData(alumnoData).nombre || "Alumno";
                     
@@ -705,28 +731,28 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             username: dni,
-                            email: `${dni.toLowerCase()}@arashi.temp`, // Email temporal
+                            email: `${dni.toLowerCase()}@arashi.temp`,
                             password: p1,
                             nombre: nombre
                         })
                     });
                     
-                    const regData = await regRes.json();
-                    
                     if(regRes.ok) {
-                        showModal("¡Cuenta Activada!", "Ya puedes iniciar sesión con tu DNI.", true);
+                        // ÉXITO: Cerramos modal de activar y abrimos el de éxito
                         document.getElementById('activate-modal').classList.add('hidden');
-                        
-                        // Opcional: Vincular usuario al alumno automáticamente si tu backend lo permite, 
-                        // sino, el Sensei o Admin tendrá que hacerlo en el panel PC.
+                        showModal("¡OSS!", "Tu cuenta ha sido activada correctamente. Ya puedes entrar con tu DNI.", true);
+                        e.target.reset(); // Limpiar formulario
                     } else {
-                        showModal("Error", "No se pudo crear el usuario. Puede que ya esté activo.", true);
+                        showModal("Aviso", "Esta cuenta ya está activa o el usuario ya existe.", true);
                     }
                 } else {
-                    showModal("No encontrado", "Este DNI no consta como alumno activo.<br>Habla con el Sensei.", true);
+                    showModal("No encontrado", "Este DNI no figura en nuestra base de alumnos. Contacta con el Sensei.", true);
                 }
-            } catch(err) { showModal("Error", "Fallo de conexión.", true); }
-            finally { btn.innerText = "ACTIVAR"; btn.disabled = false; }
+            } catch(err) { 
+                showModal("Error", "Error de conexión con el servidor.", true); 
+            } finally { 
+                btn.innerText = "ACTIVAR"; btn.disabled = false; 
+            }
         });
 
         function logout() { localStorage.clear(); location.reload(); }
@@ -757,7 +783,7 @@
                 return false; 
             }
         }
-        
+
         async function processGeneration() {
             if(!dojoIdGlobal) return alert("Error CRÍTICO: No se ha detectado el ID del Dojo. Sal y vuelve a entrar.");
             
