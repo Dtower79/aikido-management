@@ -1025,27 +1025,27 @@
                     });
 
                     listDiv.innerHTML += `
-                        <div class="class-group-card" style="margin: 0 20px 20px;">
-                            <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                                <div style="text-align:left;">
-                                    <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
-                                    <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} PENDIENTES</p>
-                                </div>
-                                <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
+                    <div class="class-group-card" style="margin: 0 20px 20px;">
+                        <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                            <div style="text-align:left;">
+                                <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
+                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} PENDIENTES</p>
                             </div>
-                            <div class="class-group-body" style="padding: 15px 20px;">
-                                <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
-                                    <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
-                                </button>
-                                <div style="border-top:1px solid var(--glass-border); padding-top:15px;">
-                                    ${sRows}
-                                </div>
+                            <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
+                        </div>
+                        <div class="class-group-body" style="padding: 15px 20px;">
+                            <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
+                                <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
+                            </button>
+                            <div style="border-top:1px solid var(--glass-border); padding-top:15px;">
+                                ${sRows}
                             </div>
-                        </div>`;
+                        </div>
+                    </div>`;
                 });
             } catch (e) {
-                console.error("❌ Fallo crítico en Panel Sensei:", e);
-                listDiv.innerHTML = `<p style='text-align:center; color:var(--accent); padding:40px;'>Error 400: El servidor no permite esta consulta. Revisa los permisos en Strapi.</p>`;
+                console.error("❌ Fallo en Panel:", e);
+                listDiv.innerHTML = "<p style='text-align:center; color:var(--accent); padding:40px;'>Fallo al cargar tatami.</p>";
             }
         }
 
@@ -1159,7 +1159,7 @@
                 const duracionHoras = parseFloat(dataC.Duracion || 1.5);
                 const fin = new Date(inicio.getTime() + (duracionHoras * 3600000));
 
-                if (ahora > fin) continue; // Si ya terminó, siguiente
+                if (ahora > fin) continue; // Si ya terminó, buscamos la siguiente
 
                 const cid = getID(c);
                 const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
@@ -1169,7 +1169,7 @@
                 const asistencia = chkJ.data?.[0];
                 const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
 
-                if (estado === 'Asistio') continue; // Si ya está validado, siguiente
+                if (estado === 'Asistio') continue; // Si ya ha sido validado, buscamos la siguiente
 
                 claseElegida = c;
                 estadoAlumno = estado;
@@ -1194,6 +1194,7 @@
                     btn.style.color = "black";
                 }
             } else {
+                document.getElementById('next-class-time').innerText = "--:--";
                 document.getElementById('next-class-date').innerText = "Sin keikos hoy";
                 btn.classList.add('hidden');
             }
