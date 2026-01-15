@@ -59,15 +59,21 @@
         .hidden { display: none !important; }
 
         /* --- MURO DE INSTALACIÓN --- */
-        #app-content { 
-            display: none; 
-            flex-direction: column; 
-            flex: 1; 
-            height: 100%; 
-            width: 100%; 
-            overflow-y: auto; 
-            padding-bottom: 110px; 
-            -webkit-overflow-scrolling: touch; 
+        #app-content {
+            opacity: 0;
+            transition: opacity 0.6s ease-in-out;
+            display: none; /* Empezamos ocultos */
+            flex-direction: column;
+            flex: 1;
+            padding-bottom: 110px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Se muestra si la app terminó de cargar O si el usuario NO está logueado */
+        .app-loaded #app-content, 
+        body:not(.user-logged) #app-content {
+            opacity: 1 !important;
+            display: flex !important;
         }
 
         #install-wall { 
@@ -868,11 +874,23 @@
             console.log("🚀 [INIT] Arrancando aplicación...");
             const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
-            if (!token || !user) return;
+            
+            if (!token || !user) {
+                // No hay sesión: Limpiamos estados y mostramos Login
+                document.body.classList.remove('user-logged');
+                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('main-nav').classList.add('hidden');
+                document.documentElement.classList.add('app-loaded');
+                return;
+            }
 
+            // Hay sesión: Marcamos como logueado
+            document.body.classList.add('user-logged');
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('main-nav').classList.remove('hidden');
             showView('dashboard');
+            
+            // ... resto del código (Promise.all, Check Instructor, etc)
 
             await Promise.all([
                 fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480),
@@ -1407,7 +1425,7 @@
             else showModal("Info", "Ya instalada o en escritorio.");
         }
 
-        window.onload = () => { if(localStorage.getItem('aikido_jwt')) initApp(); };
+        window.onload = () => { initApp(); };
     </script>
 </body>
 </html>
