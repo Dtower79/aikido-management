@@ -754,7 +754,7 @@
             <div id="calendar-content"></div>
         </div>
 
-        <!-- SENSEI PANEL VIEW -->
+        
         <!-- SENSEI PANEL VIEW -->
         <div id="sensei-view" class="hidden">
             <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
@@ -843,20 +843,11 @@
         /* --- FECHAS Y GRADOS --- */
         function formatTimeSafe(iso) {
             if(!iso) return { time: "--:--", date: "--/--/----", month: "" };
-            // Dividimos la cadena ISO para evitar que el navegador aplique el Timezone local
             const [fecha, resto] = iso.split('T');
             const [y, m, d] = fecha.split('-');
             const [hh, mm] = resto.split(':');
-            
             const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-            const nombreMes = meses[parseInt(m) - 1];
-
-            return { 
-                time: `${hh}:${mm}H`, 
-                date: `${d}/${m}/${y}`, 
-                month: nombreMes, 
-                hour: parseInt(hh) 
-            };
+            return { time: `${hh}:${mm}H`, date: `${d}/${m}/${y}`, month: meses[parseInt(m)-1], hour: parseInt(hh) };
         }
 
         const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
@@ -1034,23 +1025,23 @@
                     });
 
                     listDiv.innerHTML += `
-                    <div class="class-group-card" style="margin: 0 20px 20px;">
-                        <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                            <div style="text-align:left;">
-                                <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
-                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
+                        <div class="class-group-card" style="margin: 0 20px 20px;">
+                            <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                                <div style="text-align:left;">
+                                    <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
+                                    <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} PENDIENTES</p>
+                                </div>
+                                <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                             </div>
-                            <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
-                        </div>
-                        <div class="class-group-body" style="padding: 15px 20px;">
-                            <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
-    <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
-</button>
-                            <div style="border-top:1px solid var(--glass-border); padding-top:15px;">
-                                ${sRows}
+                            <div class="class-group-body" style="padding: 15px 20px;">
+                                <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
+                                    <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
+                                </button>
+                                <div style="border-top:1px solid var(--glass-border); padding-top:15px;">
+                                    ${sRows}
+                                </div>
                             </div>
-                        </div>
-                    </div>`;
+                        </div>`;
                 });
             } catch (e) {
                 console.error("❌ Fallo crítico en Panel Sensei:", e);
@@ -1159,7 +1150,6 @@
             const ahora = new Date();
             const btn = document.getElementById('confirm-btn');
 
-            // 1. Buscamos la primera clase válida para este alumno
             let claseElegida = null;
             let estadoAlumno = null;
 
@@ -1167,12 +1157,10 @@
                 const dataC = parseData(c);
                 const inicio = new Date(dataC.Fecha_Hora);
                 const duracionHoras = parseFloat(dataC.Duracion || 1.5);
-                const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
+                const fin = new Date(inicio.getTime() + (duracionHoras * 3600000));
 
-                // A. Si la clase ya terminó (pasó su duración), la saltamos
-                if (ahora > fin) continue;
+                if (ahora > fin) continue; // Si ya terminó, siguiente
 
-                // B. Consultamos si el alumno ya "Asistio" a esta clase específica
                 const cid = getID(c);
                 const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
@@ -1181,10 +1169,8 @@
                 const asistencia = chkJ.data?.[0];
                 const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
 
-                // C. Si ya asistió (validado por sensei o QR), saltamos a buscar la siguiente
-                if (estado === 'Asistio') continue;
+                if (estado === 'Asistio') continue; // Si ya está validado, siguiente
 
-                // D. Si llegamos aquí, esta es la clase que debe ver (ya sea Confirmado o Sin marcar)
                 claseElegida = c;
                 estadoAlumno = estado;
                 break; 
@@ -1201,7 +1187,6 @@
                     btn.innerText = "CONFIRMADO";
                     btn.disabled = true;
                     btn.style.background = "#1e293b";
-                    btn.style.color = "var(--text-muted)";
                 } else {
                     btn.innerText = "ASISTIR AL KEIKO";
                     btn.disabled = false;
@@ -1209,8 +1194,7 @@
                     btn.style.color = "black";
                 }
             } else {
-                document.getElementById('next-class-time').innerText = "--:--";
-                document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
+                document.getElementById('next-class-date').innerText = "Sin keikos hoy";
                 btn.classList.add('hidden');
             }
         }
