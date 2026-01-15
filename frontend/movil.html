@@ -1394,46 +1394,43 @@
         });
 
         async function startQRScanner() {
-            if (!alumnoGlobal) {
-                showModal("Aviso", "Cargando perfil... espera un segundo.");
-                return;
-            }
+            if (!alumnoGlobal) return showModal("Aviso", "Perfil no cargado.");
 
-            // 1. Abrir modal con diseño limpio
-            showModal("VALIDAR ASISTENCIA", `
-                <div style="margin-top:5px;">
-                    <div id="qr-reader"></div>
-                    <p style="font-size:11px; color:var(--text-muted); margin-top:15px; text-transform:none; line-height:1.4;">
-                        Mantén el código del Sensei dentro del recuadro.<br>La validación es automática al detectar el código.
+            showModal("ESCANEAR ASISTENCIA", `
+                <div style="margin-top:10px;">
+                    <div id="qr-reader" style="width:100%; border-radius:20px; overflow:hidden; background:#000;"></div>
+                    <p id="scan-status" style="font-size:12px; color:var(--text-muted); margin-top:15px;">
+                        Enfoca el código del Sensei...
                     </p>
                 </div>
             `, true);
 
-            // 2. Iniciar motor
             setTimeout(async () => {
                 try {
+                    const qrReaderEl = document.getElementById('qr-reader');
                     html5QrCode = new Html5Qrcode("qr-reader");
                     const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-                    const config = { fps: 15, qrbox: { width: 220, height: 220 } };
                     
                     await html5QrCode.start(
                         isMobile ? { facingMode: "environment" } : "user",
-                        config,
+                        { fps: 15, qrbox: { width: 220, height: 220 } },
                         async (decodedText) => {
-                            // ¡DETECTADO!
-                            console.log("🎯 QR Encontrado:", decodedText);
+                            // 1. ÉXITO DE LECTURA
+                            console.log("🎯 QR Capturado:", decodedText);
+                            document.getElementById('scan-status').innerText = "¡CÓDIGO LEÍDO! PROCESANDO...";
+                            document.getElementById('scan-status').style.color = "var(--success)";
                             
-                            // Bloqueamos cámara y cerramos modal de lectura
-                            await html5QrCode.stop().catch(e => console.error(e));
-                            closeModal();
+                            // 2. APAGAR CÁMARA INMEDIATAMENTE
+                            await html5QrCode.stop().catch(() => {});
                             
-                            // Pasamos a procesar en Strapi v5
+                            // 3. PROCESAR (v5)
                             procesarAsistenciaQR(decodedText);
-                        }
+                        },
+                        () => {} // Silencioso mientras busca
                     );
                 } catch (err) {
-                    console.error("❌ Error cámara:", err);
-                    document.getElementById('qr-reader').innerHTML = `<p style="padding:40px; color:var(--accent); font-size:12px;">Permiso de cámara denegado o dispositivo no encontrado.</p>`;
+                    console.error("Error Cámara:", err);
+                    showModal("Error", "No se pudo activar la cámara.");
                 }
             }, 300);
         }
@@ -1454,66 +1451,62 @@
         }
 
         async function procesarAsistenciaQR(classId) {
-            showModal("PROCESANDO...", "Conectando con el Dojo, no cierres la App...", false);
             const token = localStorage.getItem('aikido_jwt');
             const aluId = getID(alumnoGlobal);
+            const aluDocId = alumnoGlobal.documentId || aluId; // Aseguramos DocumentID
 
             try {
-                // A. Buscar la clase para saber su duración
-                const resClase = await fetch(`${API_URL}/api/clases/${classId}`, { 
-                    headers: { 'Authorization': `Bearer ${token}` } 
-                });
-                const jsonClase = await resClase.json();
-                if (!jsonClase.data) throw new Error("Clase no válida");
+                // A. OBTENER DATOS DE CLASE
+                const resClase = await fetch(`${API_URL}/api/clases/${classId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const dataClase = await resClase.json();
+                if (!dataClase.data) throw new Error("QR No válido");
                 
-                const dataClase = jsonClase.data.attributes || jsonClase.data;
-                const duracion = parseFloat(dataClase.Duracion || 1.5);
+                const duracion = parseFloat(dataClase.data.attributes?.Duracion || dataClase.data.Duracion || 1.5);
 
-                // B. Registrar/Actualizar asistencia
-                const resSearch = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${classId}`, { 
-                    headers: { 'Authorization': `Bearer ${token}` } 
-                });
-                const dataSearch = await resSearch.json();
-                const asisExistente = dataSearch.data?.[0];
+                // B. BUSCAR ASISTENCIA PREVIA (PARA NO DUPLICAR)
+                const resAsis = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[clase][documentId][$eq]=${classId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const jsonAsis = await resAsis.json();
+                const asisExistente = jsonAsis.data?.[0];
 
                 if (asisExistente) {
+                    // Actualizar
                     await fetch(`${API_URL}/api/asistencias/${getID(asisExistente)}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify({ data: { Estado: 'Asistio' } })
                     });
                 } else {
+                    // Crear nueva
                     await fetch(`${API_URL}/api/asistencias`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({ data: { alumno: aluId, clase: classId, Estado: 'Asistio' } })
+                        body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
                     });
                 }
 
-                // C. Incrementar horas en el perfil
-                const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const alJson = await alRes.json();
-                const p = alJson.data.attributes || alJson.data;
-                const totalHoras = (parseFloat(p.horas_acumuladas) || 0) + duracion;
+                // C. SUMAR HORAS AL PERFIL (COMPATIBLE V5)
+                const alRes = await fetch(`${API_URL}/api/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const alData = await alRes.json();
+                const p = alData.data.attributes || alData.data;
+                const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
 
-                await fetch(`${API_URL}/api/alumnos/${aluId}`, {
+                await fetch(`${API_URL}/api/alumnos/${aluDocId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ data: { horas_acumuladas: totalHoras } })
+                    body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
                 });
 
-                // D. Limpiar y Refrescar
+                // D. ACTUALIZAR UI
                 localStorage.removeItem('cache_perfil_alumno');
                 await refreshStudentData();
                 await checkTodayClass();
                 
-                closeModal(); // Cerramos el "Procesando"
-                showModal("¡OSS!", `Asistencia confirmada. Has sumado ${duracion}h.`);
+                closeModal();
+                showModal("¡OSS, ARASHI!", `Asistencia registrada: +${duracion}h.<br>Tu nuevo total es ${totalNuevo.toFixed(1)}h.`);
 
             } catch (e) {
-                console.error("❌ Fallo crítico QR:", e);
-                closeModal();
-                showModal("Error", "No se pudo registrar la asistencia. Verifica que el código es correcto.");
+                console.error("Error Procesamiento QR:", e);
+                showModal("Error", "No se pudo validar la clase. Revisa tu conexión o avisa al Sensei.");
             }
         }
 
