@@ -959,6 +959,7 @@
                 alumnoGlobal = json.data[0]; 
                 const p = alumnoGlobal.attributes || alumnoGlobal;
                 
+                // 1. Actualización de Interfaz Básica
                 document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
                 document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
 
@@ -971,30 +972,69 @@
                 document.getElementById('stat-hours').innerText = horas.toFixed(1);
                 document.getElementById('student-progress-circle').classList.remove('hidden');
 
+                // 2. Cálculo de Meta y Círculo de Progreso (Blindado v5)
                 let meta = p.grado_objetivo;
                 if (!meta) {
                     const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
                     meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
                 }
 
-                // FIX: Añadir comprobación de que requisitosGradoGlobal es un array antes de usar .find
-                // Dentro de refreshStudentData, busca la parte del find y cámbiala por esta:
-                const metaNorm = normalize(meta);
-                const req = (requisitosGradoGlobal || []).find(r => r.NORM === metaNorm);
+                const normMeta = normalize(meta);
+                const req = Array.isArray(requisitosGradoGlobal) 
+                    ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
+                    : null;
 
-                // Si no encuentra el requisito, usa el fallback, pero evita que sea 0 para no dividir por cero
-                const target = (req && req.HORAS) ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
+                const target = req ? parseFloat(req.horas || req.attributes?.horas || 60) : (GRADOS_FALLBACK[meta] || 60);
 
                 const circle = document.getElementById('progress-bar');
                 if (circle) {
                     const pct = Math.min((horas / target) * 100, 100);
                     circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
                 }
-
+                
                 document.getElementById('stat-label').innerText = `HORAS / ${target}`;
                 const lblMeta = document.getElementById('next-grade-display');
                 lblMeta.innerText = `CAMINO AL ${meta.toUpperCase()}`;
                 lblMeta.classList.remove('hidden');
+
+                // --- LÓGICA DE BOTONES DINÁMICOS POR ROL ---
+                const esSensei = user.is_sensei === true || p.es_instructor === true;
+                const navRightBtn = document.getElementById('nav-sensei');
+
+                if (esSensei) {
+                    // ROL SENSEI: Botón nav derecha va al Panel Sensei
+                    if (navRightBtn) {
+                        navRightBtn.style.display = 'flex';
+                        navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+                        navRightBtn.onclick = () => showView('sensei', navRightBtn);
+                    }
+
+                    // Inyectar botón 'Seminarios' en el Panel de Sensei (si no existe ya)
+                    if (!document.getElementById('btn-seminarios-sensei-view')) {
+                        const senseiHeader = document.querySelector('#sensei-view header');
+                        if (senseiHeader) {
+                            const btnWrap = document.createElement('div');
+                            btnWrap.id = 'btn-seminarios-sensei-view';
+                            btnWrap.style.padding = '0 25px 15px';
+                            btnWrap.innerHTML = `
+                                <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" 
+                                        onclick="window.open('https://www.meetontatami.com/', '_blank')">
+                                    <i class="fa-solid fa-calendar-day"></i> SEMINARIOS
+                                </button>`;
+                            senseiHeader.after(btnWrap);
+                        }
+                    }
+                } else {
+                    // ROL ALUMNO: Botón nav derecha va a Seminarios
+                    if (navRightBtn) {
+                        navRightBtn.style.display = 'flex';
+                        navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+                        navRightBtn.onclick = (e) => {
+                            e.preventDefault();
+                            window.open('https://www.meetontatami.com/', '_blank');
+                        };
+                    }
+                }
             }
         }
 
