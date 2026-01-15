@@ -97,10 +97,13 @@
             flex: 1; 
             display: flex; 
             flex-direction: column; 
-            justify-content: center; 
+            /* Cambiamos center por flex-start para controlar el margen superior */
+            justify-content: flex-start; 
             align-items: center; 
             padding: 20px; 
             box-sizing: border-box; 
+            /* Añadimos un margen superior generoso + el margen de seguridad de iPhone */
+            padding-top: calc(80px + env(safe-area-inset-top)); 
         }
 
         .logo-img { 
