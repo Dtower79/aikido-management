@@ -909,10 +909,17 @@
             
             // ... resto del código (Promise.all, Check Instructor, etc)
 
-            await Promise.all([
+            // Capturamos el resultado de la primera promesa (requisitos) en la variable 'reqRes'
+            const [reqRes] = await Promise.all([
                 fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480),
                 refreshStudentData()
             ]);
+
+            // Asignamos los datos a la variable global procesando v5/v4
+            if (reqRes && reqRes.data) {
+                requisitosGradoGlobal = reqRes.data.map(r => r.attributes || r);
+                console.log("📊 [INIT] Requisitos cargados:", requisitosGradoGlobal.length);
+            }
 
             const esSensei = user.is_sensei === true;
             const esInstructor = alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor) === true;
@@ -961,9 +968,14 @@
                     const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
                     meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
                 }
-                
-                const req = requisitosGradoGlobal.find(r => r.NORM === normalize(meta));
-                const target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
+
+                // FIX: Añadir comprobación de que requisitosGradoGlobal es un array antes de usar .find
+                const normMeta = normalize(meta);
+                const req = Array.isArray(requisitosGradoGlobal) 
+                    ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
+                    : null;
+
+                const target = req ? (req.horas || req.attributes?.horas) : (GRADOS_FALLBACK[meta] || 60);
 
                 const circle = document.getElementById('progress-bar');
                 const pct = Math.min((horas / target) * 100, 100);
