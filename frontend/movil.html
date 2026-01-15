@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="img/logo-arashi-movil.png">
     <title>Arashi App</title>
-    
+    <link rel="shortcut icon" href="img/logo-arashi.png" type="image/png">
     <!-- FUENTES Y LIBRERÍAS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -107,20 +107,20 @@
         }
 
         .logo-img { 
-            width: 140px !important; 
+            width: 110px; /* Bajamos de 140px a 110px */
             height: auto; 
-            margin-bottom: 25px; 
+            margin-bottom: 20px; 
             filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); 
         }
 
         .auth-card { 
-            width: 100%; 
-            max-width: 350px; 
+            width: 90%; /* En lugar de 100%, dejamos un 10% de espacio total */
+            max-width: 330px; /* Reducimos un poco el ancho máximo para que sea más estilizado */
             background: var(--card-bg); 
             backdrop-filter: blur(20px); 
             border: 1px solid var(--glass-border); 
-            padding: 40px 30px; 
-            border-radius: 35px; 
+            padding: 35px 25px; /* Reducimos un poco el padding interno para equilibrar */
+            border-radius: 30px; /* Bordes redondeados más suaves */
             text-align: center; 
             box-shadow: 0 25px 50px rgba(0,0,0,0.5); 
         }
@@ -160,15 +160,14 @@
         
         input, select { 
             width: 100%; 
-            padding: 16px 16px 16px 52px; 
+            padding: 14px 14px 14px 48px; /* Reducimos ligeramente el padding */
             background: rgba(15, 23, 42, 0.9) !important; 
             border: 1px solid var(--glass-border); 
-            border-radius: 18px; 
+            border-radius: 16px; /* Bordes algo más finos */
             color: white !important; 
-            font-size: 16px; 
+            font-size: 15px; /* Bajamos de 16px a 15px */
             box-sizing: border-box; 
             outline: none; 
-            transition: 0.3s; 
         }
 
         /* --- DASHBOARD ELEMENTS --- */
