@@ -1376,19 +1376,98 @@
             else showModal("Error", "Credenciales incorrectas.");
         });
 
-        function startQRScanner() {
-            showModal("VALIDAR ASISTENCIA", `<div id="qr-reader"></div>`, true); html5QrCode = new Html5Qrcode("qr-reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (decodedText) => {
-                await html5QrCode.stop().catch(()=>{}); closeModal(); const token = localStorage.getItem('aikido_jwt');
-                const check = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&filters[clase][documentId][$eq]=${decodedText}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const checkJ = await check.json(); let asistId = (checkJ.data.length > 0) ? getID(checkJ.data[0]) : null;
-                if(!asistId) { const newAs = await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: decodedText, Estado: 'Asistio' } }) }); asistId = getID((await newAs.json()).data); }
-                else { await fetch(`${API_URL}/api/asistencias/${asistId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Estado: 'Asistio' } }) }); }
-                const clR = await fetch(`${API_URL}/api/clases/${decodedText}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const dur = parseFloat(parseData(await clR.json()).Duracion || 0), actual = parseFloat(parseData(alumnoGlobal).horas_acumuladas || 0);
-                await fetch(`${API_URL}/api/alumnos/${getID(alumnoGlobal)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { horas_acumuladas: actual + dur } }) });
-                localStorage.removeItem('cache_perfil_alumno'); showModal("OSS!", "Asistencia validada."); refreshStudentData();
-            }, () => {});
+        async function startQRScanner() {
+            // 1. Abrimos el modal con el lector
+            showModal("VALIDAR ASISTENCIA", `
+                <div style="margin-top:10px;">
+                    <div id="qr-reader" style="width:100%; border-radius:15px; overflow:hidden; border:2px solid var(--accent);"></div>
+                    <p style="font-size:12px; color:var(--text-muted); margin-top:15px; font-weight:400; text-transform:none;">
+                        Enfoca el código QR del Sensei para registrar tu asistencia.
+                    </p>
+                </div>
+            `, true);
+
+            // 2. Iniciamos el escáner
+            html5QrCode = new Html5Qrcode("qr-reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrCode.start({ facingMode: "environment" }, config, async (decodedText) => {
+                const classId = decodedText; // El QR contiene el DocumentID de la clase
+                console.log(`📸 [SCAN] QR Detectado: ${classId}`);
+                
+                // Detenemos la cámara y cerramos modal para procesar
+                await html5QrCode.stop().catch(()=>{});
+                closeModal();
+                showModal("PROCESANDO...", "<p>Validando tu asistencia en el tatami...</p>", false);
+
+                const token = localStorage.getItem('aikido_jwt');
+                const aluId = getID(alumnoGlobal);
+
+                try {
+                    // A. Obtener datos de la clase (para saber la duración)
+                    const resClase = await fetch(`${API_URL}/api/clases/${classId}`, { 
+                        headers: { 'Authorization': `Bearer ${token}` } 
+                    });
+                    const jsonClase = await resClase.json();
+                    const dataClase = jsonClase.data.attributes || jsonClase.data;
+                    const duracion = parseFloat(dataClase.Duracion || 1.5);
+
+                    // B. Buscar si ya existe un registro de asistencia (por si estaba en 'Confirmado')
+                    const resAsis = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${classId}`, { 
+                        headers: { 'Authorization': `Bearer ${token}` } 
+                    });
+                    const jsonAsis = await resAsis.json();
+                    const asistenciaExistente = jsonAsis.data?.[0];
+
+                    if (asistenciaExistente) {
+                        // Si ya existía, actualizamos a 'Asistio'
+                        const asisDocId = getID(asistenciaExistente);
+                        await fetch(`${API_URL}/api/asistencias/${asisDocId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ data: { Estado: 'Asistio' } })
+                        });
+                    } else {
+                        // Si no existía (ej: no pulsó 'Asistir' antes), la creamos directamente
+                        await fetch(`${API_URL}/api/asistencias`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ data: { alumno: aluId, clase: classId, Estado: 'Asistio' } })
+                        });
+                    }
+
+                    // C. Sumar horas al perfil del alumno (Lógica Blindada)
+                    const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    const alJson = await alRes.json();
+                    const p = alJson.data.attributes || alJson.data;
+                    const horasActuales = parseFloat(p.horas_acumuladas) || 0;
+                    const nuevoTotal = horasActuales + duracion;
+
+                    await fetch(`${API_URL}/api/alumnos/${aluId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ data: { horas_acumuladas: nuevoTotal } })
+                    });
+
+                    // D. Sincronización final
+                    localStorage.removeItem('cache_perfil_alumno');
+                    await refreshStudentData();
+                    await checkTodayClass();
+
+                    closeModal(); // Cerramos el "Procesando"
+                    showModal("¡OSS!", `Asistencia registrada. Has sumado ${duracion}h a tu perfil.`);
+
+                } catch (e) {
+                    console.error("❌ [SCAN-ERROR]", e);
+                    closeModal();
+                    showModal("Error", "No se pudo procesar el QR. Asegúrate de tener conexión y de estar escaneando una clase válida.");
+                }
+
+            }).catch(err => {
+                console.error("🎥 [CÁMARA-ERROR]", err);
+                closeModal();
+                showModal("Aviso", "No se pudo acceder a la cámara. Asegúrate de dar permisos a la App.");
+            });
         }
 
         async function loadDojosFilter() {
