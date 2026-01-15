@@ -645,6 +645,18 @@
             opacity: 1;
         }
 
+        .qr-display-container {
+            background: white;
+            padding: 20px;
+            border-radius: 25px;
+            display: inline-block;
+            margin: 10px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        #qr-gen img {
+            margin: 0 auto;
+        }
+
     </style>
 </head>
 <body>
@@ -1024,8 +1036,8 @@
                         </div>
                         <div class="class-group-body" style="padding: 15px 20px;">
                             <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
-                                <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
-                            </button>
+    <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
+</button>
                             <div style="border-top:1px solid var(--glass-border); padding-top:15px;">
                                 ${sRows}
                             </div>
@@ -1088,6 +1100,45 @@
                 console.error("❌ [SENSEI] Error crítico:", e);
                 showModal("Error", "Fallo al contabilizar horas. Revisa la consola.");
             }
+        }
+
+        /* --- GENERADOR DE QR PARA EL TATAMI --- */
+        function generateClassQR(classId) {
+            console.log("🎫 Generando QR para Clase ID:", classId);
+            
+            // 1. Abrimos el modal con el diseño corregido
+            showModal("CÓDIGO DE ASISTENCIA", `
+                <div style="margin-top:10px;">
+                    <div class="qr-display-container">
+                        <div id="qr-gen"></div>
+                    </div>
+                    <p style="font-size:12px; color:var(--text-muted); margin-top:15px; font-weight:400; text-transform:none; line-height:1.4;">
+                        Muestra este código a los alumnos.<br>Deben usar el escáner de su App para registrarse.
+                    </p>
+                </div>
+            `, true);
+
+            // 2. Esperamos un instante a que el modal se dibuje para pintar el QR
+            setTimeout(() => {
+                const container = document.getElementById('qr-gen');
+                if (container && typeof QRCode !== 'undefined') {
+                    container.innerHTML = ""; // Limpieza
+                    new QRCode(container, {
+                        text: classId,
+                        width: 200,
+                        height: 200,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                    console.log("✅ QR Dibujado con éxito.");
+                } else {
+                    console.error("❌ Error: No se encontró qr-gen o la librería QRCode no está cargada.");
+                    if (typeof QRCode === 'undefined') {
+                        alert("Error crítico: Librería QRCode no cargada. Avisa al desarrollador.");
+                    }
+                }
+            }, 200);
         }
 
         async function checkTodayClass() {
