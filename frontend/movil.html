@@ -910,15 +910,23 @@
             // ... resto del código (Promise.all, Check Instructor, etc)
 
             // Capturamos el resultado de la primera promesa (requisitos) en la variable 'reqRes'
+            // Busca este bloque en initApp() y cámbialo por este:
             const [reqRes] = await Promise.all([
                 fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480),
                 refreshStudentData()
             ]);
 
-            // Asignamos los datos a la variable global procesando v5/v4
             if (reqRes && reqRes.data) {
-                requisitosGradoGlobal = reqRes.data.map(r => r.attributes || r);
-                console.log("📊 [INIT] Requisitos cargados:", requisitosGradoGlobal.length);
+                // Mapeamos los datos para que tengan las propiedades NORM y HORAS que tus funciones esperan
+                requisitosGradoGlobal = reqRes.data.map(r => {
+                    const item = r.attributes || r;
+                    return {
+                        ...item,
+                        NORM: normalize(item.grado),
+                        HORAS: parseFloat(item.horas || 0)
+                    };
+                });
+                console.log("✅ Requisitos sincronizados:", requisitosGradoGlobal.length);
             }
 
             const esSensei = user.is_sensei === true;
@@ -970,17 +978,19 @@
                 }
 
                 // FIX: Añadir comprobación de que requisitosGradoGlobal es un array antes de usar .find
-                const normMeta = normalize(meta);
-                const req = Array.isArray(requisitosGradoGlobal) 
-                    ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
-                    : null;
+                // Dentro de refreshStudentData, busca la parte del find y cámbiala por esta:
+                const metaNorm = normalize(meta);
+                const req = (requisitosGradoGlobal || []).find(r => r.NORM === metaNorm);
 
-                const target = req ? (req.horas || req.attributes?.horas) : (GRADOS_FALLBACK[meta] || 60);
+                // Si no encuentra el requisito, usa el fallback, pero evita que sea 0 para no dividir por cero
+                const target = (req && req.HORAS) ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
 
                 const circle = document.getElementById('progress-bar');
-                const pct = Math.min((horas / target) * 100, 100);
-                circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
-                
+                if (circle) {
+                    const pct = Math.min((horas / target) * 100, 100);
+                    circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
+                }
+
                 document.getElementById('stat-label').innerText = `HORAS / ${target}`;
                 const lblMeta = document.getElementById('next-grade-display');
                 lblMeta.innerText = `CAMINO AL ${meta.toUpperCase()}`;
@@ -1497,8 +1507,13 @@
                 }
 
                 // C. SUMAR HORAS AL PERFIL (COMPATIBLE V5)
+                // Dentro de procesarAsistenciaQR, sección C:
                 const alRes = await fetch(`${API_URL}/api/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const alData = await alRes.json();
+
+                // Si alRes falla o no hay datos, lanzamos error controlado
+                if (!alData || !alData.data) throw new Error("No se pudo leer el perfil tras actualizar");
+
                 const p = alData.data.attributes || alData.data;
                 const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
 
