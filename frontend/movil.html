@@ -1017,21 +1017,29 @@
         }
 
         /* --- REFRESH DATA (Sincronización v5) --- */
+
         async function refreshStudentData() {
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             if (!user) return;
             
+            // Consultamos por ID de cuenta (relación directa v5)
             let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
             let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
 
+            // OPTIMIZACIÓN: Solo si el primer intento falla o está vacío, probamos por DNI
             if (!json || !json.data || json.data.length === 0) {
                 endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
                 json = await fetchSmart(endpoint, null, 0); 
             }
 
             if (json && json.data && json.data.length > 0) {
-                alumnoGlobal = json.data[0]; 
-                const p = alumnoGlobal.attributes || alumnoGlobal;
+                alumnoGlobal = json.data[0];
+                updateDashboardUI(); // Centralizamos el pintado aquí
+                
+                // (Mantén aquí tu lógica de roles/seminarios que pusimos antes)
+                const esSensei = user.is_sensei === true || (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor);
+                // ... resto de lógica de botones ...
+            }
                 
                 // 1. Actualización de Interfaz Básica
                 document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
@@ -1644,18 +1652,27 @@
                 const jsonTotal = await resTotal.json();
                 const numClases = jsonTotal.meta?.pagination?.total || 0;
 
-                // E. FINALIZAR UI
-                localStorage.removeItem('cache_perfil_alumno');
-                await refreshStudentData();
-                await checkTodayClass();
+        // E. ACTUALIZACIÓN OPTIMISTA (0 LLAMADAS A API)
                 
-                // Cerramos modal sin que explote el scanner
-                document.getElementById('custom-modal').classList.add('hidden'); 
-                if(html5QrCode) {
-                    try { await html5QrCode.stop(); } catch(e) {}
-                    html5QrCode = null;
+                // 1. Actualizamos la memoria del móvil con las horas nuevas que acabamos de calcular
+                // Comprobamos si Strapi v5 nos da los datos en .attributes o planos
+                if (alumnoGlobal.attributes) {
+                    alumnoGlobal.attributes.horas_acumuladas = totalNuevo;
+                } else {
+                    alumnoGlobal.horas_acumuladas = totalNuevo;
                 }
 
+                // 2. Quitamos el aviso de "fichaje" de la pantalla (el botón rojo de asistir)
+                await checkTodayClass(); 
+
+                // 3. Repintamos la interfaz usando la nueva función local (INSTANTÁNEO)
+                updateDashboardUI();
+                
+                // 4. Cerramos el escáner y limpiamos caché de fondo para la próxima sesión
+                localStorage.removeItem('cache_perfil_alumno');
+                closeModal(); 
+
+                // F. MOSTRAR RESULTADO AL USUARIO
                 showModal("¡OSS, ARASHI!", `
                     <div style="text-align:center;">
                         <div style="font-size: 1.2rem; color: var(--success); font-weight: 800; margin-bottom: 10px;">+${duracion}h REGISTRADAS</div>
@@ -1677,8 +1694,16 @@
             ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); 
             document.getElementById(v + '-view').classList.remove('hidden');
             if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
-            if (v === 'dashboard') { refreshStudentData(); checkTodayClass(); }
-            if (v === 'sensei') loadSenseiPanel();
+                if (v === 'dashboard') {
+                updateDashboardUI(); // Instantáneo, usa local
+            }
+            
+            if (v === 'sensei') {
+                // Solo llamamos a la API si el contenedor está vacío o es un refresco intencionado
+                if (document.getElementById('student-list').innerHTML.includes('Conectando') || !el) {
+                    loadSenseiPanel();
+                }
+            }
         }
         
         function logout() { localStorage.clear(); location.reload(); }
@@ -1690,6 +1715,41 @@
         async function handleAndroidInstall() {
             if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; deferredPrompt = null; }
             else showModal("Info", "Ya instalada o en escritorio.");
+        }
+
+        /* --- OPTIMIZACIÓN: ACTUALIZAR UI SIN LLAMAR A API --- */
+        function updateDashboardUI() {
+            if (!alumnoGlobal) return;
+            const p = alumnoGlobal.attributes || alumnoGlobal;
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+
+            // Actualizar textos básicos
+            document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
+            document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
+
+            // Actualizar Horas
+            const horas = parseFloat(p.horas_acumuladas || 0);
+            document.getElementById('stat-hours').innerText = horas.toFixed(1);
+
+            // Calcular Meta (Usando la caché de requisitos que ya cargamos en initApp)
+            let meta = p.grado_objetivo;
+            if (!meta) {
+                const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
+                meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
+            }
+
+            const normMeta = normalize(meta);
+            const req = requisitosGradoGlobal.find(r => r.NORM === normMeta);
+            const target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
+
+            // Dibujar círculo
+            const circle = document.getElementById('progress-bar');
+            if (circle) {
+                const pct = Math.min((horas / target) * 100, 100);
+                circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
+            }
+            document.getElementById('stat-label').innerText = `HORAS / ${target}`;
+            document.getElementById('next-grade-display').innerText = `CAMINO AL ${meta.toUpperCase()}`;
         }
 
         window.onload = () => { initApp(); };
