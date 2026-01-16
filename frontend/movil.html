@@ -61,20 +61,20 @@
         /* --- MURO DE INSTALACIÓN --- */
         /* 1. ESTADO INICIAL: Todo oculto, muro preparado */
        #app-content {
-            display: none; /* Se activa con ready-to-show */
+            display: none !important; /* Oculto total por defecto */
             width: 100%;
             min-height: 100vh;
             flex-direction: column;
         }
 
         #install-wall {
-            display: none; /* Se activará solo si es necesario por JS */
+            display: none;
             position: fixed;
             inset: 0;
             width: 100vw;
             height: 100vh;
-            background: #05080f; /* Fondo negro puro para que no transparente nada */
-            z-index: 999999 !important;
+            background: #080c15; /* Fondo sólido, no transparente */
+            z-index: 99999;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -91,6 +91,10 @@
         /* Si no está instalada, mostramos el muro */
         .show-install-wall #install-wall {
             display: flex !important;
+        }
+
+        .app-loaded #app-content {
+            opacity: 1 !important;
         }
 
         /* --- AUTH Y LOGO --- */
@@ -684,48 +688,41 @@
 <body>
     <!-- MURO DE INSTALACIÓN -->
         <div id="install-wall">
-        <img src="img/logo-arashi.png" class="logo-img">
-        <h1>¡OSS!</h1>
-        <p style="color: var(--text-muted); margin-bottom: 25px; max-width: 280px;">Instala la App oficial para acceder al Dojo.</p>
-        
-        <!-- BLOQUE ANDROID -->
-        <div id="android-btn-area" style="display:none;">
-            <button class="action-btn primary" onclick="handleAndroidInstall()">INSTALAR AHORA</button>
-        </div>
-
-        <!-- BLOQUE APPLE (Foto 2) -->
-        <!-- BLOQUE APPLE ACTUALIZADO CON TU ICONO -->
-        <div id="ios-instructions" style="display:none; width: 100%; max-width: 320px;">
-            <div style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 25px; padding: 25px; text-align: left;">
-                
-                <!-- PASO 1: CON TU ICONO PERSONALIZADO -->
-                <div style="display:flex; align-items:center; margin-bottom:20px; gap:15px;">
-                    <div style="background:var(--accent); width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: var(--neon);">
-                        <img src="img/apple-share.png" style="width: 22px; height: 22px; filter: brightness(0) invert(1); object-fit: contain;">
-                    </div>
-                    <p style="margin:0; font-size:14px; font-weight: 600;">1. Pulsa <span style="color:var(--accent)">'Compartir'</span> en la barra de Safari.</p>
-                </div>
-
-                <!-- PASO 2 -->
-                <div style="display:flex; align-items:center; margin-bottom:20px; gap:15px;">
-                    <div style="background:var(--accent); width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: var(--neon);">
-                        <i class="fa-solid fa-hand-pointer" style="color:white; font-size: 18px;"></i>
-                    </div>
-                    <p style="margin:0; font-size:14px; font-weight: 600;">2. Desliza hacia abajo en el menú.</p>
-                </div>
-
-                <!-- PASO 3 -->
-                <div style="display:flex; align-items:center; gap:15px;">
-                    <div style="background:var(--accent); width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: var(--neon);">
-                        <i class="fa-solid fa-plus-square" style="color:white; font-size: 18px;"></i>
-                    </div>
-                    <p style="margin:0; font-size:14px; font-weight: 600;">3. Selecciona <span style="color:var(--accent)">'Añadir a la pantalla de inicio'</span>.</p>
-                </div>
+            <img src="img/logo-arashi.png" class="logo-img">
+            <h1>¡OSS!</h1>
+            <p style="color: var(--text-muted); margin-bottom: 25px; max-width: 280px;">Instala la App oficial para acceder al Dojo.</p>
+            
+            <!-- BLOQUE ANDROID -->
+            <div id="android-btn-area" style="display:none;">
+                <button class="action-btn primary" onclick="handleAndroidInstall()">INSTALAR AHORA</button>
             </div>
 
-            <p style="color:var(--accent); font-size:12px; margin-top:20px; font-weight:800; text-align:center; text-transform:uppercase; letter-spacing:1px;">
-                <i class="fa-solid fa-circle-info"></i> Desliza hacia arriba para ver el menú
-            </p>
+            <!-- BLOQUE APPLE (Foto 2) -->
+            <div id="ios-instructions" style="display:none; width: 100%; max-width: 320px; padding: 0 20px; box-sizing: border-box;">
+                <div style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 25px; padding: 25px; text-align: left;">
+                    <div style="display:flex; align-items:center; margin-bottom:20px; gap:15px;">
+                        <div style="background:var(--accent); width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: var(--neon);">
+                            <img src="img/apple-share.png" style="width: 22px; height: 22px; filter: brightness(0) invert(1); object-fit: contain;">
+                        </div>
+                        <p style="margin:0; font-size:14px; font-weight: 600;">1. Pulsa <span style="color:var(--accent)">'Compartir'</span> en la barra de Safari.</p>
+                    </div>
+                    <div style="display:flex; align-items:center; margin-bottom:20px; gap:15px;">
+                        <div style="background:var(--accent); width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: var(--neon);">
+                            <i class="fa-solid fa-hand-pointer" style="color:white; font-size: 18px;"></i>
+                        </div>
+                        <p style="margin:0; font-size:14px; font-weight: 600;">2. Desliza hacia abajo en el menú.</p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <div style="background:var(--accent); width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: var(--neon);">
+                            <i class="fa-solid fa-plus-square" style="color:white; font-size: 18px;"></i>
+                        </div>
+                        <p style="margin:0; font-size:14px; font-weight: 600;">3. Selecciona <span style="color:var(--accent)">'Añadir a la pantalla de inicio'</span>.</p>
+                    </div>
+                </div>
+                <p style="color:var(--accent); font-size:12px; margin-top:20px; font-weight:800; text-align:center;">
+                    <i class="fa-solid fa-circle-info"></i> Desliza hacia arriba para ver el menú
+                </p>
+            </div>
         </div>
 
     <div id="app-content">
@@ -1599,15 +1596,12 @@
 
         async function procesarAsistenciaQR(classId) {
             const token = localStorage.getItem('aikido_jwt');
-            const aluId = getID(alumnoGlobal);
-            const aluDocId = alumnoGlobal.documentId || aluId;
+            const aluDocId = alumnoGlobal.documentId || alumnoGlobal.id;
 
             try {
                 // A. OBTENER DATOS DE CLASE
                 const resClase = await fetch(`${API_URL}/api/clases/${classId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const dataClase = await resClase.json();
-                if (!dataClase.data) throw new Error("QR No válido");
-                
                 const duracion = parseFloat(dataClase.data.attributes?.Duracion || dataClase.data.Duracion || 1.5);
 
                 // B. REGISTRAR ASISTENCIA
@@ -1641,17 +1635,22 @@
                     body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
                 });
 
-                // D. OBTENER CONTEO TOTAL DE CLASES ASISTIDAS
+                // D. CONTEO DE CLASES (Blindado)
                 const resTotal = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[Estado][$eq]=Asistio&pagination[withCount]=true`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const jsonTotal = await resTotal.json();
-                const numClases = jsonTotal.meta.pagination.total;
+                const numClases = jsonTotal.meta?.pagination?.total || 0;
 
-                // E. ACTUALIZAR UI Y MOSTRAR MODAL ÉXITO DETALLADO
+                // E. FINALIZAR UI
                 localStorage.removeItem('cache_perfil_alumno');
                 await refreshStudentData();
                 await checkTodayClass();
                 
-                closeModal(); // Cierra el escáner
+                // Cerramos modal sin que explote el scanner
+                document.getElementById('custom-modal').classList.add('hidden'); 
+                if(html5QrCode) {
+                    try { await html5QrCode.stop(); } catch(e) {}
+                    html5QrCode = null;
+                }
 
                 showModal("¡OSS, ARASHI!", `
                     <div style="text-align:center;">
@@ -1660,16 +1659,12 @@
                             <p style="margin: 5px 0;">Total horas: <strong>${totalNuevo.toFixed(1)}h</strong></p>
                             <p style="margin: 5px 0;">Clases asistidas: <strong>${numClases}</strong></p>
                         </div>
-                        <p style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">Tu esfuerzo en el Tatami ha sido contabilizado.</p>
                     </div>
                 `);
 
             } catch (e) {
                 console.error("Error Procesamiento QR:", e);
-                // Si el error es el de "Cannot stop", no mostramos el modal de error porque el proceso fue bien
-                if(!e.message.includes("Cannot stop")) {
-                    showModal("Error", "No se pudo validar la clase. Revisa tu conexión.");
-                }
+                showModal("Error", "No se pudo validar la clase. Revisa tu conexión.");
             }
         }
 
