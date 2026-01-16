@@ -60,8 +60,13 @@
 
         /* --- MURO DE INSTALACIÓN --- */
         /* 1. ESTADO INICIAL: Todo oculto, muro preparado */
-        #app-content {
-            display: none !important; /* Nadie puede ver la app por defecto */
+       #app-content {
+            display: none; /* Oculto por defecto */
+            flex-direction: column;
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            z-index: 10;
         }
 
         #install-wall {
@@ -85,24 +90,21 @@
         .ready-to-show #install-wall {
             display: none !important;
         }
-
         /* Si no está instalada, mostramos el muro */
         .show-install-wall #install-wall {
             display: flex !important;
         }
 
         /* --- AUTH Y LOGO --- */
-        .auth-container { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            /* Cambiamos center por flex-start para controlar el margen superior */
-            justify-content: flex-start; 
-            align-items: center; 
-            padding: 20px; 
-            box-sizing: border-box; 
-            /* Añadimos un margen superior generoso + el margen de seguridad de iPhone */
-            padding-top: calc(80px + env(safe-area-inset-top)); 
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            flex: 1;
+            padding-top: calc(60px + env(safe-area-inset-top));
+            box-sizing: border-box;
         }
 
         .logo-img { 
@@ -959,24 +961,29 @@
             const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             
+            // Forzamos que se oculten todas las vistas primero para evitar solapamientos
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('login-view').classList.add('hidden');
+
             if (!token || !user) {
-                // No hay sesión: Limpiamos estados y mostramos Login
+                // MOSTRAR LOGIN
                 document.body.classList.remove('user-logged');
-                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('login-view').classList.remove('hidden'); // QUITAMOS HIDDEN
                 document.getElementById('main-nav').classList.add('hidden');
                 return;
             }
 
-            // Hay sesión: Marcamos como logueado
+            // MOSTRAR DASHBOARD
             document.body.classList.add('user-logged');
             document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('main-nav').classList.remove('hidden');
+            
+            // ... resto de tus cargas (Promise.all, etc)
+        
             showView('dashboard');
             
-            // ... resto del código (Promise.all, Check Instructor, etc)
-
-            // Capturamos el resultado de la primera promesa (requisitos) en la variable 'reqRes'
-            // Busca este bloque en initApp() y cámbialo por este:
+          
             const [reqRes] = await Promise.all([
                 fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480),
                 refreshStudentData()
