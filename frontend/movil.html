@@ -1469,32 +1469,31 @@
                 </div>
             `, true);
 
+            // --- SUSTITUYE ESTA PARTE DENTRO DE startQRScanner ---
             setTimeout(async () => {
                 try {
                     const qrReaderEl = document.getElementById('qr-reader');
                     html5QrCode = new Html5Qrcode("qr-reader");
+                    
+                    // Detectamos si es un dispositivo móvil
                     const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
                     
                     await html5QrCode.start(
-                        isMobile ? { facingMode: "environment" } : "user",
+                        // Si es móvil busca la trasera (environment), si es PC usa la frontal (user)
+                        isMobile ? { facingMode: "environment" } : { facingMode: "user" },
                         { fps: 15, qrbox: { width: 220, height: 220 } },
                         async (decodedText) => {
-                            // 1. ÉXITO DE LECTURA
+                            // ... resto de tu lógica de éxito ...
                             console.log("🎯 QR Capturado:", decodedText);
                             document.getElementById('scan-status').innerText = "¡CÓDIGO LEÍDO! PROCESANDO...";
-                            document.getElementById('scan-status').style.color = "var(--success)";
-                            
-                            // 2. APAGAR CÁMARA INMEDIATAMENTE
                             await html5QrCode.stop().catch(() => {});
-                            
-                            // 3. PROCESAR (v5)
                             procesarAsistenciaQR(decodedText);
                         },
-                        () => {} // Silencioso mientras busca
+                        () => {} 
                     );
                 } catch (err) {
                     console.error("Error Cámara:", err);
-                    showModal("Error", "No se pudo activar la cámara.");
+                    showModal("Error", "No se pudo activar la cámara. Revisa los permisos.");
                 }
             }, 300);
         }
