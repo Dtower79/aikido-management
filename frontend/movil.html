@@ -686,12 +686,41 @@
 </head>
 <body>
     <!-- MURO DE INSTALACIÓN -->
-    <div id="install-wall">
+        <div id="install-wall">
         <img src="img/logo-arashi.png" class="logo-img">
         <h1>¡OSS!</h1>
         <p style="color: var(--text-muted); margin-bottom: 25px; max-width: 280px;">Instala la App oficial para acceder al Dojo.</p>
-        <div id="android-btn-area">
+        
+        <!-- BLOQUE ANDROID -->
+        <div id="android-btn-area" style="display:none;">
             <button class="action-btn primary" onclick="handleAndroidInstall()">INSTALAR AHORA</button>
+        </div>
+
+        <!-- BLOQUE APPLE (Foto 2) -->
+        <div id="ios-instructions" style="display:none; width: 100%; max-width: 320px;">
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 20px; padding: 20px; text-align: left;">
+                <div style="display:flex; align-items:center; margin-bottom:15px; gap:15px;">
+                    <div style="background:var(--accent); width:35px; height:35px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="fa-solid fa-arrow-up-from-bracket" style="color:white;"></i>
+                    </div>
+                    <p style="margin:0; font-size:14px;">1. Pulsa <strong>'Compartir'</strong> en Safari.</p>
+                </div>
+                <div style="display:flex; align-items:center; margin-bottom:15px; gap:15px;">
+                    <div style="background:var(--accent); width:35px; height:35px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="fa-solid fa-hand-pointer" style="color:white;"></i>
+                    </div>
+                    <p style="margin:0; font-size:14px;">2. Desliza hacia abajo.</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="background:var(--accent); width:35px; height:35px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="fa-solid fa-square-plus" style="color:white;"></i>
+                    </div>
+                    <p style="margin:0; font-size:14px;">3. Selecciona <strong>'Añadir a inicio'</strong>.</p>
+                </div>
+            </div>
+            <p style="color:var(--accent); font-size:12px; margin-top:15px; font-weight:700;">
+                <i class="fa-solid fa-circle-info"></i> Desliza hacia arriba para ver el menú de Safari
+            </p>
         </div>
     </div>
 
@@ -815,11 +844,23 @@
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
 
-        /* --- DETECTOR STANDALONE / BYPASS PC --- */
+        
+        /* --- DETECTOR DE SISTEMA PARA INSTALACIÓN --- */
         (function() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            if (!isMobile || isStandalone) document.documentElement.classList.add('ready-to-show');
+
+            if (isStandalone || !isMobile) {
+                document.documentElement.classList.add('ready-to-show');
+            } else {
+                if (isIOS) {
+                    document.getElementById('ios-instructions').style.display = 'block';
+                } else {
+                    // Android se encarga el evento beforeinstallprompt que ya tienes
+                    document.getElementById('android-btn-area').style.display = 'block';
+                }
+            }
         })();
 
         let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null, requisitosGradoGlobal = [];
@@ -1529,7 +1570,7 @@
         async function procesarAsistenciaQR(classId) {
             const token = localStorage.getItem('aikido_jwt');
             const aluId = getID(alumnoGlobal);
-            const aluDocId = alumnoGlobal.documentId || aluId; // Aseguramos DocumentID
+            const aluDocId = alumnoGlobal.documentId || aluId;
 
             try {
                 // A. OBTENER DATOS DE CLASE
@@ -1539,20 +1580,18 @@
                 
                 const duracion = parseFloat(dataClase.data.attributes?.Duracion || dataClase.data.Duracion || 1.5);
 
-                // B. BUSCAR ASISTENCIA PREVIA (PARA NO DUPLICAR)
+                // B. REGISTRAR ASISTENCIA
                 const resAsis = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[clase][documentId][$eq]=${classId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const jsonAsis = await resAsis.json();
                 const asisExistente = jsonAsis.data?.[0];
 
                 if (asisExistente) {
-                    // Actualizar
                     await fetch(`${API_URL}/api/asistencias/${getID(asisExistente)}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify({ data: { Estado: 'Asistio' } })
                     });
                 } else {
-                    // Crear nueva
                     await fetch(`${API_URL}/api/asistencias`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -1560,14 +1599,9 @@
                     });
                 }
 
-                // C. SUMAR HORAS AL PERFIL (COMPATIBLE V5)
-                // Dentro de procesarAsistenciaQR, sección C:
+                // C. SUMAR HORAS
                 const alRes = await fetch(`${API_URL}/api/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const alData = await alRes.json();
-
-                // Si alRes falla o no hay datos, lanzamos error controlado
-                if (!alData || !alData.data) throw new Error("No se pudo leer el perfil tras actualizar");
-
                 const p = alData.data.attributes || alData.data;
                 const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
 
@@ -1577,17 +1611,35 @@
                     body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
                 });
 
-                // D. ACTUALIZAR UI
+                // D. OBTENER CONTEO TOTAL DE CLASES ASISTIDAS
+                const resTotal = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[Estado][$eq]=Asistio&pagination[withCount]=true`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const jsonTotal = await resTotal.json();
+                const numClases = jsonTotal.meta.pagination.total;
+
+                // E. ACTUALIZAR UI Y MOSTRAR MODAL ÉXITO DETALLADO
                 localStorage.removeItem('cache_perfil_alumno');
                 await refreshStudentData();
                 await checkTodayClass();
                 
-                closeModal();
-                showModal("¡OSS, ARASHI!", `Asistencia registrada: +${duracion}h.<br>Tu nuevo total es ${totalNuevo.toFixed(1)}h.`);
+                closeModal(); // Cierra el escáner
+
+                showModal("¡OSS, ARASHI!", `
+                    <div style="text-align:center;">
+                        <div style="font-size: 1.2rem; color: var(--success); font-weight: 800; margin-bottom: 10px;">+${duracion}h REGISTRADAS</div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-top: 10px;">
+                            <p style="margin: 5px 0;">Total horas: <strong>${totalNuevo.toFixed(1)}h</strong></p>
+                            <p style="margin: 5px 0;">Clases asistidas: <strong>${numClases}</strong></p>
+                        </div>
+                        <p style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">Tu esfuerzo en el Tatami ha sido contabilizado.</p>
+                    </div>
+                `);
 
             } catch (e) {
                 console.error("Error Procesamiento QR:", e);
-                showModal("Error", "No se pudo validar la clase. Revisa tu conexión o avisa al Sensei.");
+                // Si el error es el de "Cannot stop", no mostramos el modal de error porque el proceso fue bien
+                if(!e.message.includes("Cannot stop")) {
+                    showModal("Error", "No se pudo validar la clase. Revisa tu conexión.");
+                }
             }
         }
 
