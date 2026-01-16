@@ -1013,6 +1013,7 @@
             }
 
             await checkTodayClass();
+            updateDashboardUI();
             document.documentElement.classList.add('app-loaded');
         }
 
@@ -1022,11 +1023,9 @@
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             if (!user) return;
             
-            // Consultamos por ID de cuenta (relación directa v5)
             let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
             let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
 
-            // OPTIMIZACIÓN: Solo si el primer intento falla o está vacío, probamos por DNI
             if (!json || !json.data || json.data.length === 0) {
                 endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
                 json = await fetchSmart(endpoint, null, 0); 
@@ -1034,64 +1033,23 @@
 
             if (json && json.data && json.data.length > 0) {
                 alumnoGlobal = json.data[0];
-                updateDashboardUI(); // Centralizamos el pintado aquí
+                const p = alumnoGlobal.attributes || alumnoGlobal;
                 
-                // (Mantén aquí tu lógica de roles/seminarios que pusimos antes)
-                const esSensei = user.is_sensei === true || (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor);
-                // ... resto de lógica de botones ...
-            }
+                // 1. Pintar UI
+                updateDashboardUI();
                 
-                // 1. Actualización de Interfaz Básica
-                document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
-                document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
-
-                if (p.dojo) {
-                    const d = p.dojo.data ? p.dojo.data : p.dojo;
-                    dojoIdGlobal = d.documentId || d.id;
-                }
-
-                const horas = parseFloat(p.horas_acumuladas || 0);
-                document.getElementById('stat-hours').innerText = horas.toFixed(1);
-                document.getElementById('student-progress-circle').classList.remove('hidden');
-
-                // 2. Cálculo de Meta y Círculo de Progreso (Blindado v5)
-                let meta = p.grado_objetivo;
-                if (!meta) {
-                    const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
-                    meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
-                }
-
-                const normMeta = normalize(meta);
-                const req = Array.isArray(requisitosGradoGlobal) 
-                    ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
-                    : null;
-
-                const target = req ? parseFloat(req.horas || req.attributes?.horas || 60) : (GRADOS_FALLBACK[meta] || 60);
-
-                const circle = document.getElementById('progress-bar');
-                if (circle) {
-                    const pct = Math.min((horas / target) * 100, 100);
-                    circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
-                }
-                
-                document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-                const lblMeta = document.getElementById('next-grade-display');
-                lblMeta.innerText = `CAMINO AL ${meta.toUpperCase()}`;
-                lblMeta.classList.remove('hidden');
-
-                // --- LÓGICA DE BOTONES DINÁMICOS POR ROL ---
+                // 2. Lógica de Roles y Botones (Seminarios)
                 const esSensei = user.is_sensei === true || p.es_instructor === true;
                 const navRightBtn = document.getElementById('nav-sensei');
 
                 if (esSensei) {
-                    // ROL SENSEI: Botón nav derecha va al Panel Sensei
                     if (navRightBtn) {
                         navRightBtn.style.display = 'flex';
                         navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
                         navRightBtn.onclick = () => showView('sensei', navRightBtn);
                     }
 
-                    // Inyectar botón 'Seminarios' en el Panel de Sensei (si no existe ya)
+                    // Inyectar botón 'Seminarios' en el Panel de Sensei si no existe
                     if (!document.getElementById('btn-seminarios-sensei-view')) {
                         const senseiHeader = document.querySelector('#sensei-view header');
                         if (senseiHeader) {
@@ -1697,7 +1655,7 @@
                 if (v === 'dashboard') {
                 updateDashboardUI(); // Instantáneo, usa local
             }
-            
+
             if (v === 'sensei') {
                 // Solo llamamos a la API si el contenedor está vacío o es un refresco intencionado
                 if (document.getElementById('student-list').innerHTML.includes('Conectando') || !el) {
