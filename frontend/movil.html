@@ -61,12 +61,10 @@
         /* --- MURO DE INSTALACIÓN --- */
         /* 1. ESTADO INICIAL: Todo oculto, muro preparado */
        #app-content {
-            display: none; /* Oculto por defecto */
-            flex-direction: column;
+            display: none; /* Se activa con ready-to-show */
             width: 100%;
             min-height: 100vh;
-            position: relative;
-            z-index: 10;
+            flex-direction: column;
         }
 
         #install-wall {
@@ -99,12 +97,10 @@
         .auth-container {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
+            min-height: 100vh;
             width: 100%;
-            flex: 1;
-            padding-top: calc(60px + env(safe-area-inset-top));
-            box-sizing: border-box;
+            justify-content: flex-start;
+            align-items: center;
         }
 
         .logo-img { 
@@ -854,9 +850,9 @@
 
         
         /* --- DETECTOR DE SISTEMA PARA INSTALACIÓN --- */
-        /* --- DETECTOR DE SISTEMA CORREGIDO --- */
+        
+/* --- DETECTOR DE ENTORNO V3 --- */
         (function() {
-            // 1. Detecciones de entorno
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || false;
             const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
             const isAndroid = /Android/.test(navigator.userAgent);
@@ -864,31 +860,31 @@
 
             const html = document.documentElement;
 
-            // 2. LÓGICA DE DECISIÓN CRÍTICA
             if (!isMobile || isStandalone) {
-                // CASO A: Es un PC o la App ya está instalada en el escritorio
+                // PC o APP INSTALADA
                 html.classList.add('ready-to-show');
-                console.log("🚀 Entorno validado: App o PC");
-            } else {
-                // CASO B: Es un móvil y está abriendo desde el navegador (Safari/Chrome)
-                html.classList.add('show-install-wall');
                 
-                // Mostramos las instrucciones correctas según la marca
+                // Pequeño hack: Si después de 1 segundo sigue sin verse el login, lo forzamos
                 setTimeout(() => {
-                    const iosBlock = document.getElementById('ios-instructions');
-                    const androidBlock = document.getElementById('android-btn-area');
-                    
-                    if (isIOS) {
-                        if(iosBlock) iosBlock.style.display = 'block';
-                        if(androidBlock) androidBlock.style.display = 'none';
-                    } else {
-                        if(androidBlock) androidBlock.style.display = 'block';
-                        if(iosBlock) iosBlock.style.display = 'none';
+                    if(!localStorage.getItem('aikido_jwt')) {
+                        const loginV = document.getElementById('login-view');
+                        if(loginV) loginV.classList.remove('hidden');
                     }
-                }, 100);
-                console.log("🛡️ Muro de instalación activado");
+                }, 500);
+
+            } else {
+                // NAVEGADOR MÓVIL (Safari/Chrome) -> MURO
+                html.classList.add('show-install-wall');
+                setTimeout(() => {
+                    const ios = document.getElementById('ios-instructions');
+                    const and = document.getElementById('android-btn-area');
+                    if (isIOS && ios) ios.style.display = 'block';
+                    if (!isIOS && and) and.style.display = 'block';
+                }, 200);
             }
         })();
+
+
         let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null, requisitosGradoGlobal = [];
         let selectedMonthGen = new Date().getMonth();
         let html5QrCode = null;
@@ -957,26 +953,30 @@
 
         /* --- CORE INIT --- */
         async function initApp() {
-            console.log("🚀 [INIT] Arrancando aplicación...");
+            console.log("🚀 [INIT] Arrancando...");
             const token = localStorage.getItem('aikido_jwt');
             const user = JSON.parse(localStorage.getItem('aikido_user'));
             
-            // Forzamos que se oculten todas las vistas primero para evitar solapamientos
-            document.getElementById('dashboard-view').classList.add('hidden');
-            document.getElementById('login-view').classList.add('hidden');
+            // 1. Reset de vistas: Ocultamos todo para decidir ahora
+            document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
+                    .forEach(v => v.classList.add('hidden'));
 
             if (!token || !user) {
-                // MOSTRAR LOGIN
-                document.body.classList.remove('user-logged');
-                document.getElementById('login-view').classList.remove('hidden'); // QUITAMOS HIDDEN
+                // 2. No hay token: MOSTRAR LOGIN
+                console.log("🔑 Mostrando Login");
+                const lv = document.getElementById('login-view');
+                if(lv) lv.classList.remove('hidden');
                 document.getElementById('main-nav').classList.add('hidden');
+                
+                // Importante para que el contenido "despierte"
+                document.documentElement.classList.add('app-loaded'); 
                 return;
             }
 
-            // MOSTRAR DASHBOARD
-            document.body.classList.add('user-logged');
-            document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('dashboard-view').classList.remove('hidden');
+            // 3. Hay token: MOSTRAR DASHBOARD
+            console.log("🏠 Mostrando Dashboard");
+            const dv = document.getElementById('dashboard-view');
+            if(dv) dv.classList.remove('hidden');
             document.getElementById('main-nav').classList.remove('hidden');
             
             // ... resto de tus cargas (Promise.all, etc)
