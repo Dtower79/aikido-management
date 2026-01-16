@@ -59,38 +59,36 @@
         .hidden { display: none !important; }
 
         /* --- MURO DE INSTALACIÓN --- */
+        /* 1. ESTADO INICIAL: Todo oculto, muro preparado */
         #app-content {
-            display: none !important;
-            opacity: 0;
-        }
-        
-        /* Se muestra si la app terminó de cargar O si el usuario NO está logueado */
-        .app-loaded #app-content, 
-        body:not(.user-logged) #app-content {
-            opacity: 1 !important;
-            display: flex !important;
+            display: none !important; /* Nadie puede ver la app por defecto */
         }
 
         #install-wall {
-            display: flex;
+            display: none; /* Se activará solo si es necesario por JS */
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #05080f; /* Fondo negro puro para que no transparente nada */
+            z-index: 999999 !important;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            width: 100vw;
-            background: var(--bg);
-            z-index: 99999;
-            position: fixed;
-            top: 0;
-            left: 0;
         }
+
+        /* 2. EL INTERRUPTOR MAESTRO: Solo esta clase manda */
         .ready-to-show #app-content {
             display: flex !important;
-            opacity: 1;
         }
 
         .ready-to-show #install-wall {
             display: none !important;
+        }
+
+        /* Si no está instalada, mostramos el muro */
+        .show-install-wall #install-wall {
+            display: flex !important;
         }
 
         /* --- AUTH Y LOGO --- */
@@ -856,27 +854,39 @@
         /* --- DETECTOR DE SISTEMA PARA INSTALACIÓN --- */
         /* --- DETECTOR DE SISTEMA CORREGIDO --- */
         (function() {
-            // 1. Detectamos el estado
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            // 1. Detecciones de entorno
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || false;
+            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+            const isAndroid = /Android/.test(navigator.userAgent);
+            const isMobile = isIOS || isAndroid;
 
-            // 2. Lógica de visualización
-            if (isStandalone || !isMobile) {
-                // Si ya está instalada o es un PC, entramos directo
-                document.documentElement.classList.add('ready-to-show');
+            const html = document.documentElement;
+
+            // 2. LÓGICA DE DECISIÓN CRÍTICA
+            if (!isMobile || isStandalone) {
+                // CASO A: Es un PC o la App ya está instalada en el escritorio
+                html.classList.add('ready-to-show');
+                console.log("🚀 Entorno validado: App o PC");
             } else {
-                // Si es móvil y NO está instalada, preparamos el muro de instrucciones
-                if (isIOS) {
-                    document.getElementById('ios-instructions').style.display = 'block';
-                    document.getElementById('android-btn-area').style.display = 'none';
-                } else {
-                    document.getElementById('android-btn-area').style.display = 'block';
-                    document.getElementById('ios-instructions').style.display = 'none';
-                }
+                // CASO B: Es un móvil y está abriendo desde el navegador (Safari/Chrome)
+                html.classList.add('show-install-wall');
+                
+                // Mostramos las instrucciones correctas según la marca
+                setTimeout(() => {
+                    const iosBlock = document.getElementById('ios-instructions');
+                    const androidBlock = document.getElementById('android-btn-area');
+                    
+                    if (isIOS) {
+                        if(iosBlock) iosBlock.style.display = 'block';
+                        if(androidBlock) androidBlock.style.display = 'none';
+                    } else {
+                        if(androidBlock) androidBlock.style.display = 'block';
+                        if(iosBlock) iosBlock.style.display = 'none';
+                    }
+                }, 100);
+                console.log("🛡️ Muro de instalación activado");
             }
         })();
-
         let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null, requisitosGradoGlobal = [];
         let selectedMonthGen = new Date().getMonth();
         let html5QrCode = null;
@@ -954,7 +964,6 @@
                 document.body.classList.remove('user-logged');
                 document.getElementById('login-view').classList.remove('hidden');
                 document.getElementById('main-nav').classList.add('hidden');
-                document.documentElement.classList.add('app-loaded');
                 return;
             }
 
