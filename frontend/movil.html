@@ -1470,32 +1470,45 @@
             `, true);
 
             // --- SUSTITUYE ESTA PARTE DENTRO DE startQRScanner ---
-            setTimeout(async () => {
+        setTimeout(async () => {
                 try {
                     const qrReaderEl = document.getElementById('qr-reader');
                     html5QrCode = new Html5Qrcode("qr-reader");
                     
-                    // Detectamos si es un dispositivo móvil
                     const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
                     
-                    await html5QrCode.start(
-                        // Si es móvil busca la trasera (environment), si es PC usa la frontal (user)
-                        isMobile ? { facingMode: "environment" } : { facingMode: "user" },
-                        { fps: 15, qrbox: { width: 220, height: 220 } },
-                        async (decodedText) => {
-                            // ... resto de tu lógica de éxito ...
-                            console.log("🎯 QR Capturado:", decodedText);
-                            document.getElementById('scan-status').innerText = "¡CÓDIGO LEÍDO! PROCESANDO...";
-                            await html5QrCode.stop().catch(() => {});
-                            procesarAsistenciaQR(decodedText);
-                        },
-                        () => {} 
-                    );
+                    // Configuración de escaneo (común para ambos)
+                    const config = { fps: 15, qrbox: { width: 220, height: 220 } };
+
+                    try {
+                        // INTENTO 1: Con restricciones (trasera en móvil)
+                        const constraints = isMobile ? { facingMode: "environment" } : { facingMode: "user" };
+                        await html5QrCode.start(constraints, config, onScanSuccess);
+                    } catch (err) {
+                        console.warn("⚠️ Intento 1 fallido, probando cámara por defecto...", err);
+                        // INTENTO 2: Sin ninguna restricción (lo que el navegador decida)
+                        // Esto soluciona el OverconstrainedError en PC
+                        await html5QrCode.start({ deviceId: { undefined } }, config, onScanSuccess);
+                    }
+
                 } catch (err) {
-                    console.error("Error Cámara:", err);
-                    showModal("Error", "No se pudo activar la cámara. Revisa los permisos.");
+                    console.error("❌ Error final Cámara:", err);
+                    showModal("Error", "No se pudo activar la cámara. Asegúrate de dar permisos en el navegador.");
                 }
             }, 300);
+
+            // Función auxiliar para no repetir código
+            async function onScanSuccess(decodedText) {
+                console.log("🎯 QR Capturado:", decodedText);
+                document.getElementById('scan-status').innerText = "¡CÓDIGO LEÍDO! PROCESANDO...";
+                
+                // Apagado seguro: solo si está corriendo
+                if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) {
+                    await html5QrCode.stop().catch(() => {});
+                }
+                
+                procesarAsistenciaQR(decodedText);
+            }
         }
 
         async function loadDojosFilter() {
