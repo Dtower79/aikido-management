@@ -815,26 +815,34 @@
 
         <!-- SENSEI PANEL VIEW -->
         <!-- SENSEI PANEL VIEW -->
-        <div id="sensei-view" class="hidden">
-            <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
-            
-            <div style="padding: 0 25px; margin-bottom: 25px; margin-top: 10px;">
-                <p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">FILTRAR TATAMI POR DOJO:</p>
-                <select id="sensei-dojo-filter" class="sensei-select" onchange="loadSenseiPanel()">
-                    <option value="all">-- TODOS LOS DOJOS --</option>
-                </select>
-            </div>
+        <!-- SENSEI PANEL VIEW -->
+<div id="sensei-view" class="hidden">
+    <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
+    
+    <!-- Botón Seminarios Fijo para Senseis -->
+    <div style="padding: 0 25px 15px;">
+        <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')">
+            <i class="fa-solid fa-calendar-day"></i> SEMINARIOS
+        </button>
+    </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 20px 12px;">
-                <button class="action-btn" style="padding:18px; font-size:12px; background:#1e293b; color:white;" onclick="uiGenerateMonth()">GENERAR MES</button>
-                <button class="action-btn" style="padding:18px; font-size:12px; background:#1e293b; color:white;" onclick="loadManageClasses()">EDITAR CLASES</button>
-            </div>
-            <div style="margin:0 20px 25px;">
-                <button class="action-btn" style="padding:18px; font-size:12px; background:var(--accent); color:white; width:100%;" onclick="uiCreateSingleClass()">+ NUEVA CLASE SUELTA</button>
-            </div>
+    <div style="padding: 0 25px; margin-bottom: 25px; margin-top: 10px;">
+        <p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">FILTRAR TATAMI POR DOJO:</p>
+        <select id="sensei-dojo-filter" class="sensei-select" onchange="loadSenseiPanel()">
+            <option value="all">-- TODOS LOS DOJOS --</option>
+        </select>
+    </div>
 
-            <div id="student-list" style="padding-bottom: 40px;"></div>
-        </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 20px 12px;">
+        <button class="action-btn" style="padding:18px; font-size:12px; background:#1e293b; color:white;" onclick="uiGenerateMonth()">GENERAR MES</button>
+        <button class="action-btn" style="padding:18px; font-size:12px; background:#1e293b; color:white;" onclick="loadManageClasses()">EDITAR CLASES</button>
+    </div>
+    <div style="margin:0 20px 25px;">
+        <button class="action-btn" style="padding:18px; font-size:12px; background:var(--accent); color:white; width:100%;" onclick="uiCreateSingleClass()">+ NUEVA CLASE SUELTA</button>
+    </div>
+
+    <div id="student-list" style="padding-bottom: 40px;"></div>
+</div>
 
         <!-- NAV BAR -->
         <nav class="nav-bar hidden" id="main-nav">
@@ -990,66 +998,144 @@ async function initApp() {
 
         /* --- REFRESH DATA (Sincronización v5) --- */
 
+// --- 1. DETECCIÓN DE IDENTIDAD Y ROLES ---
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     const token = localStorage.getItem('aikido_jwt');
     if (!token || !user) return;
     
-    const aluCacheId = localStorage.getItem('arashi_alumno_docid');
-    let json = null;
-
     try {
-        // A. BUSCAR PERFIL DE ALUMNO (Si existe)
-        if (aluCacheId) {
-            const res = await fetchSmart(`/api/alumnos/${aluCacheId}?populate=*`, 'perfil_alumno', 168);
-            json = (res && res.data) ? { data: [res.data] } : (res ? { data: [res] } : null);
-        } else {
-            let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-            json = await fetchSmart(endpoint, null, 0); 
-            if (!json || !json.data || json.data.length === 0) {
-                endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-                json = await fetchSmart(endpoint, null, 0); 
-            }
-            if (json?.data?.[0]) {
-                localStorage.setItem('arashi_alumno_docid', getID(json.data[0]));
-            }
+        // Buscamos al alumno (para Raúl o para ver si el usuario tiene ficha)
+        let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+        let json = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json());
+        
+        if (!json?.data?.[0]) {
+            endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
+            json = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json());
         }
 
-        alumnoGlobal = (json && json.data && json.data.length > 0) ? json.data[0] : null;
+        alumnoGlobal = json?.data?.[0] || null;
+        if (alumnoGlobal) localStorage.setItem('arashi_alumno_docid', getID(alumnoGlobal));
 
-        // B. LÓGICA DE ROLES (Sensei vs Alumno)
         const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
         
-        // Francesc: is_sensei en User | Raúl: es_instructor en Alumno
-        const esSenseiReal = (user.is_sensei === true) || (p && (p.es_instructor === true || p.es_instructor === "true"));
+        // IDENTIDAD DUAL SENSEI:
+        // Caso A: Francesc (is_sensei en User)
+        // Caso B: Raúl (es_instructor en Alumno)
+        const esSenseiReal = (user.is_sensei === true || user.is_sensei === "true") || 
+                             (p && (p.es_instructor === true || p.es_instructor === "true"));
         
-        const navRightBtn = document.getElementById('nav-sensei');
-
-        if (esSenseiReal) {
-            if (navRightBtn) {
-                navRightBtn.style.display = 'flex';
-                navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-                navRightBtn.onclick = () => showView('sensei', navRightBtn);
+        const navSensei = document.getElementById('nav-sensei');
+        if (navSensei) {
+            navSensei.style.display = 'flex'; // Siempre visible
+            if (esSenseiReal) {
+                // Si es Sensei -> Botón va al Panel
+                navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+                navSensei.onclick = () => showView('sensei', navSensei);
+            } else {
+                // Si es Alumno normal -> Botón va a Seminarios
+                navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+                navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
             }
-            // Asegurar que el botón de seminarios existe para Senseis también
-            if (!document.getElementById('btn-seminarios-sensei-view')) {
-                const senseiHeader = document.querySelector('#sensei-view header');
-                if (senseiHeader) {
-                    const btnWrap = document.createElement('div');
-                    btnWrap.id = 'btn-seminarios-sensei-view';
-                    btnWrap.style.padding = '0 25px 15px';
-                    btnWrap.innerHTML = `<button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')"><i class="fa-solid fa-calendar-day"></i> SEMINARIOS</button>`;
-                    senseiHeader.after(btnWrap);
-                }
-            }
-        } else if (navRightBtn) {
-            navRightBtn.style.display = 'flex';
-            navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-            navRightBtn.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
         }
 
         updateDashboardUI();
-    } catch (e) { console.error("Crash en Identidad:", e); }
+    } catch (e) { console.error("Error Identidad:", e); }
+}
+
+// --- 2. CARGA DEL PANEL SENSEI (CON DEEP POPULATE V5) ---
+async function loadSenseiPanel() {
+    const listDiv = document.getElementById('student-list');
+    if (!listDiv) return;
+
+    const dojoFilter = document.getElementById('sensei-dojo-filter')?.value || 'all';
+    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'><i class='fa-solid fa-spinner fa-spin'></i> Sincronizando Tatami...</p>";
+
+    try {
+        const token = localStorage.getItem('aikido_jwt');
+        
+        // DEEP POPULATE: En v5 es obligatorio pedir explícitamente los hijos de las relaciones
+        // Filtramos directamente por Estado=Confirmado en la API (más seguro)
+        const endpoint = `/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate][dojo]=*&sort=createdAt:desc`;
+        
+        const res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const json = await res.json();
+
+        if (!json?.data || json.data.length === 0) {
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes de validar.</p>";
+            return;
+        }
+
+        const groups = {};
+        json.data.forEach(item => {
+            const a = item.attributes || item;
+            const alu = parseRelation(a.alumno);
+            const cla = parseRelation(a.clase);
+
+            if (!alu || !cla) return;
+
+            // Filtrado por Dojo (v5 documentId)
+            const dojoData = parseRelation(cla.dojo);
+            const dId = dojoData ? (dojoData.documentId || dojoData.id) : null;
+            if (dojoFilter !== 'all' && dId !== dojoFilter) return;
+
+            const cid = cla.documentId || cla.id;
+            if (!groups[cid]) groups[cid] = { info: cla, students: [] };
+
+            groups[cid].students.push({
+                asistId: item.documentId || item.id,
+                alumnoId: alu.documentId || alu.id,
+                nombre: (alu.nombre || "Alumno").toUpperCase(),
+                apellidos: (alu.apellidos || "").toUpperCase(),
+                grado: alu.grado || "S/G"
+            });
+        });
+
+        const keys = Object.keys(groups);
+        if (keys.length === 0) {
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos para el dojo seleccionado.</p>";
+            return;
+        }
+
+        // Ordenar clases
+        keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
+
+        listDiv.innerHTML = "";
+        keys.forEach(cid => {
+            const g = groups[cid];
+            const f = formatTimeSafe(g.info.Fecha_Hora);
+            
+            let sRows = g.students.map(s => `
+                <div class="student-item">
+                    <div class="student-info">
+                        <h4>${s.nombre} ${s.apellidos}</h4>
+                        <p>${s.grado}</p>
+                    </div>
+                    <div class="sensei-actions">
+                        <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
+                        <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
+                    </div>
+                </div>`).join('');
+
+            listDiv.innerHTML += `
+            <div class="class-group-card">
+                <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                    <div style="text-align:left;">
+                        <h3>${f.date} - ${f.time}</h3>
+                        <p style="font-size:10px; color:var(--accent); font-weight:800;">${g.students.length} POR VALIDAR</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+                <div class="class-group-body" style="padding: 15px 20px;">
+                    <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> QR TATAMI</button>
+                    <div style="border-top:1px solid var(--glass-border); padding-top:10px; margin-top:10px;">${sRows}</div>
+                </div>
+            </div>`;
+        });
+    } catch (e) { 
+        console.error("Error Sensei Panel:", e);
+        listDiv.innerHTML = "<p style='color:red;text-align:center;padding:20px;'>Error de red. Reintenta.</p>";
+    }
 }
 
         /* --- SENSEI PANEL (Agrupación y 7 días) --- */
