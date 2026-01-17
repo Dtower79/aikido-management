@@ -354,15 +354,21 @@
         }
 
         .student-item { 
-            background: rgba(255,255,255,0.03); 
-            padding: 12px 18px; /* Aumentamos un poco el padding lateral */
-            border-radius: 18px; 
+            background: transparent !important; /* Eliminamos el fondo */
+            padding: 15px 5px !important; /* Eliminamos padding lateral para ganar ancho */
+            border: none !important; /* Eliminamos el borde de la caja */
+            border-bottom: 1px solid rgba(255,255,255,0.05) !important; /* Línea divisoria sutil */
+            border-radius: 0 !important; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            margin: 10px 0; /* Solo margen vertical, el horizontal lo dará el contenedor */
-            border: 1px solid var(--glass-border); 
+            margin: 0 !important; 
             box-sizing: border-box;
+        }
+
+        /* El último alumno de la lista no necesita línea divisoria */
+        .student-item:last-child { 
+            border-bottom: none !important; 
         }
         .sensei-actions { 
             display: flex; 
@@ -1195,6 +1201,32 @@
 
         /* --- REFRESH DATA (Sincronización v5) --- */
 async function refreshStudentData() {
+        // 1. Aseguramos que la lista sea exhaustiva
+    const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
+
+    let meta = p.grado_objetivo;
+    if (!meta) {
+        // Normalizamos el grado que viene de Strapi (Ej: "4O DAN" -> "4DAN")
+        const gradoActualNorm = normalize(p.grado);
+        
+        // Buscamos el índice en nuestra escalera
+        const idx = GRADOS_ORDER.findIndex(x => normalize(x) === gradoActualNorm);
+
+        if (idx !== -1 && idx < GRADOS_ORDER.length - 1) {
+            // Si lo encuentra, la meta es el siguiente peldaño
+            meta = GRADOS_ORDER[idx + 1];
+        } else {
+            // SI FALLA LA BÚSQUEDA (Caso de Carlos): 
+            // Si el grado actual contiene "DAN", la meta lógica mínima es "5º DAN" o el siguiente nivel
+            if (gradoActualNorm.includes("DAN")) {
+                const nivel = parseInt(gradoActualNorm); // Saca el "4" de "4DAN"
+                meta = isNaN(nivel) ? "1º DAN" : (nivel + 1) + "º DAN";
+            } else {
+                meta = "1º DAN"; // Fallback para Kyus o desconocidos
+            }
+        }
+    }
+
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return;
     
@@ -1337,7 +1369,26 @@ async function loadSenseiPanel() {
                 sRows += `<div class="student-item" id="it-${s.asistId}"><div class="student-info"><h4>${s.nombre} ${s.apellidos || ""}</h4><p>${s.grado || 'S/G'}</p></div><div class="sensei-actions"><button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button><button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button></div></div>`;
             });
 
-            listDiv.innerHTML += `<div class="class-group-card"><div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')"><div style="text-align:left;"><h3>${f.date} - ${f.time}</h3><p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p></div><i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i></div><div class="class-group-body"><button class="qr-tatami-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI</button><div style="border-top:1px solid var(--glass-border); padding:15px 20px;">${sRows}</div></div></div>`;
+            // --- DENTRO DEL BUCLE DE loadSenseiPanel ---
+        listDiv.innerHTML += `
+        <div class="class-group-card">
+            <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                <div style="text-align:left;">
+                    <h3>${f.date} - ${f.time}</h3>
+                    <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
+                </div>
+                <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
+            </div>
+            <div class="class-group-body">
+                <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
+                    <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
+                </button>
+                <!-- HEMOS QUITADO EL PADDING LATERAL AQUÍ PARA QUE EL NOMBRE OCUPE TODO EL ANCHO -->
+                <div style="border-top:1px solid var(--glass-border); padding: 0 15px;">
+                    ${sRows}
+                </div>
+            </div>
+        </div>`;
         });
     } catch (e) {
         const topHtml = listDiv.firstElementChild.outerHTML;
