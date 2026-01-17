@@ -1201,32 +1201,6 @@
 
         /* --- REFRESH DATA (Sincronización v5) --- */
 async function refreshStudentData() {
-        // 1. Aseguramos que la lista sea exhaustiva
-    const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
-
-    let meta = p.grado_objetivo;
-    if (!meta) {
-        // Normalizamos el grado que viene de Strapi (Ej: "4O DAN" -> "4DAN")
-        const gradoActualNorm = normalize(p.grado);
-        
-        // Buscamos el índice en nuestra escalera
-        const idx = GRADOS_ORDER.findIndex(x => normalize(x) === gradoActualNorm);
-
-        if (idx !== -1 && idx < GRADOS_ORDER.length - 1) {
-            // Si lo encuentra, la meta es el siguiente peldaño
-            meta = GRADOS_ORDER[idx + 1];
-        } else {
-            // SI FALLA LA BÚSQUEDA (Caso de Carlos): 
-            // Si el grado actual contiene "DAN", la meta lógica mínima es "5º DAN" o el siguiente nivel
-            if (gradoActualNorm.includes("DAN")) {
-                const nivel = parseInt(gradoActualNorm); // Saca el "4" de "4DAN"
-                meta = isNaN(nivel) ? "1º DAN" : (nivel + 1) + "º DAN";
-            } else {
-                meta = "1º DAN"; // Fallback para Kyus o desconocidos
-            }
-        }
-    }
-
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return;
     
@@ -1257,7 +1231,7 @@ async function refreshStudentData() {
     const zenCard = document.getElementById('zen-card');
 
     if (!json || !json.data || (Array.isArray(json.data) && json.data.length === 0)) {
-        // CASO FRANCESC (Sensei sin ficha)
+        // --- CASO STAFF (Francesc) ---
         const initials = ((user.nombre?.[0] || "") + (user.apellidos?.[0] || "")).toUpperCase();
         document.getElementById('user-initials').innerText = initials || "S";
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
@@ -1268,9 +1242,9 @@ async function refreshStudentData() {
             circle.insertAdjacentHTML('afterend', zenHTML);
         }
     } else {
-        // CASO ALUMNO (Raúl / Otros)
+        // --- CASO ALUMNO (Raúl / Carlos / etc) ---
         alumnoGlobal = Array.isArray(json.data) ? json.data[0] : json.data; 
-        const p = alumnoGlobal.attributes || alumnoGlobal;
+        const p = alumnoGlobal.attributes || alumnoGlobal; // AHORA SÍ DEFINIMOS "p"
         if (zenCard) zenCard.remove();
         
         document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
@@ -1282,10 +1256,25 @@ async function refreshStudentData() {
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
         if (circle) circle.classList.remove('hidden');
 
-        let meta = p.grado_objetivo || "1º DAN";
+        // --- LÓGICA DE META (CORREGIDA PARA CARLOS 4º DAN) ---
+        let meta = p.grado_objetivo;
+        if (!meta) {
+            const gradoActualNorm = normalize(p.grado);
+            const idx = GRADOS_ORDER.findIndex(x => normalize(x) === gradoActualNorm);
+
+            if (idx !== -1 && idx < GRADOS_ORDER.length - 1) {
+                meta = GRADOS_ORDER[idx + 1];
+            } else if (gradoActualNorm.includes("DAN")) {
+                const nivel = parseInt(gradoActualNorm);
+                meta = isNaN(nivel) ? "1º DAN" : (nivel + 1) + "º DAN";
+            } else {
+                meta = "1º DAN";
+            }
+        }
+
         const normMeta = normalize(meta);
         const req = requisitosGradoGlobal.find(r => normalize(r.grado) === normMeta);
-        const target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
+        const target = req ? (req.HORAS || req.horas) : (GRADOS_FALLBACK[meta] || 60);
 
         const bar = document.getElementById('progress-bar');
         if (bar) {
