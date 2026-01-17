@@ -963,25 +963,35 @@
 
         /* --- SISTEMA DE CACHÉ Y DEBUG --- */
         async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
-            console.log(`🔍 [API] Consultando: ${endpoint}`);
-            if (cacheKey) {
-                const cached = localStorage.getItem(`cache_${cacheKey}`);
-                if (cached) {
-                    const { time, data } = JSON.parse(cached);
-                    if ((Date.now() - time) / (1000 * 60 * 60) < durationHours) return data; 
-                }
+    console.log(`🔍 [SMART-FETCH] ${endpoint}`);
+    if (cacheKey) {
+        const cached = localStorage.getItem(`cache_${cacheKey}`);
+        if (cached) {
+            const { time, data } = JSON.parse(cached);
+            const horasPasadas = (Date.now() - time) / (1000 * 60 * 60);
+            if (horasPasadas < durationHours) {
+                console.log(`📦 [CACHE-HIT] ${cacheKey} (${horasPasadas.toFixed(1)}h / ${durationHours}h)`);
+                return data; 
             }
-            try {
-                const res = await fetch(`${API_URL}${endpoint}`, { 
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-                });
-                const json = await res.json();
-                if (cacheKey && json) {
-                    localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({ time: Date.now(), data: json }));
-                }
-                return json;
-            } catch (e) { console.error("❌ Fallo API:", e); return null; }
         }
+    }
+    
+    try {
+        const res = await fetch(`${API_URL}${endpoint}`, { 
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+        });
+        const json = await res.json();
+        if (cacheKey && json) {
+            localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({ time: Date.now(), data: json }));
+        }
+        return json;
+    } catch (e) { 
+        console.error("❌ Fallo API:", e); 
+        // Si falla la red, devolvemos lo que tengamos en cache aunque sea viejo
+        const backup = localStorage.getItem(`cache_${cacheKey}`);
+        return backup ? JSON.parse(backup).data : null;
+    }
+}
 
         /* --- MODALES --- */
         function showModal(t, htmlContent, showCloseBtn = true) { 
@@ -1044,8 +1054,8 @@
     showView('dashboard');
     
     const [reqRes] = await Promise.all([
-        fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480),
-        refreshStudentData()
+    fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 1440),
+    refreshStudentData()
     ]);
 
     if (reqRes && reqRes.data) {
@@ -1079,88 +1089,68 @@ async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return;
     
-    // 1. Intentamos buscar por ID de usuario
-    let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-    let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
+    // 1. INTELIGENCIA: Recuperamos el ID permanente para ahorrar búsquedas
+    const savedDocId = localStorage.getItem('aikido_student_doc_id');
+    let json = null;
 
-    // 2. Si no lo encuentra, intentamos buscar por DNI
-    if (!json || !json.data || json.data.length === 0) {
-        endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
+    if (savedDocId && savedDocId !== "null") {
+        // Cache de 168 horas (1 semana)
+        json = await fetchSmart(`/api/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
+    } else {
+        // Búsqueda inicial (Solo se hace una vez en la vida de la instalación)
+        let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
         json = await fetchSmart(endpoint, null, 0); 
+        if (!json?.data?.length) {
+            endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
+            json = await fetchSmart(endpoint, null, 0);
+        }
+        if (json?.data?.length) {
+            localStorage.setItem('aikido_student_doc_id', getID(json.data[0]));
+        } else {
+            localStorage.setItem('aikido_student_doc_id', "null");
+        }
     }
 
-    // Definimos las variables de la interfaz
     const circle = document.getElementById('student-progress-circle');
     const nextGrade = document.getElementById('next-grade-display');
     const zenCard = document.getElementById('zen-card');
 
-    // 3. DECISIÓN FINAL: ¿Es alumno o es solo Sensei/Staff?
-    if (!json || !json.data || json.data.length === 0) {
-        // --- CASO: PURE SENSEI (Francesc) ---
-        console.log("👤 Modo Staff/Sensei detectado");
-        
-        // Iniciales desde el User de Strapi
+    if (!json || !json.data || (Array.isArray(json.data) && json.data.length === 0)) {
+        // CASO FRANCESC (Sensei sin ficha)
         const initials = ((user.nombre?.[0] || "") + (user.apellidos?.[0] || "")).toUpperCase();
         document.getElementById('user-initials').innerText = initials || "S";
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
-
-        // Ocultar círculos de alumno
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
-
-        // Inyectar la tarjeta Zen ESPECTACULAR (solo si no existe ya)
         if (!zenCard && circle) {
-            const zenHTML = `
-                <div id="zen-card" class="zen-master-card">
-                    <img src="img/logo_sin_fondo.png" class="zen-logo">
-                    <h2 class="zen-title">SENSEI</h2>
-                    <p class="zen-subtitle">ARASHI DOJO STAFF</p>
-                </div>`;
+            const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title">SENSEI</h2><p class="zen-subtitle">ARASHI DOJO STAFF</p></div>`;
             circle.insertAdjacentHTML('afterend', zenHTML);
         }
-
     } else {
-        // --- CASO: ALUMNO (Raúl) ---
-        alumnoGlobal = json.data[0]; 
+        // CASO ALUMNO (Raúl / Otros)
+        alumnoGlobal = Array.isArray(json.data) ? json.data[0] : json.data; 
         const p = alumnoGlobal.attributes || alumnoGlobal;
-        
-        // Si venimos de un login de sensei, borramos la tarjeta Zen
         if (zenCard) zenCard.remove();
-
-        // Datos del perfil
+        
         document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
         document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
-
-        if (p.dojo) {
-            const d = p.dojo.data ? p.dojo.data : p.dojo;
-            dojoIdGlobal = d.documentId || d.id;
-        }
-
+        
+        if (p.dojo) dojoIdGlobal = getID(p.dojo.data || p.dojo);
+        
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
-        
-        // Mostrar círculo y meta
         if (circle) circle.classList.remove('hidden');
 
-        let meta = p.grado_objetivo;
-        if (!meta) {
-            const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
-            meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
-        }
-
+        let meta = p.grado_objetivo || "1º DAN";
         const normMeta = normalize(meta);
-        const req = Array.isArray(requisitosGradoGlobal) 
-            ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
-            : null;
-
-        const target = req ? parseFloat(req.horas || req.attributes?.horas || 60) : (GRADOS_FALLBACK[meta] || 60);
+        const req = requisitosGradoGlobal.find(r => normalize(r.grado) === normMeta);
+        const target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
 
         const bar = document.getElementById('progress-bar');
         if (bar) {
             const pct = Math.min((horas / target) * 100, 100);
             bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
         }
-        
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
@@ -1168,7 +1158,7 @@ async function refreshStudentData() {
         }
     }
 
-    // 4. Configuración de la barra de navegación según el campo "is_sensei"
+    // Nav Bar Logic
     const navRightBtn = document.getElementById('nav-sensei');
     if (navRightBtn) {
         if (user.is_sensei === true) {
@@ -1196,7 +1186,7 @@ async function loadSenseiPanel() {
 
     try {
         const endpoint = `/api/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100`;
-        const json = await fetchSmart(endpoint, null, 0); 
+        const json = await fetchSmart(endpoint, 'asistencias_sensei', 2); 
         if (!json || !json.data) throw new Error("No hay datos");
 
         const groups = {};
@@ -1532,7 +1522,7 @@ async function loadSenseiPanel() {
 
         async function loadMonthlyClasses(el) {
             showView('clases', el); const container = document.getElementById('calendar-content'); container.innerHTML = "<p style='text-align:center;padding:20px;'>Cargando...</p>";
-            const json = await fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 24);
+            const json = await fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 168);
             const grouped = {}; const hoyCorte = new Date(); hoyCorte.setHours(0,0,0,0);
             (json.data||[]).forEach(c => {
                 const d = parseData(c); if (new Date(d.Fecha_Hora) < hoyCorte) return; const f = formatTimeSafe(d.Fecha_Hora);
@@ -1630,78 +1620,59 @@ async function loadSenseiPanel() {
         }
 
         async function procesarAsistenciaQR(classId) {
-            const token = localStorage.getItem('aikido_jwt');
-            const aluDocId = alumnoGlobal.documentId || alumnoGlobal.id;
+    const token = localStorage.getItem('aikido_jwt');
+    const aluDocId = getID(alumnoGlobal);
+    if(!aluDocId) return;
 
-            try {
-                // A. OBTENER DATOS DE CLASE
-                const resClase = await fetch(`${API_URL}/api/clases/${classId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const dataClase = await resClase.json();
-                const duracion = parseFloat(dataClase.data.attributes?.Duracion || dataClase.data.Duracion || 1.5);
+    try {
+        // 1. Obtener datos de clase (desde cache de 168h si es posible)
+        const resClase = await fetchSmart(`/api/clases/${classId}`, null, 0); // Pedimos directo porque es acción real
+        const duracion = parseFloat(resClase.data.attributes?.Duracion || resClase.data.Duracion || 1.5);
 
-                // B. REGISTRAR ASISTENCIA
-                const resAsis = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[clase][documentId][$eq]=${classId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const jsonAsis = await resAsis.json();
-                const asisExistente = jsonAsis.data?.[0];
+        // 2. Registrar Asistencia (1 API Call)
+        await fetch(`${API_URL}/api/asistencias`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
+        });
 
-                if (asisExistente) {
-                    await fetch(`${API_URL}/api/asistencias/${getID(asisExistente)}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({ data: { Estado: 'Asistio' } })
-                    });
-                } else {
-                    await fetch(`${API_URL}/api/asistencias`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
-                    });
-                }
+        // 3. Sumar Horas en Strapi (1 API Call)
+        const p = alumnoGlobal.attributes || alumnoGlobal;
+        const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
 
-                // C. SUMAR HORAS
-                const alRes = await fetch(`${API_URL}/api/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const alData = await alRes.json();
-                const p = alData.data.attributes || alData.data;
-                const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
+        await fetch(`${API_URL}/api/alumnos/${aluDocId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
+        });
 
-                await fetch(`${API_URL}/api/alumnos/${aluDocId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
-                });
-
-                // D. CONTEO DE CLASES (Blindado)
-                const resTotal = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[Estado][$eq]=Asistio&pagination[withCount]=true`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const jsonTotal = await resTotal.json();
-                const numClases = jsonTotal.meta?.pagination?.total || 0;
-
-                // E. FINALIZAR UI
-                localStorage.removeItem('cache_perfil_alumno');
-                await refreshStudentData();
-                await checkTodayClass();
-                
-                // Cerramos modal sin que explote el scanner
-                document.getElementById('custom-modal').classList.add('hidden'); 
-                if(html5QrCode) {
-                    try { await html5QrCode.stop(); } catch(e) {}
-                    html5QrCode = null;
-                }
-
-                showModal("¡OSS, ARASHI!", `
-                    <div style="text-align:center;">
-                        <div style="font-size: 1.2rem; color: var(--success); font-weight: 800; margin-bottom: 10px;">+${duracion}h REGISTRADAS</div>
-                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-top: 10px;">
-                            <p style="margin: 5px 0;">Total horas: <strong>${totalNuevo.toFixed(1)}h</strong></p>
-                            <p style="margin: 5px 0;">Clases asistidas: <strong>${numClases}</strong></p>
-                        </div>
-                    </div>
-                `);
-
-            } catch (e) {
-                console.error("Error Procesamiento QR:", e);
-                showModal("Error", "No se pudo validar la clase. Revisa tu conexión.");
-            }
+        // 4. --- MATEMÁTICA LOCAL (EL TRUCO) ---
+        // Actualizamos el objeto global y la cache sin hacer GET
+        if(alumnoGlobal.attributes) alumnoGlobal.attributes.horas_acumuladas = totalNuevo;
+        else alumnoGlobal.horas_acumuladas = totalNuevo;
+        
+        const cacheData = JSON.parse(localStorage.getItem('cache_perfil_alumno'));
+        if(cacheData) {
+            if(cacheData.data.attributes) cacheData.data.attributes.horas_acumuladas = totalNuevo;
+            else cacheData.data.horas_acumuladas = totalNuevo;
+            localStorage.setItem('cache_perfil_alumno', JSON.stringify({ time: Date.now(), data: cacheData.data }));
         }
+
+        // Refrescamos UI desde memoria local (0 API Calls)
+        updateDashboardUI(); 
+        closeModal();
+        showModal("¡OSS!", `Has sumado ${duracion}h. Total: ${totalNuevo.toFixed(1)}h`);
+
+    } catch (e) {
+        showModal("Error", "No se pudo validar el QR.");
+    }
+}
+
+// Función auxiliar para repintar sin fetch
+function updateDashboardUI() {
+    refreshStudentData(); // Al estar la cache actualizada con "time: Date.now()", leerá de local.
+    checkTodayClass();
+}
 
 
         function showView(v, el) { 
