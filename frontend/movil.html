@@ -1074,24 +1074,27 @@
             
             listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Conectando con el Tatami...</p>";
             
-            const limitDate = new Date();
-            limitDate.setDate(limitDate.getDate() - 7); 
+            // --- NUEVO RADAR AMPLIADO ---
+            const hoy = new Date();
+            const haceSieteDias = new Date();
+            haceSieteDias.setDate(hoy.getDate() - 7);
+            
+            const enSieteDias = new Date();
+            enSieteDias.setDate(hoy.getDate() + 7);
 
             try {
-                const endpoint = `/api/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100`;
+                // Consultamos asistencias confirmadas. Cache 0 para ver cambios al segundo.
+                const endpoint = `/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100`;
                 const json = await fetchSmart(endpoint, null, 0); 
 
                 if (!json || !json.data || json.data.length === 0) {
-                    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos confirmados.</p>";
+                    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes de validar.</p>";
                     return;
                 }
 
                 const groups = {};
                 json.data.forEach(item => {
                     const a = item.attributes || item; 
-                    const estado = (a.Estado || a.estado || "").toString().trim().toLowerCase();
-                    if (estado !== 'confirmado') return;
-
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
                     if (!alu || !cla) return;
@@ -1100,7 +1103,10 @@
                     const dojoId = getID(dojo);
                     const classDate = new Date(cla.Fecha_Hora);
 
-                    if (classDate < limitDate) return;
+                    // FILTRO DE RADAR: Solo mostramos clases en la ventana de 14 días (7 atrás, 7 adelante)
+                    if (classDate < haceSieteDias || classDate > enSieteDias) return;
+                    
+                    // FILTRO DE DOJO
                     if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
 
                     const cid = getID(cla);
@@ -1117,13 +1123,14 @@
 
                 const keys = Object.keys(groups);
                 if (keys.length === 0) {
-                    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes.</p>";
+                    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay confirmaciones en esta ventana de tiempo.</p>";
                     return;
                 }
 
+                // Ordenar clases por fecha
                 keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
+
                 listDiv.innerHTML = "";
-                
                 keys.forEach(cid => {
                     const g = groups[cid];
                     const f = formatTimeSafe(g.info.Fecha_Hora);
@@ -1144,7 +1151,7 @@
                         <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
                             <div style="text-align:left;">
                                 <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
-                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
+                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS CONFIRMADOS</p>
                             </div>
                             <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                         </div>
@@ -1152,11 +1159,16 @@
                             <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
                                 <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
                             </button>
-                            <div style="border-top:1px solid var(--glass-border); padding-top:15px;">${sRows}</div>
+                            <div style="border-top:1px solid var(--glass-border); padding-top:15px;">
+                                ${sRows}
+                            </div>
                         </div>
                     </div>`;
                 });
-            } catch (e) { console.error(e); listDiv.innerHTML = "<p style='text-align:center; color:var(--accent); padding:40px;'>Error Tatami.</p>"; }
+            } catch (e) {
+                console.error("❌ Fallo en Panel Sensei:", e);
+                listDiv.innerHTML = `<p style='text-align:center; color:var(--accent); padding:40px;'>Error de conexión con el Tatami.</p>`;
+            }
         }
 
         /* --- VALIDACIÓN Y ASISTENCIA --- */
