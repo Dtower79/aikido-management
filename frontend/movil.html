@@ -962,17 +962,14 @@ async function initApp() {
         document.querySelectorAll('#dashboard-view, #clases-view, #sensei-view').forEach(v => v.classList.add('hidden'));
         document.getElementById('login-view').classList.remove('hidden');
         document.getElementById('main-nav').classList.add('hidden');
-        document.documentElement.classList.add('app-loaded'); // Quitamos transparencias
+        document.documentElement.classList.add('app-loaded');
         return;
     }
 
-    // Hay sesión: Preparamos la estructura
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('main-nav').classList.remove('hidden');
     showView('dashboard');
-    document.documentElement.classList.add('app-loaded'); // Mostramos contenido YA
 
-    // Carga de datos en paralelo (API-First)
     const [reqRes] = await Promise.all([
         fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 720),
         refreshStudentData()
@@ -985,19 +982,10 @@ async function initApp() {
         });
     }
 
-    // Sincronización final de UI
     updateDashboardUI();
-    
-    if (alumnoGlobal) {
-        await checkTodayClass();
-    }
+    if (alumnoGlobal) await checkTodayClass();
 
-    // Verificamos si es Sensei o Instructor
-    const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-    if (user.is_sensei === true || (p && p.es_instructor === true)) {
-        document.getElementById('nav-sensei').style.display = 'flex';
-        await loadDojosFilter(); 
-    }
+    document.documentElement.classList.add('app-loaded');
 }
 
         /* --- REFRESH DATA (Sincronización v5) --- */
@@ -1011,7 +999,7 @@ async function initApp() {
     let json = null;
 
     try {
-        // A. INTENTAR CARGAR COMO ALUMNO (Instructor o Alumno normal)
+        // A. BUSCAR EN TABLA ALUMNOS (Para Raúl e Instructores)
         if (aluCacheId) {
             const res = await fetchSmart(`/api/alumnos/${aluCacheId}?populate=*`, 'perfil_alumno', 168);
             json = (res && res.data) ? { data: [res.data] } : (res ? { data: [res] } : null);
@@ -1027,28 +1015,29 @@ async function initApp() {
             }
         }
 
-        // B. ASIGNAR IDENTIDAD
+        // B. ASIGNAR IDENTIDAD SEGÚN RESULTADO
         if (json && json.data && json.data.length > 0) {
-            alumnoGlobal = json.data[0]; // Raúl (Alumno + Instructor)
+            alumnoGlobal = json.data[0]; // Raúl entra aquí
         } else {
-            alumnoGlobal = null; // Francesc (Sensei Máximo)
+            alumnoGlobal = null; // Francesc entra aquí
         }
 
-        // C. PINTAR UI (Instantáneo)
+        // C. REpintar interfaz
         updateDashboardUI();
 
-        // D. LÓGICA DE ROLES Y BOTONES (Seminarios)
+        // D. LÓGICA DE BOTONES (SENSEI / SEMINARIOS)
         const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
         const esSenseiReal = (user.is_sensei === true) || (p && p.es_instructor === true);
         const navRightBtn = document.getElementById('nav-sensei');
 
         if (esSenseiReal) {
+            // CASO SENSEI: Botón a Panel Sensei
             if (navRightBtn) {
                 navRightBtn.style.display = 'flex';
                 navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
                 navRightBtn.onclick = () => showView('sensei', navRightBtn);
             }
-            // Inyectar Seminarios en Panel Sensei si no existe
+            // Botón Seminarios dentro del Panel Sensei
             if (!document.getElementById('btn-seminarios-sensei-view')) {
                 const senseiHeader = document.querySelector('#sensei-view header');
                 if (senseiHeader) {
@@ -1059,138 +1048,102 @@ async function initApp() {
                     senseiHeader.after(btnWrap);
                 }
             }
-        } else {
-            // ALUMNO NORMAL: Botón Seminarios en Nav
-            if (navRightBtn) {
-                navRightBtn.style.display = 'flex';
-                navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-                navRightBtn.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
-            }
+        } else if (navRightBtn) {
+            // CASO ALUMNO NORMAL: Botón directo a Seminarios
+            navRightBtn.style.display = 'flex';
+            navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+            navRightBtn.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
         }
-    } catch (e) { console.error("Error en refreshStudentData:", e); }
+    } catch (e) { console.error("Crash en Identidad:", e); }
 }
 
         /* --- SENSEI PANEL (Agrupación y 7 días) --- */
         async function loadSenseiPanel() {
-            const listDiv = document.getElementById('student-list');
-            const filterEl = document.getElementById('sensei-dojo-filter');
-            const dojoFilter = filterEl ? filterEl.value : 'all';
-            
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Conectando con el Tatami...</p>";
-            
-            // --- RADAR TOTAL (15 días atrás, 15 adelante) ---
-            const hoy = new Date();
-            const inicioRadar = new Date();
-            inicioRadar.setDate(hoy.getDate() - 15);
-            const finRadar = new Date();
-            finRadar.setDate(hoy.getDate() + 15);
+    const listDiv = document.getElementById('student-list');
+    const filterEl = document.getElementById('sensei-dojo-filter');
+    const dojoFilter = filterEl ? filterEl.value : 'all';
+    
+    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Conectando con el Tatami...</p>";
+    
+    // RADAR: 15 días atrás y 15 adelante (Para que el día 20 entre en el radar)
+    const hoy = new Date();
+    const inicioRadar = new Date(); inicioRadar.setDate(hoy.getDate() - 15);
+    const finRadar = new Date(); finRadar.setDate(hoy.getDate() + 15);
 
-            try {
-                // Pedimos TODO lo que huela a asistencia. Filtramos nosotros en el móvil para asegurar éxito.
-                const endpoint = `/api/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100&sort=createdAt:desc`;
-                const json = await fetchSmart(endpoint, null, 0); 
+    try {
+        const endpoint = `/api/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100&sort=createdAt:desc`;
+        const json = await fetchSmart(endpoint, null, 0); 
 
-                console.log("📡 [SENSEI] Datos recibidos:", json?.data?.length || 0);
-
-                if (!json || !json.data || json.data.length === 0) {
-                    listDiv.innerHTML = `
-                        <div style="margin: 20px; padding: 30px; background: rgba(255,255,255,0.03); border-radius: 20px; text-align: center; border: 1px dashed var(--glass-border);">
-                            <p style="color: var(--text-muted); margin:0;">No hay registros de asistencia en el Tatami.</p>
-                        </div>`;
-                    return;
-                }
-
-                const groups = {};
-
-                json.data.forEach(item => {
-                    const a = item.attributes || item; 
-                    const estado = (a.Estado || a.estado || "").toString().trim().toLowerCase();
-
-                    // 1. FILTRO: Solo alumnos que han pulsado "Asistir" (Confirmado)
-                    if (estado !== 'confirmado') return;
-
-                    const alu = parseRelation(a.alumno);
-                    const cla = parseRelation(a.clase);
-                    if (!alu || !cla) return;
-
-                    const dojo = parseRelation(cla.dojo);
-                    const dojoId = getID(dojo);
-                    const classDate = new Date(cla.Fecha_Hora);
-
-                    // 2. FILTRO RADAR: ¿Está dentro de nuestra ventana de tiempo?
-                    if (classDate < inicioRadar || classDate > finRadar) return;
-                    
-                    // 3. FILTRO DOJO
-                    if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
-
-                    const cid = getID(cla);
-                    if (!groups[cid]) groups[cid] = { info: cla, students: [] };
-                    
-                    groups[cid].students.push({ 
-                        asistId: getID(item), 
-                        alumnoId: getID(alu),
-                        nombre: alu.nombre || "Alumno",
-                        apellidos: alu.apellidos || "",
-                        grado: alu.grado || "S/G"
-                    });
-                });
-
-                const keys = Object.keys(groups);
-                
-                if (keys.length === 0) {
-                    listDiv.innerHTML = `
-                        <div style="margin: 20px; padding: 30px; background: rgba(255,255,255,0.03); border-radius: 20px; text-align: center; border: 1px dashed var(--glass-border);">
-                            <p style="color: var(--accent); font-weight: 800; margin-bottom: 5px;">TATAMI VACÍO</p>
-                            <p style="color: var(--text-muted); font-size: 12px; margin:0;">No hay alumnos confirmados para las clases cercanas.</p>
-                        </div>`;
-                    return;
-                }
-
-                // Ordenamos por fecha de clase
-                keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
-
-                listDiv.innerHTML = "";
-                keys.forEach(cid => {
-                    const g = groups[cid];
-                    const f = formatTimeSafe(g.info.Fecha_Hora);
-                    
-                    let sRows = g.students.map(s => `
-                        <div class="student-item" id="it-${s.asistId}">
-                            <div class="student-info">
-                                <h4>${s.nombre} ${s.apellidos}</h4>
-                                <p>${s.grado}</p>
-                            </div>
-                            <div class="sensei-actions">
-                                <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
-                                <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
-                            </div>
-                        </div>`).join('');
-
-                    listDiv.innerHTML += `
-                    <div class="class-group-card" style="margin: 0 20px 20px;">
-                        <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                            <div style="text-align:left;">
-                                <h3 style="font-size:16px;">${f.date} - ${f.time}</h3>
-                                <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
-                            </div>
-                            <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
-                        </div>
-                        <div class="class-group-body" style="padding: 15px 20px;">
-                            <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
-                                <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
-                            </button>
-                            <div style="border-top:1px solid var(--glass-border); padding-top:15px; margin-top:10px;">
-                                ${sRows}
-                            </div>
-                        </div>
-                    </div>`;
-                });
-
-            } catch (e) {
-                console.error("❌ Fallo en Panel Sensei:", e);
-                listDiv.innerHTML = `<p style='text-align:center; color:var(--accent); padding:40px;'>Fallo al conectar con el Tatami. Revisa la consola.</p>`;
-            }
+        if (!json || !json.data || json.data.length === 0) {
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay datos de asistencia.</p>";
+            return;
         }
+
+        const groups = {};
+        json.data.forEach(item => {
+            const a = item.attributes || item; 
+            const estado = (a.Estado || a.estado || "").toString().trim().toLowerCase();
+            
+            if (estado !== 'confirmado') return; // Solo queremos los que Raúl ha pulsado "Asistir"
+
+            const alu = parseRelation(a.alumno);
+            const cla = parseRelation(a.clase);
+            if (!alu || !cla) return;
+
+            const classDate = new Date(cla.Fecha_Hora);
+            if (classDate < inicioRadar || classDate > finRadar) return;
+            
+            const dojoId = getID(parseRelation(cla.dojo));
+            if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
+
+            const cid = getID(cla);
+            if (!groups[cid]) groups[cid] = { info: cla, students: [] };
+            
+            groups[cid].students.push({ 
+                asistId: getID(item), 
+                alumnoId: getID(alu),
+                nombre: alu.nombre || "Alumno",
+                apellidos: alu.apellidos || "",
+                grado: alu.grado || "S/G"
+            });
+        });
+
+        const keys = Object.keys(groups);
+        if (keys.length === 0) {
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos para estas fechas.</p>";
+            return;
+        }
+
+        keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
+        listDiv.innerHTML = "";
+        keys.forEach(cid => {
+            const g = groups[cid], f = formatTimeSafe(g.info.Fecha_Hora);
+            let sRows = g.students.map(s => `
+                <div class="student-item" id="it-${s.asistId}">
+                    <div class="student-info"><h4>${s.nombre} ${s.apellidos}</h4><p>${s.grado}</p></div>
+                    <div class="sensei-actions">
+                        <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
+                        <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
+                    </div>
+                </div>`).join('');
+
+            listDiv.innerHTML += `
+            <div class="class-group-card">
+                <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                    <div style="text-align:left;">
+                        <h3>${f.date} - ${f.time}</h3>
+                        <p style="font-size:10px; color:var(--accent);">${g.students.length} PENDIENTES</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-down" style="opacity:0.3;"></i>
+                </div>
+                <div class="class-group-body" style="padding: 15px 20px;">
+                    <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> QR TATAMI</button>
+                    <div style="border-top:1px solid var(--glass-border); padding-top:15px; margin-top:10px;">${sRows}</div>
+                </div>
+            </div>`;
+        });
+    } catch (e) { console.error("Error Panel:", e); }
+}
 
         /* --- VALIDACIÓN Y ASISTENCIA --- */
         async function validateAttendance(asistId, asiste, aluId, dur) {
