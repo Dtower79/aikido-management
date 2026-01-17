@@ -99,6 +99,9 @@
 
         /* --- AUTH Y LOGO --- */
         .auth-container {
+            padding-left: 20px;
+            padding-right: 20px;
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
@@ -119,8 +122,8 @@
         }
 
         .auth-card { 
-            width: 86%; /* En lugar de 100%, dejamos un 10% de espacio total */
-            max-width: 320px; /* Reducimos un poco el ancho máximo para que sea más estilizado */
+            width: 82%; /* En lugar de 100%, dejamos un 10% de espacio total */
+            max-width: 310px; /* Reducimos un poco el ancho máximo para que sea más estilizado */
             background: var(--card-bg); 
             backdrop-filter: blur(20px); 
             border: 1px solid var(--glass-border); 
@@ -128,6 +131,7 @@
             border-radius: 30px; /* Bordes redondeados más suaves */
             text-align: center; 
             box-shadow: 0 25px 50px rgba(0,0,0,0.5); 
+            margin: 0 auto; 
         }
 
         .auth-footer { 
@@ -1169,24 +1173,22 @@
     
     showView('dashboard');
     
-    const [reqRes] = await Promise.all([
-    fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 1440),
-    refreshStudentData()
-    ]);
+    const reqRes = await fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 1440);
 
     if (reqRes && reqRes.data) {
+        // 2. Procesamos y mapeamos a la variable global ANTES de seguir
         requisitosGradoGlobal = reqRes.data.map(r => {
             const item = r.attributes || r;
             return {
                 ...item,
-                // Usamos Grado con G mayúscula como en tu captura
                 NORM: normalize(item.Grado || item.grado), 
-                // Usamos Horas_Necesarias como en tu captura
-                HORAS: parseFloat(item.Horas_Necesarias || item.horas_necesarias || item.horas || 0)
+                HORAS: parseFloat(item.Horas_Necesarias || item.horas_necesarias || 0)
             };
         });
-        console.log("✅ Requisitos sincronizados:", requisitosGradoGlobal.length);
+        console.log("✅ Requisitos listos para el Dashboard");
     }
+
+    await refreshStudentData(); 
 
     // --- CAMBIO AQUÍ: Prioridad al campo is_sensei del User de Strapi ---
     const esSensei = user.is_sensei === true;
