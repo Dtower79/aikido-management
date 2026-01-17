@@ -1013,10 +1013,12 @@
             let json;
 
             if (aluCacheId) {
-                // 168 HORAS = 1 SEMANA DE TRANQUILIDAD PARA TU API
+                // Consultamos directo por ID (Caché 1 semana)
                 const res = await fetchSmart(`/api/alumnos/${aluCacheId}?populate=*`, 'perfil_alumno', 168);
-                json = res && res.data ? { data: [res.data] } : null;
+                // Normalización para v5 (GET por ID devuelve objeto directo)
+                json = (res && res.data) ? { data: [res.data] } : (res ? { data: [res] } : null);
             } else {
+                // Búsqueda inicial
                 let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
                 json = await fetchSmart(endpoint, null, 0); 
                 if (!json || !json.data || json.data.length === 0) {
@@ -1030,9 +1032,12 @@
 
             if (json && json.data && json.data.length > 0) {
                 alumnoGlobal = json.data[0];
-                updateDashboardUI(); // Repinta con los datos (viejos o nuevos) de la memoria
-                
                 const p = alumnoGlobal.attributes || alumnoGlobal;
+                
+                // Pintar UI con los datos obtenidos
+                updateDashboardUI();
+                
+                // Lógica de Roles y Seminarios
                 const esSensei = user.is_sensei === true || p.es_instructor === true;
                 const navRightBtn = document.getElementById('nav-sensei');
 
@@ -1071,38 +1076,38 @@
             listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Conectando con el Tatami...</p>";
             
             const limitDate = new Date();
-            limitDate.setDate(limitDate.getDate() - 7);
+            limitDate.setDate(limitDate.getDate() - 7); // Ventana de 7 días
 
             try {
-                // Sintaxis optimizada para v5: populate plano y sin filtros complejos en URL
+                // Consultamos asistencias. Forzamos cache 0 para ver cambios inmediatos.
                 const endpoint = `/api/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100`;
                 const json = await fetchSmart(endpoint, null, 0); 
 
-                if (!json || !json.data) {
-                    console.error("❌ [SENSEI] Respuesta inválida del servidor:", json);
-                    throw new Error("No hay datos disponibles");
+                if (!json || !json.data || json.data.length === 0) {
+                    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay datos en el servidor.</p>";
+                    return;
                 }
 
-                console.log(`📊 [SENSEI] Analizando ${json.data.length} asistencias...`);
+                console.log(`📊 [SENSEI] Analizando ${json.data.length} registros...`);
                 const groups = {};
 
                 json.data.forEach(item => {
                     const a = item.attributes || item; 
-                    const estado = (a.Estado || a.estado || "").trim();
+                    const estado = (a.Estado || a.estado || "").toString().trim().toLowerCase();
 
-                    // Solo procesamos los que están en "Confirmado"
-                    if (estado.toLowerCase() !== 'confirmado') return;
+                    // 1. FILTRO DE ESTADO: Solo queremos los confirmados por el alumno
+                    if (estado !== 'confirmado') return;
 
+                    // 2. EXTRACCIÓN ROBUSTA (v5 Compatible)
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    
                     if (!alu || !cla) return;
 
                     const dojo = parseRelation(cla.dojo);
                     const dojoId = getID(dojo);
                     const classDate = new Date(cla.Fecha_Hora);
 
-                    // Filtros manuales (más seguro que en URL)
+                    // 3. FILTROS DE TIEMPO Y DOJO
                     if (classDate < limitDate) return;
                     if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
 
@@ -1112,9 +1117,9 @@
                     groups[cid].students.push({ 
                         asistId: getID(item), 
                         alumnoId: getID(alu),
-                        nombre: alu.nombre,
-                        apellidos: alu.apellidos,
-                        grado: alu.grado
+                        nombre: alu.nombre || "Alumno",
+                        apellidos: alu.apellidos || "",
+                        grado: alu.grado || "S/G"
                     });
                 });
 
@@ -1124,7 +1129,7 @@
                     return;
                 }
 
-                // Ordenar por fecha
+                // Ordenar clases por fecha
                 keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
 
                 listDiv.innerHTML = "";
@@ -1132,12 +1137,13 @@
                     const g = groups[cid];
                     const f = formatTimeSafe(g.info.Fecha_Hora);
                     let sRows = "";
+                    
                     g.students.forEach(s => {
                         sRows += `
                         <div class="student-item" id="it-${s.asistId}">
                             <div class="student-info">
-                                <h4>${s.nombre} ${s.apellidos || ""}</h4>
-                                <p>${s.grado || 'S/G'}</p>
+                                <h4>${s.nombre} ${s.apellidos}</h4>
+                                <p>${s.grado}</p>
                             </div>
                             <div class="sensei-actions">
                                 <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
@@ -1157,8 +1163,8 @@
                         </div>
                         <div class="class-group-body" style="padding: 15px 20px;">
                             <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
-    <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
-</button>
+                                <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
+                            </button>
                             <div style="border-top:1px solid var(--glass-border); padding-top:15px;">
                                 ${sRows}
                             </div>
@@ -1166,8 +1172,8 @@
                     </div>`;
                 });
             } catch (e) {
-                console.error("❌ Fallo crítico en Panel Sensei:", e);
-                listDiv.innerHTML = `<p style='text-align:center; color:var(--accent); padding:40px;'>Error 400: El servidor no permite esta consulta. Revisa los permisos en Strapi.</p>`;
+                console.error("❌ Fallo en Panel Sensei:", e);
+                listDiv.innerHTML = `<p style='text-align:center; color:var(--accent); padding:40px;'>Error de conexión. Revisa los permisos de la API.</p>`;
             }
         }
 
@@ -1671,20 +1677,28 @@
         }
 
         /* --- OPTIMIZACIÓN: ACTUALIZAR UI SIN LLAMAR A API --- */
+        /* --- OPTIMIZACIÓN: ACTUALIZAR UI SIN LLAMAR A API --- */
         function updateDashboardUI() {
             if (!alumnoGlobal) return;
             const p = alumnoGlobal.attributes || alumnoGlobal;
             const user = JSON.parse(localStorage.getItem('aikido_user'));
 
-            // Actualizar textos básicos
-            document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
-            document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
+            // 1. Mostrar contenedores ocultos
+            const circleCont = document.getElementById('student-progress-circle');
+            const nextGrade = document.getElementById('next-grade-display');
+            if (circleCont) circleCont.classList.remove('hidden');
+            if (nextGrade) nextGrade.classList.remove('hidden');
 
-            // Actualizar Horas
+            // 2. Actualizar textos básicos e Iniciales
+            const initials = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
+            document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
+            document.getElementById('user-initials').innerText = initials || "??";
+
+            // 3. Actualizar Horas
             const horas = parseFloat(p.horas_acumuladas || 0);
             document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-            // Calcular Meta (Usando la caché de requisitos que ya cargamos en initApp)
+            // 4. Calcular Meta (Usando la caché de requisitos)
             let meta = p.grado_objetivo;
             if (!meta) {
                 const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
@@ -1692,10 +1706,10 @@
             }
 
             const normMeta = normalize(meta);
-            const req = requisitosGradoGlobal.find(r => r.NORM === normMeta);
+            const req = (requisitosGradoGlobal || []).find(r => r.NORM === normMeta);
             const target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
 
-            // Dibujar círculo
+            // 5. Dibujar círculo
             const circle = document.getElementById('progress-bar');
             if (circle) {
                 const pct = Math.min((horas / target) * 100, 100);
