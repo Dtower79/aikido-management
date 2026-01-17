@@ -967,7 +967,8 @@
                 <button class="action-btn" style="padding:18px; font-size:12px; background:var(--accent); color:white; width:100%;" onclick="uiCreateSingleClass()">+ NUEVA CLASE SUELTA</button>
             </div>
 
-            <div id="student-list" style="padding-bottom: 40px;"></div>
+            <!-- Subimos el padding a 120px para que el último alumno nunca quede tapado por el menú -->
+            <div id="student-list" style="padding-bottom: 120px;"></div>
         </div>
 
         <!-- NAV BAR -->
@@ -1273,15 +1274,28 @@ async function refreshStudentData() {
         }
 
         const normMeta = normalize(meta);
-        const req = requisitosGradoGlobal.find(r => normalize(r.grado) === normMeta);
-        const target = req ? (req.HORAS || req.horas) : (GRADOS_FALLBACK[meta] || 60);
+        const req = (Array.isArray(requisitosGradoGlobal)) 
+            ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
+            : null;
 
+        // Si lo encuentra, extrae las horas del campo plano o del objeto attributes
+        let target = 60; // Valor por defecto
+        if (req) {
+            target = parseFloat(req.horas || req.attributes?.horas || req.HORAS || 60);
+        } else {
+            // Si no está en la tabla, usa el rescate de GRADOS_FALLBACK
+            target = GRADOS_FALLBACK[meta] || 60;
+        }
+
+        // Pintamos los datos en la pantalla
         const bar = document.getElementById('progress-bar');
         if (bar) {
             const pct = Math.min((horas / target) * 100, 100);
             bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
         }
+
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
+        
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
