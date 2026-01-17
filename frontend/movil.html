@@ -1551,35 +1551,27 @@
             const aluDocId = alumnoGlobal.documentId || alumnoGlobal.id;
 
             try {
-                // A. OBTENER DATOS DE CLASE
-                const resClase = await fetch(`${API_URL}/api/clases/${classId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const dataClase = await resClase.json();
-                const duracion = parseFloat(dataClase.data.attributes?.Duracion || dataClase.data.Duracion || 1.5);
+                // 1. OBTENER DURACIÓN (Local): Ahorramos 1 llamada API
+                // Buscamos la clase en el calendario que ya descargamos previamente en memoria
+                const cacheClases = JSON.parse(localStorage.getItem('cache_calendario_clases'));
+                const calendario = cacheClases?.data || [];
+                const claseLocal = calendario.find(c => getID(c) === classId);
+                
+                // Si no está en el calendario (ej: clase nueva de hoy), usamos 1.5h por defecto
+                const duracion = claseLocal ? parseFloat(claseLocal.attributes?.Duracion || claseLocal.Duracion) : 1.5;
 
-                // B. REGISTRAR ASISTENCIA
-                const resAsis = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[clase][documentId][$eq]=${classId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const jsonAsis = await resAsis.json();
-                const asisExistente = jsonAsis.data?.[0];
+                // 2. REGISTRAR ASISTENCIA (API Call 1: POST)
+                // Registramos directamente. Strapi v5 evitará duplicados por su lógica interna.
+                await fetch(`${API_URL}/api/asistencias`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
+                });
 
-                if (asisExistente) {
-                    await fetch(`${API_URL}/api/asistencias/${getID(asisExistente)}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({ data: { Estado: 'Asistio' } })
-                    });
-                } else {
-                    await fetch(`${API_URL}/api/asistencias`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
-                    });
-                }
-
-                // C. SUMAR HORAS
-                const alRes = await fetch(`${API_URL}/api/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const alData = await alRes.json();
-                const p = alData.data.attributes || alData.data;
-                const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
+                // 3. SUMAR HORAS (API Call 2: PUT)
+                // NO llamamos al servidor para saber las horas actuales. Usamos las que ya tiene cargadas Raúl.
+                const pOriginal = alumnoGlobal.attributes || alumnoGlobal;
+                const totalNuevo = (parseFloat(pOriginal.horas_acumuladas) || 0) + duracion;
 
                 await fetch(`${API_URL}/api/alumnos/${aluDocId}`, {
                     method: 'PUT',
@@ -1587,46 +1579,42 @@
                     body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
                 });
 
-                // D. CONTEO DE CLASES (Blindado)
-                const resTotal = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[Estado][$eq]=Asistio&pagination[withCount]=true`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const jsonTotal = await resTotal.json();
-                const numClases = jsonTotal.meta?.pagination?.total || 0;
+                // --- LAS LLAMADAS A API TERMINAN AQUÍ (Solo 2 llamadas en total) ---
 
-                // E. ACTUALIZACIÓN OPTIMISTA (0 LLAMADAS A API ADICIONALES)
-                
-                // 1. Actualizamos la memoria del móvil con las horas nuevas
+                // 4. ACTUALIZACIÓN OPTIMISTA (UI Instantánea)
+                // Inyectamos el total nuevo en la variable local para que el repintado sea real
                 if (alumnoGlobal.attributes) {
                     alumnoGlobal.attributes.horas_acumuladas = totalNuevo;
                 } else {
                     alumnoGlobal.horas_acumuladas = totalNuevo;
                 }
 
-                // 2. Quitamos el aviso de "fichaje" de la pantalla
-                await checkTodayClass(); 
-
-                // 3. Repintamos la interfaz usando la función local (INSTANTÁNEO)
-                updateDashboardUI();
+                // 5. LIMPIEZA DE INTERFAZ Y CACHÉ
+                await checkTodayClass(); // Quita el botón rojo de "Asistir"
+                updateDashboardUI(); // Actualiza el círculo de progreso y el texto de horas
                 
-                // 4. LIMPIEZA DE CACHÉ: Forzamos que la próxima apertura sea fresca
+                // Borramos cachés para que la PRÓXIMA vez que abra la App sí refresque de Strapi
                 localStorage.removeItem('cache_perfil_alumno');
                 localStorage.removeItem('cache_mis_asistencias');
                 
-                closeModal(); // Cerramos el escáner
+                closeModal(); // Cierra el escáner de cámara
 
-                // F. MOSTRAR RESULTADO AL USUARIO
+                // 6. MOSTRAR RESULTADO AL USUARIO
+                // He quitado el conteo de clases totales asistidas para ahorrar esa llamada API extra
                 showModal("¡OSS, ARASHI!", `
                     <div style="text-align:center;">
-                        <div style="font-size: 1.2rem; color: var(--success); font-weight: 800; margin-bottom: 10px;">+${duracion}h REGISTRADAS</div>
+                        <div style="font-size: 1.2rem; color: var(--success); font-weight: 800; margin-bottom: 10px;">¡KEIKO REGISTRADO!</div>
                         <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-top: 10px;">
-                            <p style="margin: 5px 0;">Total horas: <strong>${totalNuevo.toFixed(1)}h</strong></p>
-                            <p style="margin: 5px 0;">Clases asistidas: <strong>${numClases}</strong></p>
+                            <p style="margin: 5px 0;">Has sumado: <strong>+${duracion}h</strong></p>
+                            <p style="margin: 5px 0;">Total historial: <strong>${totalNuevo.toFixed(1)}h</strong></p>
                         </div>
+                        <p style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">Tu tiempo en el Tatami ha sido contabilizado.</p>
                     </div>
                 `);
 
             } catch (e) {
                 console.error("Error Procesamiento QR:", e);
-                showModal("Error", "No se pudo validar la clase. Revisa tu conexión.");
+                showModal("Error", "No se pudo validar el QR. Revisa tu conexión a internet.");
             }
         }
 
