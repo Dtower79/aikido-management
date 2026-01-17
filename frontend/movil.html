@@ -690,53 +690,53 @@
         /* --- ESTILO SENSEI KANJI --- */
         /* --- SENSEI DOJO BOX PREMIUM --- */
         /* --- SENSEI DOJO BOX OBSIDIAN --- */
-/* --- SENSEI MASTER BOX PREMIUM --- */
+
 /* --- SENSEI MASTER BOX PREMIUM --- */
 .sensei-status-container {
-    background: linear-gradient(145deg, #050505 0%, #151515 100%);
+    background: #000000;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 28px;
-    padding: 20px 25px;
+    border-radius: 24px;
+    padding: 15px 20px;
     margin: 15px auto 25px;
-    width: 90%;
-    max-width: 360px;
+    width: 92%;
+    max-width: 380px;
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
 }
 
 .sensei-logo-mini {
-    width: 75px;
-    height: 75px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--accent);
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
 }
 
 .kanji-vertical-img {
-    height: 110px; /* Tamaño para que se vea bien en vertical */
+    height: 100px;
     width: auto;
-    filter: brightness(0) invert(1); /* Esto pone la imagen en blanco */
-    opacity: 0.9;
+    object-fit: contain;
+    /* Eliminamos el filtro invert que fallaba */
 }
 
 .sensei-badge-vertical-wrap {
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 5px;
 }
 
 .sensei-badge-label {
     background: var(--accent);
     color: white;
-    padding: 6px 15px;
-    border-radius: 8px;
-    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 10px;
     font-weight: 900;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
 }
 
@@ -854,14 +854,15 @@
 
              <!-- AREA SENSEI (Visible solo para Senseis Puros o Francesc) -->
             <!-- AREA SENSEI PREMIUM (Solo para Senseis no alumnos) -->
+<!-- AREA SENSEI PREMIUM -->
 <div id="sensei-kanji-area" class="sensei-status-container hidden">
-    <!-- Lado Izquierdo: Logo Arashi -->
+    <!-- Logo Izquierda -->
     <img src="img/logo-arashi2.jpeg" class="sensei-logo-mini" alt="Logo">
     
-    <!-- Centro: Imagen Kanjis Verticales -->
-    <img src="img/kanjis.jpg" class="kanji-vertical-img" alt="Aikido Kanjis">
+    <!-- Centro: Kanjis Verticales -->
+    <img src="img/kanjis.jpg" class="kanji-vertical-img" alt="Aikido">
     
-    <!-- Lado Derecho: Badge -->
+    <!-- Badge Derecha -->
     <div class="sensei-badge-vertical-wrap">
         <div class="sensei-badge-label">SENSEI</div>
     </div>
@@ -1030,8 +1031,8 @@ async function initApp() {
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     
-    // 1. Ocultar todo al inicio
-    document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
+    // 1. Reset visual
+    document.querySelectorAll('.section, #dashboard-view, #login-view, #clases-view, #sensei-view')
             .forEach(v => v.classList.add('hidden'));
 
     if (!token || !user) {
@@ -1041,28 +1042,19 @@ async function initApp() {
         return;
     }
 
-    // 2. Mostrar Dashboard y Navegación inmediatamente
+    // 2. MOSTRAR TODO POR DEFECTO (Para que no desaparezcan los botones)
     document.getElementById('dashboard-view').classList.remove('hidden');
     document.getElementById('main-nav').classList.remove('hidden');
-    showView('dashboard');
     
-    // 3. Cargar datos en paralelo
-    const [reqRes] = await Promise.all([
-        fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480),
-        refreshStudentData()
-    ]);
-
-    // 4. Mapear requisitos de grado
-    if (reqRes && reqRes.data) {
-        requisitosGradoGlobal = reqRes.data.map(r => {
-            const item = r.attributes || r;
-            return { ...item, NORM: normalize(item.grado), HORAS: parseFloat(item.horas || 0) };
-        });
-    }
-
-    // 5. Activar Panel Sensei si tiene permisos
-    const esInstructor = user.is_sensei || (alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor));
-    if (esInstructor) {
+    // 3. Ejecutar procesos
+    await refreshStudentData(); // Carga identidad
+    await checkTodayClass();     // Carga keiko
+    
+    // 4. Activar herramientas de gestión (Calendario y Sensei Panel)
+    const esSenseiValido = user.is_sensei || (alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor));
+    
+    if (esSenseiValido) {
+        console.log("🥋 Activando Panel Sensei");
         const navSensei = document.getElementById('nav-sensei');
         if (navSensei) {
             navSensei.style.display = 'flex';
@@ -1071,7 +1063,7 @@ async function initApp() {
         await loadDojosFilter(); 
     }
 
-    await checkTodayClass();
+    showView('dashboard');
     document.documentElement.classList.add('app-loaded');
 }
         /* --- REFRESH DATA (Sincronización v5) --- */
@@ -1085,57 +1077,47 @@ async function refreshStudentData() {
     const metaArea = document.getElementById('next-grade-display');
     const kanjiArea = document.getElementById('sensei-kanji-area');
 
-    // 1. Buscar si el usuario es ALUMNO (Ej: Raúl)
+    // BUSCAR FICHA ALUMNO
     let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-    let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
+    let res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+    let json = await res.json();
 
-    if (!json || !json.data || json.data.length === 0) {
+    // Fallback por DNI
+    if (!json.data || json.data.length === 0) {
         endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-        json = await fetchSmart(endpoint, null, 0); 
+        res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
+        json = await res.json();
     }
 
-    if (json && json.data && json.data.length > 0) {
+    if (json.data && json.data.length > 0) {
         // --- CASO ALUMNO (RAÚL) ---
-        alumnoGlobal = json.data[0]; 
+        alumnoGlobal = json.data[0];
         const p = alumnoGlobal.attributes || alumnoGlobal;
         
-        // Prioridad: Nombre de la tabla Alumno
-        nameLabel.innerText = (p.nombre || user.nombre || "ALUMNO").toUpperCase();
+        nameLabel.innerText = (p.nombre || user.nombre || "RAÚL").toUpperCase();
         initialLabel.innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
 
         circleArea.classList.remove('hidden');
         metaArea.classList.remove('hidden');
         kanjiArea.classList.add('hidden');
 
-        // Lógica de círculo y progreso
+        // Actualizar círculo
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
-        let meta = p.grado_objetivo;
-        if (!meta) {
-            const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
-            meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
-        }
-        const req = requisitosGradoGlobal.find(r => normalize(r.grado) === normalize(meta));
-        const target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
-        
         const circle = document.getElementById('progress-bar');
-        if (circle) {
-            const pct = Math.min((horas / target) * 100, 100);
-            circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
-        }
-        document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-        metaArea.innerText = `CAMINO AL ${meta.toUpperCase()}`;
-
+        if (circle) circle.style.strokeDashoffset = 339.29 - (Math.min(horas/60, 1) * 339.29);
+        
     } else {
         // --- CASO SENSEI PURO (FRANCESC) ---
-        nameLabel.innerText = (user.nombre || "SENSEI").toUpperCase();
-        initialLabel.innerText = ((user.nombre?.[0] || "S") + (user.apellidos?.[0] || "")).toUpperCase();
+        nameLabel.innerText = (user.nombre || "FRANCESC").toUpperCase();
+        initialLabel.innerText = ((user.nombre?.[0] || "F") + (user.apellidos?.[0] || "C")).toUpperCase();
         
         circleArea.classList.add('hidden');
         metaArea.classList.add('hidden');
         if (user.is_sensei) kanjiArea.classList.remove('hidden');
     }
 }
+
 async function checkTodayClass() {
     const btn = document.getElementById('confirm-btn');
     const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { 
