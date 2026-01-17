@@ -1179,8 +1179,10 @@
             const item = r.attributes || r;
             return {
                 ...item,
-                NORM: normalize(item.grado),
-                HORAS: parseFloat(item.horas || 0)
+                // Usamos Grado con G mayúscula como en tu captura
+                NORM: normalize(item.Grado || item.grado), 
+                // Usamos Horas_Necesarias como en tu captura
+                HORAS: parseFloat(item.Horas_Necesarias || item.horas_necesarias || item.horas || 0)
             };
         });
         console.log("✅ Requisitos sincronizados:", requisitosGradoGlobal.length);
@@ -1275,17 +1277,11 @@ async function refreshStudentData() {
 
         const normMeta = normalize(meta);
         const req = (Array.isArray(requisitosGradoGlobal)) 
-            ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
-            : null;
+            ? requisitosGradoGlobal.find(r => r.NORM === normMeta)
+            : null;         
 
         // Si lo encuentra, extrae las horas del campo plano o del objeto attributes
-        let target = 60; // Valor por defecto
-        if (req) {
-            target = parseFloat(req.horas || req.attributes?.horas || req.HORAS || 60);
-        } else {
-            // Si no está en la tabla, usa el rescate de GRADOS_FALLBACK
-            target = GRADOS_FALLBACK[meta] || 60;
-        }
+        let target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
 
         // Pintamos los datos en la pantalla
         const bar = document.getElementById('progress-bar');
@@ -1295,7 +1291,7 @@ async function refreshStudentData() {
         }
 
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-        
+
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
