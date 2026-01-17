@@ -898,7 +898,10 @@
                     </div>
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
-                <div class="auth-footer">¿Usuario Nuevo? <a onclick="document.getElementById('activate-modal').classList.remove('hidden')">Activa tu cuenta</a></div>
+                <div class="auth-footer">
+    ¿Usuario Nuevo? <a onclick="document.getElementById('activate-modal').classList.remove('hidden')">Activa tu cuenta</a><br><br>
+    <a onclick="openForgotModal()" style="color: var(--text-muted); font-size: 12px; font-weight: 400; text-decoration: none;">¿Olvidaste tu contraseña?</a>
+</div>
             </div>
         </div>
 
@@ -973,10 +976,48 @@
         </nav>
              <div id="sheet-overlay" class="sheet-overlay" onclick="toggleProfileSheet()"></div>
         <div id="profile-sheet" class="bottom-sheet">
-            <!-- ... contenido del panel ... -->
-        </div>
+    <div class="sheet-header"></div>
+    <h3 style="margin: 0 0 20px; font-size: 18px; text-align: center;">AJUSTES DE PERFIL</h3>
+    
+    <button class="sheet-btn" onclick="openChangePassModal()">
+        <i class="fa-solid fa-key"></i> CAMBIAR CONTRASEÑA
+    </button>
+    
+    <button class="sheet-btn" onclick="window.open('https://wa.me/34637718364', '_blank')">
+        <i class="fa-brands fa-whatsapp"></i> CONTACTAR RAÜL
+    </button>
+
+    <button class="sheet-btn logout" onclick="logout()">
+        <i class="fa-solid fa-power-off"></i> CERRAR SESIÓN
+    </button>
+</div>
         <div id="password-modal" class="modal-overlay hidden">
-            <!-- ... contenido del modal ... -->
+    <div class="modal-content">
+        <h3 style="margin-top:0">Cambiar Contraseña</h3>
+        <form id="change-pass-form">
+            <input type="password" id="old-pass" class="modal-field" placeholder="Contraseña Actual" required>
+            <input type="password" id="new-pass" class="modal-field" placeholder="Nueva Contraseña" required>
+            <input type="password" id="confirm-pass" class="modal-field" placeholder="Repetir Nueva Contraseña" required>
+            <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px;">
+                <button type="submit" class="action-btn primary" id="btn-pass-submit">ACTUALIZAR</button>
+                <button type="button" class="action-btn" style="background:#334155; color:white;" onclick="closePassModal()">CANCELAR</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="forgot-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h3 style="margin-top:0">Recuperar Acceso</h3>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Introduce tu email para recibir un enlace de restablecimiento.</p>
+                <form id="forgot-form">
+                    <input type="email" id="forgot-email" class="modal-field" placeholder="Tu Email" required>
+                    <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px;">
+                        <button type="submit" class="action-btn primary" id="btn-forgot-submit">ENVIAR ENLACE</button>
+                        <button type="button" class="action-btn" style="background:#334155; color:white;" onclick="document.getElementById('forgot-modal').classList.add('hidden')">CANCELAR</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -1822,6 +1863,37 @@ document.getElementById('change-pass-form').addEventListener('submit', async (e)
         showModal("Error", "Fallo de conexión.");
     } finally {
         btn.innerText = "ACTUALIZAR";
+        btn.disabled = false;
+    }
+});
+
+function openForgotModal() {
+    document.getElementById('forgot-modal').classList.remove('hidden');
+}
+
+document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value.trim();
+    const btn = document.getElementById('btn-forgot-submit');
+    btn.innerText = "ENVIANDO...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+        });
+        if (res.ok) {
+            document.getElementById('forgot-modal').classList.add('hidden');
+            showModal("¡Email Enviado!", "Si el email existe, recibirás un enlace de recuperación pronto.");
+        } else {
+            showModal("Aviso", "No se pudo procesar. Revisa el email.");
+        }
+    } catch (err) {
+        showModal("Error", "Fallo de conexión.");
+    } finally {
+        btn.innerText = "ENVIAR ENLACE";
         btn.disabled = false;
     }
 });
