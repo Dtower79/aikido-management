@@ -752,6 +752,65 @@
     z-index: 2;
 }
 
+        /* --- BOTTOM SHEET PERFIL --- */
+.bottom-sheet {
+    position: fixed;
+    bottom: -100%; /* Escondido abajo */
+    left: 0;
+    right: 0;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px);
+    border-top: 2px solid var(--accent);
+    border-radius: 35px 35px 0 0;
+    z-index: 10002;
+    transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 20px 25px 40px;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+}
+
+.bottom-sheet.open {
+    bottom: 0; /* Sube al abrir */
+}
+
+.sheet-header {
+    width: 40px;
+    height: 4px;
+    background: var(--glass-border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+}
+
+.sheet-btn {
+    width: 100%;
+    padding: 18px;
+    margin-bottom: 12px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.03);
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+}
+
+.sheet-btn i { color: var(--accent); font-size: 18px; width: 25px; }
+
+.sheet-btn.logout {
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 10001;
+    display: none;
+}
+
 
     </style>
 </head>
@@ -908,8 +967,17 @@
             <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
             <div class="qr-main-btn" onclick="startQRScanner()"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
             <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
-            <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
+            <a href="#" class="nav-item" onclick="toggleProfileSheet()">
+            <i class="fa-solid fa-sliders"></i><span>Panel</span>
+            </a>
         </nav>
+             <div id="sheet-overlay" class="sheet-overlay" onclick="toggleProfileSheet()"></div>
+        <div id="profile-sheet" class="bottom-sheet">
+            <!-- ... contenido del panel ... -->
+        </div>
+        <div id="password-modal" class="modal-overlay hidden">
+            <!-- ... contenido del modal ... -->
+        </div>
     </div>
 
     <script>
@@ -1693,6 +1761,70 @@ function updateDashboardUI() {
             if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; deferredPrompt = null; }
             else showModal("Info", "Ya instalada o en escritorio.");
         }
+
+        // Abrir/Cerrar Menú Inferior
+function toggleProfileSheet() {
+    const sheet = document.getElementById('profile-sheet');
+    const overlay = document.getElementById('sheet-overlay');
+    const isOpen = sheet.classList.contains('open');
+
+    if (isOpen) {
+        sheet.classList.remove('open');
+        overlay.style.display = 'none';
+    } else {
+        sheet.classList.add('open');
+        overlay.style.display = 'block';
+    }
+}
+
+function openChangePassModal() {
+    toggleProfileSheet(); // Cerramos el menú de abajo
+    document.getElementById('password-modal').classList.remove('hidden');
+}
+
+function closePassModal() {
+    document.getElementById('password-modal').classList.add('hidden');
+}
+
+// Lógica de cambio de contraseña en Strapi
+document.getElementById('change-pass-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = document.getElementById('old-pass').value;
+    const password = document.getElementById('new-pass').value;
+    const passwordConfirmation = document.getElementById('confirm-pass').value;
+
+    if (password !== passwordConfirmation) {
+        showModal("Aviso", "Las nuevas contraseñas no coinciden.");
+        return;
+    }
+
+    const btn = document.getElementById('btn-pass-submit');
+    btn.innerText = "ACTUALIZANDO...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/api/auth/change-password`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}`
+            },
+            body: JSON.stringify({ currentPassword, password, passwordConfirmation })
+        });
+
+        if (res.ok) {
+            closePassModal();
+            showModal("¡Éxito!", "Contraseña actualizada correctamente.");
+        } else {
+            showModal("Error", "La contraseña actual no es correcta.");
+        }
+    } catch (err) {
+        showModal("Error", "Fallo de conexión.");
+    } finally {
+        btn.innerText = "ACTUALIZAR";
+        btn.disabled = false;
+    }
+});
 
         window.onload = () => { initApp(); };
     </script>
