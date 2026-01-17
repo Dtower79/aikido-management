@@ -689,54 +689,57 @@
 
         /* --- ESTILO SENSEI KANJI --- */
         /* --- SENSEI DOJO BOX PREMIUM --- */
+        /* --- SENSEI DOJO BOX OBSIDIAN --- */
         .sensei-status-container {
-            background: #000000; /* Negro puro */
-            border: 1px solid rgba(239, 68, 68, 0.3); /* Borde rojo sutil */
-            border-radius: 35px;
-            padding: 30px 20px;
-            margin: 20px auto 30px;
-            width: 85%;
-            max-width: 300px;
+            background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            padding: 25px;
+            margin: 15px auto 25px;
+            width: 88%;
+            max-width: 340px;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 0 15px rgba(239, 68, 68, 0.1);
+            gap: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
             position: relative;
-            overflow: hidden;
         }
 
-        /* Brillo de cristal superior */
-        .sensei-status-container::before {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 50%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
-            pointer-events: none;
+        .sensei-logo-mini {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .sensei-kanji-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
         }
 
         .kanji-aikido {
-            font-size: 70px;
+            font-size: 50px;
             color: #ffffff;
             line-height: 1;
             margin: 0;
             font-family: serif;
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
-            letter-spacing: 12px;
-            padding-left: 12px; /* Centrado óptico por el letter-spacing */
+            letter-spacing: 5px;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.2));
         }
 
         .sensei-badge-label {
-            margin-top: 15px;
+            margin-top: 8px;
             background: var(--accent);
             color: white;
-            padding: 5px 22px;
-            border-radius: 50px;
-            font-size: 13px;
+            padding: 3px 12px;
+            border-radius: 6px;
+            font-size: 11px;
             font-weight: 800;
-            letter-spacing: 4px;
+            letter-spacing: 2px;
             text-transform: uppercase;
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
         }
 
     </style>
@@ -853,6 +856,7 @@
 
              <!-- AREA SENSEI (Visible solo para Senseis Puros o Francesc) -->
             <div id="sensei-kanji-area" class="sensei-status-container hidden">
+                <img src="img/logo-arashi2.jpeg" class="sensei-logo-mini" alt="Dojo Logo">
                 <div class="kanji-aikido">合気道</div>
                 <div class="sensei-badge-label">SENSEI</div>
             </div>
@@ -860,7 +864,7 @@
             <!-- Siguiente Keiko (Se mantiene para todos) -->
             <div class="class-hero" id="class-hero-card">
 
-            
+
             <div class="class-hero" id="class-hero-card">
                 <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Siguiente Keiko</p>
                 <h2 id="next-class-time" style="margin:12px 0 4px; font-size:38px;">--:--</h2>
@@ -1079,86 +1083,151 @@
         }
 
         /* --- REFRESH DATA (Sincronización v5) --- */
-        async function refreshStudentData() {
+async function refreshStudentData() {
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    if (!user) return;
+    
+    // Referencias UI
+    const circleArea = document.getElementById('student-progress-circle');
+    const metaArea = document.getElementById('next-grade-display');
+    const kanjiArea = document.getElementById('sensei-kanji-area');
+    const nameLabel = document.getElementById('user-display-name');
+    const initialLabel = document.getElementById('user-initials');
+
+    // 1. Intentar cargar ficha de Alumno (Tu caso, Raúl)
+    let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+    let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
+
+    if (!json || !json.data || json.data.length === 0) {
+        endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
+        json = await fetchSmart(endpoint, null, 0); 
+    }
+
+    // 2. Determinar Identidad (Alumno tiene prioridad sobre User)
+    if (json && json.data && json.data.length > 0) {
+        alumnoGlobal = json.data[0];
+        const p = alumnoGlobal.attributes || alumnoGlobal;
+        
+        // Ponemos tu nombre de Alumno (Raúl)
+        nameLabel.innerText = (p.nombre || "").toUpperCase();
+        initialLabel.innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
+
+        // Mostrar Progreso
+        circleArea.classList.remove('hidden');
+        metaArea.classList.remove('hidden');
+        kanjiArea.classList.add('hidden');
+
+        const horas = parseFloat(p.horas_acumuladas || 0);
+        document.getElementById('stat-hours').innerText = horas.toFixed(1);
+
+        // Meta y Círculo
+        let meta = p.grado_objetivo;
+        if (!meta) {
+            const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
+            meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
+        }
+        const target = (requisitosGradoGlobal.find(r => normalize(r.grado) === normalize(meta))?.horas) || (GRADOS_FALLBACK[meta] || 60);
+        const circle = document.getElementById('progress-bar');
+        if (circle) {
+            const pct = Math.min((horas / target) * 100, 100);
+            circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
+        }
+        document.getElementById('stat-label').innerText = `HORAS / ${target}`;
+        metaArea.innerText = `CAMINO AL ${meta.toUpperCase()}`;
+
+    } else {
+        // CASO SENSEI PURO (Francesc)
+        nameLabel.innerText = (user.nombre || "SENSEI").toUpperCase();
+        initialLabel.innerText = ((user.nombre?.[0] || "S") + (user.apellidos?.[0] || "")).toUpperCase();
+        
+        if (user.is_sensei) {
+            circleArea.classList.add('hidden');
+            metaArea.classList.add('hidden');
+            kanjiArea.classList.remove('hidden');
+        }
+    }
+
+    // 3. Activar Panel Sensei (Asegurar que el botón funcione)
+    const esInstructor = (user.is_sensei === true) || (alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor));
+    const navSensei = document.getElementById('nav-sensei');
+    
+    if (esInstructor) {
+        navSensei.style.display = 'flex';
+        // Re-vinculamos el click por si acaso
+        navSensei.onclick = () => {
+            showView('sensei', navSensei);
+            loadSenseiPanel();
+        };
+    }
+}
+
+        async function checkTodayClass() {
             const user = JSON.parse(localStorage.getItem('aikido_user'));
-            if (!user) return;
+            const btn = document.getElementById('confirm-btn');
             
-            // 1. Identidad base (Francesc Castellanos -> FC)
-            const nombreRef = user.nombre || "Sensei";
-            const apellidosRef = user.apellidos || "";
-            const iniciales = (nombreRef[0] + (apellidosRef[0] || "")).toUpperCase();
+            // Obtenemos clases (esto funciona para todos)
+            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { 
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+            });
+            const json = await res.json();
+            const ahora = new Date();
 
-            document.getElementById('user-display-name').innerText = nombreRef.toUpperCase();
-            document.getElementById('user-initials').innerText = iniciales;
+            let claseElegida = null;
+            let yaAsistio = false;
 
-            const circleArea = document.getElementById('student-progress-circle');
-            const metaArea = document.getElementById('next-grade-display');
-            const kanjiArea = document.getElementById('sensei-kanji-area');
+            for (const c of (json.data || [])) {
+                const dataC = parseData(c);
+                const inicio = new Date(dataC.Fecha_Hora);
+                const duracion = parseFloat(dataC.Duracion || 1.5);
+                const fin = new Date(inicio.getTime() + (duracion * 60 * 60 * 1000));
 
-            // 2. Intentar cargar ficha de Alumno
-            let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-            let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
+                if (ahora > fin) continue;
 
-            // Si no lo encuentra por ID de cuenta, intentamos por DNI (Username) por si la relación falló
-            if (!json || !json.data || json.data.length === 0) {
-                endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-                json = await fetchSmart(endpoint, null, 0); 
+                // Comprobar asistencia si es alumno
+                if (alumnoGlobal) {
+                    const aid = getID(alumnoGlobal);
+                    const cid = getID(c);
+                    const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aid}&filters[clase][documentId][$eq]=${cid}`, { 
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+                    });
+                    const chkJ = await chk.json();
+                    if (chkJ.data?.length > 0) {
+                        const est = chkJ.data[0].attributes?.Estado || chkJ.data[0].Estado;
+                        if (est === 'Asistio') { yaAsistio = true; continue; }
+                        if (est === 'Confirmado') yaAsistio = "confirmado";
+                    }
+                }
+                
+                claseElegida = c;
+                break;
             }
 
-            // --- LÓGICA DE VISUALIZACIÓN ---
-            
-            if (json && json.data && json.data.length > 0) {
-                // CASO 1: ES ALUMNO (Independientemente de si es Sensei o no)
-                console.log("📈 Modo Alumno Activado para:", user.username);
-                alumnoGlobal = json.data[0]; 
-                const p = alumnoGlobal.attributes || alumnoGlobal;
+            if (claseElegida) {
+                claseHoyId = getID(claseElegida);
+                const f = formatTimeSafe(parseData(claseElegida).Fecha_Hora);
+                document.getElementById('next-class-time').innerText = f.time;
+                document.getElementById('next-class-date').innerText = f.date;
                 
-                circleArea.classList.remove('hidden');
-                metaArea.classList.remove('hidden');
-                kanjiArea.classList.add('hidden'); // Ocultamos Kanjis
-
-                if (p.dojo) {
-                    const d = p.dojo.data ? p.dojo.data : p.dojo;
-                    dojoIdGlobal = d.documentId || d.id;
+                // LOGICA DE BOTÓN:
+                if (!alumnoGlobal) {
+                    // Sensei Puro: Ve la clase pero no hay botón
+                    btn.classList.add('hidden');
+                } else {
+                    btn.classList.remove('hidden');
+                    if (yaAsistio === "confirmado") {
+                        btn.innerText = "CONFIRMADO";
+                        btn.disabled = true;
+                        btn.style.background = "#1e293b";
+                    } else {
+                        btn.innerText = "ASISTIR AL KEIKO";
+                        btn.disabled = false;
+                        btn.style.background = "white";
+                    }
                 }
-
-                const horas = parseFloat(p.horas_acumuladas || 0);
-                document.getElementById('stat-hours').innerText = horas.toFixed(1);
-
-                // Meta y Círculo
-                let meta = p.grado_objetivo;
-                if (!meta) {
-                    const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
-                    meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
-                }
-                const target = (requisitosGradoGlobal.find(r => normalize(r.grado) === normalize(meta))?.horas) || (GRADOS_FALLBACK[meta] || 60);
-                
-                const circle = document.getElementById('progress-bar');
-                if (circle) {
-                    const pct = Math.min((horas / target) * 100, 100);
-                    circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
-                }
-                document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-                metaArea.innerText = `CAMINO AL ${meta.toUpperCase()}`;
-
-            } else if (user.is_sensei) {
-                // CASO 2: ES SENSEI PERO NO ALUMNO
-                console.log("🥋 Modo Autoridad (Sensei Puro) Activado");
-                circleArea.classList.add('hidden');
-                metaArea.classList.add('hidden');
-                kanjiArea.classList.remove('hidden'); // Mostramos la Dojo Box con Kanjis
-            }
-
-            // 3. Botones de Navegación (Sensei Panel siempre activo si is_sensei)
-            const navRightBtn = document.getElementById('nav-sensei');
-            if (user.is_sensei || (alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor))) {
-                navRightBtn.style.display = 'flex';
-                navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-                navRightBtn.onclick = () => showView('sensei', navRightBtn);
             } else {
-                navRightBtn.style.display = 'flex';
-                navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-                navRightBtn.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
+                document.getElementById('next-class-time').innerText = "--:--";
+                document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
+                btn.classList.add('hidden');
             }
         }
 
@@ -1362,72 +1431,7 @@
             }, 200);
         }
 
-        async function checkTodayClass() {
-            if (!alumnoGlobal) return;
-            const aluId = getID(alumnoGlobal);
-            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { 
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-            });
-            const json = await res.json();
-            const ahora = new Date();
-            const btn = document.getElementById('confirm-btn');
-
-            // 1. Buscamos la primera clase válida para este alumno
-            let claseElegida = null;
-            let estadoAlumno = null;
-
-            for (const c of (json.data || [])) {
-                const dataC = parseData(c);
-                const inicio = new Date(dataC.Fecha_Hora);
-                const duracionHoras = parseFloat(dataC.Duracion || 1.5);
-                const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
-
-                // A. Si la clase ya terminó (pasó su duración), la saltamos
-                if (ahora > fin) continue;
-
-                // B. Consultamos si el alumno ya "Asistio" a esta clase específica
-                const cid = getID(c);
-                const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-                });
-                const chkJ = await chk.json();
-                const asistencia = chkJ.data?.[0];
-                const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
-
-                // C. Si ya asistió (validado por sensei o QR), saltamos a buscar la siguiente
-                if (estado === 'Asistio') continue;
-
-                // D. Si llegamos aquí, esta es la clase que debe ver (ya sea Confirmado o Sin marcar)
-                claseElegida = c;
-                estadoAlumno = estado;
-                break; 
-            }
-
-            if (claseElegida) {
-                claseHoyId = getID(claseElegida);
-                const f = formatTimeSafe(parseData(claseElegida).Fecha_Hora);
-                document.getElementById('next-class-time').innerText = f.time;
-                document.getElementById('next-class-date').innerText = f.date;
-                btn.classList.remove('hidden');
-
-                if (estadoAlumno === 'Confirmado') {
-                    btn.innerText = "CONFIRMADO";
-                    btn.disabled = true;
-                    btn.style.background = "#1e293b";
-                    btn.style.color = "var(--text-muted)";
-                } else {
-                    btn.innerText = "ASISTIR AL KEIKO";
-                    btn.disabled = false;
-                    btn.style.background = "white";
-                    btn.style.color = "black";
-                }
-            } else {
-                document.getElementById('next-class-time').innerText = "--:--";
-                document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
-                btn.classList.add('hidden');
-            }
-        }
-
+        
         /* --- GESTIÓN CALENDARIO --- */
         async function loadManageClasses() {
             const listDiv = document.getElementById('student-list');
