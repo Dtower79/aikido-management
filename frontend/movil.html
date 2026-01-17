@@ -1289,51 +1289,46 @@
             const token = localStorage.getItem('aikido_jwt');
 
             try {
-                // --- API CALL OPTIMIZADA: Paralelismo y Agregación ---
-                // Pedimos clases y asistencias al mismo tiempo. Ahorramos esperas.
-                const [resClases, resMisAsistencias] = await Promise.all([
-                    fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=10`, { 
-                        headers: { 'Authorization': `Bearer ${token}` } 
-                    }),
-                    fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&populate=clase&pagination[limit]=30&sort=createdAt:desc`, { 
-                        headers: { 'Authorization': `Bearer ${token}` } 
-                    })
+                // --- OPTIMIZACIÓN SUPREMA: Calendario (24h) y Asistencias (1h) desde memoria local ---
+                const [jsonClases, jsonAsis] = await Promise.all([
+                    fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=15', 'calendario_clases', 24),
+                    fetchSmart(`/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&populate=clase&pagination[limit]=30&sort=createdAt:desc`, 'mis_asistencias', 1)
                 ]);
 
-                const jsonClases = await resClases.json();
-                const jsonAsis = await resMisAsistencias.json();
-                
                 const ahora = new Date();
                 
-                // Mapeamos las asistencias en un objeto simple para búsqueda ultra-rápida en memoria
-                const asistenciasLocales = (jsonAsis.data || []).map(a => {
+                // Mapeamos asistencias para búsqueda instantánea en memoria
+                const asistenciasLocales = (jsonAsis?.data || []).map(a => {
                     const item = a.attributes || a;
-                    const claseId = getID(item.clase?.data || item.clase);
-                    return { claseId, estado: item.Estado || item.estado };
+                    return { 
+                        claseId: getID(item.clase?.data || item.clase), 
+                        estado: item.Estado || item.estado 
+                    };
                 });
 
                 let claseElegida = null;
                 let estadoAlumno = null;
 
-                // PROCESAMIENTO LOCAL: Comparamos las clases con nuestras asistencias sin volver a internet
-                for (const c of (jsonClases.data || [])) {
+                // BUCLE DE FILTRADO LOCAL (Sin llamadas a API)
+                for (const c of (jsonClases?.data || [])) {
                     const dataC = parseData(c);
                     const inicio = new Date(dataC.Fecha_Hora);
                     const duracionHoras = parseFloat(dataC.Duracion || 1.5);
                     const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
 
-                    // A. ¿La clase ya ha terminado por completo?
+                    // 1. ¿La clase ya ha terminado oficialmente? 
+                    // Si la abre a las 12:00 y la clase acabó a las 11:30, la salta.
                     if (ahora > fin) continue;
 
                     const cid = getID(c);
-                    
-                    // B. ¿Ya hemos asistido (Asistio) a esta clase? 
-                    const miAsistencia = asistenciasLocales.find(a => a.claseId === cid);
-                    const estado = miAsistencia ? miAsistencia.estado : null;
+                    const miAsis = asistenciasLocales.find(a => a.claseId === cid);
+                    const estado = miAsis ? miAsis.estado : null;
 
+                    // 2. ¿Ya tiene el check de 'Asistio' (Validado por Sensei o QR)?
+                    // Si ya terminó esa clase, pasamos a buscar la siguiente (ej: la de la tarde)
                     if (estado === 'Asistio') continue;
 
-                    // C. Si llegamos aquí, esta es la clase a mostrar (ya sea Confirmado o Pendiente)
+                    // 3. Si llegamos aquí, esta es la clase que debe ver
                     claseElegida = c;
                     estadoAlumno = estado;
                     break; 
@@ -1347,6 +1342,7 @@
                     document.getElementById('next-class-date').innerText = f.date;
                     btn.classList.remove('hidden');
 
+                    // Ajuste visual del botón según el estado en memoria
                     if (estadoAlumno === 'Confirmado') {
                         btn.innerText = "CONFIRMADO";
                         btn.disabled = true;
@@ -1359,37 +1355,13 @@
                         btn.style.color = "black";
                     }
                 } else {
+                    // Si no hay más clases hoy o ya asistió a todas
                     document.getElementById('next-class-time').innerText = "--:--";
                     document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
                     btn.classList.add('hidden');
                 }
             } catch (e) {
                 console.error("❌ Fallo en checkTodayClass:", e);
-            }
-        }
-
-            if (claseElegida) {
-                claseHoyId = getID(claseElegida);
-                const f = formatTimeSafe(parseData(claseElegida).Fecha_Hora);
-                document.getElementById('next-class-time').innerText = f.time;
-                document.getElementById('next-class-date').innerText = f.date;
-                btn.classList.remove('hidden');
-
-                if (estadoAlumno === 'Confirmado') {
-                    btn.innerText = "CONFIRMADO";
-                    btn.disabled = true;
-                    btn.style.background = "#1e293b";
-                    btn.style.color = "var(--text-muted)";
-                } else {
-                    btn.innerText = "ASISTIR AL KEIKO";
-                    btn.disabled = false;
-                    btn.style.background = "white";
-                    btn.style.color = "black";
-                }
-            } else {
-                document.getElementById('next-class-time').innerText = "--:--";
-                document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
-                btn.classList.add('hidden');
             }
         }
 
@@ -1533,8 +1505,22 @@
 
         async function confirmAttendance() {
             if (!claseHoyId || !alumnoGlobal) return;
-            await fetch(`${API_URL}/api/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
-            localStorage.removeItem('cache_perfil_alumno'); checkTodayClass();
+            const token = localStorage.getItem('aikido_jwt');
+            
+            // 1. Enviamos la confirmación al servidor
+            const res = await fetch(`${API_URL}/api/asistencias`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) 
+            });
+
+            if (res.ok) {
+                // 2. ¡CLAVE! Borramos la caché de asistencias para forzar al Dashboard a ver el cambio
+                localStorage.removeItem('cache_mis_asistencias'); 
+                
+                // 3. Refrescamos la vista (ahora hará 1 sola llamada para traer el 'Confirmado')
+                await checkTodayClass();
+            }
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
