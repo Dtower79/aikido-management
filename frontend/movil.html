@@ -954,163 +954,156 @@
 
         /* --- CORE INIT --- */
         async function initApp() {
-            console.log("🚀 [INIT] Arrancando...");
-            const token = localStorage.getItem('aikido_jwt');
-            const user = JSON.parse(localStorage.getItem('aikido_user'));
-            
-            // 1. Reset de vistas: Ocultamos todo para decidir ahora
-            document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
-                    .forEach(v => v.classList.add('hidden'));
+    console.log("🚀 [INIT] Arrancando...");
+    const token = localStorage.getItem('aikido_jwt');
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    
+    document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
+            .forEach(v => v.classList.add('hidden'));
 
-            if (!token || !user) {
-                // 2. No hay token: MOSTRAR LOGIN
-                console.log("🔑 Mostrando Login");
-                const lv = document.getElementById('login-view');
-                if(lv) lv.classList.remove('hidden');
-                document.getElementById('main-nav').classList.add('hidden');
-                
-                // Importante para que el contenido "despierte"
-                document.documentElement.classList.add('app-loaded'); 
-                return;
-            }
+    if (!token || !user) {
+        console.log("🔑 Mostrando Login");
+        const lv = document.getElementById('login-view');
+        if(lv) lv.classList.remove('hidden');
+        document.getElementById('main-nav').classList.add('hidden');
+        document.documentElement.classList.add('app-loaded'); 
+        return;
+    }
 
-            // 3. Hay token: MOSTRAR DASHBOARD
-            console.log("🏠 Mostrando Dashboard");
-            const dv = document.getElementById('dashboard-view');
-            if(dv) dv.classList.remove('hidden');
-            document.getElementById('main-nav').classList.remove('hidden');
-            
-            // ... resto de tus cargas (Promise.all, etc)
-        
-            showView('dashboard');
-            
-          
-            const [reqRes] = await Promise.all([
-                fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480),
-                refreshStudentData()
-            ]);
+    console.log("🏠 Mostrando Dashboard");
+    const dv = document.getElementById('dashboard-view');
+    if(dv) dv.classList.remove('hidden');
+    document.getElementById('main-nav').classList.remove('hidden');
+    
+    showView('dashboard');
+    
+    const [reqRes] = await Promise.all([
+        fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 480),
+        refreshStudentData()
+    ]);
 
-            if (reqRes && reqRes.data) {
-                // Mapeamos los datos para que tengan las propiedades NORM y HORAS que tus funciones esperan
-                requisitosGradoGlobal = reqRes.data.map(r => {
-                    const item = r.attributes || r;
-                    return {
-                        ...item,
-                        NORM: normalize(item.grado),
-                        HORAS: parseFloat(item.horas || 0)
-                    };
-                });
-                console.log("✅ Requisitos sincronizados:", requisitosGradoGlobal.length);
-            }
+    if (reqRes && reqRes.data) {
+        requisitosGradoGlobal = reqRes.data.map(r => {
+            const item = r.attributes || r;
+            return {
+                ...item,
+                NORM: normalize(item.grado),
+                HORAS: parseFloat(item.horas || 0)
+            };
+        });
+        console.log("✅ Requisitos sincronizados:", requisitosGradoGlobal.length);
+    }
 
-            const esSensei = user.is_sensei === true;
-            const esInstructor = alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor) === true;
-            
-            if (esSensei || esInstructor) {
-                console.log("🥋 [AUTH] Acceso Sensei Concedido.");
-                document.getElementById('nav-sensei').style.display = 'flex';
-                await loadDojosFilter(); 
-            }
+    // --- CAMBIO AQUÍ: Prioridad al campo is_sensei del User de Strapi ---
+    const esSensei = user.is_sensei === true;
+    const esInstructor = alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor) === true;
+    
+    if (esSensei || esInstructor) {
+        console.log("🥋 [AUTH] Acceso Sensei Concedido.");
+        document.getElementById('nav-sensei').style.display = 'flex';
+        await loadDojosFilter(); 
+    }
 
-            await checkTodayClass();
-            document.documentElement.classList.add('app-loaded');
-        }
+    await checkTodayClass();
+    document.documentElement.classList.add('app-loaded');
+}
 
         /* --- REFRESH DATA (Sincronización v5) --- */
         async function refreshStudentData() {
-            const user = JSON.parse(localStorage.getItem('aikido_user'));
-            if (!user) return;
-            
-            let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-            let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    if (!user) return;
+    
+    let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+    let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
 
-            if (!json || !json.data || json.data.length === 0) {
-                endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-                json = await fetchSmart(endpoint, null, 0); 
-            }
+    if (!json || !json.data || json.data.length === 0) {
+        endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
+        json = await fetchSmart(endpoint, null, 0); 
+    }
 
-            if (json && json.data && json.data.length > 0) {
-                alumnoGlobal = json.data[0]; 
-                const p = alumnoGlobal.attributes || alumnoGlobal;
-                
-                // 1. Actualización de Interfaz Básica
-                document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
-                document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
-
-                if (p.dojo) {
-                    const d = p.dojo.data ? p.dojo.data : p.dojo;
-                    dojoIdGlobal = d.documentId || d.id;
-                }
-
-                const horas = parseFloat(p.horas_acumuladas || 0);
-                document.getElementById('stat-hours').innerText = horas.toFixed(1);
-                document.getElementById('student-progress-circle').classList.remove('hidden');
-
-                // 2. Cálculo de Meta y Círculo de Progreso (Blindado v5)
-                let meta = p.grado_objetivo;
-                if (!meta) {
-                    const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
-                    meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
-                }
-
-                const normMeta = normalize(meta);
-                const req = Array.isArray(requisitosGradoGlobal) 
-                    ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
-                    : null;
-
-                const target = req ? parseFloat(req.horas || req.attributes?.horas || 60) : (GRADOS_FALLBACK[meta] || 60);
-
-                const circle = document.getElementById('progress-bar');
-                if (circle) {
-                    const pct = Math.min((horas / target) * 100, 100);
-                    circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
-                }
-                
-                document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-                const lblMeta = document.getElementById('next-grade-display');
-                lblMeta.innerText = `CAMINO AL ${meta.toUpperCase()}`;
-                lblMeta.classList.remove('hidden');
-
-                // --- LÓGICA DE BOTONES DINÁMICOS POR ROL ---
-                const esSensei = user.is_sensei === true || p.es_instructor === true;
-                const navRightBtn = document.getElementById('nav-sensei');
-
-                if (esSensei) {
-                    // ROL SENSEI: Botón nav derecha va al Panel Sensei
-                    if (navRightBtn) {
-                        navRightBtn.style.display = 'flex';
-                        navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-                        navRightBtn.onclick = () => showView('sensei', navRightBtn);
-                    }
-
-                    // Inyectar botón 'Seminarios' en el Panel de Sensei (si no existe ya)
-                    if (!document.getElementById('btn-seminarios-sensei-view')) {
-                        const senseiHeader = document.querySelector('#sensei-view header');
-                        if (senseiHeader) {
-                            const btnWrap = document.createElement('div');
-                            btnWrap.id = 'btn-seminarios-sensei-view';
-                            btnWrap.style.padding = '0 25px 15px';
-                            btnWrap.innerHTML = `
-                                <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" 
-                                        onclick="window.open('https://www.meetontatami.com/', '_blank')">
-                                    <i class="fa-solid fa-calendar-day"></i> SEMINARIOS
-                                </button>`;
-                            senseiHeader.after(btnWrap);
-                        }
-                    }
-                } else {
-                    // ROL ALUMNO: Botón nav derecha va a Seminarios
-                    if (navRightBtn) {
-                        navRightBtn.style.display = 'flex';
-                        navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-                        navRightBtn.onclick = (e) => {
-                            e.preventDefault();
-                            window.open('https://www.meetontatami.com/', '_blank');
-                        };
-                    }
-                }
+    // --- LÓGICA PARA SENSEI SIN FICHA DE ALUMNO ---
+    if (!json || !json.data || json.data.length === 0) {
+        console.log("👤 Usuario sin ficha de alumno (Pure Sensei)");
+        document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
+        document.getElementById('user-initials').innerText = (user.nombre ? user.nombre[0] : "S").toUpperCase();
+        
+        // Ocultamos elementos de progreso
+        document.getElementById('student-progress-circle').classList.add('hidden');
+        document.getElementById('next-grade-display').classList.add('hidden');
+        
+        // Si es sensei en Strapi, forzamos el botón en el nav
+        if (user.is_sensei) {
+            const navRightBtn = document.getElementById('nav-sensei');
+            if (navRightBtn) {
+                navRightBtn.style.display = 'flex';
+                navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+                navRightBtn.onclick = () => showView('sensei', navRightBtn);
             }
         }
+        return; // Salimos, no hay más datos que cargar
+    }
+
+    if (json && json.data && json.data.length > 0) {
+        alumnoGlobal = json.data[0]; 
+        const p = alumnoGlobal.attributes || alumnoGlobal;
+        
+        document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
+        document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
+
+        if (p.dojo) {
+            const d = p.dojo.data ? p.dojo.data : p.dojo;
+            dojoIdGlobal = d.documentId || d.id;
+        }
+
+        const horas = parseFloat(p.horas_acumuladas || 0);
+        document.getElementById('stat-hours').innerText = horas.toFixed(1);
+        document.getElementById('student-progress-circle').classList.remove('hidden');
+
+        let meta = p.grado_objetivo;
+        if (!meta) {
+            const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
+            meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
+        }
+
+        const normMeta = normalize(meta);
+        const req = Array.isArray(requisitosGradoGlobal) 
+            ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
+            : null;
+
+        const target = req ? parseFloat(req.horas || req.attributes?.horas || 60) : (GRADOS_FALLBACK[meta] || 60);
+
+        const circle = document.getElementById('progress-bar');
+        if (circle) {
+            const pct = Math.min((horas / target) * 100, 100);
+            circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
+        }
+        
+        document.getElementById('stat-label').innerText = `HORAS / ${target}`;
+        const lblMeta = document.getElementById('next-grade-display');
+        lblMeta.innerText = `CAMINO AL ${meta.toUpperCase()}`;
+        lblMeta.classList.remove('hidden');
+
+        const esSensei = user.is_sensei === true || p.es_instructor === true;
+        const navRightBtn = document.getElementById('nav-sensei');
+
+        if (esSensei) {
+            if (navRightBtn) {
+                navRightBtn.style.display = 'flex';
+                navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+                navRightBtn.onclick = () => showView('sensei', navRightBtn);
+            }
+        } else {
+            if (navRightBtn) {
+                navRightBtn.style.display = 'flex';
+                navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+                navRightBtn.onclick = (e) => {
+                    e.preventDefault();
+                    window.open('https://www.meetontatami.com/', '_blank');
+                };
+            }
+        }
+    }
+}
 
         /* --- SENSEI PANEL (Agrupación y 7 días) --- */
         async function loadSenseiPanel() {
@@ -1313,70 +1306,76 @@
         }
 
         async function checkTodayClass() {
-            if (!alumnoGlobal) return;
-            const aluId = getID(alumnoGlobal);
-            const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { 
+    // Quitamos el return preventivo para que los Senseis vean la clase
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
+    
+    const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { 
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+    });
+    const json = await res.json();
+    const ahora = new Date();
+    const btn = document.getElementById('confirm-btn');
+
+    let claseElegida = null;
+    let estadoAlumno = null;
+
+    for (const c of (json.data || [])) {
+        const dataC = parseData(c);
+        const inicio = new Date(dataC.Fecha_Hora);
+        const duracionHoras = parseFloat(dataC.Duracion || 1.5);
+        const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
+
+        if (ahora > fin) continue;
+
+        // Solo consultamos asistencia si hay ID de alumno
+        if (aluId) {
+            const cid = getID(c);
+            const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
             });
-            const json = await res.json();
-            const ahora = new Date();
-            const btn = document.getElementById('confirm-btn');
+            const chkJ = await chk.json();
+            const asistencia = chkJ.data?.[0];
+            const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
 
-            // 1. Buscamos la primera clase válida para este alumno
-            let claseElegida = null;
-            let estadoAlumno = null;
+            if (estado === 'Asistio') continue;
+            estadoAlumno = estado;
+        }
 
-            for (const c of (json.data || [])) {
-                const dataC = parseData(c);
-                const inicio = new Date(dataC.Fecha_Hora);
-                const duracionHoras = parseFloat(dataC.Duracion || 1.5);
-                const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
+        claseElegida = c;
+        break; 
+    }
 
-                // A. Si la clase ya terminó (pasó su duración), la saltamos
-                if (ahora > fin) continue;
+    if (claseElegida) {
+        claseHoyId = getID(claseElegida);
+        const f = formatTimeSafe(parseData(claseElegida).Fecha_Hora);
+        document.getElementById('next-class-time').innerText = f.time;
+        document.getElementById('next-class-date').innerText = f.date;
 
-                // B. Consultamos si el alumno ya "Asistio" a esta clase específica
-                const cid = getID(c);
-                const chk = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-                });
-                const chkJ = await chk.json();
-                const asistencia = chkJ.data?.[0];
-                const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
-
-                // C. Si ya asistió (validado por sensei o QR), saltamos a buscar la siguiente
-                if (estado === 'Asistio') continue;
-
-                // D. Si llegamos aquí, esta es la clase que debe ver (ya sea Confirmado o Sin marcar)
-                claseElegida = c;
-                estadoAlumno = estado;
-                break; 
-            }
-
-            if (claseElegida) {
-                claseHoyId = getID(claseElegida);
-                const f = formatTimeSafe(parseData(claseElegida).Fecha_Hora);
-                document.getElementById('next-class-time').innerText = f.time;
-                document.getElementById('next-class-date').innerText = f.date;
-                btn.classList.remove('hidden');
-
-                if (estadoAlumno === 'Confirmado') {
-                    btn.innerText = "CONFIRMADO";
-                    btn.disabled = true;
-                    btn.style.background = "#1e293b";
-                    btn.style.color = "var(--text-muted)";
-                } else {
-                    btn.innerText = "ASISTIR AL KEIKO";
-                    btn.disabled = false;
-                    btn.style.background = "white";
-                    btn.style.color = "black";
-                }
+        // --- LÓGICA DE BOTÓN DINÁMICA ---
+        if (!alumnoGlobal) {
+            // Es un Sensei sin ficha de alumno: Ve la clase pero no el botón
+            btn.classList.add('hidden');
+        } else {
+            btn.classList.remove('hidden');
+            if (estadoAlumno === 'Confirmado') {
+                btn.innerText = "CONFIRMADO";
+                btn.disabled = true;
+                btn.style.background = "#1e293b";
+                btn.style.color = "var(--text-muted)";
             } else {
-                document.getElementById('next-class-time').innerText = "--:--";
-                document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
-                btn.classList.add('hidden');
+                btn.innerText = "ASISTIR AL KEIKO";
+                btn.disabled = false;
+                btn.style.background = "white";
+                btn.style.color = "black";
             }
         }
+    } else {
+        document.getElementById('next-class-time').innerText = "--:--";
+        document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
+        btn.classList.add('hidden');
+    }
+}
 
         /* --- GESTIÓN CALENDARIO --- */
         async function loadManageClasses() {
