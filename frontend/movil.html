@@ -10,17 +10,11 @@
     <link rel="apple-touch-icon" href="img/logo-arashi-movil.png">
     <title>Arashi App</title>
     <link rel="shortcut icon" href="img/logo-arashi.png" type="image/png">
-    <!-- FUENTES Y LIBRERÍAS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-
     <style>
-        /* --- VARIABLES DE DISEÑO --- */
         :root { 
             --bg: #05080f; 
             --accent: #ef4444; 
@@ -33,23 +27,15 @@
             accent-color: var(--accent);
         }
 
-        /* --- RESET Y BASE --- */
         html, body { 
             background-color: #080c15; 
             background-image: radial-gradient(circle at top right, #1e1b4b, #080c15); 
-            margin: 0; 
-            padding: 0; 
-            min-height: 100vh; 
-            width: 100vw; 
-            color: var(--text-main); 
-            font-family: 'Inter', sans-serif; 
-            overflow-x: hidden; 
-            overflow-y: auto; 
-            color-scheme: dark; 
+            margin: 0; padding: 0; min-height: 100vh; width: 100vw; 
+            color: var(--text-main); font-family: 'Inter', sans-serif; 
+            overflow-x: hidden; overflow-y: auto; color-scheme: dark; 
         }
 
-        /* --- TIPOGRAFÍA MAESTRA (INTER 800) --- */
-        h1, h2, h3, .val, .action-btn, .next-grade-label, .month-header, .section-label, .mini-btn, .class-qr-btn, .month-btn { 
+        h1, h2, h3, h4, .val, .action-btn, .next-grade-label, .month-header, .section-label, .mini-btn, .month-btn { 
             font-family: 'Inter', sans-serif !important; 
             font-weight: 800 !important; 
             text-transform: uppercase; 
@@ -58,732 +44,109 @@
 
         .hidden { display: none !important; }
 
-        /* --- MURO DE INSTALACIÓN --- */
-        /* 1. ESTADO INICIAL: Todo oculto, muro preparado */
-       #app-content {
-            display: none !important; /* Oculto total por defecto */
-            width: 100%;
-            min-height: 100vh;
-            flex-direction: column;
-        }
+        #app-content { display: none; width: 100%; min-height: 100vh; flex-direction: column; }
+        #install-wall { display: none; position: fixed; inset: 0; z-index: 99999; flex-direction: column; align-items: center; justify-content: center; background: #080c15; }
+        .ready-to-show #app-content { display: flex !important; }
+        .show-install-wall #install-wall { display: flex !important; }
+        .app-loaded #app-content { opacity: 1 !important; transition: opacity 0.6s; }
 
-        #install-wall {
-            display: none;
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #080c15; /* Fondo sólido, no transparente */
-            z-index: 99999;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* 2. EL INTERRUPTOR MAESTRO: Solo esta clase manda */
-        .ready-to-show #app-content {
-            display: flex !important;
-        }
-
-        .ready-to-show #install-wall {
-            display: none !important;
-        }
-        /* Si no está instalada, mostramos el muro */
-        .show-install-wall #install-wall {
-            display: flex !important;
-        }
-
-        .app-loaded #app-content {
-            opacity: 1 !important;
-        }
-
-        /* --- AUTH Y LOGO --- */
-        .auth-container {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            width: 100%;
-            /* justify-content: flex-start asegura que el padding-top mande */
-            justify-content: flex-start; 
-            align-items: center;
-            /* Bajamos el contenido un 12% de la altura total de la pantalla + el hueco de Apple */
-            padding-top: calc(12vh + env(safe-area-inset-top)); 
-            box-sizing: border-box;
-        }
-
-        .logo-img { 
-            width: 110px;
-            height: auto; 
-            margin-bottom: 30px; /* Más espacio entre logo y tarjeta */
-            filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); 
-        }
-
-        .auth-card { 
-            width: 90%; /* En lugar de 100%, dejamos un 10% de espacio total */
-            max-width: 330px; /* Reducimos un poco el ancho máximo para que sea más estilizado */
-            background: var(--card-bg); 
-            backdrop-filter: blur(20px); 
-            border: 1px solid var(--glass-border); 
-            padding: 35px 25px; /* Reducimos un poco el padding interno para equilibrar */
-            border-radius: 30px; /* Bordes redondeados más suaves */
-            text-align: center; 
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5); 
-        }
-
-        .auth-footer { 
-            margin-top: 25px; 
-            font-size: 14px; 
-            color: #ffffff; 
-            font-weight: 300; 
-            letter-spacing: 0.5px; 
-        }
-
-        .auth-footer a { 
-            color: var(--accent); 
-            text-decoration: underline; 
-            font-weight: 800; 
-            margin-left: 5px; 
-            cursor: pointer; 
-        }
+        .auth-container { display: flex; flex-direction: column; min-height: 100vh; justify-content: flex-start; align-items: center; padding-top: calc(12vh + env(safe-area-inset-top)); box-sizing: border-box; }
+        .logo-img { width: 110px; margin-bottom: 30px; filter: drop-shadow(0 0 15px rgba(239,68,68,0.4)); }
+        .auth-card { width: 90%; max-width: 330px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 35px 25px; border-radius: 30px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
         
-        .input-group { 
-            position: relative; 
-            margin-bottom: 15px; 
-            width: 100%; 
-            text-align: left; 
-        }
+        .input-group { position: relative; margin-bottom: 15px; width: 100%; text-align: left; }
+        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 15px; z-index: 10; }
+        input, select { width: 100%; padding: 14px 14px 14px 48px; background: rgba(15, 23, 42, 0.9) !important; border: 1px solid var(--glass-border); border-radius: 16px; color: white !important; font-size: 15px; box-sizing: border-box; outline: none; }
 
-        .input-group i { 
-            position: absolute; 
-            left: 16px; 
-            top: 50%; 
-            transform: translateY(-50%); 
-            color: var(--text-muted); 
-            z-index: 10; 
-            font-size: 15px; 
-        }
+        .header-app { display: flex; justify-content: space-between; align-items: center; padding: 20px 25px 0; width: 100%; box-sizing: border-box; }
+        .profile-circle { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, var(--accent), #7f1d1d); display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; box-shadow: var(--neon); }
         
-        input, select { 
-            width: 100%; 
-            padding: 14px 14px 14px 48px; /* Reducimos ligeramente el padding */
-            background: rgba(15, 23, 42, 0.9) !important; 
-            border: 1px solid var(--glass-border); 
-            border-radius: 16px; /* Bordes algo más finos */
-            color: white !important; 
-            font-size: 15px; /* Bajamos de 16px a 15px */
-            box-sizing: border-box; 
-            outline: none; 
-        }
+        .action-btn { width: 100%; padding: 20px; border-radius: 22px; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; font-weight: 800; transition: 0.2s; }
+        .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
+        .action-btn:disabled { background: #1e293b !important; color: var(--text-muted) !important; opacity: 0.6; }
 
-        /* --- DASHBOARD ELEMENTS --- */
-        .header-app { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 15px; 
-            width: 100%; 
-            padding: 20px 25px 0; 
-            box-sizing: border-box; 
-        }
+        .progress-container { display: flex; justify-content: center; align-items: center; position: relative; margin: 20px auto 5px; width: 140px; height: 140px; }
+        .progress-ring__circle { transition: stroke-dashoffset 0.8s ease; stroke-dasharray: 339.29; stroke-dashoffset: 339.29; }
+        .progress-text { position: absolute; text-align: center; width: 100%; }
+        .progress-text .val { font-size: 36px; color: white; display: block; }
+        .progress-text .lbl { font-size: 11px; color: var(--text-muted); }
 
-        .profile-circle { 
-            width: 50px; 
-            height: 50px; 
-            border-radius: 15px; 
-            background: linear-gradient(135deg, var(--accent), #7f1d1d); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: 800; 
-            border: 1px solid var(--glass-border); 
-            color: white; 
-            flex-shrink: 0; 
-            box-shadow: var(--neon); 
-        }
-        
-        .action-btn { 
-            width: 100%; 
-            padding: 20px; 
-            background: white; 
-            color: black; 
-            border: none; 
-            border-radius: 22px; 
-            font-size: 17px; 
-            cursor: pointer; 
-            transition: 0.2s; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 10px; 
-        }
-
-        .action-btn.primary { 
-            background: var(--accent); 
-            color: white; 
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); 
-        }
-
-        .action-btn:disabled { 
-            background: #1e293b !important; 
-            color: white !important; 
-            opacity: 0.6; 
-            cursor: default; 
-        }
-        
-        .class-hero { 
-            background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
-            padding: 35px 25px; 
-            border-radius: 40px; 
-            box-shadow: 0 20px 45px rgba(239,68,68,0.3); 
-            text-align: center; 
-            margin: 0 20px 25px; 
-            border: 1px solid rgba(255,255,255,0.2); 
-            opacity: 0; 
-            transform: translateY(20px); 
-            animation: fadeInUp 0.8s forwards; 
-        }
-
-        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
-
-        /* --- PROGRESO DASHBOARD --- */
-        .progress-container { 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            position: relative; 
-            margin: 20px auto 5px; 
-            width: 140px; 
-            height: 140px; 
-        }
-
-        .progress-ring { 
-            transform: rotate(-90deg); 
-            width: 140px; 
-            height: 140px; 
-        }
-
-        .progress-ring__circle { 
-            transition: stroke-dashoffset 0.8s ease-in-out; 
-            stroke-dasharray: 339.29; 
-            stroke-dashoffset: 339.29; 
-        }
-
-        .progress-text { 
-            position: absolute; 
-            text-align: center; 
-            top: 48%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            display: flex; 
-            flex-direction: column; 
-            width: 100%; 
-        }
-
-        .progress-text .val { 
-            font-size: 36px; 
-            display: block; 
-            line-height: 1; 
-            margin: 0; 
-            color: white; 
-        }
-
-        .progress-text .lbl { 
-            font-size: 11px; 
-            color: var(--text-muted); 
-            text-transform: uppercase; 
-            letter-spacing: 1.5px; 
-            font-weight: 700; 
-            margin-top: 2px; 
-        }
-
-        .next-grade-label { 
-            font-size: 14px; 
-            color: var(--accent); 
-            text-align: center; 
-            margin-bottom: 25px; 
-            display: block; 
-            letter-spacing: 1.5px; 
-        }
-
-        /* --- SENSEI UI --- */
-        .class-group-card { 
-            background: rgba(30, 41, 59, 0.6); 
-            border: 1px solid var(--glass-border); 
-            border-radius: 25px; 
-            margin: 0 20px 20px; 
-            overflow: hidden; 
-        }
-
-        .class-group-header { 
-            padding: 18px 20px; 
-            background: rgba(0,0,0,0.2); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            cursor: pointer; 
-        }
-
-        .class-group-header h3 { 
-            margin: 0; 
-            font-size: 15px; 
-            color: white; 
-        }
-
-        .class-group-body { 
-            display: none; 
-            padding: 10px 0; 
-        }
-
+        .class-hero { background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); padding: 35px 25px; border-radius: 40px; text-align: center; margin: 0 20px 25px; border: 1px solid rgba(255,255,255,0.2); }
+        .class-group-card { background: rgba(30, 41, 59, 0.6); border: 1px solid var(--glass-border); border-radius: 25px; margin: 0 20px 20px; overflow: hidden; }
+        .class-group-header { padding: 18px 20px; background: rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .class-group-body { display: none; padding: 10px 0; }
         .class-group-body.open { display: block; }
 
-        .class-qr-btn { 
-            width: 100%; 
-            padding: 18px; 
-            background: var(--accent); 
-            border: none; 
-            color: white; 
-            font-size: 14px; 
-            cursor: pointer; 
-            border-bottom: 1px solid var(--glass-border); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 10px; 
-        }
+        .student-item { background: rgba(255,255,255,0.03); padding: 12px 18px; border-radius: 18px; display: flex; justify-content: space-between; align-items: center; margin: 10px 15px; border: 1px solid var(--glass-border); }
+        .sensei-actions { display: flex; gap: 10px; }
+        .mini-btn { border: none; border-radius: 12px; height: 42px; width: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; font-size: 16px; }
+        .mini-btn.no { background: #334155; color: #ff4444; }
+        .mini-btn.ok { background: var(--success); width: auto; padding: 0 20px; font-size: 12px; }
 
-        .student-item { 
-            background: rgba(255,255,255,0.03); 
-            padding: 12px 18px; /* Aumentamos un poco el padding lateral */
-            border-radius: 18px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin: 10px 0; /* Solo margen vertical, el horizontal lo dará el contenedor */
-            border: 1px solid var(--glass-border); 
-            box-sizing: border-box;
-        }
-        .sensei-actions { 
-            display: flex; 
-            gap: 12px; 
-            margin-left: 10px; /* Separación mínima con el nombre */
-        }
-
-        .student-info h4 { 
-            margin: 0; 
-            font-size: 14px; 
-            color: white; 
-            font-weight: 700; 
-        }
-
-        .student-info p { 
-            margin: 2px 0 0; 
-            font-size: 11px; 
-            color: var(--text-muted); 
-            font-weight: 400; 
-            text-transform: uppercase; 
-        }
-
-        .sensei-actions { 
-            display: flex; 
-            gap: 10px; 
-        }
-
-        .mini-btn { 
-            border: none; 
-            border-radius: 12px; 
-            height: 42px; 
-            width: 42px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            cursor: pointer; 
-            color: white; 
-            transition: 0.2s; 
-            font-size: 16px; 
-        }
-
-        .mini-btn.no { 
-            background: #334155; 
-            color: #ff4444; 
-        }
-
-        .mini-btn.ok { 
-            background: var(--success); 
-            width: auto; 
-            padding: 0 20px; 
-            font-size: 12px; 
-        }
-
-        /* --- CALENDAR --- */
-        .month-header { 
-            padding: 15px 25px 5px; 
-            font-size: 20px; 
-            color: white; 
-            text-transform: uppercase; 
-            letter-spacing: 2px; 
-        }
-
-        .section-label { 
-            padding: 0 25px; 
-            margin: 10px 0 15px; 
-            font-size: 11px; 
-            color: var(--accent); 
-            letter-spacing: 2px; 
-        }
-
-        .grid-container { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
-            gap: 12px; 
-            padding: 0 20px 30px; 
-        }
-
-        .class-card { 
-            background: rgba(255,255,255,0.03); 
-            border: 1px solid var(--glass-border); 
-            padding: 18px; 
-            border-radius: 20px; 
-            text-align: center; 
-            border-bottom: 3px solid var(--accent); 
-            cursor: pointer; 
-        }
-
-        .class-card h4 { 
-            margin: 0; 
-            font-size: 14px; 
-            color: white; 
-        }
-
-        .class-card p { 
-            margin: 5px 0 0; 
-            font-size: 13px; 
-            color: var(--text-main); 
-        }
-
-        /* --- NAV BAR --- */
-        .nav-bar { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            height: 85px; 
-            background: rgba(8, 12, 21, 0.98); 
-            backdrop-filter: blur(25px); 
-            border-top: 1px solid var(--glass-border); 
-            display: flex; 
-            justify-content: space-evenly; 
-            align-items: center; 
-            padding-bottom: 15px; 
-            z-index: 4000; 
-        }
-
-        .nav-item { 
-            color: var(--text-muted); 
-            font-size: 18px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            text-decoration: none; 
-        }
-
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(8, 12, 21, 0.98); backdrop-filter: blur(25px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-evenly; align-items: center; padding-bottom: 15px; z-index: 4000; }
+        .nav-item { color: var(--text-muted); font-size: 18px; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
         .nav-item.active { color: var(--accent); }
+        .nav-item span { font-size: 11px; font-weight: 700; margin-top: 6px; text-transform: uppercase; }
+        .qr-inner { width: 62px; height: 62px; background: var(--accent); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: white; font-size: 26px; border: 4px solid var(--bg); transform: translateY(-20px); box-shadow: var(--neon); }
 
-        .nav-item span { 
-            font-size: 11px; 
-            font-weight: 700; 
-            margin-top: 6px; 
-            text-transform: uppercase; 
-        }
-
-        .qr-inner { 
-            width: 62px; 
-            height: 62px; 
-            background: var(--accent); 
-            border-radius: 22px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: white; 
-            font-size: 26px; 
-            border: 4px solid var(--bg); 
-            transform: translateY(-20px); 
-            box-shadow: var(--neon); 
-        }
-
-        /* --- MODALES PREMIUM --- */
-        .modal-overlay { 
-            position: fixed; 
-            inset: 0; 
-            background: radial-gradient(circle at top right, #1e1b4b, #05080f); 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            z-index: 9999; 
-            padding: 20px; 
-        }
-
-        #custom-modal { z-index: 10001 !important; }
-
-        .modal-content { 
-            background: #0f172a; 
-            border: 1px solid var(--glass-border); 
-            padding: 45px 30px 35px; /* Margen superior elegante */
-            border-radius: 35px; 
-            width: 100%; 
-            max-width: 400px; 
-            text-align: center; 
-            box-sizing: border-box; 
-            max-height: 90vh; 
-            overflow-y: auto; 
-            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
-            /* Ocultar barra de desplazamiento visualmente */
-            scrollbar-width: none; 
-            -ms-overflow-style: none; 
-        }
-        .modal-content::-webkit-scrollbar { display: none; }
-
-        .modal-field { 
-            width: 100%; 
-            padding: 16px; 
-            background: rgba(15, 23, 42, 0.9) !important; 
-            border: 1px solid var(--glass-border); 
-            border-radius: 18px; 
-            color: white !important; 
-            font-size: 16px; 
-            margin-bottom: 12px; 
-            outline: none; 
-            box-sizing: border-box; 
-            transition: 0.3s; 
-            font-family: 'Inter', sans-serif !important; 
-            font-weight: 800; 
-        }
-
-        .sensei-select {
-            width: 100%;
-            padding: 12px 16px;
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid var(--glass-border);
-            border-radius: 15px;
-            color: var(--text-main);
-            font-size: 13px;
-            font-family: 'Inter', sans-serif !important;
-            font-weight: 800;
-            outline: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 15px center;
-            background-size: 15px;
-            transition: 0.3s;
-        }
-
-        .qr-tatami-btn {
-            width: 100%;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.05); /* Translucidez oscura */
-            color: var(--text-main);
-            border: 1px solid var(--glass-border);
-            border-radius: 18px;
-            font-size: 12px;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .qr-tatami-btn i {
-            color: var(--accent); /* El icono QR en rojo para que resalte */
-            font-size: 18px;
-        }
-        .qr-tatami-btn:active {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: var(--accent);
-            transform: scale(0.98);
-        }
-
-        /* Color de iconos en campos fecha/hora */
-        input[type="date"]::-webkit-calendar-picker-indicator,
-        input[type="time"]::-webkit-calendar-picker-indicator {
-            filter: invert(0.8) sepia(1) saturate(5) hue-rotate(175deg);
-            cursor: pointer;
-        }
-
-        .modal-label { 
-            display: block; 
-            text-align: left; 
-            font-size: 12px; 
-            color: var(--text-muted); 
-            font-weight: 800; 
-            margin-bottom: 8px; 
-            margin-left: 10px; 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-        }
-        
-        .month-picker-grid { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 10px; 
-            margin: 15px 0 25px; 
-        }
-
-        .month-btn { 
-            background: rgba(255,255,255,0.05); 
-            border: 1px solid var(--glass-border); 
-            padding: 14px 5px; 
-            border-radius: 12px; 
-            color: var(--text-muted); 
-            font-size: 13px; 
-            cursor: pointer; 
-            transition: 0.2s; 
-        }
-
-        .month-btn.active { 
-            background: var(--accent); 
-            color: white; 
-            border-color: var(--accent); 
-            box-shadow: var(--neon); 
-        }
-
-        #app-content {
-            opacity: 0;
-            transition: opacity 0.6s ease-in-out;
-        }
-        .app-loaded #app-content {
-            opacity: 1;
-        }
-
-        .qr-display-container {
-            background: white;
-            padding: 20px;
-            border-radius: 25px;
-            display: inline-block;
-            margin: 10px auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        #qr-gen img {
-            margin: 0 auto;
-        }
-
-        #qr-reader {
-            width: 100% !important;
-            border: none !important;
-            border-radius: 20px;
-            overflow: hidden;
-            background: #000;
-            aspect-ratio: 1 / 1; /* Cuadrado perfecto */
-        }
-        /* Eliminar etiquetas feas que mete la librería por defecto */
-        #qr-reader__dashboard, #qr-reader__status_span {
-            display: none !important;
-        }
-        #qr-reader video {
-            object-fit: cover !important;
-            border-radius: 20px;
-        }
-
+        .modal-overlay { position: fixed; inset: 0; background: radial-gradient(circle at top right, #1e1b4b, #05080f); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; }
+        .modal-content { background: #0f172a; border: 1px solid var(--glass-border); padding: 45px 30px 35px; border-radius: 35px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.6); }
+        .modal-label { display: block; text-align: left; font-size: 11px; color: var(--text-muted); margin: 10px 0 5px 5px; }
+        .month-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 20px; }
     </style>
 </head>
 <body>
-    <!-- MURO DE INSTALACIÓN -->
-        <div id="install-wall">
-            <img src="img/logo-arashi.png" class="logo-img">
-            <h1>¡OSS!</h1>
-            <p style="color: var(--text-muted); margin-bottom: 25px; max-width: 280px;">Instala la App oficial para acceder al Dojo.</p>
-            
-            <!-- BLOQUE ANDROID -->
-            <div id="android-btn-area" style="display:none;">
-                <button class="action-btn primary" onclick="handleAndroidInstall()">INSTALAR AHORA</button>
-            </div>
-
-            <!-- BLOQUE APPLE (Foto 2) -->
-            <div id="ios-instructions" style="display:none; width: 100%; max-width: 320px; padding: 0 20px; box-sizing: border-box;">
-                <div style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 25px; padding: 25px; text-align: left;">
-                    <div style="display:flex; align-items:center; margin-bottom:20px; gap:15px;">
-                        <div style="background:var(--accent); width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: var(--neon);">
-                            <img src="img/apple-share.png" style="width: 22px; height: 22px; filter: brightness(0) invert(1); object-fit: contain;">
-                        </div>
-                        <p style="margin:0; font-size:14px; font-weight: 600;">1. Pulsa <span style="color:var(--accent)">'Compartir'</span> en la barra de Safari.</p>
-                    </div>
-                    <div style="display:flex; align-items:center; margin-bottom:20px; gap:15px;">
-                        <div style="background:var(--accent); width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: var(--neon);">
-                            <i class="fa-solid fa-hand-pointer" style="color:white; font-size: 18px;"></i>
-                        </div>
-                        <p style="margin:0; font-size:14px; font-weight: 600;">2. Desliza hacia abajo en el menú.</p>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:15px;">
-                        <div style="background:var(--accent); width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: var(--neon);">
-                            <i class="fa-solid fa-plus-square" style="color:white; font-size: 18px;"></i>
-                        </div>
-                        <p style="margin:0; font-size:14px; font-weight: 600;">3. Selecciona <span style="color:var(--accent)">'Añadir a la pantalla de inicio'</span>.</p>
-                    </div>
-                </div>
-                <p style="color:var(--accent); font-size:12px; margin-top:20px; font-weight:800; text-align:center;">
-                    <i class="fa-solid fa-circle-info"></i> Desliza hacia arriba para ver el menú
-                </p>
-            </div>
+    <div id="install-wall">
+        <img src="img/logo-arashi.png" class="logo-img">
+        <h1>¡OSS!</h1>
+        <p style="color: var(--text-muted); margin-bottom: 25px; text-align:center;">Instala la App oficial para acceder al Dojo.</p>
+        <div id="android-btn-area" style="display:none;"><button class="action-btn primary" onclick="handleAndroidInstall()">INSTALAR AHORA</button></div>
+        <div id="ios-instructions" style="display:none; color:white; font-size:14px; padding:20px; background:rgba(255,255,255,0.05); border-radius:20px;">
+            <p>1. Pulsa el botón 'Compartir' <i class="fa-solid fa-share-from-square"></i></p>
+            <p>2. Selecciona 'Añadir a la pantalla de inicio' <i class="fa-solid fa-plus-square"></i></p>
         </div>
+    </div>
 
     <div id="app-content">
-        <!-- MODAL SISTEMA -->
         <div id="custom-modal" class="modal-overlay hidden">
             <div class="modal-content">
                 <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
                 <h3 id="modal-title">...</h3>
-                <div id="modal-body-content" style="margin-bottom:20px; font-size:14px; color: #ddd; line-height:1.5;"></div>
-                <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">CERRAR</button>
+                <div id="modal-body-content" style="margin-bottom:20px; font-size:14px; color: #ddd; line-height:1.6;"></div>
+                <button class="action-btn primary" onclick="closeModal()">CERRAR</button>
             </div>
         </div>
 
-        <!-- ACTIVAR CUENTA -->
         <div id="activate-modal" class="modal-overlay hidden">
             <div class="modal-content">
-                <h3 style="margin-top:0">Activar Cuenta</h3>
-                <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Introduce tu DNI y crea una contraseña.</p>
+                <h3>Activar Cuenta</h3>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Crea tu contraseña de acceso.</p>
                 <form id="activate-form">
-                    <input type="text" id="act-dni" class="modal-field" placeholder="DNI (12345678X)" required maxlength="9" oninput="this.value = this.value.toUpperCase()">
+                    <input type="text" id="act-dni" class="modal-field" placeholder="DNI (12345678X)" required maxlength="9">
                     <input type="password" id="act-pass" class="modal-field" placeholder="Nueva Contraseña" required>
                     <input type="password" id="act-pass2" class="modal-field" placeholder="Repetir Contraseña" required>
-                    <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px;">
-                        <button type="submit" class="action-btn primary" id="btn-activate-submit">ACTIVAR</button>
-                        <button type="button" class="action-btn" style="background:#334155; color:white;" onclick="document.getElementById('activate-modal').classList.add('hidden')">CANCELAR</button>
-                    </div>
+                    <button type="submit" class="action-btn primary">ACTIVAR CUENTA</button>
+                    <button type="button" class="action-btn" onclick="document.getElementById('activate-modal').classList.add('hidden')" style="margin-top:10px; background:transparent; color:white;">CANCELAR</button>
                 </form>
             </div>
         </div>
 
-        <!-- LOGIN VIEW -->
         <div id="login-view" class="auth-container">
             <img src="img/logo-arashi.png" class="logo-img">
             <div class="auth-card">
                 <h2>HOLA, ARASHI!</h2>
                 <form id="login-form">
-                    <div class="input-group">
-                        <i class="fa-solid fa-id-card"></i>
-                        <input type="text" id="dni-login" placeholder="DNI" required maxlength="9" oninput="this.value = this.value.toUpperCase()">
-                    </div>
-                    <div class="input-group">
-                        <i class="fa-solid fa-lock"></i>
-                        <input type="password" id="password" placeholder="Contraseña" required>
-                    </div>
+                    <div class="input-group"><i class="fa-solid fa-id-card"></i><input type="text" id="dni-login" placeholder="DNI" required maxlength="9" oninput="this.value = this.value.toUpperCase()"></div>
+                    <div class="input-group"><i class="fa-solid fa-lock"></i><input type="password" id="password" placeholder="Contraseña" required></div>
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
-                <div class="auth-footer">¿Usuario Nuevo? <a onclick="document.getElementById('activate-modal').classList.remove('hidden')">Activa tu cuenta</a></div>
+                <div style="margin-top:20px; font-size:13px;">¿Usuario Nuevo? <a onclick="document.getElementById('activate-modal').classList.remove('hidden')" style="color:var(--accent); font-weight:800; cursor:pointer; text-decoration:underline;">Activa tu cuenta</a></div>
             </div>
         </div>
 
-        <!-- DASHBOARD VIEW -->
         <div id="dashboard-view" class="hidden">
             <header class="header-app">
-                <div>
-                    <p style="color:var(--text-muted); margin:0; font-size:12px; font-weight:700;">Hola!</p>
-                    <h1 style="margin:2px 0 0; font-size:26px;" id="user-display-name">...</h1>
-                </div>
+                <div><p style="color:var(--text-muted); margin:0; font-size:12px; font-weight:700;">Hola!</p><h1 style="margin:2px 0 0; font-size:26px;" id="user-display-name">...</h1></div>
                 <div class="profile-circle" id="user-initials">??</div>
             </header>
             
@@ -794,10 +157,10 @@
                 </svg>
                 <div class="progress-text">
                     <span id="stat-hours" class="val">0.0</span>
-                    <span id="stat-label" class="lbl">HORAS / --</span>
+                    <span id="stat-label" class="lbl">HORAS / 60</span>
                 </div>
             </div>
-            <div id="next-grade-display" class="next-grade-label hidden">Cargando meta...</div>
+            <div id="next-grade-display" class="next-grade-label hidden">CAMINO AL...</div>
 
             <div class="class-hero" id="class-hero-card">
                 <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Siguiente Keiko</p>
@@ -807,110 +170,97 @@
             </div>
         </div>
 
-        <!-- CALENDARIO VIEW -->
         <div id="clases-view" class="hidden">
             <header class="header-app"><h1 style="margin:0; font-size:24px;">CALENDARIO</h1></header>
-            <div id="calendar-content"></div>
+            <div id="calendar-content" style="padding-bottom:100px;"></div>
         </div>
 
-        <!-- SENSEI PANEL VIEW -->
-        <!-- SENSEI PANEL VIEW -->
-        <!-- SENSEI PANEL VIEW -->
-<div id="sensei-view" class="hidden">
-    <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
-    
-    <!-- Botón Seminarios Fijo para Senseis -->
-    <div style="padding: 0 25px 15px;">
-        <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')">
-            <i class="fa-solid fa-calendar-day"></i> SEMINARIOS
-        </button>
-    </div>
+        <div id="sensei-view" class="hidden">
+            <header class="header-app"><h1 style="font-size:24px; margin:0;">SENSEI PANEL</h1></header>
+            
+            <!-- Botón Seminarios -->
+            <div style="padding: 0 25px 15px;">
+                <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')">
+                    <i class="fa-solid fa-calendar-day"></i> SEMINARIOS
+                </button>
+            </div>
 
-    <div style="padding: 0 25px; margin-bottom: 25px; margin-top: 10px;">
-        <p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">FILTRAR TATAMI POR DOJO:</p>
-        <select id="sensei-dojo-filter" class="sensei-select" onchange="loadSenseiPanel()">
-            <option value="all">-- TODOS LOS DOJOS --</option>
-        </select>
-    </div>
+            <!-- Filtro Dojo -->
+            <div style="padding: 0 25px 15px;">
+                <p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">FILTRAR TATAMI POR DOJO:</p>
+                <select id="sensei-dojo-filter" class="modal-field" onchange="loadSenseiPanel()" style="padding-left:15px !important;">
+                    <option value="all">-- TODOS LOS DOJOS --</option>
+                </select>
+            </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 20px 12px;">
-        <button class="action-btn" style="padding:18px; font-size:12px; background:#1e293b; color:white;" onclick="uiGenerateMonth()">GENERAR MES</button>
-        <button class="action-btn" style="padding:18px; font-size:12px; background:#1e293b; color:white;" onclick="loadManageClasses()">EDITAR CLASES</button>
-    </div>
-    <div style="margin:0 20px 25px;">
-        <button class="action-btn" style="padding:18px; font-size:12px; background:var(--accent); color:white; width:100%;" onclick="uiCreateSingleClass()">+ NUEVA CLASE SUELTA</button>
-    </div>
+            <!-- Herramientas Técnicas -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 20px 12px;">
+                <button class="action-btn" style="padding:15px; font-size:11px; background:#1e293b; color:white;" onclick="uiGenerateMonth()">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> GENERAR MES
+                </button>
+                <button class="action-btn" style="padding:15px; font-size:11px; background:#1e293b; color:white;" onclick="loadManageClasses()">
+                    <i class="fa-solid fa-calendar-check"></i> EDITAR CLASES
+                </button>
+            </div>
+            
+            <div style="margin:0 20px 25px;">
+                <button class="action-btn" style="padding:15px; font-size:12px; background:var(--accent); color:white; width:100%;" onclick="uiCreateSingleClass()">
+                    <i class="fa-solid fa-plus-circle"></i> + NUEVA CLASE SUELTA
+                </button>
+            </div>
 
-    <div id="student-list" style="padding-bottom: 40px;"></div>
-</div>
+            <!-- Lista de alumnos confirmados por validar -->
+            <div id="student-list" style="padding-bottom: 120px;"></div>
+        </div>
 
-        <!-- NAV BAR -->
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
             <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
             <div class="qr-main-btn" onclick="startQRScanner()"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
-            <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
+            <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this);"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
             <a href="#" class="nav-item" onclick="logout()"><i class="fa-solid fa-power-off"></i><span>Salir</span></a>
         </nav>
     </div>
 
     <script>
         const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
-
-        
-        /* --- DETECTOR DE SISTEMA PARA INSTALACIÓN --- */
-        
-/* --- DETECTOR DE ENTORNO V3 --- */
-        (function() {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || false;
-            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-            const isAndroid = /Android/.test(navigator.userAgent);
-            const isMobile = isIOS || isAndroid;
-
-            const html = document.documentElement;
-
-            if (!isMobile || isStandalone) {
-                // PC o APP INSTALADA
-                html.classList.add('ready-to-show');
-                
-                // Pequeño hack: Si después de 1 segundo sigue sin verse el login, lo forzamos
-                setTimeout(() => {
-                    if(!localStorage.getItem('aikido_jwt')) {
-                        const loginV = document.getElementById('login-view');
-                        if(loginV) loginV.classList.remove('hidden');
-                    }
-                }, 500);
-
-            } else {
-                // NAVEGADOR MÓVIL (Safari/Chrome) -> MURO
-                html.classList.add('show-install-wall');
-                setTimeout(() => {
-                    const ios = document.getElementById('ios-instructions');
-                    const and = document.getElementById('android-btn-area');
-                    if (isIOS && ios) ios.style.display = 'block';
-                    if (!isIOS && and) and.style.display = 'block';
-                }, 200);
-            }
-        })();
-
-
-        let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null, requisitosGradoGlobal = [];
+        let alumnoGlobal = null;
+        let claseHoyId = null;
+        let dojoIdGlobal = null;
+        let requisitosGradoGlobal = [];
         let selectedMonthGen = new Date().getMonth();
         let html5QrCode = null;
 
-        /* --- UTILS --- */
+        /* --- UTILIDADES --- */
+        const getID = (o) => o.documentId || o.id;
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
-        const getID = (o) => o.documentId || o.id;
+        
+        function normalize(g) { 
+            return (!g) ? "" : g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, ''); 
+        }
 
-        /* --- SISTEMA DE CACHÉ Y DEBUG --- */
+        function formatTimeSafe(iso) {
+            if(!iso) return { time: "--:--", date: "--/--/----", month: "" };
+            const [fecha, resto] = iso.split('T');
+            const [y, m, d] = fecha.split('-');
+            const [hh, mm] = resto.split(':');
+            const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+            return { 
+                time: `${hh}:${mm}H`, 
+                date: `${d}/${m}/${y}`, 
+                month: meses[parseInt(m) - 1], 
+                hour: parseInt(hh) 
+            };
+        }
+
+        /* --- CACHÉ INTELIGENTE --- */
         async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
-            console.log(`🔍 [API] Consultando: ${endpoint}`);
             if (cacheKey) {
                 const cached = localStorage.getItem(`cache_${cacheKey}`);
                 if (cached) {
                     const { time, data } = JSON.parse(cached);
-                    if ((Date.now() - time) / (1000 * 60 * 60) < durationHours) return data; 
+                    if ((Date.now() - time) / 3600000 < durationHours) return data; 
                 }
             }
             try {
@@ -922,386 +272,296 @@
                     localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({ time: Date.now(), data: json }));
                 }
                 return json;
-            } catch (e) { console.error("❌ Fallo API:", e); return null; }
+            } catch (e) { return null; }
         }
 
-        /* --- MODALES --- */
-        function showModal(t, htmlContent, showCloseBtn = true) { 
-            document.getElementById('modal-title').innerText = t;
-            document.getElementById('modal-body-content').innerHTML = htmlContent || "";
-            document.getElementById('modal-ok-btn').style.display = showCloseBtn ? 'block' : 'none';
-            document.getElementById('custom-modal').classList.remove('hidden'); 
-        }
-        function closeModal() { 
-            document.getElementById('custom-modal').classList.add('hidden'); 
-            if(html5QrCode) { html5QrCode.stop().catch(()=>{}); html5QrCode = null; } 
-        }
-
-        /* --- FECHAS Y GRADOS --- */
-        function formatTimeSafe(iso) {
-            if(!iso) return { time: "--:--", date: "--/--/----", month: "" };
-            // Dividimos la cadena ISO para evitar que el navegador aplique el Timezone local
-            const [fecha, resto] = iso.split('T');
-            const [y, m, d] = fecha.split('-');
-            const [hh, mm] = resto.split(':');
-            
-            const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-            const nombreMes = meses[parseInt(m) - 1];
-
-            return { 
-                time: `${hh}:${mm}H`, 
-                date: `${d}/${m}/${y}`, 
-                month: nombreMes, 
-                hour: parseInt(hh) 
-            };
-        }
-
-        const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
-        const GRADOS_FALLBACK = { "5º KYU": 30, "4º KYU": 40, "3º KYU": 50, "2º KYU": 50, "1º KYU": 60, "1º DAN": 70 };
-        function normalize(g) { return (!g) ? "" : g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, ''); }
-
-        /* --- CORE INIT --- */
-async function initApp() {
-    console.log("🚀 [INIT] Arrancando aplicación...");
-    const token = localStorage.getItem('aikido_jwt');
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    
-    if (!token || !user) {
-        document.querySelectorAll('#dashboard-view, #clases-view, #sensei-view').forEach(v => v.classList.add('hidden'));
-        document.getElementById('login-view').classList.remove('hidden');
-        document.getElementById('main-nav').classList.add('hidden');
-        document.documentElement.classList.add('app-loaded');
-        return;
-    }
-
-    document.getElementById('login-view').classList.add('hidden');
-    document.getElementById('main-nav').classList.remove('hidden');
-    showView('dashboard');
-
-    const [reqRes] = await Promise.all([
-        fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 720),
-        refreshStudentData()
-    ]);
-
-    if (reqRes && reqRes.data) {
-        requisitosGradoGlobal = reqRes.data.map(r => {
-            const item = r.attributes || r;
-            return { ...item, NORM: normalize(item.grado), HORAS: parseFloat(item.horas || 0) };
-        });
-    }
-
-    updateDashboardUI();
-    if (alumnoGlobal) await checkTodayClass();
-
-    document.documentElement.classList.add('app-loaded');
-}
-
-        /* --- REFRESH DATA (Sincronización v5) --- */
-
-// --- 1. DETECCIÓN DE IDENTIDAD Y ROLES ---
-async function refreshStudentData() {
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    const token = localStorage.getItem('aikido_jwt');
-    if (!token || !user) return;
-    
-    try {
-        // Obtenemos ficha de alumno (si existe)
-        let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-        let json = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json());
-        
-        if (!json?.data?.[0]) {
-            endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-            json = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json());
-        }
-
-        alumnoGlobal = json?.data?.[0] || null;
-        if (alumnoGlobal) localStorage.setItem('arashi_alumno_docid', getID(alumnoGlobal));
-
-        const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-        
-        // Lógica de detección:
-        // Francesc tiene is_sensei: true en el objeto User.
-        // Raúl tiene es_instructor: true en su ficha de Alumno.
-        const esSensei = (user.is_sensei === true || user.is_sensei === "true") || 
-                         (p && (p.es_instructor === true || p.es_instructor === "true"));
-        
-        const navSensei = document.getElementById('nav-sensei');
-        if (navSensei) {
-            navSensei.style.display = 'flex';
-            if (esSensei) {
-                navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-                navSensei.onclick = () => { showView('sensei', navSensei); loadSenseiPanel(); };
-            } else {
-                navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-                navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
-            }
-        }
-
-        updateDashboardUI();
-    } catch (e) { console.error("Error Identidad:", e); }
-}
-
-// --- 2. CARGA DEL PANEL SENSEI (CON DEEP POPULATE V5) ---
-async function loadSenseiPanel() {
-    const listDiv = document.getElementById('student-list');
-    if (!listDiv) return;
-
-    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'><i class='fa-solid fa-spinner fa-spin'></i> Sincronizando Tatami...</p>";
-
-    try {
-        const token = localStorage.getItem('aikido_jwt');
-        // populate[alumno][populate]=* es la clave en Strapi v5 para ver nombres
-        const endpoint = `/api/asistencias?populate[alumno][populate]=*&populate[clase][populate][dojo]=*&sort=createdAt:desc&pagination[limit]=100`;
-        
-        const res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
-        const json = await res.json();
-
-        const groups = {};
-        let encontrados = 0;
-
-        (json.data || []).forEach(item => {
-            const data = item.attributes || item;
-            const estado = (data.Estado || data.estado || "").toString().toLowerCase().trim();
-            
-            if (estado !== 'confirmado') return;
-
-            const alu = parseRelation(data.alumno);
-            const cla = parseRelation(data.clase);
-            if (!alu || !cla) return;
-
-            const cid = getID(cla);
-            if (!groups[cid]) groups[cid] = { info: cla, students: [] };
-
-            groups[cid].students.push({
-                asistId: getID(item),
-                alumnoId: getID(alu),
-                nombre: (alu.nombre || "Alumno").toUpperCase(),
-                apellidos: (alu.apellidos || "").toUpperCase(),
-                grado: alu.grado || "S/G"
-            });
-            encontrados++;
-        });
-
-        if (encontrados === 0) {
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos esperando validación.</p>";
-            return;
-        }
-
-        listDiv.innerHTML = "";
-        Object.keys(groups).sort((a,b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora)).forEach(cid => {
-            const g = groups[cid], f = formatTimeSafe(g.info.Fecha_Hora);
-            listDiv.innerHTML += `
-                <div class="class-group-card">
-                    <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                        <div style="text-align:left;">
-                            <h3>${f.date} - ${f.time}</h3>
-                            <p style="font-size:10px; color:var(--accent); font-weight:800;">${g.students.length} POR VALIDAR</p>
-                        </div>
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </div>
-                    <div class="class-group-body" style="padding: 15px 20px;">
-                        <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> QR TATAMI</button>
-                        <div style="margin-top:10px;">
-                            ${g.students.map(s => `
-                                <div class="student-item">
-                                    <div class="student-info"><h4>${s.nombre} ${s.apellidos}</h4><p>${s.grado}</p></div>
-                                    <div class="sensei-actions">
-                                        <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
-                                        <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
-                                    </div>
-                                </div>`).join('')}
-                        </div>
-                    </div>
-                </div>`;
-        });
-    } catch (e) { console.error("Error Panel:", e); listDiv.innerHTML = "<p style='text-align:center; color:red;'>Error de red.</p>"; }
-}
-
-        /* --- SENSEI PANEL (Agrupación y 7 días) --- */
-// --- FUNCIÓN SENSEI PANEL CORREGIDA ---
-async function loadSenseiPanel() {
-    const listDiv = document.getElementById('student-list');
-    if (!listDiv) return;
-
-    const dojoFilter = document.getElementById('sensei-dojo-filter')?.value || 'all';
-    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'><i class='fa-solid fa-spinner fa-spin'></i> Sincronizando Tatami...</p>";
-
-    try {
-        const token = localStorage.getItem('aikido_jwt');
-        
-        // En v5 pedimos todo y filtramos localmente para evitar fallos por Capitalización (Confirmado vs confirmado)
-        // Pedimos populate completo de alumno y clase
-        const endpoint = `/api/asistencias?populate[alumno]=*&populate[clase][populate]=*&sort=createdAt:desc&pagination[limit]=100`;
-        
-        const res = await fetch(`${API_URL}${endpoint}`, { 
-            headers: { 'Authorization': `Bearer ${token}` } 
-        });
-        const json = await res.json();
-
-        console.log("DEBUG SENSEI - Datos recibidos:", json); // Esto es vital para depurar
-
-        if (!json?.data || json.data.length === 0) {
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay registros de asistencia en el sistema.</p>";
-            return;
-        }
-
-        const groups = {};
-        let encontrados = 0;
-
-        json.data.forEach(item => {
-            // Extraer datos planos (Strapi v5)
-            const a = item.attributes || item;
-            
-            // FILTRO CLAVE: Comprobar estado "confirmado" sin importar mayúsculas
-            const estadoActual = (a.Estado || a.estado || "").toString().toLowerCase().trim();
-            if (estadoActual !== 'confirmado') return;
-
-            const alu = parseRelation(a.alumno);
-            const cla = parseRelation(a.clase);
-
-            if (!alu || !cla) return;
-
-            // Filtrado por Dojo
-            const dojoData = parseRelation(cla.dojo);
-            const dId = dojoData ? getID(dojoData) : null;
-            if (dojoFilter !== 'all' && dId !== dojoFilter) return;
-
-            const cid = getID(cla);
-            if (!groups[cid]) groups[cid] = { info: cla, students: [] };
-
-            groups[cid].students.push({
-                asistId: getID(item),
-                alumnoId: getID(alu),
-                nombre: (alu.nombre || "Alumno").toUpperCase(),
-                apellidos: (alu.apellidos || "").toUpperCase(),
-                grado: alu.grado || "S/G"
-            });
-            encontrados++;
-        });
-
-        if (encontrados === 0) {
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos con estado 'Confirmado' ahora mismo.</p>";
-            return;
-        }
-
-        // Ordenar y Renderizar
-        const keys = Object.keys(groups).sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
-        
-        listDiv.innerHTML = "";
-        keys.forEach(cid => {
-            const g = groups[cid];
-            const f = formatTimeSafe(g.info.Fecha_Hora);
-            
-            let sRows = g.students.map(s => `
-                <div class="student-item" id="it-${s.asistId}">
-                    <div class="student-info">
-                        <h4>${s.nombre} ${s.apellidos}</h4>
-                        <p>${s.grado}</p>
-                    </div>
-                    <div class="sensei-actions">
-                        <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
-                        <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
-                    </div>
-                </div>`).join('');
-
-            listDiv.innerHTML += `
-            <div class="class-group-card">
-                <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                    <div style="text-align:left;">
-                        <h3>${f.date} - ${f.time}</h3>
-                        <p style="font-size:10px; color:var(--accent); font-weight:800;">${g.students.length} POR VALIDAR</p>
-                    </div>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </div>
-                <div class="class-group-body" style="padding: 15px 20px;">
-                    <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> GENERAR QR ASISTENCIA</button>
-                    <div style="border-top:1px solid var(--glass-border); padding-top:10px; margin-top:10px;">${sRows}</div>
-                </div>
-            </div>`;
-        });
-    } catch (e) { 
-        console.error("Error Grave Sensei Panel:", e);
-        listDiv.innerHTML = `<p style='color:red;text-align:center;padding:20px;'>Error técnico: ${e.message}</p>`;
-    }
-}
-
-// --- REFRESH DATA (DETECTAR ROLES) ---
-async function refreshStudentData() {
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    const token = localStorage.getItem('aikido_jwt');
-    if (!token || !user) return;
-    
-    try {
-        // 1. Intentamos buscar su ficha de alumno
-        let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-        let res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
-        let json = await res.json();
-        
-        if (!json?.data?.[0]) {
-            endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-            res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
-            json = await res.json();
-        }
-
-        alumnoGlobal = json?.data?.[0] || null;
-        if (alumnoGlobal) localStorage.setItem('arashi_alumno_docid', getID(alumnoGlobal));
-
-        // 2. Lógica de Identidad Sensei (Detección Doble)
-        const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-        
-        // Comprobamos el 'is_sensei' del USER (visto en tu captura) 
-        // y el 'es_instructor' del ALUMNO (Raúl)
-        const esSenseiReal = (user.is_sensei === true || user.is_sensei === "true") || 
-                             (p && (p.es_instructor === true || p.es_instructor === "true"));
-        
-        const navSensei = document.getElementById('nav-sensei');
-        if (navSensei) {
-            navSensei.style.display = 'flex';
-            if (esSenseiReal) {
-                navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-                navSensei.onclick = () => showView('sensei', navSensei);
-            } else {
-                navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-                navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
-            }
-        }
-
-        updateDashboardUI();
-    } catch (e) { console.error("Error Identidad:", e); }
-}
-
-        /* --- VALIDACIÓN Y ASISTENCIA --- */
-        async function validateAttendance(asistId, asiste, aluId, dur) {
+        /* --- INICIO Y AUTENTICACIÓN --- */
+        async function initApp() {
             const token = localStorage.getItem('aikido_jwt');
-            console.log(`📡 [SENSEI] Validando Asistencia: ${asistId} | Alumno: ${aluId}`);
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+            
+            if (!token || !user) {
+                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('main-nav').classList.add('hidden');
+                document.documentElement.classList.add('app-loaded');
+                return;
+            }
+
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('main-nav').classList.remove('hidden');
+            showView('dashboard');
+
+            // Carga inicial de datos maestros
+            await Promise.all([
+                fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 720).then(res => {
+                    if (res?.data) {
+                        requisitosGradoGlobal = res.data.map(r => ({
+                            ...parseData(r),
+                            NORM: normalize(parseData(r).grado),
+                            HORAS: parseFloat(parseData(r).horas || 0)
+                        }));
+                    }
+                }),
+                refreshStudentData()
+            ]);
+
+            if (alumnoGlobal) await checkTodayClass();
+            document.documentElement.classList.add('app-loaded');
+        }
+
+        async function refreshStudentData() {
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+            const token = localStorage.getItem('aikido_jwt');
+            if (!token || !user) return;
+            
+            try {
+                // Buscamos ficha de alumno
+                let res = await fetch(`${API_URL}/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`, { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                }).then(r => r.json());
+                
+                if (!res?.data?.[0]) {
+                    res = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`, { 
+                        headers: { 'Authorization': `Bearer ${token}` } 
+                    }).then(r => r.json());
+                }
+
+                alumnoGlobal = res?.data?.[0] || null;
+                const p = alumnoGlobal ? parseData(alumnoGlobal) : null;
+                
+                // Francesc (is_sensei) o Raúl (es_instructor)
+                const esSensei = (user.is_sensei === true) || (p && (p.es_instructor === true || p.es_instructor === "true"));
+                
+                const navSensei = document.getElementById('nav-sensei');
+                if (navSensei) {
+                    navSensei.style.display = 'flex';
+                    if (esSensei) {
+                        navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+                        navSensei.onclick = () => showView('sensei', navSensei);
+                    } else {
+                        navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+                        navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
+                    }
+                }
+                updateDashboardUI();
+                await loadDojosFilter();
+            } catch (e) { console.error(e); }
+        }
+
+        /* --- DASHBOARD LOGIC --- */
+        function updateDashboardUI() {
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+            if (!user) return;
+
+            const p = alumnoGlobal ? parseData(alumnoGlobal) : null;
+            const initials = p ? ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")) : ((user.nombre?.[0] || "S") + (user.apellidos?.[0] || "C"));
+            
+            document.getElementById('user-display-name').innerText = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
+            document.getElementById('user-initials').innerText = initials.toUpperCase();
+
+            const circleCont = document.getElementById('student-progress-circle');
+            const nextGrade = document.getElementById('next-grade-display');
+            const heroCard = document.getElementById('class-hero-card');
+
+            if (alumnoGlobal) {
+                circleCont.classList.remove('hidden');
+                nextGrade.classList.remove('hidden');
+                heroCard.classList.remove('hidden');
+
+                const horas = parseFloat(p.horas_acumuladas || 0);
+                document.getElementById('stat-hours').innerText = horas.toFixed(1);
+                
+                const meta = p.grado_objetivo || "1º DAN";
+                const req = requisitosGradoGlobal.find(r => r.NORM === normalize(meta));
+                const target = req?.HORAS || 60;
+                
+                document.getElementById('progress-bar').style.strokeDashoffset = 339.29 - (Math.min(horas / target, 1) * 339.29);
+                document.getElementById('stat-label').innerText = `HORAS / ${target}`;
+                document.getElementById('next-grade-display').innerText = `CAMINO AL ${meta.toUpperCase()}`;
+            } else {
+                circleCont.classList.add('hidden');
+                nextGrade.classList.add('hidden');
+                heroCard.classList.add('hidden');
+            }
+        }
+
+        async function checkTodayClass() {
+            if (!alumnoGlobal) return;
+            const token = localStorage.getItem('aikido_jwt');
+            try {
+                const [clases, asis] = await Promise.all([
+                    fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=15', 'calendario_clases', 48),
+                    fetchSmart(`/api/asistencias?filters[alumno][documentId][$eq]=${getID(alumnoGlobal)}&populate=clase&pagination[limit]=30`, 'mis_asistencias', 24)
+                ]);
+
+                const ahora = new Date();
+                const localAsis = (asis?.data || []).map(a => ({ 
+                    id: getID(parseRelation(parseData(a).clase)), 
+                    estado: parseData(a).Estado 
+                }));
+
+                let elegida = null;
+                for (const c of (clases?.data || [])) {
+                    const d = parseData(c);
+                    const inicio = new Date(d.Fecha_Hora);
+                    const fin = new Date(inicio.getTime() + (d.Duracion * 3600000));
+                    if (ahora > fin) continue;
+
+                    const miAsis = localAsis.find(a => a.id === getID(c));
+                    if (miAsis?.estado === 'Asistio') continue;
+
+                    elegida = { ...d, id: getID(c), miEstado: miAsis?.estado };
+                    break;
+                }
+
+                const btn = document.getElementById('confirm-btn');
+                if (elegida) {
+                    claseHoyId = elegida.id;
+                    const f = formatTimeSafe(elegida.Fecha_Hora);
+                    document.getElementById('next-class-time').innerText = f.time;
+                    document.getElementById('next-class-date').innerText = f.date;
+                    btn.classList.remove('hidden');
+                    
+                    if (elegida.miEstado === 'Confirmado') {
+                        btn.innerText = "CONFIRMADO";
+                        btn.disabled = true;
+                        btn.style.background = "#1e293b";
+                    } else {
+                        btn.innerText = "ASISTIR AL KEIKO";
+                        btn.disabled = false;
+                        btn.style.background = "white";
+                    }
+                } else {
+                    document.getElementById('next-class-time').innerText = "--:--";
+                    document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
+                    btn.classList.add('hidden');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function confirmAttendance() {
+            if (!claseHoyId || !alumnoGlobal) return;
+            const token = localStorage.getItem('aikido_jwt');
+            const res = await fetch(`${API_URL}/api/asistencias`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) 
+            });
+            if (res.ok) {
+                localStorage.removeItem('cache_mis_asistencias'); 
+                await checkTodayClass();
+            }
+        }
+
+        /* --- SENSEI PANEL LOGIC --- */
+        async function loadSenseiPanel() {
+            const listDiv = document.getElementById('student-list');
+            if (!listDiv) return;
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'><i class='fa-solid fa-spinner fa-spin'></i> Sincronizando Tatami...</p>";
+            
+            const dojoFilter = document.getElementById('sensei-dojo-filter')?.value || 'all';
+            const token = localStorage.getItem('aikido_jwt');
 
             try {
-                // 1. Cambiamos el estado de la asistencia
-                const resAsist = await fetch(`${API_URL}/api/asistencias/${asistId}`, { 
+                // Populate profundo para ver nombres en v5
+                const endpoint = `/api/asistencias?populate[alumno][populate]=*&populate[clase][populate][dojo]=*&sort=createdAt:desc&pagination[limit]=100`;
+                const json = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json());
+                
+                const groups = {};
+                let encontrados = 0;
+
+                (json.data || []).forEach(item => {
+                    const data = parseData(item);
+                    const estado = (data.Estado || "").toLowerCase().trim();
+                    if (estado !== 'confirmado') return;
+
+                    const alu = parseRelation(data.alumno);
+                    const cla = parseRelation(data.clase);
+                    if (!alu || !cla) return;
+
+                    const dId = getID(parseRelation(cla.dojo));
+                    if (dojoFilter !== 'all' && dId !== dojoFilter) return;
+
+                    const cid = getID(cla);
+                    if (!groups[cid]) groups[cid] = { info: cla, students: [] };
+                    
+                    groups[cid].students.push({
+                        asistId: getID(item),
+                        alumnoId: getID(alu),
+                        nombre: alu.nombre,
+                        apellidos: alu.apellidos,
+                        grado: alu.grado
+                    });
+                    encontrados++;
+                });
+
+                if (encontrados === 0) {
+                    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos esperando validación.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = "";
+                Object.keys(groups).sort((a,b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora)).forEach(cid => {
+                    const g = groups[cid];
+                    const f = formatTimeSafe(g.info.Fecha_Hora);
+                    
+                    const studentRows = g.students.map(s => `
+                        <div class="student-item">
+                            <div class="student-info">
+                                <h4>${s.nombre} ${s.apellidos}</h4>
+                                <p>${s.grado}</p>
+                            </div>
+                            <div class="sensei-actions">
+                                <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                                <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    listDiv.innerHTML += `
+                        <div class="class-group-card">
+                            <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                                <div>
+                                    <h3>${f.date} - ${f.time}</h3>
+                                    <p style="color:var(--accent); font-size:10px;">${g.students.length} PENDIENTES</p>
+                                </div>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </div>
+                            <div class="class-group-body">
+                                <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
+                                    <i class="fa-solid fa-qrcode"></i> QR TATAMI
+                                </button>
+                                ${studentRows}
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (e) { 
+                console.error(e);
+                listDiv.innerHTML = "<p style='text-align:center; color:red; padding:20px;'>Error al conectar con Strapi.</p>"; 
+            }
+        }
+
+        async function validateAttendance(asistId, asiste, aluId, dur) {
+            const token = localStorage.getItem('aikido_jwt');
+            try {
+                // 1. Actualizar estado de asistencia
+                await fetch(`${API_URL}/api/asistencias/${asistId}`, { 
                     method: 'PUT', 
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
                     body: JSON.stringify({ data: { Estado: asiste ? 'Asistio' : 'No Asistio' } }) 
                 });
 
-                if (!resAsist.ok) throw new Error("Error al actualizar estado de asistencia");
-
-                // 2. Si el alumno ha venido, sumamos horas
+                // 2. Si asistió, sumar horas al alumno
                 if(asiste) {
-                    // Pedimos la ficha del alumno para ver sus horas actuales
-                    const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                    const alJson = await alRes.json();
+                    const alRes = await fetch(`${API_URL}/api/alumnos/${aluId}`, { 
+                        headers: { 'Authorization': `Bearer ${token}` } 
+                    }).then(r => r.json());
+                    const p = parseData(alRes.data);
+                    const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + parseFloat(dur);
                     
-                    // EXTRACCIÓN BLINDADA (Compatible con Strapi v4 y v5)
-                    const dataRoot = alJson.data;
-                    const attributes = dataRoot.attributes || dataRoot; // Si no hay attributes, los datos están en la raíz (v5)
-                    
-                    const horasPrevias = parseFloat(attributes.horas_acumuladas) || 0;
-                    const horasASumar = parseFloat(dur) || 0;
-                    const totalNuevo = horasPrevias + horasASumar;
-
-                    console.log(`📈 [SENSEI] Horas previas: ${horasPrevias} | Sumando: ${horasASumar} | Total: ${totalNuevo}`);
-
-                    // Actualizamos el perfil del alumno con el nuevo total
                     await fetch(`${API_URL}/api/alumnos/${aluId}`, { 
                         method: 'PUT', 
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
@@ -1309,495 +569,346 @@ async function refreshStudentData() {
                     });
                 }
 
-                // 3. Refrescar la interfaz
-                await loadSenseiPanel(); // Recarga la lista del sensei
-                localStorage.removeItem('cache_perfil_alumno'); // Limpia caché para que el alumno vea el cambio
-                refreshStudentData(); // Refresca tu propio círculo si tú eres el alumno
-
-                console.log("✅ [SENSEI] Proceso completado.");
-
-            } catch (e) {
-                console.error("❌ [SENSEI] Error crítico:", e);
-                showModal("Error", "Fallo al contabilizar horas. Revisa la consola.");
-            }
+                localStorage.removeItem('cache_perfil_alumno');
+                await loadSenseiPanel();
+                await refreshStudentData();
+            } catch (e) { showModal("Error", "No se pudo procesar la validación."); }
         }
 
-        /* --- GENERADOR DE QR PARA EL TATAMI --- */
-        function generateClassQR(classId) {
-            console.log("🎫 Generando QR para Clase ID:", classId);
-            
-            // 1. Abrimos el modal con el diseño corregido
-            showModal("CÓDIGO DE ASISTENCIA", `
-                <div style="margin-top:10px;">
-                    <div class="qr-display-container">
-                        <div id="qr-gen"></div>
-                    </div>
-                    <p style="font-size:12px; color:var(--text-muted); margin-top:15px; font-weight:400; text-transform:none; line-height:1.4;">
-                        Muestra este código a los alumnos.<br>Deben usar el escáner de su App para registrarse.
-                    </p>
-                </div>
-            `, true);
-
-            // 2. Esperamos un instante a que el modal se dibuje para pintar el QR
-            setTimeout(() => {
-                const container = document.getElementById('qr-gen');
-                if (container && typeof QRCode !== 'undefined') {
-                    container.innerHTML = ""; // Limpieza
-                    new QRCode(container, {
-                        text: classId,
-                        width: 200,
-                        height: 200,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
-                    });
-                    console.log("✅ QR Dibujado con éxito.");
-                } else {
-                    console.error("❌ Error: No se encontró qr-gen o la librería QRCode no está cargada.");
-                    if (typeof QRCode === 'undefined') {
-                        alert("Error crítico: Librería QRCode no cargada. Avisa al desarrollador.");
-                    }
-                }
-            }, 200);
-        }
-
-        async function checkTodayClass() {
-            if (!alumnoGlobal) return;
-            const aluDocId = alumnoGlobal.documentId || getID(alumnoGlobal);
-            const token = localStorage.getItem('aikido_jwt');
-
-            try {
-                const [jsonClases, jsonAsis] = await Promise.all([
-                    fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=15', 'calendario_clases', 48), // 2 DÍAS
-                    fetchSmart(`/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&populate=clase&pagination[limit]=30&sort=createdAt:desc`, 'mis_asistencias', 24) // 1 DÍA
-                ]);
-
-                const ahora = new Date();
-                const asistenciasLocales = (jsonAsis?.data || []).map(a => {
-                    const item = a.attributes || a;
-                    return { claseId: getID(item.clase?.data || item.clase), estado: item.Estado || item.estado };
-                });
-
-                let claseElegida = null;
-                let estadoAlumno = null;
-
-                for (const c of (jsonClases?.data || [])) {
-                    const dataC = parseData(c);
-                    const inicio = new Date(dataC.Fecha_Hora);
-                    const duracionHoras = parseFloat(dataC.Duracion || 1.5);
-                    const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
-
-                    if (ahora > fin) continue;
-                    const cid = getID(c);
-                    const miAsis = asistenciasLocales.find(a => a.claseId === cid);
-                    const estado = miAsis ? miAsis.estado : null;
-                    if (estado === 'Asistio') continue;
-                    claseElegida = c;
-                    estadoAlumno = estado;
-                    break; 
-                }
-
-                const btn = document.getElementById('confirm-btn');
-                if (claseElegida) {
-                    claseHoyId = getID(claseElegida);
-                    const f = formatTimeSafe(parseData(claseElegida).Fecha_Hora);
-                    document.getElementById('next-class-time').innerText = f.time;
-                    document.getElementById('next-class-date').innerText = f.date;
-                    btn.classList.remove('hidden');
-                    if (estadoAlumno === 'Confirmado') {
-                        btn.innerText = "CONFIRMADO";
-                        btn.disabled = true;
-                        btn.style.background = "#1e293b";
-                        btn.style.color = "var(--text-muted)";
-                    } else {
-                        btn.innerText = "ASISTIR AL KEIKO";
-                        btn.disabled = false;
-                        btn.style.background = "white";
-                        btn.style.color = "black";
-                    }
-                } else {
-                    document.getElementById('next-class-time').innerText = "--:--";
-                    document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
-                    btn.classList.add('hidden');
-                }
-            } catch (e) { console.error("❌ Fallo en checkTodayClass:", e); }
-        }
-
-        /* --- GESTIÓN CALENDARIO --- */
+        /* --- HERRAMIENTAS TÉCNICAS (ADMIN) --- */
         async function loadManageClasses() {
             const listDiv = document.getElementById('student-list');
-            // Añadimos botón para volver a ver las validaciones de alumnos
             listDiv.innerHTML = `
-                <button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">
-                    ← VOLVER A VALIDACIONES
+                <button class="action-btn" onclick="loadSenseiPanel()" style="margin-bottom:20px; background:#334155; color:white;">
+                    <i class="fa-solid fa-arrow-left"></i> VOLVER A VALIDACIONES
                 </button>
-                <p style='text-align:center; opacity:0.5; padding:10px;'>Cargando Editor...</p>
+                <p style="text-align:center; opacity:0.5;">Cargando gestor de clases...</p>
             `;
+            
+            const token = localStorage.getItem('aikido_jwt');
             const res = await fetch(`${API_URL}/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100`, { 
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-            });
-            // ... resto de la función igual ...
-            const json = await res.json(), grouped = {};
-            json.data.filter(c => new Date(parseData(c).Fecha_Hora) > new Date()).forEach(c => {
-                const d = parseData(c), f = formatTimeSafe(d.Fecha_Hora);
+                headers: { 'Authorization': `Bearer ${token}` } 
+            }).then(r => r.json());
+            
+            const grouped = {};
+            const hoy = new Date();
+            
+            res.data.forEach(c => {
+                const d = parseData(c);
+                if (new Date(d.Fecha_Hora) < hoy) return; // Solo futuras
+                
+                const f = formatTimeSafe(d.Fecha_Hora);
                 if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
+                
                 const item = { ...f, id: getID(c), dur: d.Duracion, raw: d.Fecha_Hora };
-                if (f.hour < 14) grouped[f.month].morning.push(item); else grouped[f.month].afternoon.push(item);
+                if (f.hour < 14) grouped[f.month].morning.push(item);
+                else grouped[f.month].afternoon.push(item);
             });
-            listDiv.innerHTML = ""; 
+
+            listDiv.innerHTML = `<button class="action-btn" onclick="loadSenseiPanel()" style="margin-bottom:20px; background:#334155; color:white;"><i class="fa-solid fa-arrow-left"></i> VOLVER</button>`;
+            
             for (const month in grouped) {
-                let html = `<div class="month-header">${month}</div>`;
-                if(grouped[month].morning.length) { 
-                    html += `<div class="section-label">Mañana</div><div class="grid-container">`; 
-                    grouped[month].morning.forEach(i => html += `<div class="class-card" onclick="openEditClass('${i.id}','${i.raw}',${i.dur})"><h4>${i.date}</h4><p>${i.time} • ${i.dur}h</p></div>`); 
-                    html += `</div>`; 
+                listDiv.innerHTML += `<div class="month-header">${month}</div>`;
+                
+                if (grouped[month].morning.length) {
+                    listDiv.innerHTML += `<div class="section-label">Sesiones Mañana</div><div class="grid-container">`;
+                    grouped[month].morning.forEach(i => {
+                        listDiv.innerHTML += `<div class="class-card" onclick="openEditClass('${i.id}','${i.raw}',${i.dur})"><h4>${i.date}</h4><p>${i.time} • ${i.dur}h</p></div>`;
+                    });
+                    listDiv.innerHTML += `</div>`;
                 }
-                if(grouped[month].afternoon.length) { 
-                    html += `<div class="section-label">Tarde</div><div class="grid-container">`; 
-                    grouped[month].afternoon.forEach(i => html += `<div class="class-card" onclick="openEditClass('${i.id}','${i.raw}',${i.dur})"><h4>${i.date}</h4><p>${i.time} • ${i.dur}h</p></div>`); 
-                    html += `</div>`; 
+                
+                if (grouped[month].afternoon.length) {
+                    listDiv.innerHTML += `<div class="section-label">Sesiones Tarde</div><div class="grid-container">`;
+                    grouped[month].afternoon.forEach(i => {
+                        listDiv.innerHTML += `<div class="class-card" onclick="openEditClass('${i.id}','${i.raw}',${i.dur})"><h4>${i.date}</h4><p>${i.time} • ${i.dur}h</p></div>`;
+                    });
+                    listDiv.innerHTML += `</div>`;
                 }
-                listDiv.innerHTML += html;
             }
         }
 
-        function openEditClass(id, raw, dur) { 
-            const [d, t] = raw.split('T'); 
-            showModal("EDITAR CLASE", `
-                <div style="text-align:left; margin-top:10px;">
-                    <span class="modal-label">FECHA:</span><input type="date" id="e-d" value="${d}" class="modal-field">
-                    <span class="modal-label">HORA:</span><input type="time" id="e-h" value="${t.substring(0,5)}" class="modal-field">
-                    <span class="modal-label">DURACIÓN:</span><select id="e-dur" class="modal-field"><option value="1" ${dur==1?'selected':''}>1.0h</option><option value="1.5" ${dur==1.5?'selected':''}>1.5h</option></select>
-                    <button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR CAMBIOS</button>
-                    <button class="action-btn" style="background:#ef4444; color:white; margin-top:10px;" onclick="deleteClass('${id}')">ELIMINAR KEIKO</button>
-                </div>`, true); 
+        function openEditClass(id, raw, dur) {
+            const [d, t] = raw.split('T');
+            showModal("EDITAR SESIÓN", `
+                <div style="text-align:left;">
+                    <span class="modal-label">FECHA:</span>
+                    <input type="date" id="edit-date" value="${d}" class="modal-field">
+                    <span class="modal-label">HORA:</span>
+                    <input type="time" id="edit-time" value="${t.substring(0,5)}" class="modal-field">
+                    <span class="modal-label">DURACIÓN (Horas):</span>
+                    <select id="edit-dur" class="modal-field">
+                        <option value="1" ${dur==1?'selected':''}>1.0h</option>
+                        <option value="1.5" ${dur==1.5?'selected':''}>1.5h</option>
+                        <option value="2" ${dur==2?'selected':''}>2.0h</option>
+                    </select>
+                    <button class="action-btn primary" onclick="saveClass('${id}')" style="margin-top:15px;">GUARDAR CAMBIOS</button>
+                    <button class="action-btn" onclick="deleteClass('${id}')" style="margin-top:10px; background:#ef4444; color:white;">ELIMINAR SESIÓN</button>
+                </div>
+            `);
         }
 
-        async function saveClass(id) { 
-            const dVal = document.getElementById('e-d').value, tVal = document.getElementById('e-h').value, dur = document.getElementById('e-dur').value; 
-            await fetch(`${API_URL}/api/clases/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { Fecha_Hora: `${dVal}T${tVal}:00.000Z`, Duracion: parseFloat(dur) } }) }); 
-            localStorage.removeItem('cache_calendario_clases'); closeModal(); loadManageClasses(); 
+        async function saveClass(id) {
+            const date = document.getElementById('edit-date').value;
+            const time = document.getElementById('edit-time').value;
+            const dur = document.getElementById('edit-dur').value;
+            const token = localStorage.getItem('aikido_jwt');
+            
+            await fetch(`${API_URL}/api/clases/${id}`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ data: { Fecha_Hora: `${date}T${time}:00.000Z`, Duracion: parseFloat(dur) } })
+            });
+            
+            localStorage.removeItem('cache_calendario_clases');
+            closeModal();
+            loadManageClasses();
         }
 
-        async function deleteClass(id) { 
-            await fetch(`${API_URL}/api/clases/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } }); 
-            localStorage.removeItem('cache_calendario_clases'); closeModal(); loadManageClasses(); 
+        async function deleteClass(id) {
+            if (!confirm("¿Eliminar esta clase definitivamente?")) return;
+            const token = localStorage.getItem('aikido_jwt');
+            await fetch(`${API_URL}/api/clases/${id}`, { 
+                method: 'DELETE', 
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            localStorage.removeItem('cache_calendario_clases');
+            closeModal();
+            loadManageClasses();
         }
 
-        /* --- GENERACIÓN AUTOMÁTICA --- */
-        function setGenMonth(m, btn) { selectedMonthGen = m; document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
         function uiGenerateMonth() {
             const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-            let gridHtml = `<div class="month-picker-grid">`;
-            months.forEach((m, idx) => { gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
-            gridHtml += `</div>`;
-            showModal("GENERAR MES", `<div style="text-align:left; margin-top:10px;"><span class="modal-label">AÑO:</span><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><span class="modal-label">MES:</span>${gridHtml}<span class="modal-label">HORA MAÑANA (Mar):</span><input type="time" id="gen-morning" value="10:00" class="modal-field"><span class="modal-label">HORA TARDE (Mar/Jue):</span><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><button class="action-btn primary" onclick="processGeneration()" style="margin-top:10px;">GENERAR CALENDARIO</button></div>`, true);
+            let grid = `<div class="month-picker-grid">`;
+            months.forEach((m, idx) => {
+                grid += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`;
+            });
+            grid += `</div>`;
+            
+            showModal("GENERAR CALENDARIO", `
+                <div style="text-align:left;">
+                    <span class="modal-label">AÑO:</span>
+                    <select id="gen-year" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
+                    <span class="modal-label">MES A GENERAR:</span>
+                    ${grid}
+                    <button class="action-btn primary" onclick="processGeneration()" style="margin-top:15px;">INICIAR GENERACIÓN AUTOMÁTICA</button>
+                </div>
+            `);
+        }
+
+        function setGenMonth(m, btn) {
+            selectedMonthGen = m;
+            document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
         }
 
         async function processGeneration() {
-            const token = localStorage.getItem('aikido_jwt'), year = parseInt(document.getElementById('gen-year-select').value), month = selectedMonthGen;
-            const hM = document.getElementById('gen-morning').value, hT = document.getElementById('gen-afternoon').value;
-            let creadas = 0, ultimo = new Date(year, month + 1, 0).getDate();
-            const btn = document.querySelector('#custom-modal .action-btn.primary'); btn.innerText = "GENERANDO..."; btn.disabled = true;
-            for(let d = 1; d <= ultimo; d++) {
-                const dateObj = new Date(year, month, d), day = dateObj.getDay();
-                const send = async (h) => {
-                    const iso = `${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}T${h}:00.000Z`;
-                    await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: 1.5, dojo: dojoIdGlobal } }) }); creadas++;
-                };
-                if(day === 2) { await send(hM); await send(hT); } else if(day === 4) { await send(hT); }
+            const token = localStorage.getItem('aikido_jwt');
+            const year = parseInt(document.getElementById('gen-year').value);
+            const month = selectedMonthGen;
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            
+            showModal("PROCESANDO...", "<p>Creando sesiones en Strapi. Por favor, espera...</p>", false);
+            
+            for(let d = 1; d <= lastDay; d++) {
+                const date = new Date(year, month, d);
+                const day = date.getDay(); // 2=Mar, 4=Jue
+                
+                if (day === 2 || day === 4) {
+                    const times = day === 2 ? ["10:00", "19:00"] : ["19:00"];
+                    for (const t of times) {
+                        const iso = `${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}T${t}:00.000Z`;
+                        await fetch(`${API_URL}/api/clases`, { 
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: 1.5, dojo: dojoIdGlobal } })
+                        });
+                    }
+                }
             }
-            localStorage.removeItem('cache_calendario_clases'); showModal("ÉXITO", `Se han creado ${creadas} clases.`); 
+            
+            localStorage.removeItem('cache_calendario_clases');
+            showModal("ÉXITO", "Calendario mensual generado correctamente.");
         }
 
-        function uiCreateSingleClass() { 
-            showModal("NUEVA CLASE SUELTA", `<div style="text-align:left; margin-top:10px;"><span class="modal-label">FECHA:</span><input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}"><span class="modal-label">HORA:</span><input type="time" id="single-time" class="modal-field" value="10:00"><span class="modal-label">DURACIÓN:</span><select id="single-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select><button class="action-btn primary" onclick="processSingleClass()" style="margin-top:10px;">CREAR KEIKO</button></div>`, true); 
+        function uiCreateSingleClass() {
+            showModal("CLASE SUELTA", `
+                <div style="text-align:left;">
+                    <span class="modal-label">FECHA:</span>
+                    <input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}">
+                    <span class="modal-label">HORA:</span>
+                    <input type="time" id="single-time" class="modal-field" value="19:00">
+                    <button class="action-btn primary" onclick="processSingleClass()" style="margin-top:15px;">CREAR SESIÓN</button>
+                </div>
+            `);
         }
 
-        async function processSingleClass() { 
-            const token = localStorage.getItem('aikido_jwt'), d = document.getElementById('single-date').value, t = document.getElementById('single-time').value, dur = document.getElementById('single-dur').value; 
-            await fetch(`${API_URL}/api/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: `${d}T${t}:00.000Z`, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) }); 
-            localStorage.removeItem('cache_calendario_clases'); closeModal(); checkTodayClass(); 
-        }
-
-        /* --- AUTH Y ACTIVACIÓN --- */
-        document.getElementById('activate-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const dni = document.getElementById('act-dni').value.trim().toUpperCase(), p1 = document.getElementById('act-pass').value.trim(), p2 = document.getElementById('act-pass2').value.trim();
-            if (p1 !== p2) { showModal("Aviso", "Contraseñas no coinciden."); return; }
-            if (p1.length < 6) { showModal("Aviso", "Mínimo 6 caracteres."); return; }
-            const btn = document.getElementById('btn-activate-submit'); btn.innerText = "PROCESANDO..."; btn.disabled = true;
-            try {
-                const resSearch = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`);
-                const dataSearch = await resSearch.json();
-                if (!dataSearch.data || dataSearch.data.length === 0) { showModal("Error", "DNI no registrado."); btn.innerText = "ACTIVAR"; btn.disabled = false; return; }
-                const alu = dataSearch.data[0], alumnoDocId = alu.documentId, p = alu.attributes || alu;
-                let gradoObj = "S/G";
-                const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
-                if(idx !== -1 && idx < GRADOS_ORDER.length - 1) gradoObj = GRADOS_ORDER[idx+1];
-                const regRes = await fetch(`${API_URL}/api/auth/local/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: dni, email: `${dni.toLowerCase()}@arashi.com`, password: p1 }) });
-                const regData = await regRes.json();
-                if (regRes.ok) {
-                    await fetch(`${API_URL}/api/alumnos/${alumnoDocId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${regData.jwt}` }, body: JSON.stringify({ data: { cuenta_usuario: regData.user.id, grado_objetivo: gradoObj } }) });
-                    document.getElementById('activate-modal').classList.add('hidden'); showModal("¡OSS!", "Cuenta activada. Ya puedes entrar."); e.target.reset();
-                } else { showModal("Aviso", regData.error.message.includes("taken") ? "Ya estás activo." : regData.error.message); }
-            } catch (err) { showModal("Error", "Fallo servidor."); } finally { btn.innerText = "ACTIVAR"; btn.disabled = false; }
-        });
-
-        async function loadMonthlyClasses(el) {
-            showView('clases', el); const container = document.getElementById('calendar-content'); container.innerHTML = "<p style='text-align:center;padding:20px;'>Cargando...</p>";
-            const json = await fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 24);
-            const grouped = {}; const hoyCorte = new Date(); hoyCorte.setHours(0,0,0,0);
-            (json.data||[]).forEach(c => {
-                const d = parseData(c); if (new Date(d.Fecha_Hora) < hoyCorte) return; const f = formatTimeSafe(d.Fecha_Hora);
-                if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
-                const item = { ...f, dur: d.Duracion }; if (f.hour < 14) grouped[f.month].morning.push(item); else grouped[f.month].afternoon.push(item);
-            });
-            let html = ""; for (const m in grouped) {
-                html += `<div class="month-header">${m}</div>`;
-                if(grouped[m].morning.length) { html += `<div class="section-label">Mañana</div><div class="grid-container">`; grouped[m].morning.forEach(x => html+=`<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`); html+="</div>"; }
-                if(grouped[m].afternoon.length) { html += `<div class="section-label">Tarde</div><div class="grid-container">`; grouped[m].afternoon.forEach(x => html+=`<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`); html+="</div>"; }
-            }
-            container.innerHTML = html;
-        }
-
-        async function confirmAttendance() {
-            if (!claseHoyId || !alumnoGlobal) return;
+        async function processSingleClass() {
+            const date = document.getElementById('single-date').value;
+            const time = document.getElementById('single-time').value;
             const token = localStorage.getItem('aikido_jwt');
             
-            // 1. Enviamos la confirmación al servidor
-            const res = await fetch(`${API_URL}/api/asistencias`, { 
+            await fetch(`${API_URL}/api/clases`, { 
                 method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ data: { Fecha_Hora: `${date}T${time}:00.000Z`, Duracion: 1.5, dojo: dojoIdGlobal } })
             });
-
-            if (res.ok) {
-                // 2. ¡CLAVE! Borramos la caché de asistencias para forzar al Dashboard a ver el cambio
-                localStorage.removeItem('cache_mis_asistencias'); 
-                
-                // 3. Refrescamos la vista (ahora hará 1 sola llamada para traer el 'Confirmado')
-                await checkTodayClass();
-            }
-        }
-
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); const identifier = document.getElementById('dni-login').value.trim(), password = document.getElementById('password').value.trim();
-            const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
-            if (res.ok) { const d = await res.json(); localStorage.setItem('aikido_jwt', d.jwt); localStorage.setItem('aikido_user', JSON.stringify(d.user)); initApp(); }
-            else showModal("Error", "Credenciales incorrectas.");
-        });
-
-        async function startQRScanner() {
-            if (!alumnoGlobal) return showModal("Aviso", "Perfil no cargado.");
-
-            showModal("ESCANEAR ASISTENCIA", `
-                <div style="margin-top:10px;">
-                    <div id="qr-reader" style="width:100%; border-radius:20px; overflow:hidden; background:#000;"></div>
-                    <p id="scan-status" style="font-size:12px; color:var(--text-muted); margin-top:15px;">
-                        Enfoca el código del Sensei...
-                    </p>
-                </div>
-            `, true);
-
-            // --- SUSTITUYE ESTA PARTE DENTRO DE startQRScanner ---
-        setTimeout(async () => {
-                try {
-                    const qrReaderEl = document.getElementById('qr-reader');
-                    html5QrCode = new Html5Qrcode("qr-reader");
-                    
-                    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-                    
-                    // Configuración de escaneo (común para ambos)
-                    const config = { fps: 15, qrbox: { width: 220, height: 220 } };
-
-                    try {
-                        // INTENTO 1: Con restricciones (trasera en móvil)
-                        const constraints = isMobile ? { facingMode: "environment" } : { facingMode: "user" };
-                        await html5QrCode.start(constraints, config, onScanSuccess);
-                    } catch (err) {
-                        console.warn("⚠️ Intento 1 fallido, probando cámara por defecto...", err);
-                        // INTENTO 2: Sin ninguna restricción (lo que el navegador decida)
-                        // Esto soluciona el OverconstrainedError en PC
-                        await html5QrCode.start({ deviceId: { undefined } }, config, onScanSuccess);
-                    }
-
-                } catch (err) {
-                    console.error("❌ Error final Cámara:", err);
-                    showModal("Error", "No se pudo activar la cámara. Asegúrate de dar permisos en el navegador.");
-                }
-            }, 300);
-
-            // Función auxiliar para no repetir código
-            async function onScanSuccess(decodedText) {
-                console.log("🎯 QR Capturado:", decodedText);
-                document.getElementById('scan-status').innerText = "¡CÓDIGO LEÍDO! PROCESANDO...";
-                
-                // Apagado seguro: solo si está corriendo
-                if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) {
-                    await html5QrCode.stop().catch(() => {});
-                }
-                
-                procesarAsistenciaQR(decodedText);
-            }
+            
+            localStorage.removeItem('cache_calendario_clases');
+            closeModal();
+            loadSenseiPanel();
         }
 
         async function loadDojosFilter() {
             const select = document.getElementById('sensei-dojo-filter');
-            if(!select) return;
-            const res = await fetchSmart('/api/dojos', 'lista_dojos_sensei', 24);
-            if(res && res.data) {
-                res.data.forEach(d => {
-                    const info = d.attributes || d;
-                    const opt = document.createElement('option');
-                    opt.value = d.documentId || d.id;
-                    opt.innerText = info.nombre.replace("Aikido Arashi ", "").toUpperCase();
-                    select.appendChild(opt);
-                });
-            }
+            if(!select || select.options.length > 1) return;
+            const res = await fetchSmart('/api/dojos', 'dojos_sensei', 24);
+            res?.data?.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = getID(d);
+                opt.innerText = parseData(d).nombre.replace("Aikido Arashi ", "").toUpperCase();
+                select.appendChild(opt);
+            });
         }
 
-        async function procesarAsistenciaQR(classId) {
+        /* --- NAVEGACIÓN Y OTROS --- */
+        function showView(v, el) {
+            ['dashboard', 'login', 'sensei', 'clases'].forEach(x => {
+                const view = document.getElementById(x + '-view');
+                if (view) view.classList.add('hidden');
+            });
+            
+            const target = document.getElementById(v + '-view');
+            if (target) target.classList.remove('hidden');
+            
+            if (el) {
+                document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active'));
+                el.classList.add('active');
+            }
+
+            if (v === 'dashboard') updateDashboardUI();
+            if (v === 'sensei') loadSenseiPanel();
+        }
+
+        async function loadMonthlyClasses(el) {
+            showView('clases', el);
+            const container = document.getElementById('calendar-content');
+            container.innerHTML = "<p style='text-align:center; padding:40px; opacity:0.5;'>Sincronizando calendario...</p>";
+            
+            const json = await fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 48);
+            const grouped = {};
+            const hoyCorte = new Date().setHours(0,0,0,0);
+            
+            (json?.data || []).forEach(c => {
+                const d = parseData(c);
+                if (new Date(d.Fecha_Hora) < hoyCorte) return;
+                
+                const f = formatTimeSafe(d.Fecha_Hora);
+                if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
+                
+                const item = { ...f, dur: d.Duracion };
+                if (f.hour < 14) grouped[f.month].morning.push(item);
+                else grouped[f.month].afternoon.push(item);
+            });
+
+            let html = "";
+            for (const m in grouped) {
+                html += `<div class="month-header">${m}</div>`;
+                if(grouped[m].morning.length) {
+                    html += `<div class="section-label">Mañanas</div><div class="grid-container">`;
+                    grouped[m].morning.forEach(x => html += `<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`);
+                    html += `</div>`;
+                }
+                if(grouped[m].afternoon.length) {
+                    html += `<div class="section-label">Tardes</div><div class="grid-container">`;
+                    grouped[m].afternoon.forEach(x => html += `<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`);
+                    html += `</div>`;
+                }
+            }
+            container.innerHTML = html || "<p style='text-align:center; padding:40px;'>No hay keikos programados.</p>";
+        }
+
+        function generateClassQR(id) {
+            showModal("QR TATAMI", `<div class='qr-display-container'><div id='qr-gen'></div></div><p style='font-size:12px; opacity:0.7;'>Muestra este código al grupo.</p>`);
+            setTimeout(() => {
+                const container = document.getElementById('qr-gen');
+                if (container) {
+                    container.innerHTML = "";
+                    new QRCode(container, { text: id, width: 200, height: 200 });
+                }
+            }, 200);
+        }
+
+        async function startQRScanner() {
+            showModal("ESCÁNER DE ASISTENCIA", "<div id='qr-reader'></div><p style='margin-top:15px; font-size:12px;'>Enfoca el código QR del Sensei.</p>");
+            setTimeout(async () => {
+                html5QrCode = new Html5Qrcode("qr-reader");
+                await html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, async (txt) => {
+                    await html5QrCode.stop();
+                    procesarAsistenciaQR(txt);
+                });
+            }, 300);
+        }
+
+        async function procesarAsistenciaQR(cid) {
             const token = localStorage.getItem('aikido_jwt');
-            const aluDocId = alumnoGlobal.documentId || alumnoGlobal.id;
-
             try {
-                // 1. OBTENER DURACIÓN (Local): Ahorramos 1 llamada API
-                // Buscamos la clase en el calendario que ya descargamos previamente en memoria
-                const cacheClases = JSON.parse(localStorage.getItem('cache_calendario_clases'));
-                const calendario = cacheClases?.data || [];
-                const claseLocal = calendario.find(c => getID(c) === classId);
-                
-                // Si no está en el calendario (ej: clase nueva de hoy), usamos 1.5h por defecto
-                const duracion = claseLocal ? parseFloat(claseLocal.attributes?.Duracion || claseLocal.Duracion) : 1.5;
-
-                // 2. REGISTRAR ASISTENCIA (API Call 1: POST)
-                // Registramos directamente. Strapi v5 evitará duplicados por su lógica interna.
-                await fetch(`${API_URL}/api/asistencias`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
+                await fetch(`${API_URL}/api/asistencias`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                    body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: cid, Estado: 'Asistio' } }) 
                 });
-
-                // 3. SUMAR HORAS (API Call 2: PUT)
-                // NO llamamos al servidor para saber las horas actuales. Usamos las que ya tiene cargadas Raúl.
-                const pOriginal = alumnoGlobal.attributes || alumnoGlobal;
-                const totalNuevo = (parseFloat(pOriginal.horas_acumuladas) || 0) + duracion;
-
-                await fetch(`${API_URL}/api/alumnos/${aluDocId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
-                });
-
-                // --- LAS LLAMADAS A API TERMINAN AQUÍ (Solo 2 llamadas en total) ---
-
-                // 4. ACTUALIZACIÓN OPTIMISTA (UI Instantánea)
-                // Inyectamos el total nuevo en la variable local para que el repintado sea real
-                if (alumnoGlobal.attributes) {
-                    alumnoGlobal.attributes.horas_acumuladas = totalNuevo;
-                } else {
-                    alumnoGlobal.horas_acumuladas = totalNuevo;
-                }
-
-                // 5. LIMPIEZA DE INTERFAZ Y CACHÉ
-                await checkTodayClass(); // Quita el botón rojo de "Asistir"
-                updateDashboardUI(); // Actualiza el círculo de progreso y el texto de horas
-                
-                // Borramos cachés para que la PRÓXIMA vez que abra la App sí refresque de Strapi
-                localStorage.removeItem('cache_perfil_alumno');
-                localStorage.removeItem('cache_mis_asistencias');
-                
-                closeModal(); // Cierra el escáner de cámara
-
-                // 6. MOSTRAR RESULTADO AL USUARIO
-                // He quitado el conteo de clases totales asistidas para ahorrar esa llamada API extra
-                showModal("¡OSS, ARASHI!", `
-                    <div style="text-align:center;">
-                        <div style="font-size: 1.2rem; color: var(--success); font-weight: 800; margin-bottom: 10px;">¡KEIKO REGISTRADO!</div>
-                        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-top: 10px;">
-                            <p style="margin: 5px 0;">Has sumado: <strong>+${duracion}h</strong></p>
-                            <p style="margin: 5px 0;">Total historial: <strong>${totalNuevo.toFixed(1)}h</strong></p>
-                        </div>
-                        <p style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">Tu tiempo en el Tatami ha sido contabilizado.</p>
-                    </div>
-                `);
-
-            } catch (e) {
-                console.error("Error Procesamiento QR:", e);
-                showModal("Error", "No se pudo validar el QR. Revisa tu conexión a internet.");
-            }
+                closeModal();
+                showModal("¡OSS!", "Tu asistencia al Keiko ha sido registrada.");
+            } catch(e) { showModal("Error", "No se pudo registrar la asistencia."); }
         }
 
-
-        function showView(v, el) { 
-            ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); 
-            document.getElementById(v + '-view').classList.remove('hidden');
-            if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
-                if (v === 'dashboard') {
-                updateDashboardUI(); // Instantáneo, usa local
-            }
-
-            if (v === 'sensei') {
-                // Solo llamamos a la API si el contenedor está vacío o es un refresco intencionado
-                if (document.getElementById('student-list').innerHTML.includes('Conectando') || !el) {
-                    loadSenseiPanel();
-                }
-            }
-        }
-        
         function logout() { localStorage.clear(); location.reload(); }
-
-        /* --- PWA LOGIC --- */
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const b = document.getElementById('android-btn-area'); if (b) b.style.display = 'block'; });
-        async function handleAndroidInstall() {
-            if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; deferredPrompt = null; }
-            else showModal("Info", "Ya instalada o en escritorio.");
+        function closeModal() { 
+            document.getElementById('custom-modal').classList.add('hidden'); 
+            if(html5QrCode) html5QrCode.stop().catch(()=>{}); 
+        }
+        function showModal(t, c, showBtn = true) { 
+            document.getElementById('modal-title').innerText = t; 
+            document.getElementById('modal-body-content').innerHTML = c; 
+            document.getElementById('modal-ok-btn').style.display = showBtn ? 'block' : 'none';
+            document.getElementById('custom-modal').classList.remove('hidden'); 
         }
 
-        /* --- OPTIMIZACIÓN: ACTUALIZAR UI SIN LLAMAR A API --- */
-        /* --- OPTIMIZACIÓN: ACTUALIZAR UI SIN LLAMAR A API --- */
-function updateDashboardUI() {
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    if (!user) return;
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const identifier = document.getElementById('dni-login').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const res = await fetch(`${API_URL}/api/auth/local`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ identifier, password }) 
+            });
+            if (res.ok) {
+                const d = await res.json();
+                localStorage.setItem('aikido_jwt', d.jwt);
+                localStorage.setItem('aikido_user', JSON.stringify(d.user));
+                initApp();
+            } else { showModal("Error", "Credenciales incorrectas."); }
+        });
 
-    const circleCont = document.getElementById('student-progress-circle');
-    const nextGrade = document.getElementById('next-grade-display');
-    const heroCard = document.getElementById('class-hero-card');
-
-    if (alumnoGlobal) {
-        // CASO RAÚL (Alumno + Instructor)
-        const p = alumnoGlobal.attributes || alumnoGlobal;
-        document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "SENSEI").toUpperCase();
-        document.getElementById('user-initials').innerText = ((p.nombre?.[0] || user.nombre?.[0] || "S") + (p.apellidos?.[0] || user.apellidos?.[0] || "C")).toUpperCase();
+        window.onload = () => initApp();
         
-        if (circleCont) circleCont.classList.remove('hidden');
-        if (nextGrade) nextGrade.classList.remove('hidden');
-        if (heroCard) heroCard.classList.remove('hidden');
-
-        const horas = parseFloat(p.horas_acumuladas || 0);
-        document.getElementById('stat-hours').innerText = horas.toFixed(1);
-        const meta = p.grado_objetivo || "1º DAN";
-        const req = (requisitosGradoGlobal || []).find(r => r.NORM === normalize(meta));
-        const target = (req && req.HORAS) ? req.HORAS : 60;
-        const circle = document.getElementById('progress-bar');
-        if (circle) circle.style.strokeDashoffset = 339.29 - (Math.min(horas / target, 1) * 339.29);
-        document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-        document.getElementById('next-grade-display').innerText = `CAMINO AL ${meta.toUpperCase()}`;
-    } else {
-        // CASO FRANCESC (Sensei directo desde User)
-        document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
-        document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellidos?.[0] || "C");
-        
-        // Francesc no tiene horas que contar, ocultamos progreso
-        if (circleCont) circleCont.classList.add('hidden');
-        if (nextGrade) nextGrade.classList.add('hidden');
-        if (heroCard) heroCard.classList.add('hidden');
-    }
-}
-        window.onload = () => { initApp(); };
+        /* --- PWA Logic --- */
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => { 
+            e.preventDefault(); 
+            deferredPrompt = e; 
+            document.getElementById('android-btn-area').style.display = 'block'; 
+        });
+        async function handleAndroidInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                await deferredPrompt.userChoice;
+                deferredPrompt = null;
+            }
+        }
     </script>
 </body>
 </html>
