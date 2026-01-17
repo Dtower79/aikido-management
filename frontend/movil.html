@@ -689,18 +689,27 @@
 
         /* --- ZEN MASTER CARD PARA SENSEIS --- */
 .zen-master-card {
-    background: linear-gradient(rgba(5, 8, 15, 0.8), rgba(5, 8, 15, 0.8)), url('img/kanjis.jpg');
-    background-size: cover;
+    /* Mantenemos el degradado pero ajustamos el fondo */
+    background: linear-gradient(rgba(5, 8, 15, 0.7), rgba(5, 8, 15, 0.7)), url('img/kanjis.jpg');
+    
+    /* CAMBIO CLAVE: 100% 100% obliga a la imagen a encajar entera en el recuadro */
+    background-size: 100% 100%; 
     background-position: center;
+    background-repeat: no-repeat;
+    
     border: 2px solid var(--accent);
-    border-radius: 40px;
-    padding: 40px 25px;
+    border-radius: 35px;
+    padding: 30px 20px;
     margin: 20px;
     text-align: center;
-    box-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(239, 68, 68, 0.2);
     position: relative;
     overflow: hidden;
-    animation: fadeInUp 0.8s forwards;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px; /* Le damos altura para que luzca la imagen */
 }
 
 .zen-master-card::before {
@@ -711,27 +720,38 @@
 }
 
 .zen-logo {
-    width: 80px;
-    filter: drop-shadow(0 0 10px rgba(239,68,68,0.5));
-    margin-bottom: 15px;
+    width: 90px;
+    height: auto;
+    /* object-fit: contain asegura que el logo salga ENTERO siempre */
+    object-fit: contain; 
+    filter: drop-shadow(0 0 15px rgba(239,68,68,0.8));
+    margin-bottom: 10px;
     position: relative;
+    z-index: 2;
 }
 
 .zen-title {
-    font-size: 42px;
-    margin: 0;
-    letter-spacing: 8px;
-    color: white;
-    font-weight: 800;
+    font-size: 38px !important; /* Ajuste para móviles */
+    margin: 5px 0 0 !important;
+    letter-spacing: 6px !important;
+    color: white !important;
+    font-weight: 800 !important;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    position: relative;
+    z-index: 2;
 }
 
 .zen-subtitle {
-    font-size: 14px;
-    color: var(--accent);
-    letter-spacing: 4px;
-    margin-top: 5px;
-    font-weight: 700;
+    font-size: 12px !important;
+    color: var(--accent) !important;
+    letter-spacing: 3px !important;
+    margin-top: 5px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 2;
 }
+
 
     </style>
 </head>
@@ -1059,40 +1079,55 @@ async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return;
     
+    // 1. Intentamos buscar por ID de usuario
     let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
     let json = await fetchSmart(endpoint, 'perfil_alumno', 0.1);
 
+    // 2. Si no lo encuentra, intentamos buscar por DNI
     if (!json || !json.data || json.data.length === 0) {
         endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
         json = await fetchSmart(endpoint, null, 0); 
     }
 
-    // --- LÓGICA DE IDENTIDAD Y UI ---
-    const zenCard = document.getElementById('zen-card');
+    // Definimos las variables de la interfaz
     const circle = document.getElementById('student-progress-circle');
     const nextGrade = document.getElementById('next-grade-display');
+    const zenCard = document.getElementById('zen-card');
 
+    // 3. DECISIÓN FINAL: ¿Es alumno o es solo Sensei/Staff?
     if (!json || !json.data || json.data.length === 0) {
-        // CASO SENSEI FRANCESC (Sin ficha de alumno)
+        // --- CASO: PURE SENSEI (Francesc) ---
+        console.log("👤 Modo Staff/Sensei detectado");
+        
+        // Iniciales desde el User de Strapi
         const initials = ((user.nombre?.[0] || "") + (user.apellidos?.[0] || "")).toUpperCase();
         document.getElementById('user-initials').innerText = initials || "S";
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
 
-        circle.classList.add('hidden');
-        nextGrade.classList.add('hidden');
+        // Ocultar círculos de alumno
+        if (circle) circle.classList.add('hidden');
+        if (nextGrade) nextGrade.classList.add('hidden');
 
-        if (!zenCard) {
-            const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo_sin_fondo.png" class="zen-logo"><h2 class="zen-title">SENSEI</h2><p class="zen-subtitle">ARASHI GROUP BADALONA</p></div>`;
+        // Inyectar la tarjeta Zen ESPECTACULAR (solo si no existe ya)
+        if (!zenCard && circle) {
+            const zenHTML = `
+                <div id="zen-card" class="zen-master-card">
+                    <img src="img/logo-arashi.png" class="zen-logo">
+                    <h2 class="zen-title">SENSEI</h2>
+                    <p class="zen-subtitle">ARASHI DOJO STAFF</p>
+                </div>`;
             circle.insertAdjacentHTML('afterend', zenHTML);
         }
+
     } else {
-        // CASO RAÚL (Alumno normal)
+        // --- CASO: ALUMNO (Raúl) ---
         alumnoGlobal = json.data[0]; 
         const p = alumnoGlobal.attributes || alumnoGlobal;
         
-        // Limpiar Zen Card si existe de una sesión previa
+        // Si venimos de un login de sensei, borramos la tarjeta Zen
         if (zenCard) zenCard.remove();
 
+        // Datos del perfil
         document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
         document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
 
@@ -1104,8 +1139,8 @@ async function refreshStudentData() {
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
         
-        // MOSTRAR CÍRCULO PARA ALUMNOS (Corrección Raúl)
-        circle.classList.remove('hidden');
+        // Mostrar círculo y meta
+        if (circle) circle.classList.remove('hidden');
 
         let meta = p.grado_objetivo;
         if (!meta) {
@@ -1127,11 +1162,13 @@ async function refreshStudentData() {
         }
         
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-        nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
-        nextGrade.classList.remove('hidden');
+        if (nextGrade) {
+            nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
+            nextGrade.classList.remove('hidden');
+        }
     }
 
-    // Configuración del botón Sensei/Seminarios según rol en Strapi
+    // 4. Configuración de la barra de navegación según el campo "is_sensei"
     const navRightBtn = document.getElementById('nav-sensei');
     if (navRightBtn) {
         if (user.is_sensei === true) {
