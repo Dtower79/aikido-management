@@ -1012,38 +1012,27 @@
             const aluCacheId = localStorage.getItem('arashi_alumno_docid');
             let json;
 
-            // --- OPTIMIZACIÓN API-FIRST: Búsqueda por ID directo vs Filtrado ---
             if (aluCacheId) {
-                // Si ya conocemos su ID, hacemos 1 sola llamada directa ultra-rápida
-                const res = await fetchSmart(`/api/alumnos/${aluCacheId}?populate=*`, 'perfil_alumno', 0.1);
-                // Normalizamos respuesta (Strapi devuelve objeto en GET by ID, pero necesitamos array para la lógica de abajo)
+                // 168 HORAS = 1 SEMANA DE TRANQUILIDAD PARA TU API
+                const res = await fetchSmart(`/api/alumnos/${aluCacheId}?populate=*`, 'perfil_alumno', 168);
                 json = res && res.data ? { data: [res.data] } : null;
             } else {
-                // Si es la primera vez o no hay caché, buscamos por cuenta_usuario
                 let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
                 json = await fetchSmart(endpoint, null, 0); 
-
-                // Si falla, probamos por DNI (segundo intento)
                 if (!json || !json.data || json.data.length === 0) {
                     endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
                     json = await fetchSmart(endpoint, null, 0); 
                 }
-
-                // Si lo encontramos, guardamos el ID para que la PRÓXIMA vez cargue instantáneo
                 if (json?.data?.[0]) {
                     localStorage.setItem('arashi_alumno_docid', getID(json.data[0]));
                 }
             }
 
-            // --- PROCESAMIENTO DE DATOS Y UI ---
             if (json && json.data && json.data.length > 0) {
                 alumnoGlobal = json.data[0];
+                updateDashboardUI(); // Repinta con los datos (viejos o nuevos) de la memoria
+                
                 const p = alumnoGlobal.attributes || alumnoGlobal;
-                
-                // 1. Pintar UI (Instantáneo usando memoria local)
-                updateDashboardUI();
-                
-                // 2. Lógica de Roles y Botones (Seminarios)
                 const esSensei = user.is_sensei === true || p.es_instructor === true;
                 const navRightBtn = document.getElementById('nav-sensei');
 
@@ -1053,31 +1042,21 @@
                         navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
                         navRightBtn.onclick = () => showView('sensei', navRightBtn);
                     }
-
-                    // Inyectar botón 'Seminarios' en el Panel de Sensei si no existe
                     if (!document.getElementById('btn-seminarios-sensei-view')) {
                         const senseiHeader = document.querySelector('#sensei-view header');
                         if (senseiHeader) {
                             const btnWrap = document.createElement('div');
                             btnWrap.id = 'btn-seminarios-sensei-view';
                             btnWrap.style.padding = '0 25px 15px';
-                            btnWrap.innerHTML = `
-                                <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" 
-                                        onclick="window.open('https://www.meetontatami.com/', '_blank')">
-                                    <i class="fa-solid fa-calendar-day"></i> SEMINARIOS
-                                </button>`;
+                            btnWrap.innerHTML = `<button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')"><i class="fa-solid fa-calendar-day"></i> SEMINARIOS</button>`;
                             senseiHeader.after(btnWrap);
                         }
                     }
                 } else {
-                    // ROL ALUMNO: Botón nav derecha va a Seminarios
                     if (navRightBtn) {
                         navRightBtn.style.display = 'flex';
                         navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-                        navRightBtn.onclick = (e) => {
-                            e.preventDefault();
-                            window.open('https://www.meetontatami.com/', '_blank');
-                        };
+                        navRightBtn.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
                     }
                 }
             }
@@ -1289,46 +1268,31 @@
             const token = localStorage.getItem('aikido_jwt');
 
             try {
-                // --- OPTIMIZACIÓN SUPREMA: Calendario (24h) y Asistencias (1h) desde memoria local ---
                 const [jsonClases, jsonAsis] = await Promise.all([
-                    fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=15', 'calendario_clases', 24),
-                    fetchSmart(`/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&populate=clase&pagination[limit]=30&sort=createdAt:desc`, 'mis_asistencias', 1)
+                    fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=15', 'calendario_clases', 48), // 2 DÍAS
+                    fetchSmart(`/api/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&populate=clase&pagination[limit]=30&sort=createdAt:desc`, 'mis_asistencias', 24) // 1 DÍA
                 ]);
 
                 const ahora = new Date();
-                
-                // Mapeamos asistencias para búsqueda instantánea en memoria
                 const asistenciasLocales = (jsonAsis?.data || []).map(a => {
                     const item = a.attributes || a;
-                    return { 
-                        claseId: getID(item.clase?.data || item.clase), 
-                        estado: item.Estado || item.estado 
-                    };
+                    return { claseId: getID(item.clase?.data || item.clase), estado: item.Estado || item.estado };
                 });
 
                 let claseElegida = null;
                 let estadoAlumno = null;
 
-                // BUCLE DE FILTRADO LOCAL (Sin llamadas a API)
                 for (const c of (jsonClases?.data || [])) {
                     const dataC = parseData(c);
                     const inicio = new Date(dataC.Fecha_Hora);
                     const duracionHoras = parseFloat(dataC.Duracion || 1.5);
                     const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
 
-                    // 1. ¿La clase ya ha terminado oficialmente? 
-                    // Si la abre a las 12:00 y la clase acabó a las 11:30, la salta.
                     if (ahora > fin) continue;
-
                     const cid = getID(c);
                     const miAsis = asistenciasLocales.find(a => a.claseId === cid);
                     const estado = miAsis ? miAsis.estado : null;
-
-                    // 2. ¿Ya tiene el check de 'Asistio' (Validado por Sensei o QR)?
-                    // Si ya terminó esa clase, pasamos a buscar la siguiente (ej: la de la tarde)
                     if (estado === 'Asistio') continue;
-
-                    // 3. Si llegamos aquí, esta es la clase que debe ver
                     claseElegida = c;
                     estadoAlumno = estado;
                     break; 
@@ -1341,8 +1305,6 @@
                     document.getElementById('next-class-time').innerText = f.time;
                     document.getElementById('next-class-date').innerText = f.date;
                     btn.classList.remove('hidden');
-
-                    // Ajuste visual del botón según el estado en memoria
                     if (estadoAlumno === 'Confirmado') {
                         btn.innerText = "CONFIRMADO";
                         btn.disabled = true;
@@ -1355,14 +1317,11 @@
                         btn.style.color = "black";
                     }
                 } else {
-                    // Si no hay más clases hoy o ya asistió a todas
                     document.getElementById('next-class-time').innerText = "--:--";
                     document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
                     btn.classList.add('hidden');
                 }
-            } catch (e) {
-                console.error("❌ Fallo en checkTodayClass:", e);
-            }
+            } catch (e) { console.error("❌ Fallo en checkTodayClass:", e); }
         }
 
         /* --- GESTIÓN CALENDARIO --- */
@@ -1645,25 +1604,26 @@
                 const jsonTotal = await resTotal.json();
                 const numClases = jsonTotal.meta?.pagination?.total || 0;
 
-        // E. ACTUALIZACIÓN OPTIMISTA (0 LLAMADAS A API)
+                // E. ACTUALIZACIÓN OPTIMISTA (0 LLAMADAS A API ADICIONALES)
                 
-                // 1. Actualizamos la memoria del móvil con las horas nuevas que acabamos de calcular
-                // Comprobamos si Strapi v5 nos da los datos en .attributes o planos
+                // 1. Actualizamos la memoria del móvil con las horas nuevas
                 if (alumnoGlobal.attributes) {
                     alumnoGlobal.attributes.horas_acumuladas = totalNuevo;
                 } else {
                     alumnoGlobal.horas_acumuladas = totalNuevo;
                 }
 
-                // 2. Quitamos el aviso de "fichaje" de la pantalla (el botón rojo de asistir)
+                // 2. Quitamos el aviso de "fichaje" de la pantalla
                 await checkTodayClass(); 
 
-                // 3. Repintamos la interfaz usando la nueva función local (INSTANTÁNEO)
+                // 3. Repintamos la interfaz usando la función local (INSTANTÁNEO)
                 updateDashboardUI();
                 
-                // 4. Cerramos el escáner y limpiamos caché de fondo para la próxima sesión
+                // 4. LIMPIEZA DE CACHÉ: Forzamos que la próxima apertura sea fresca
                 localStorage.removeItem('cache_perfil_alumno');
-                closeModal(); 
+                localStorage.removeItem('cache_mis_asistencias');
+                
+                closeModal(); // Cerramos el escáner
 
                 // F. MOSTRAR RESULTADO AL USUARIO
                 showModal("¡OSS, ARASHI!", `
