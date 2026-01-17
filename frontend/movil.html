@@ -1046,94 +1046,75 @@ async function loadSenseiPanel() {
     const listDiv = document.getElementById('student-list');
     if (!listDiv) return;
 
-    const dojoFilter = document.getElementById('sensei-dojo-filter')?.value || 'all';
     listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'><i class='fa-solid fa-spinner fa-spin'></i> Sincronizando Tatami...</p>";
 
     try {
         const token = localStorage.getItem('aikido_jwt');
-        
-        // DEEP POPULATE: En v5 es obligatorio pedir explícitamente los hijos de las relaciones
-        // Filtramos directamente por Estado=Confirmado en la API (más seguro)
-        const endpoint = `/api/asistencias?filters[Estado][$eq]=Confirmado&populate[alumno][populate]=*&populate[clase][populate][dojo]=*&sort=createdAt:desc`;
+        // populate[alumno][populate]=* es la clave en Strapi v5 para ver nombres
+        const endpoint = `/api/asistencias?populate[alumno][populate]=*&populate[clase][populate][dojo]=*&sort=createdAt:desc&pagination[limit]=100`;
         
         const res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
         const json = await res.json();
 
-        if (!json?.data || json.data.length === 0) {
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes de validar.</p>";
-            return;
-        }
-
         const groups = {};
-        json.data.forEach(item => {
-            const a = item.attributes || item;
-            const alu = parseRelation(a.alumno);
-            const cla = parseRelation(a.clase);
+        let encontrados = 0;
 
+        (json.data || []).forEach(item => {
+            const data = item.attributes || item;
+            const estado = (data.Estado || data.estado || "").toString().toLowerCase().trim();
+            
+            if (estado !== 'confirmado') return;
+
+            const alu = parseRelation(data.alumno);
+            const cla = parseRelation(data.clase);
             if (!alu || !cla) return;
 
-            // Filtrado por Dojo (v5 documentId)
-            const dojoData = parseRelation(cla.dojo);
-            const dId = dojoData ? (dojoData.documentId || dojoData.id) : null;
-            if (dojoFilter !== 'all' && dId !== dojoFilter) return;
-
-            const cid = cla.documentId || cla.id;
+            const cid = getID(cla);
             if (!groups[cid]) groups[cid] = { info: cla, students: [] };
 
             groups[cid].students.push({
-                asistId: item.documentId || item.id,
-                alumnoId: alu.documentId || alu.id,
+                asistId: getID(item),
+                alumnoId: getID(alu),
                 nombre: (alu.nombre || "Alumno").toUpperCase(),
                 apellidos: (alu.apellidos || "").toUpperCase(),
                 grado: alu.grado || "S/G"
             });
+            encontrados++;
         });
 
-        const keys = Object.keys(groups);
-        if (keys.length === 0) {
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos para el dojo seleccionado.</p>";
+        if (encontrados === 0) {
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos esperando validación.</p>";
             return;
         }
 
-        // Ordenar clases
-        keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
-
         listDiv.innerHTML = "";
-        keys.forEach(cid => {
-            const g = groups[cid];
-            const f = formatTimeSafe(g.info.Fecha_Hora);
-            
-            let sRows = g.students.map(s => `
-                <div class="student-item">
-                    <div class="student-info">
-                        <h4>${s.nombre} ${s.apellidos}</h4>
-                        <p>${s.grado}</p>
-                    </div>
-                    <div class="sensei-actions">
-                        <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
-                        <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
-                    </div>
-                </div>`).join('');
-
+        Object.keys(groups).sort((a,b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora)).forEach(cid => {
+            const g = groups[cid], f = formatTimeSafe(g.info.Fecha_Hora);
             listDiv.innerHTML += `
-            <div class="class-group-card">
-                <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                    <div style="text-align:left;">
-                        <h3>${f.date} - ${f.time}</h3>
-                        <p style="font-size:10px; color:var(--accent); font-weight:800;">${g.students.length} POR VALIDAR</p>
+                <div class="class-group-card">
+                    <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                        <div style="text-align:left;">
+                            <h3>${f.date} - ${f.time}</h3>
+                            <p style="font-size:10px; color:var(--accent); font-weight:800;">${g.students.length} POR VALIDAR</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-down"></i>
                     </div>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </div>
-                <div class="class-group-body" style="padding: 15px 20px;">
-                    <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> QR TATAMI</button>
-                    <div style="border-top:1px solid var(--glass-border); padding-top:10px; margin-top:10px;">${sRows}</div>
-                </div>
-            </div>`;
+                    <div class="class-group-body" style="padding: 15px 20px;">
+                        <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> QR TATAMI</button>
+                        <div style="margin-top:10px;">
+                            ${g.students.map(s => `
+                                <div class="student-item">
+                                    <div class="student-info"><h4>${s.nombre} ${s.apellidos}</h4><p>${s.grado}</p></div>
+                                    <div class="sensei-actions">
+                                        <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
+                                        <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
+                                    </div>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+                </div>`;
         });
-    } catch (e) { 
-        console.error("Error Sensei Panel:", e);
-        listDiv.innerHTML = "<p style='color:red;text-align:center;padding:20px;'>Error de red. Reintenta.</p>";
-    }
+    } catch (e) { console.error("Error Panel:", e); listDiv.innerHTML = "<p style='text-align:center; color:red;'>Error de red.</p>"; }
 }
 
         /* --- SENSEI PANEL (Agrupación y 7 días) --- */
@@ -1251,43 +1232,42 @@ async function refreshStudentData() {
     if (!token || !user) return;
     
     try {
-        // Buscamos el alumno vinculado al usuario
+        // 1. Intentamos buscar su ficha de alumno
         let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-        let json = await fetchSmart(endpoint, null, 0); 
+        let res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        let json = await res.json();
         
         if (!json?.data?.[0]) {
             endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-            json = await fetchSmart(endpoint, null, 0); 
+            res = await fetch(`${API_URL}${endpoint}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            json = await res.json();
         }
 
         alumnoGlobal = json?.data?.[0] || null;
-        if (alumnoGlobal) {
-            localStorage.setItem('arashi_alumno_docid', getID(alumnoGlobal));
-        }
+        if (alumnoGlobal) localStorage.setItem('arashi_alumno_docid', getID(alumnoGlobal));
 
+        // 2. Lógica de Identidad Sensei (Detección Doble)
         const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
         
-        // IDENTIDAD: Francesc (is_sensei en User) | Raúl (es_instructor en Alumno)
-        const esSensei = (user.is_sensei === true || user.is_sensei === "true") || 
-                         (p && (p.es_instructor === true || p.es_instructor === "true"));
+        // Comprobamos el 'is_sensei' del USER (visto en tu captura) 
+        // y el 'es_instructor' del ALUMNO (Raúl)
+        const esSenseiReal = (user.is_sensei === true || user.is_sensei === "true") || 
+                             (p && (p.es_instructor === true || p.es_instructor === "true"));
         
         const navSensei = document.getElementById('nav-sensei');
         if (navSensei) {
-            if (esSensei) {
-                navSensei.style.display = 'flex';
+            navSensei.style.display = 'flex';
+            if (esSenseiReal) {
                 navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
                 navSensei.onclick = () => showView('sensei', navSensei);
             } else {
-                navSensei.style.display = 'flex';
                 navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
                 navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
             }
         }
 
         updateDashboardUI();
-    } catch (e) { 
-        console.error("Error al refrescar identidad:", e); 
-    }
+    } catch (e) { console.error("Error Identidad:", e); }
 }
 
         /* --- VALIDACIÓN Y ASISTENCIA --- */
@@ -1788,38 +1768,30 @@ function updateDashboardUI() {
     const heroCard = document.getElementById('class-hero-card');
 
     if (alumnoGlobal) {
-        // --- VISTA RAÚL (Alumno/Instructor) ---
+        // CASO RAÚL (Alumno + Instructor)
         const p = alumnoGlobal.attributes || alumnoGlobal;
-        document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
-        const initials = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
-        document.getElementById('user-initials').innerText = initials || "??";
-
+        document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "SENSEI").toUpperCase();
+        document.getElementById('user-initials').innerText = ((p.nombre?.[0] || user.nombre?.[0] || "S") + (p.apellidos?.[0] || user.apellidos?.[0] || "C")).toUpperCase();
+        
         if (circleCont) circleCont.classList.remove('hidden');
         if (nextGrade) nextGrade.classList.remove('hidden');
         if (heroCard) heroCard.classList.remove('hidden');
 
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
-
-        let meta = p.grado_objetivo || "1º DAN";
-        const normMeta = normalize(meta);
-        const req = (requisitosGradoGlobal || []).find(r => r.NORM === normMeta);
-        const target = (req && req.HORAS) ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
-
+        const meta = p.grado_objetivo || "1º DAN";
+        const req = (requisitosGradoGlobal || []).find(r => r.NORM === normalize(meta));
+        const target = (req && req.HORAS) ? req.HORAS : 60;
         const circle = document.getElementById('progress-bar');
-        if (circle) {
-            const pct = Math.min((horas / target) * 100, 100);
-            circle.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
-        }
+        if (circle) circle.style.strokeDashoffset = 339.29 - (Math.min(horas / target, 1) * 339.29);
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
         document.getElementById('next-grade-display').innerText = `CAMINO AL ${meta.toUpperCase()}`;
-
-    } else if (user.is_sensei) {
-        // --- VISTA FRANCESC (Sensei Máximo) ---
+    } else {
+        // CASO FRANCESC (Sensei directo desde User)
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
-        const initials = ((user.nombre?.[0] || "S") + (user.apellidos?.[0] || "")).toUpperCase();
-        document.getElementById('user-initials').innerText = initials;
-
+        document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S") + (user.apellidos?.[0] || "C");
+        
+        // Francesc no tiene horas que contar, ocultamos progreso
         if (circleCont) circleCont.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         if (heroCard) heroCard.classList.add('hidden');
