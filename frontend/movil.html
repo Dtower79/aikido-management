@@ -1067,51 +1067,82 @@ async function refreshStudentData() {
         json = await fetchSmart(endpoint, null, 0); 
     }
 
-    // --- LÓGICA SENSEI SIN FICHA (Casos como Francesc) ---
+    // --- LÓGICA DE IDENTIDAD Y UI ---
+    const zenCard = document.getElementById('zen-card');
+    const circle = document.getElementById('student-progress-circle');
+    const nextGrade = document.getElementById('next-grade-display');
+
     if (!json || !json.data || json.data.length === 0) {
-        console.log("👤 Pure Sensei Mode: " + user.nombre);
-        
-        // 1. Iniciales Correctas (Francesc Castellanos -> FC)
+        // CASO SENSEI FRANCESC (Sin ficha de alumno)
         const initials = ((user.nombre?.[0] || "") + (user.apellidos?.[0] || "")).toUpperCase();
         document.getElementById('user-initials').innerText = initials || "S";
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
 
-        // 2. Ocultar Círculo de Horas y Meta
-        document.getElementById('student-progress-circle').classList.add('hidden');
-        document.getElementById('next-grade-display').classList.add('hidden');
+        circle.classList.add('hidden');
+        nextGrade.classList.add('hidden');
 
-        // 3. Inyectar ZEN MASTER CARD si no existe
-        if (!document.getElementById('zen-card')) {
-            const zenHTML = `
-                <div id="zen-card" class="zen-master-card">
-                    <img src="img/logo_sin_fondo.png" class="zen-logo">
-                    <h2 class="zen-title">SENSEI</h2>
-                    <p class="zen-subtitle">ARASHI DOJO STAFF</p>
-                </div>`;
-            document.getElementById('student-progress-circle').insertAdjacentHTML('afterend', zenHTML);
+        if (!zenCard) {
+            const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title">SENSEI</h2><p class="zen-subtitle">ARASHI DOJO STAFF</p></div>`;
+            circle.insertAdjacentHTML('afterend', zenHTML);
         }
-
-        // 4. Asegurar Navegación Sensei
-        if (user.is_sensei) {
-            const navRightBtn = document.getElementById('nav-sensei');
-            if (navRightBtn) {
-                navRightBtn.style.display = 'flex';
-                navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-                navRightBtn.onclick = () => showView('sensei', navRightBtn);
-            }
-        }
-        return; 
-    }
-
-    // (El resto de la función para alumnos normales sigue igual...)
-    if (json && json.data && json.data.length > 0) {
-        // ... (Tu código intacto aquí para el flujo de alumno)
+    } else {
+        // CASO RAÚL (Alumno normal)
         alumnoGlobal = json.data[0]; 
         const p = alumnoGlobal.attributes || alumnoGlobal;
-        // ...
+        
+        // Limpiar Zen Card si existe de una sesión previa
+        if (zenCard) zenCard.remove();
+
         document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
         document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
-        // ...
+
+        if (p.dojo) {
+            const d = p.dojo.data ? p.dojo.data : p.dojo;
+            dojoIdGlobal = d.documentId || d.id;
+        }
+
+        const horas = parseFloat(p.horas_acumuladas || 0);
+        document.getElementById('stat-hours').innerText = horas.toFixed(1);
+        
+        // MOSTRAR CÍRCULO PARA ALUMNOS (Corrección Raúl)
+        circle.classList.remove('hidden');
+
+        let meta = p.grado_objetivo;
+        if (!meta) {
+            const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
+            meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
+        }
+
+        const normMeta = normalize(meta);
+        const req = Array.isArray(requisitosGradoGlobal) 
+            ? requisitosGradoGlobal.find(r => normalize(r.grado || r.attributes?.grado) === normMeta)
+            : null;
+
+        const target = req ? parseFloat(req.horas || req.attributes?.horas || 60) : (GRADOS_FALLBACK[meta] || 60);
+
+        const bar = document.getElementById('progress-bar');
+        if (bar) {
+            const pct = Math.min((horas / target) * 100, 100);
+            bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
+        }
+        
+        document.getElementById('stat-label').innerText = `HORAS / ${target}`;
+        nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
+        nextGrade.classList.remove('hidden');
+    }
+
+    // Configuración del botón Sensei/Seminarios según rol en Strapi
+    const navRightBtn = document.getElementById('nav-sensei');
+    if (navRightBtn) {
+        if (user.is_sensei === true) {
+            navRightBtn.style.display = 'flex';
+            navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+            navRightBtn.onclick = () => showView('sensei', navRightBtn);
+        } else {
+            navRightBtn.style.display = 'flex';
+            navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+            navRightBtn.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
+        }
     }
 }
 
@@ -1121,16 +1152,7 @@ async function loadSenseiPanel() {
     const filterEl = document.getElementById('sensei-dojo-filter');
     const dojoFilter = filterEl ? filterEl.value : 'all';
     
-    // Devolvemos el botón de Seminarios al principio del panel
-    listDiv.innerHTML = `
-        <div style="margin: 0 20px 20px;">
-            <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" 
-                    onclick="window.open('https://www.meetontatami.com/', '_blank')">
-                <i class="fa-solid fa-earth-europe"></i> VER SEMINARIOS EXTERNOS
-            </button>
-        </div>
-        <p style='text-align:center; opacity:0.5; padding:20px;'>Conectando con el Tatami...</p>
-    `;
+    listDiv.innerHTML = `<div style="margin: 0 20px 20px;"><button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')"><i class="fa-solid fa-earth-europe"></i> VER SEMINARIOS EXTERNOS</button></div><p style='text-align:center; opacity:0.5; padding:20px;'>Conectando con el Tatami...</p>`;
     
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - 7);
@@ -1138,7 +1160,6 @@ async function loadSenseiPanel() {
     try {
         const endpoint = `/api/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100`;
         const json = await fetchSmart(endpoint, null, 0); 
-
         if (!json || !json.data) throw new Error("No hay datos");
 
         const groups = {};
@@ -1151,27 +1172,19 @@ async function loadSenseiPanel() {
             if (!alu || !cla) return;
 
             const dojo = parseRelation(cla.dojo);
-            const dojoId = getID(dojo);
             const classDate = new Date(cla.Fecha_Hora);
-
             if (classDate < limitDate) return;
-            if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
+            if (dojoFilter !== 'all' && (getID(dojo) !== dojoFilter)) return;
 
             const cid = getID(cla);
             if (!groups[cid]) groups[cid] = { info: cla, students: [] };
-            groups[cid].students.push({ 
-                asistId: getID(item), 
-                alumnoId: getID(alu),
-                nombre: alu.nombre,
-                apellidos: alu.apellidos,
-                grado: alu.grado
-            });
+            groups[cid].students.push({ asistId: getID(item), alumnoId: getID(alu), nombre: alu.nombre, apellidos: alu.apellidos, grado: alu.grado });
         });
 
         const keys = Object.keys(groups);
-        // Limpiamos solo el mensaje de carga, manteniendo el botón de seminarios
-        const headerBtn = listDiv.firstElementChild.outerHTML;
-        listDiv.innerHTML = headerBtn;
+        // Mantener el botón superior de seminarios
+        const topHtml = listDiv.firstElementChild.outerHTML;
+        listDiv.innerHTML = topHtml;
 
         if (keys.length === 0) {
             listDiv.innerHTML += "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes de validar.</p>";
@@ -1179,16 +1192,20 @@ async function loadSenseiPanel() {
         }
 
         keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
-        // ... (Resto del renderizado de grupos de clase intacto)
-        keys.forEach(cid => {
-           // ... (Tu código de renderizado de tarjetas de clase)
-        });
 
+        keys.forEach(cid => {
+            const g = groups[cid];
+            const f = formatTimeSafe(g.info.Fecha_Hora);
+            let sRows = "";
+            g.students.forEach(s => {
+                sRows += `<div class="student-item" id="it-${s.asistId}"><div class="student-info"><h4>${s.nombre} ${s.apellidos || ""}</h4><p>${s.grado || 'S/G'}</p></div><div class="sensei-actions"><button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button><button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button></div></div>`;
+            });
+
+            listDiv.innerHTML += `<div class="class-group-card"><div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')"><div style="text-align:left;"><h3>${f.date} - ${f.time}</h3><p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p></div><i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i></div><div class="class-group-body"><button class="qr-tatami-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI</button><div style="border-top:1px solid var(--glass-border); padding:15px 20px;">${sRows}</div></div></div>`;
+        });
     } catch (e) {
-        console.error(e);
-        // Mantener el botón de seminarios incluso en error
-        const headerBtn = listDiv.firstElementChild.outerHTML;
-        listDiv.innerHTML = headerBtn + `<p style='text-align:center; color:var(--accent); padding:20px;'>Error al cargar datos.</p>`;
+        const topHtml = listDiv.firstElementChild.outerHTML;
+        listDiv.innerHTML = topHtml + `<p style='text-align:center; padding:20px;'>Error al cargar el Tatami.</p>`;
     }
 }
 
