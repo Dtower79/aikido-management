@@ -1053,83 +1053,98 @@ async function refreshStudentData() {
 }
 
         /* --- SENSEI PANEL (Agrupación y 7 días) --- */
+// --- FUNCIÓN SENSEI PANEL CORREGIDA ---
 async function loadSenseiPanel() {
     const listDiv = document.getElementById('student-list');
+    if (!listDiv) return;
+
     const filterEl = document.getElementById('sensei-dojo-filter');
     const dojoFilter = (filterEl && filterEl.value) ? filterEl.value : 'all';
     
-    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>Conectando con el Tatami...</p>";
+    listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'><i class='fa-solid fa-spinner fa-spin'></i> Buscando alumnos en el Tatami...</p>";
     
+    // Radar de fechas (15 días)
     const hoy = new Date();
     const inicioRadar = new Date(); inicioRadar.setDate(hoy.getDate() - 15);
     const finRadar = new Date(); finRadar.setDate(hoy.getDate() + 15);
 
     try {
-        // Pedimos asistencias con profundidad de datos
-        const endpoint = `/api/asistencias?populate[alumno]=*&populate[clase][populate][dojo]=*&pagination[limit]=100&sort=createdAt:desc`;
+        // En v5, pedimos los datos lo más planos posible pero con relaciones
+        const endpoint = `/api/asistencias?populate[alumno][populate]=*&populate[clase][populate][dojo]=*&pagination[limit]=100&sort=createdAt:desc`;
         const json = await fetchSmart(endpoint, null, 0); 
 
         if (!json || !json.data || json.data.length === 0) {
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay asistencias registradas.</p>";
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay registros de asistencia en la base de datos.</p>";
             return;
         }
 
         const groups = {};
+        
         json.data.forEach(item => {
+            // Strapi v5: Los datos están en el primer nivel o en .attributes
             const a = item.attributes || item; 
-            const estado = (a.Estado || a.estado || "").toString().trim().toLowerCase();
             
-            // Filtro estricto: Solo mostramos los que han pulsado "Asistir" (estado Confirmado)
+            // Normalización del estado (ignoramos espacios y mayúsculas)
+            const estadoRaw = a.Estado || a.estado || "";
+            const estado = estadoRaw.toString().trim().toLowerCase();
+            
+            // IMPORTANTE: Solo mostramos los que están en espera de validación (Confirmado)
             if (estado !== 'confirmado') return;
 
+            // Extraer relaciones de forma segura (v4 y v5)
             const alu = parseRelation(a.alumno);
             const cla = parseRelation(a.clase);
+
             if (!alu || !cla) return;
 
-            const classDate = new Date(cla.Fecha_Hora);
+            // Filtro de Fecha
+            const classDate = new Date(cla.Fecha_Hora || cla.fecha_hora);
             if (classDate < inicioRadar || classDate > finRadar) return;
             
-            // Extracción de ID de Dojo compatible con v5
+            // Filtro de Dojo
             const dojoData = parseRelation(cla.dojo);
-            const dojoId = dojoData ? getID(dojoData) : null;
+            const dId = dojoData ? (dojoData.documentId || dojoData.id) : null;
             
-            if (dojoFilter !== 'all' && dojoId !== dojoFilter) return;
+            if (dojoFilter !== 'all' && dId !== dojoFilter) return;
 
-            const cid = getID(cla);
+            // Agrupar por ID de Clase
+            const cid = cla.documentId || cla.id;
             if (!groups[cid]) groups[cid] = { info: cla, students: [] };
             
             groups[cid].students.push({ 
-                asistId: getID(item), 
-                alumnoId: getID(alu),
-                nombre: alu.nombre || "Alumno",
-                apellidos: alu.apellidos || "",
+                asistId: item.documentId || item.id, 
+                alumnoId: alu.documentId || alu.id,
+                nombre: (alu.nombre || "Alumno").toUpperCase(),
+                apellidos: (alu.apellidos || "").toUpperCase(),
                 grado: alu.grado || "S/G"
             });
         });
 
         const keys = Object.keys(groups);
         if (keys.length === 0) {
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos confirmados en el radar (30 días).</p>";
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos 'Confirmados' para validar en este momento.</p>";
             return;
         }
 
-        // Ordenar por fecha de clase
+        // Ordenar clases por fecha (la más cercana primero)
         keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
         
         listDiv.innerHTML = "";
         keys.forEach(cid => {
-            const g = groups[cid], f = formatTimeSafe(g.info.Fecha_Hora);
-            let sRows = g.students.map(s => `
+            const g = groups[cid];
+            const f = formatTimeSafe(g.info.Fecha_Hora || g.info.fecha_hora);
+            
+            let studentRows = g.students.map(s => `
                 <div class="student-item" id="it-${s.asistId}">
                     <div class="student-info">
-                        <h4>${s.nombre.toUpperCase()} ${s.apellidos.toUpperCase()}</h4>
+                        <h4>${s.nombre} ${s.apellidos}</h4>
                         <p>${s.grado}</p>
                     </div>
                     <div class="sensei-actions">
-                        <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})">
+                        <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion || 1.5})">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
-                        <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">
+                        <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion || 1.5})">
                             OK
                         </button>
                     </div>
@@ -1139,20 +1154,73 @@ async function loadSenseiPanel() {
             <div class="class-group-card">
                 <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
                     <div style="text-align:left;">
-                        <h3>${f.date} - ${f.time}</h3>
-                        <p style="font-size:10px; color:var(--accent); font-weight:800;">${g.students.length} ALUMNOS POR VALIDAR</p>
+                        <h3 style="font-size:14px;">${f.date} - ${f.time}</h3>
+                        <p style="font-size:10px; color:var(--accent); font-weight:800; margin-top:3px;">
+                            <i class="fa-solid fa-user-clock"></i> ${g.students.length} PENDIENTES
+                        </p>
                     </div>
                     <i class="fa-solid fa-chevron-down" style="opacity:0.3;"></i>
                 </div>
                 <div class="class-group-body" style="padding: 15px 20px;">
-                    <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')"><i class="fa-solid fa-qrcode"></i> GENERAR QR CLASE</button>
-                    <div style="border-top:1px solid var(--glass-border); padding-top:15px; margin-top:10px;">${sRows}</div>
+                    <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
+                        <i class="fa-solid fa-qrcode"></i> QR PARA ESTA CLASE
+                    </button>
+                    <div style="border-top:1px solid var(--glass-border); padding-top:10px; margin-top:10px;">
+                        ${studentRows}
+                    </div>
                 </div>
             </div>`;
         });
+
     } catch (e) { 
-        console.error("Error Panel:", e); 
-        listDiv.innerHTML = "<p style='text-align:center; color:red; padding:40px;'>Error al cargar datos del Tatami.</p>";
+        console.error("❌ Error Crítico en Panel Sensei:", e);
+        listDiv.innerHTML = "<p style='text-align:center; color:var(--accent); padding:40px;'>Error de conexión con Strapi.</p>";
+    }
+}
+
+// --- REFRESH DATA (DETECTAR ROLES) ---
+async function refreshStudentData() {
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const token = localStorage.getItem('aikido_jwt');
+    if (!token || !user) return;
+    
+    try {
+        // Buscamos el alumno vinculado al usuario
+        let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+        let json = await fetchSmart(endpoint, null, 0); 
+        
+        if (!json?.data?.[0]) {
+            endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
+            json = await fetchSmart(endpoint, null, 0); 
+        }
+
+        alumnoGlobal = json?.data?.[0] || null;
+        if (alumnoGlobal) {
+            localStorage.setItem('arashi_alumno_docid', getID(alumnoGlobal));
+        }
+
+        const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
+        
+        // IDENTIDAD: Francesc (is_sensei en User) | Raúl (es_instructor en Alumno)
+        const esSensei = (user.is_sensei === true || user.is_sensei === "true") || 
+                         (p && (p.es_instructor === true || p.es_instructor === "true"));
+        
+        const navSensei = document.getElementById('nav-sensei');
+        if (navSensei) {
+            if (esSensei) {
+                navSensei.style.display = 'flex';
+                navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+                navSensei.onclick = () => showView('sensei', navSensei);
+            } else {
+                navSensei.style.display = 'flex';
+                navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+                navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
+            }
+        }
+
+        updateDashboardUI();
+    } catch (e) { 
+        console.error("Error al refrescar identidad:", e); 
     }
 }
 
