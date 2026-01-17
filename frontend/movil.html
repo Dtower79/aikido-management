@@ -954,117 +954,120 @@
 
         /* --- CORE INIT --- */
         async function initApp() {
-    console.log("🚀 [INIT] Arrancando...");
-    const token = localStorage.getItem('aikido_jwt');
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    
-    document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
-            .forEach(v => v.classList.add('hidden'));
+            console.log("🚀 [INIT] Arrancando...");
+            const token = localStorage.getItem('aikido_jwt');
+            const user = JSON.parse(localStorage.getItem('aikido_user'));
+            
+            document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
+                    .forEach(v => v.classList.add('hidden'));
 
-    if (!token || !user) {
-        const lv = document.getElementById('login-view');
-        if(lv) lv.classList.remove('hidden');
-        document.getElementById('main-nav').classList.add('hidden');
-        return;
-    }
+            if (!token || !user) {
+                const lv = document.getElementById('login-view');
+                if(lv) lv.classList.remove('hidden');
+                document.getElementById('main-nav').classList.add('hidden');
+                return;
+            }
 
-    document.getElementById('main-nav').classList.remove('hidden');
-    showView('dashboard');
+            document.getElementById('main-nav').classList.remove('hidden');
+            showView('dashboard');
 
-    const [reqRes] = await Promise.all([
-        fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 720),
-        refreshStudentData()
-    ]);
+            const [reqRes] = await Promise.all([
+                fetchSmart('/api/requisito-grados?pagination[limit]=100', 'requisitos', 720),
+                refreshStudentData()
+            ]);
 
-    if (reqRes && reqRes.data) {
-        requisitosGradoGlobal = reqRes.data.map(r => {
-            const item = r.attributes || r;
-            return { ...item, NORM: normalize(item.grado), HORAS: parseFloat(item.horas || 0) };
-        });
-    }
+            if (reqRes && reqRes.data) {
+                requisitosGradoGlobal = reqRes.data.map(r => {
+                    const item = r.attributes || r;
+                    return { ...item, NORM: normalize(item.grado), HORAS: parseFloat(item.horas || 0) };
+                });
+            }
 
-    // Refrescamos UI con los requisitos ya cargados
-    updateDashboardUI();
-    await checkTodayClass();
+            // Refrescamos UI con los requisitos ya cargados
+            updateDashboardUI();
+            await checkTodayClass();
 
-    // Detección de panel Sensei (Francesc o Instructores)
-    const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-    if (user.is_sensei === true || (p && p.es_instructor === true)) {
-        document.getElementById('nav-sensei').style.display = 'flex';
-        await loadDojosFilter(); 
-    }
+            // Detección de panel Sensei (Francesc o Instructores)
+            const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
+            if (user.is_sensei === true || (p && p.es_instructor === true)) {
+                document.getElementById('nav-sensei').style.display = 'flex';
+                await loadDojosFilter(); 
+            }
+            updateDashboardUI();
+            if (alumnoGlobal) await checkTodayClass();
 
-    document.documentElement.classList.add('app-loaded');
-}
+                    document.documentElement.classList.add('app-loaded');
+                }
 
         /* --- REFRESH DATA (Sincronización v5) --- */
 
         async function refreshStudentData() {
-            const user = JSON.parse(localStorage.getItem('aikido_user'));
-            if (!user) return;
-            
-            const aluCacheId = localStorage.getItem('arashi_alumno_docid');
-            let json;
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const token = localStorage.getItem('aikido_jwt');
+    if (!token || !user) return;
+    
+    const aluCacheId = localStorage.getItem('arashi_alumno_docid');
+    let json = null;
 
-            // A. INTENTAR CARGAR COMO ALUMNO (Instructor o Alumno normal)
-            if (aluCacheId) {
-                const res = await fetchSmart(`/api/alumnos/${aluCacheId}?populate=*`, 'perfil_alumno', 168);
-                json = (res && res.data) ? { data: [res.data] } : (res ? { data: [res] } : null);
-            } else {
-                let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+    try {
+        // A. INTENTAR CARGAR COMO ALUMNO (Instructor o Alumno normal)
+        if (aluCacheId) {
+            const res = await fetchSmart(`/api/alumnos/${aluCacheId}?populate=*`, 'perfil_alumno', 168);
+            json = (res && res.data) ? { data: [res.data] } : (res ? { data: [res] } : null);
+        } else {
+            let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+            json = await fetchSmart(endpoint, null, 0); 
+            if (!json || !json.data || json.data.length === 0) {
+                endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
                 json = await fetchSmart(endpoint, null, 0); 
-                if (!json || !json.data || json.data.length === 0) {
-                    endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-                    json = await fetchSmart(endpoint, null, 0); 
-                }
-                if (json?.data?.[0]) {
-                    localStorage.setItem('arashi_alumno_docid', getID(json.data[0]));
-                }
             }
-
-            if (json && json.data && json.data.length > 0) {
-                // --- CASO 1: ES ALUMNO (O INSTRUCTOR) ---
-                alumnoGlobal = json.data[0];
-                updateDashboardUI();
-            } else {
-                // --- CASO 2: NO ES ALUMNO, ¿ES SENSEI MÁXIMO? ---
-                if (user.is_sensei) {
-                    alumnoGlobal = null; // Confirmamos que no es alumno
-                    updateDashboardUI(); // Esta función ahora manejará datos de 'user'
-                }
-            }
-
-            // --- LOGICA DE BOTONES SEGÚN ROL DETECTADO ---
-            const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-            const esSenseiReal = user.is_sensei === true || (p && p.es_instructor === true);
-            const navRightBtn = document.getElementById('nav-sensei');
-
-            if (esSenseiReal) {
-                if (navRightBtn) {
-                    navRightBtn.style.display = 'flex';
-                    navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-                    navRightBtn.onclick = () => showView('sensei', navRightBtn);
-                }
-                // Inyectar Seminarios en Panel Sensei
-                if (!document.getElementById('btn-seminarios-sensei-view')) {
-                    const senseiHeader = document.querySelector('#sensei-view header');
-                    if (senseiHeader) {
-                        const btnWrap = document.createElement('div');
-                        btnWrap.id = 'btn-seminarios-sensei-view';
-                        btnWrap.style.padding = '0 25px 15px';
-                        btnWrap.innerHTML = `<button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')"><i class="fa-solid fa-calendar-day"></i> SEMINARIOS</button>`;
-                        senseiHeader.after(btnWrap);
-                    }
-                }
-            } else {
-                // ALUMNO NORMAL: Botón Seminarios en Nav
-                if (navRightBtn) {
-                    navRightBtn.style.display = 'flex';
-                    navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-                    navRightBtn.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
-                }
+            if (json?.data?.[0]) {
+                localStorage.setItem('arashi_alumno_docid', getID(json.data[0]));
             }
         }
+
+        // B. ASIGNAR IDENTIDAD
+        if (json && json.data && json.data.length > 0) {
+            alumnoGlobal = json.data[0]; // Raúl (Alumno + Instructor)
+        } else {
+            alumnoGlobal = null; // Francesc (Sensei Máximo)
+        }
+
+        // C. PINTAR UI (Instantáneo)
+        updateDashboardUI();
+
+        // D. LÓGICA DE ROLES Y BOTONES (Seminarios)
+        const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
+        const esSenseiReal = (user.is_sensei === true) || (p && p.es_instructor === true);
+        const navRightBtn = document.getElementById('nav-sensei');
+
+        if (esSenseiReal) {
+            if (navRightBtn) {
+                navRightBtn.style.display = 'flex';
+                navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+                navRightBtn.onclick = () => showView('sensei', navRightBtn);
+            }
+            // Inyectar Seminarios en Panel Sensei si no existe
+            if (!document.getElementById('btn-seminarios-sensei-view')) {
+                const senseiHeader = document.querySelector('#sensei-view header');
+                if (senseiHeader) {
+                    const btnWrap = document.createElement('div');
+                    btnWrap.id = 'btn-seminarios-sensei-view';
+                    btnWrap.style.padding = '0 25px 15px';
+                    btnWrap.innerHTML = `<button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')"><i class="fa-solid fa-calendar-day"></i> SEMINARIOS</button>`;
+                    senseiHeader.after(btnWrap);
+                }
+            }
+        } else {
+            // ALUMNO NORMAL: Botón Seminarios en Nav
+            if (navRightBtn) {
+                navRightBtn.style.display = 'flex';
+                navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+                navRightBtn.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
+            }
+        }
+    } catch (e) { console.error("Error en refreshStudentData:", e); }
+}
 
         /* --- SENSEI PANEL (Agrupación y 7 días) --- */
         async function loadSenseiPanel() {
@@ -1679,30 +1682,30 @@
         /* --- OPTIMIZACIÓN: ACTUALIZAR UI SIN LLAMAR A API --- */
 function updateDashboardUI() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
+    if (!user) return;
+
     const circleCont = document.getElementById('student-progress-circle');
     const nextGrade = document.getElementById('next-grade-display');
+    const heroCard = document.getElementById('class-hero-card');
 
     if (alumnoGlobal) {
-        // --- VISTA ALUMNO / INSTRUCTOR ---
+        // --- VISTA RAÚL (Alumno/Instructor) ---
         const p = alumnoGlobal.attributes || alumnoGlobal;
+        document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
+        const initials = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
+        document.getElementById('user-initials').innerText = initials || "??";
+
         if (circleCont) circleCont.classList.remove('hidden');
         if (nextGrade) nextGrade.classList.remove('hidden');
-
-        const initials = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
-        document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
-        document.getElementById('user-initials').innerText = initials || "??";
+        if (heroCard) heroCard.classList.remove('hidden');
 
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        let meta = p.grado_objetivo;
-        if (!meta) {
-            const idx = GRADOS_ORDER.findIndex(x => normalize(x) === normalize(p.grado));
-            meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "1º DAN";
-        }
+        let meta = p.grado_objetivo || "1º DAN";
         const normMeta = normalize(meta);
         const req = (requisitosGradoGlobal || []).find(r => r.NORM === normMeta);
-        const target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
+        const target = (req && req.HORAS) ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
 
         const circle = document.getElementById('progress-bar');
         if (circle) {
@@ -1711,16 +1714,16 @@ function updateDashboardUI() {
         }
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
         document.getElementById('next-grade-display').innerText = `CAMINO AL ${meta.toUpperCase()}`;
-    } else if (user.is_sensei) {
-        // --- VISTA SENSEI MÁXIMO (Francesc) ---
-        if (circleCont) circleCont.classList.add('hidden'); // Francesc no tiene círculo de horas
-        if (nextGrade) nextGrade.classList.add('hidden');
 
+    } else if (user.is_sensei) {
+        // --- VISTA FRANCESC (Sensei Máximo) ---
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
         const initials = ((user.nombre?.[0] || "S") + (user.apellidos?.[0] || "")).toUpperCase();
         document.getElementById('user-initials').innerText = initials;
-        
-        // Ocultamos la tarjeta de "Siguiente Keiko" para el Sensei Máximo si quieres, o déjala.
+
+        if (circleCont) circleCont.classList.add('hidden');
+        if (nextGrade) nextGrade.classList.add('hidden');
+        if (heroCard) heroCard.classList.add('hidden');
     }
 }
         window.onload = () => { initApp(); };
