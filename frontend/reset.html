@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Contraseña - Arashi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;800&display=swap" rel="stylesheet">
+    <style>
+        body { background: #080c15; color: white; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .card { background: rgba(30, 41, 59, 0.4); padding: 40px 30px; border-radius: 35px; border: 1px solid rgba(255,255,255,0.1); width: 90%; max-width: 320px; text-align: center; }
+        input { width: 100%; padding: 16px; margin-bottom: 12px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: white; box-sizing: border-box; outline: none; font-size: 16px; }
+        button { background: #ef4444; color: white; border: none; width: 100%; padding: 18px; border-radius: 20px; font-weight: 800; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+        .logo { width: 90px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img src="img/logo-arashi-informe.png" class="logo">
+        <h2 style="font-size: 20px; margin-bottom: 10px;">NUEVA CLAVE</h2>
+        <p style="color:#94a3b8; font-size:13px; margin-bottom:25px;">Introduce tu DNI y tu nueva contraseña.</p>
+        
+        <input type="text" id="dni" placeholder="DNI (12345678X)" oninput="this.value=this.value.toUpperCase()">
+        <input type="password" id="p1" placeholder="Nueva Contraseña">
+        <input type="password" id="p2" placeholder="Repetir Contraseña">
+        
+        <button onclick="ejecutarCambio()">Actualizar Dojo</button>
+        <p id="msg" style="font-size: 12px; margin-top: 15px; font-weight: bold;"></p>
+    </div>
+
+    <script>
+        async function ejecutarCambio() {
+            const dni = document.getElementById('dni').value.trim();
+            const p1 = document.getElementById('p1').value;
+            const p2 = document.getElementById('p2').value;
+            const msg = document.getElementById('msg');
+            
+            // --- PEGA AQUÍ TU TOKEN DE STRAPI ---
+            const MASTER_TOKEN = "712ea2392e112eff3f68fbdd89e9dc763cb3919118bfc31cbd0543da32e26173f6a2435786fb3bae6bc0823f6d7a4103321c38810ddd41fea5095e6b3a27e2f85a39c6413e5c28679c4a9388d12a18d79a630a83bdbea81ae5d4bb9664ba1d4dc78db876d6098fc00207134daea300cd498e28f4630e3866f7f62547da3b618c";
+
+            if (p1 !== p2 || p1.length < 6) {
+                msg.innerText = "Las claves deben coincidir (min. 6 caracteres).";
+                msg.style.color = "#ef4444";
+                return;
+            }
+
+            msg.innerText = "Sincronizando con el Dojo...";
+            msg.style.color = "white";
+
+            try {
+                // 1. Buscamos el ID interno del usuario por su DNI
+                const resSearch = await fetch(`https://elegant-acoustics-3b7e60f840.strapiapp.com/api/users?filters[username][$eq]=${dni}`, {
+                    headers: { 'Authorization': `Bearer ${MASTER_TOKEN}` }
+                });
+                const users = await resSearch.json();
+
+                if (!users || users.length === 0) {
+                    msg.innerText = "DNI no encontrado.";
+                    msg.style.color = "#ef4444";
+                    return;
+                }
+
+                const userId = users[0].id;
+
+                // 2. Aplicamos la nueva contraseña directamente
+                const resUpdate = await fetch(`https://elegant-acoustics-3b7e60f840.strapiapp.com/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${MASTER_TOKEN}` 
+                    },
+                    body: JSON.stringify({ password: p1 })
+                });
+
+                if (resUpdate.ok) {
+                    msg.style.color = "#22c55e";
+                    msg.innerText = "¡CONTRASEÑA CAMBIADA! Redirigiendo...";
+                    setTimeout(() => window.location.href = "movil.html", 2000);
+                } else {
+                    msg.innerText = "Error en el servidor. Inténtalo más tarde.";
+                    msg.style.color = "#ef4444";
+                }
+            } catch (e) {
+                msg.innerText = "Fallo de conexión.";
+                msg.style.color = "#ef4444";
+            }
+        }
+    </script>
+</body>
+</html>
