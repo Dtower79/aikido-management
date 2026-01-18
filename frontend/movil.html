@@ -1021,10 +1021,11 @@
             <div class="modal-content">
                 <h3 style="margin-top:0">Recuperar Acceso</h3>
                 <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Introduce tu email para recibir un enlace de restablecimiento.</p>
+                <!-- Busca el forgot-modal y cambia el form -->
                 <form id="forgot-form">
-                    <input type="email" id="forgot-email" class="modal-field" placeholder="Tu Email" required>
+                    <input type="text" id="forgot-dni" class="modal-field" placeholder="DNI (12345678X)" required maxlength="9" oninput="this.value = this.value.toUpperCase()">
                     <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px;">
-                        <button type="submit" class="action-btn primary" id="btn-forgot-submit">ENVIAR ENLACE</button>
+                        <button type="submit" class="action-btn primary" id="btn-forgot-submit">REVISAR DNI Y ENVIAR</button>
                         <button type="button" class="action-btn" style="background:#334155; color:white;" onclick="document.getElementById('forgot-modal').classList.add('hidden')">CANCELAR</button>
                     </div>
                 </form>
@@ -1925,27 +1926,54 @@ function openForgotModal() {
 
 document.getElementById('forgot-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('forgot-email').value.trim();
+    const dni = document.getElementById('forgot-dni').value.trim().toUpperCase();
     const btn = document.getElementById('btn-forgot-submit');
-    btn.innerText = "ENVIANDO...";
+    
+    btn.innerText = "BUSCANDO ALUMNO...";
     btn.disabled = true;
 
     try {
-        const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
+        // 1. Buscamos el email asociado a ese DNI en la tabla Alumnos
+        const resAlu = await fetch(`${API_URL}/api/alumnos?filters[dni][$eq]=${dni}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } // Si no hay token, Strapi debe tener este permiso público (find alumnos)
+        });
+        const dataAlu = await resAlu.json();
+
+        if (!dataAlu.data || dataAlu.data.length === 0) {
+            showModal("Error", "DNI no encontrado en la base de datos del Dojo.");
+            btn.innerText = "REVISAR DNI Y ENVIAR";
+            btn.disabled = false;
+            return;
+        }
+
+        // Extraemos el email de la ficha
+        const emailAlumno = dataAlu.data[0].attributes?.email || dataAlu.data[0].email;
+
+        if (!emailAlumno) {
+            showModal("Aviso", "Tu ficha de alumno no tiene un correo asignado. Contacta con el Sensei.");
+            return;
+        }
+
+        btn.innerText = "ENVIANDO CORREO...";
+
+        // 2. Disparamos el proceso de Strapi usando ese email
+        const resReset = await fetch(`${API_URL}/api/auth/forgot-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email })
+            body: JSON.stringify({ email: emailAlumno })
         });
-        if (res.ok) {
+
+        if (resReset.ok) {
             document.getElementById('forgot-modal').classList.add('hidden');
-            showModal("¡Email Enviado!", "Si el email existe, recibirás un enlace de recuperación pronto.");
+            showModal("¡OSS!", `Hemos enviado un enlace de acceso al correo: ${emailAlumno.replace(/(.{3})(.*)(?=@)/, "$1***")}`);
         } else {
-            showModal("Aviso", "No se pudo procesar. Revisa el email.");
+            showModal("Error", "No se pudo procesar el envío. Revisa que tu usuario esté activo.");
         }
+
     } catch (err) {
         showModal("Error", "Fallo de conexión.");
     } finally {
-        btn.innerText = "ENVIAR ENLACE";
+        btn.innerText = "REVISAR DNI Y ENVIAR";
         btn.disabled = false;
     }
 });
