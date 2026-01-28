@@ -162,24 +162,33 @@ async function loadAlumnos(activos) {
 }
 
 function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
-    // 1. Limpiamos cualquier rastro de selección previa
+    // 1. Log para diagnóstico (mira la consola F12 al clicar)
+    console.log("Seleccionando alumno:", id, "Activo:", esActivo);
+
+    // 2. Detener que el clic "atraviese" la tabla y llegue al fondo
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    // 3. Limpiar selecciones previas
     closeAlumnoActions();
     
-    // 2. Localizamos la fila y la iluminamos
+    // 4. Resaltar la fila
     const row = document.getElementById(`row-${id}`);
     if (!row) {
-        console.error("No se encontró la fila row-" + id);
+        console.error("Error: No se encontró el elemento row-" + id);
         return;
     }
     row.classList.add('selected-row');
 
-    // 3. Decidimos qué botones mostrar según si es Alumno o Baja
+    // 5. Generar botones según el estado
     let actionsHtml = "";
     if (esActivo) {
         actionsHtml = `
             <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
             <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-            <button class="action-btn-icon delete" title="Dar de Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+            <button class="action-btn-icon delete" title="Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
         `;
     } else {
         actionsHtml = `
@@ -191,48 +200,43 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
     const isMobile = window.innerWidth <= 900;
 
     if (isMobile) {
-        // MÓVIL: Panel desde abajo
+        // MÓVIL
         document.getElementById('sheet-alumno-name').innerText = (nombre + " " + apellidos).toUpperCase();
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
     } else {
-        // ESCRITORIO: Barra flotante
+        // ESCRITORIO
         const bar = document.getElementById('action-bar-desktop');
         bar.innerHTML = actionsHtml;
-        bar.classList.remove('hidden');
-
-        // Cálculo de posición "mágica"
-        const rect = row.getBoundingClientRect();
         
-        // Ajuste fino: la centramos verticalmente respecto a la fila
-        // y la alejamos un poco de la zona del nombre
-        bar.style.top = (rect.top + (rect.height / 2) - 22) + "px";
-        bar.style.left = (rect.left + 300) + "px"; 
+        // POSICIONAMIENTO DINÁMICO: Donde haces clic
+        bar.style.position = 'fixed';
+        bar.style.top = (event.clientY - 25) + "px"; // Centrado vertical en el ratón
+        bar.style.left = (event.clientX + 20) + "px"; // 20px a la derecha del ratón
+        
+        bar.classList.remove('hidden');
+        console.log("Barra mostrada en:", bar.style.top, bar.style.left);
     }
-
-    // Evitamos que el clic se propague al documento y cierre la barra al instante
-    if (event) event.stopPropagation();
+}
+function closeAlumnoActions() {
+    document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
+    const bar = document.getElementById('action-bar-desktop');
+    const sheet = document.getElementById('bottom-sheet-mobile');
+    if (bar) bar.classList.add('hidden');
+    if (sheet) sheet.classList.add('hidden');
 }
 
 // Cerrar acciones al hacer clic fuera
 document.addEventListener('click', (e) => {
-    // Si el clic NO es en una fila Y NO es dentro de la propia barra de acciones...
-    if (!e.target.closest('tr') && !e.target.closest('.action-bar-desktop') && !e.target.closest('.bottom-sheet-content')) {
+    const isRowClick = e.target.closest('tr');
+    const isBarClick = e.target.closest('.action-bar-desktop');
+    const isSheetClick = e.target.closest('.bottom-sheet-content');
+
+    if (!isRowClick && !isBarClick && !isSheetClick) {
         closeAlumnoActions();
     }
 });
 
-function closeAlumnoActions() {
-    // Quitamos el color rojo de todas las filas
-    document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
-    
-    // Escondemos los contenedores
-    const bar = document.getElementById('action-bar-desktop');
-    const sheet = document.getElementById('bottom-sheet-mobile');
-    
-    if (bar) bar.classList.add('hidden');
-    if (sheet) sheet.classList.add('hidden');
-}
 
 const formAlumno = document.getElementById('form-nuevo-alumno');
 if (formAlumno) {
