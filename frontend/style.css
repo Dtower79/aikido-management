@@ -154,11 +154,9 @@ tr:hover td { background: rgba(255,255,255,0.03) !important; }
 
 /* 2. Añadimos el efecto visual de fila seleccionada */
 tr.selected-row td {
-    background: linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, rgba(30, 41, 59, 1) 100%) !important;
-    color: white !important;
     border-top: 1px solid var(--accent) !important;
     border-bottom: 1px solid var(--accent) !important;
-    transition: all 0.3s ease;
+    background: rgba(239, 68, 68, 0.05) !important;
 }
 
 tr.selected-row {
@@ -186,8 +184,10 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .toolbar { 
     display: flex; 
     align-items: center; 
-    gap: 20px; 
-    flex-wrap: nowrap; /* Evitamos que salte de línea en escritorio */
+    gap: 15px; 
+    width: 100%; 
+    margin-bottom: 20px;
+    height: 50px;
 }
 
 .selected-student-name {
@@ -220,9 +220,44 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     animation: fadeIn 0.3s ease;
 }
 
-.search-box { 
-    flex: 0 1 350px; /* Ancho fijo máximo de 350px para la búsqueda */
+.toolbar-actions-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Todo a la derecha */
+    gap: 10px;
+    height: 100%;
+    padding: 0 15px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    opacity: 0; /* Oculto por defecto */
+    pointer-events: none;
 }
+
+.toolbar-actions-area.active {
+    opacity: 1;
+    pointer-events: all;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.student-tag {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-right: 10px;
+    border-right: 1px solid var(--border);
+    padding-right: 15px;
+    white-space: nowrap;
+}
+
+
+
+.search-box { 
+    flex: 0 1 300px; /* El buscador ya no se estira infinito */
+}
+
 .search-box input { background: transparent; border: none; color: white; outline: none; width: 100%; margin-left: 10px; }
 
 .btn-pdf { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; }

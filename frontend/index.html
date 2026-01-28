@@ -122,7 +122,7 @@
                         <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
                         <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI..."></div>
                         <!-- Nuevo contenedor de acciones en la barra superior -->
-                        <div id="toolbar-actions" class="toolbar-actions hidden"></div>
+                        <div id="actions-alumnos" class="toolbar-actions-area"></div>
                     </div>
                 </header>
                 <div class="table-container drag-scroll">
@@ -138,7 +138,6 @@
                                 <th>Teléfono</th>
                                 <th>Dojo</th>
                                 <th>Alta</th>
-                                
                             </tr>
                         </thead>
                         <tbody id="lista-alumnos-body"></tbody>
@@ -149,12 +148,28 @@
             <!-- BAJAS -->
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header"><h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2></header>
-                <div class="toolbar" style="margin-bottom:15px; justify-content:flex-start;">
+                <div class="toolbar">
                     <div class="font-tool"><button onclick="changeFontSize('table-bajas', -1)">A-</button><button onclick="changeFontSize('table-bajas', 1)">A+</button></div>
                     <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-baja" placeholder="Buscar baja..."></div>
+                    <!-- Nuevo contenedor de acciones en la barra superior para Bajas -->
+                    <div id="actions-bajas" class="toolbar-actions-area"></div>
                 </div>
                 <div class="table-container drag-scroll">
-                    <table id="table-bajas"><thead><tr><th class="txt-accent">Fecha Baja</th><th>Apellidos</th><th>Nombre</th><th>DNI</th><th>Grado</th><th>Seguro</th><th>Teléfono</th><th>Dojo</th></tr></thead><tbody id="lista-bajas-body"></tbody></table>
+                    <table id="table-bajas">
+                        <thead>
+                            <tr>
+                                <th class="txt-accent">Fecha Baja</th>
+                                <th>Apellidos</th>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Grado</th>
+                                <th>Seguro</th>
+                                <th>Teléfono</th>
+                                <th>Dojo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-bajas-body"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -266,7 +281,7 @@
         </div>
     </div>
 
-    <!-- MODAL CAMBIO DE CONTRASEÑA (RESTAURADO) -->
+    <!-- MODAL CAMBIO DE CONTRASEÑA -->
     <div id="change-pass-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <h3><i class="fa-solid fa-key"></i> Cambiar Contraseña</h3>
@@ -296,17 +311,18 @@
 
     <script src="app.js"></script>
     <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-    <!-- Barra Flotante Escritorio -->
-<div id="action-bar-desktop" class="action-bar-desktop hidden"></div>
 
-<!-- Panel Inferior Móvil (Bottom Sheet) -->
-<div id="bottom-sheet-mobile" class="bottom-sheet-overlay hidden" onclick="closeAlumnoActions()">
-    <div class="bottom-sheet-content" onclick="event.stopPropagation()">
-        <div class="sheet-handle"></div>
-        <h3 id="sheet-alumno-name">Nombre Alumno</h3>
-        <div id="sheet-actions-container"></div>
-        <button class="action-btn secondary" style="width:100%; margin-top:15px;" onclick="closeAlumnoActions()">Cerrar</button>
+    <!-- Barra Flotante Escritorio -->
+    <div id="action-bar-desktop" class="action-bar-desktop hidden"></div>
+
+    <!-- Panel Inferior Móvil (Bottom Sheet) -->
+    <div id="bottom-sheet-mobile" class="bottom-sheet-overlay hidden" onclick="closeAlumnoActions()">
+        <div class="bottom-sheet-content" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <h3 id="sheet-alumno-name">Nombre Alumno</h3>
+            <div id="sheet-actions-container"></div>
+            <button class="action-btn secondary" style="width:100%; margin-top:15px;" onclick="closeAlumnoActions()">Cerrar</button>
+        </div>
     </div>
-</div>
 </body>
 </html>

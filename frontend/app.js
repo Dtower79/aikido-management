@@ -162,69 +162,66 @@ async function loadAlumnos(activos) {
 }
 
 function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
-    // 1. Log para diagnóstico (mira la consola F12 al clicar)
-    console.log("Seleccionando alumno:", id, "Activo:", esActivo);
-
-    // 2. Detener que el clic "atraviese" la tabla y llegue al fondo
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    // 3. Limpiar selecciones previas
+    // 1. Limpiar cualquier selección previa
     closeAlumnoActions();
     
-    // 4. Resaltar la fila
+    // 2. Resaltar la fila actual
     const row = document.getElementById(`row-${id}`);
-    if (!row) {
-        console.error("Error: No se encontró el elemento row-" + id);
-        return;
-    }
-    row.classList.add('selected-row');
+    if (row) row.classList.add('selected-row');
 
-    // 5. Generar botones según el estado
-    let actionsHtml = "";
-    if (esActivo) {
-        actionsHtml = `
-            <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
-            <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-            <button class="action-btn-icon delete" title="Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
-        `;
-    } else {
-        actionsHtml = `
-            <button class="action-btn-icon restore" title="Reactivar" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
-            <button class="action-btn-icon delete" title="Eliminar" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
-        `;
-    }
+    // 3. Preparar los iconos
+    const actionsHtml = esActivo ? `
+        <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+        <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="action-btn-icon delete" title="Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+    ` : `
+        <button class="action-btn-icon restore" title="Reactivar" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
+        <button class="action-btn-icon delete" title="Eliminar" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
+    `;
 
     const isMobile = window.innerWidth <= 900;
 
     if (isMobile) {
-        // MÓVIL
-        document.getElementById('sheet-alumno-name').innerText = (nombre + " " + apellidos).toUpperCase();
+        // En móvil mantenemos el Bottom Sheet (es lo mejor para el dedo)
+        document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
     } else {
-        // ESCRITORIO
-        const bar = document.getElementById('action-bar-desktop');
-        bar.innerHTML = actionsHtml;
+        // EN ESCRITORIO: Inyectar en la barra correspondiente
+        const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
+        const container = document.getElementById(targetId);
         
-        // POSICIONAMIENTO DINÁMICO: Donde haces clic
-        bar.style.position = 'fixed';
-        bar.style.top = (event.clientY - 25) + "px"; // Centrado vertical en el ratón
-        bar.style.left = (event.clientX + 20) + "px"; // 20px a la derecha del ratón
-        
-        bar.classList.remove('hidden');
-        console.log("Barra mostrada en:", bar.style.top, bar.style.left);
+        if (container) {
+            container.innerHTML = `
+                <span class="student-tag">${nombre} ${apellidos}</span>
+                ${actionsHtml}
+            `;
+            container.classList.add('active');
+        }
     }
+    if (event) event.stopPropagation();
 }
+
+// También actualizamos closeAlumnoActions para limpiar la barra
 function closeAlumnoActions() {
+    // Quitar resaltado de filas
     document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
-    const bar = document.getElementById('action-bar-desktop');
+    
+    // Limpiar y ocultar áreas de la toolbar
+    ['actions-alumnos', 'actions-bajas'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('active');
+            el.innerHTML = '';
+        }
+    });
+
+    // Ocultar móvil
     const sheet = document.getElementById('bottom-sheet-mobile');
-    if (bar) bar.classList.add('hidden');
     if (sheet) sheet.classList.add('hidden');
 }
+
+function logout() { localStorage.clear(); location.reload(); }
 
 // Cerrar acciones al hacer clic fuera
 document.addEventListener('click', (e) => {
