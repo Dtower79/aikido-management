@@ -186,20 +186,19 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
         document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
-    } else {
-        // EN ESCRITORIO: Inyectar en la barra correspondiente del toolbar (Actions Alumnos o Bajas)
-        const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
-        const container = document.getElementById(targetId);
-        
-        if (container) {
-            container.innerHTML = `
-                <div style="flex: 1; visibility: hidden;"></div> <!-- Espaciador invisible a la izquierda -->
-                <span class="student-tag">${nombre} ${apellidos}</span>
-                <div class="actions-buttons-wrap">${actionsHtml}</div>
-            `;
-            container.classList.add('active');
+        } else {
+            const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
+            const container = document.getElementById(targetId);
+            
+            if (container) {
+                container.innerHTML = `
+                    <div style="grid-column: 1;"></div> <!-- Espaciador izquierdo -->
+                    <span class="student-tag">${nombre} ${apellidos}</span>
+                    <div class="actions-buttons-wrap">${actionsHtml}</div>
+                `;
+                container.classList.add('active');
+            }
         }
-    }
     if (event) event.stopPropagation();
 }
 
@@ -308,7 +307,23 @@ async function editarAlumno(documentId) {
     } catch { showModal("Error", "Error al cargar datos."); }
 }
 
-function resetForm() { const f = document.getElementById('form-nuevo-alumno'); if (f) f.reset(); document.getElementById('seguro-status-text').innerText = "NO PAGADO"; document.getElementById('seguro-status-text').style.color = "#ef4444"; document.getElementById('edit-id').value = ""; document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO"; document.getElementById('btn-cancelar-edit').classList.add('hidden'); }
+function resetForm() { 
+    const f = document.getElementById('form-nuevo-alumno'); 
+    if (f) f.reset(); 
+    
+    // Resetear visuales de seguro
+    document.getElementById('seguro-status-text').innerText = "NO PAGADO"; 
+    document.getElementById('seguro-status-text').style.color = "#ef4444"; 
+    
+    // Resetear ID de edición
+    document.getElementById('edit-id').value = ""; 
+    document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO"; 
+    document.getElementById('btn-cancelar-edit').classList.add('hidden'); 
+    
+    // Volver a la lista de alumnos
+    showSection('alumnos'); 
+}
+
 function confirmarEstado(id, activo, nombre) { showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => { const fecha = activo ? null : new Date().toISOString().split('T')[0]; await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) }); showSection(activo ? 'alumnos' : 'bajas'); }); }
 function eliminarDefinitivo(id, nombre) { showModal("¡PELIGRO!", `¿Borrar físicamente a ${nombre}?`, () => { setTimeout(() => { showModal("ÚLTIMO AVISO", "Irreversible.", async () => { await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } }); loadAlumnos(false); }); }, 500); }); }
 
