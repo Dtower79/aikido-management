@@ -58,18 +58,32 @@ function showDashboard() {
 }
 
 function showSection(id) {
+    // 1. Ocultamos TODAS las secciones, incluida la de bienvenida
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
-    document.getElementById(`sec-${id}`).classList.remove('hidden');
     
+    // 2. Mostramos solo la que queremos
+    const targetSection = document.getElementById(`sec-${id}`);
+    if (targetSection) {
+        targetSection.classList.remove('hidden');
+    }
+    
+    // 3. Gestionamos los botones del menú
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     const activeBtn = document.getElementById(`btn-nav-${id}`);
     if(activeBtn) activeBtn.classList.add('active');
 
+    // 4. Cargas específicas
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
     if (id === 'status') runDiagnostics();
-    if (id === 'nuevo-alumno') { const isEditing = document.getElementById('edit-id').value !== ""; if (!isEditing) resetForm(); }
+    if (id === 'nuevo-alumno') { 
+        const isEditing = document.getElementById('edit-id').value !== ""; 
+        if (!isEditing) resetForm(); 
+    }
+    
+    // 5. Cerramos cualquier menú de acciones abierto al cambiar de sección
+    if (typeof closeAlumnoActions === 'function') closeAlumnoActions();
 }
 
 // --- UTILS ---
@@ -129,6 +143,7 @@ async function loadAlumnos(activos) {
             // Al hacer clic, disparamos la magia
             tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e);
             
+            // ... dentro del forEach de loadAlumnos ...
             tr.innerHTML = `
                 ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
                 <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
@@ -141,6 +156,7 @@ async function loadAlumnos(activos) {
                 <td>${getDojoName(p.dojo)}</td>
                 ${activos ? `<td>${formatDateDisplay(p.fecha_inicio)}</td>` : ''}
             `;
+            // No añadimos la celda sticky-col aquí
             tbody.appendChild(tr);
         });
     } catch (e) { tbody.innerHTML = `<tr><td colspan="10">Error de carga.</td></tr>`; }
