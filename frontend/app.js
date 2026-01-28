@@ -121,7 +121,8 @@ function togglePassword(i, icon) { const x = document.getElementById(i); if (x.t
 // --- CARGA ALUMNOS (Corrección Botón Borrar) ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    tbody.innerHTML = `<tr><td colspan="10">Cargando...</td></tr>`;
+    const colCount = activos ? 9 : 8;
+    tbody.innerHTML = `<tr><td colspan="${colCount}">Cargando...</td></tr>`;
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
 
@@ -140,10 +141,9 @@ async function loadAlumnos(activos) {
             
             const tr = document.createElement('tr');
             tr.id = `row-${id}`;
-            // Al hacer clic, disparamos la magia
-            tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e);
+            // Pasamos 'activos' para saber qué botones mostrar
+            tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
             
-            // ... dentro del forEach de loadAlumnos ...
             tr.innerHTML = `
                 ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
                 <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
@@ -156,30 +156,33 @@ async function loadAlumnos(activos) {
                 <td>${getDojoName(p.dojo)}</td>
                 ${activos ? `<td>${formatDateDisplay(p.fecha_inicio)}</td>` : ''}
             `;
-            // No añadimos la celda sticky-col aquí
             tbody.appendChild(tr);
         });
-    } catch (e) { tbody.innerHTML = `<tr><td colspan="10">Error de carga.</td></tr>`; }
+    } catch (e) { tbody.innerHTML = `<tr><td colspan="${colCount}">Error de carga.</td></tr>`; }
 }
 
-function handleAlumnoSelection(id, nombre, apellidos, event) {
-    // 1. Limpiar cualquier selección previa
+function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
     closeAlumnoActions();
-    
-    // 2. Resaltar fila
     const row = document.getElementById(`row-${id}`);
     if (!row) return;
     row.classList.add('selected-row');
 
-    // 3. Preparar los botones (HTML)
-    const actionsHtml = `
-        <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
-        <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn-icon delete" title="Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
-    `;
+    // Botones dinámicos según si es Alumno o es una Baja
+    let actionsHtml = "";
+    if (esActivo) {
+        actionsHtml = `
+            <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+            <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
+            <button class="action-btn-icon delete" title="Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+        `;
+    } else {
+        actionsHtml = `
+            <button class="action-btn-icon restore" title="Reactivar" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
+            <button class="action-btn-icon delete" title="Eliminar" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
+        `;
+    }
 
     const isMobile = window.innerWidth <= 900;
-
     if (isMobile) {
         document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
@@ -189,16 +192,11 @@ function handleAlumnoSelection(id, nombre, apellidos, event) {
         bar.innerHTML = actionsHtml;
         bar.classList.remove('hidden');
 
-        // Posicionamiento dinámico relativo a la fila seleccionada
         const rect = row.getBoundingClientRect();
-        const scrollContainer = document.querySelector('.content');
-        
-        // Colocamos la barra a la derecha del nombre (aprox 400px desde la izquierda) 
-        // para que no se salga de la pantalla
-        bar.style.top = `${rect.top + (rect.height / 2) - 25}px`;
-        bar.style.left = `${rect.left + 350}px`; 
+        // Centrado vertical y pegado a la zona del nombre/dni
+        bar.style.top = `${rect.top + (rect.height / 2) - 22}px`;
+        bar.style.left = `${rect.left + 250}px`; 
     }
-
     if (event) event.stopPropagation();
 }
 
