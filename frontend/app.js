@@ -360,6 +360,7 @@ document.getElementById('change-pass-form')?.addEventListener('submit', async (e
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
 // 1. INFORME HISTÓRICO INDIVIDUAL
+// 1. INFORME HISTÓRICO INDIVIDUAL (CORREGIDO: Timezone Fix literal)
 async function generateIndividualHistory(id, nombre, apellidos) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -376,16 +377,20 @@ async function generateIndividualHistory(id, nombre, apellidos) {
             const a = item.attributes || item;
             const c = parseRelation(a.clase);
             
-            let fechaStr = "NO DISP", horaStr = "--", duracion = 0, tipo = "General";
+            let fechaStr = "NO DISP", horaStr = "--:--", duracion = 0, tipo = "General";
+            
             if (c && c.Fecha_Hora) {
-                const dateObj = new Date(c.Fecha_Hora);
-                fechaStr = dateObj.toLocaleDateString('es-ES');
-                horaStr = dateObj.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+                // TRATAMIENTO LITERAL: Evitamos que el navegador aplique el desfase de +1 hora
+                const [fechaPart, resto] = c.Fecha_Hora.split('T'); // "2026-01-20" y "10:00:00.000Z"
+                const [y, m, d] = fechaPart.split('-');
+                
+                fechaStr = `${d}/${m}/${y}`;
+                horaStr = resto.substring(0, 5); // Cogemos "10:00" directamente de la cadena
+                
                 duracion = parseFloat(c.Duracion || 0);
                 tipo = c.Tipo || "General";
             }
             
-            // Sumar solo si asistió
             if(a.Estado === 'Asistio') totalHoras += duracion;
 
             return [fechaStr, horaStr, tipo, duracion + 'h', a.Estado === 'Asistio' ? 'ASISTIÓ' : 'NO VINO'];
