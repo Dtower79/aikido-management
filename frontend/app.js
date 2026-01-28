@@ -163,52 +163,58 @@ async function loadAlumnos(activos) {
 }
 
 function handleAlumnoSelection(id, nombre, apellidos, event) {
-    // 1. Limpiar selección anterior
-    document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
+    // 1. Limpiar cualquier selección previa
+    closeAlumnoActions();
     
-    // 2. Resaltar fila actual
+    // 2. Resaltar fila
     const row = document.getElementById(`row-${id}`);
+    if (!row) return;
     row.classList.add('selected-row');
 
-    const isMobile = window.innerWidth <= 900;
+    // 3. Preparar los botones (HTML)
     const actionsHtml = `
         <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
         <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn-icon delete" title="Dar de Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+        <button class="action-btn-icon delete" title="Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
     `;
 
+    const isMobile = window.innerWidth <= 900;
+
     if (isMobile) {
-        // --- MÓVIL: Bottom Sheet ---
         document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
     } else {
-        // --- ESCRITORIO: Barra Flotante ---
         const bar = document.getElementById('action-bar-desktop');
         bar.innerHTML = actionsHtml;
         bar.classList.remove('hidden');
 
-        // Posicionamiento inteligente al lado de la fila
+        // Posicionamiento dinámico relativo a la fila seleccionada
         const rect = row.getBoundingClientRect();
-        bar.style.top = `${rect.top + (rect.height / 2) - (bar.offsetHeight / 2)}px`;
-        bar.style.left = `${rect.right + 20}px`;
+        const scrollContainer = document.querySelector('.content');
+        
+        // Colocamos la barra a la derecha del nombre (aprox 400px desde la izquierda) 
+        // para que no se salga de la pantalla
+        bar.style.top = `${rect.top + (rect.height / 2) - 25}px`;
+        bar.style.left = `${rect.left + 350}px`; 
     }
 
-    // Detener propagación para que el clic fuera funcione
     if (event) event.stopPropagation();
 }
 
 // Cerrar acciones al hacer clic fuera
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('tr') && !e.target.closest('.action-bar-desktop') && !e.target.closest('.bottom-sheet-content')) {
+    if (!e.target.closest('tr') && !e.target.closest('.action-bar-desktop')) {
         closeAlumnoActions();
     }
 });
 
 function closeAlumnoActions() {
     document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
-    document.getElementById('action-bar-desktop').classList.add('hidden');
-    document.getElementById('bottom-sheet-mobile').classList.add('hidden');
+    const bar = document.getElementById('action-bar-desktop');
+    const sheet = document.getElementById('bottom-sheet-mobile');
+    if (bar) bar.classList.add('hidden');
+    if (sheet) sheet.classList.add('hidden');
 }
 
 const formAlumno = document.getElementById('form-nuevo-alumno');
