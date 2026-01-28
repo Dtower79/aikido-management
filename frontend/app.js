@@ -162,18 +162,24 @@ async function loadAlumnos(activos) {
 }
 
 function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
+    // 1. Limpiamos cualquier rastro de selección previa
     closeAlumnoActions();
+    
+    // 2. Localizamos la fila y la iluminamos
     const row = document.getElementById(`row-${id}`);
-    if (!row) return;
+    if (!row) {
+        console.error("No se encontró la fila row-" + id);
+        return;
+    }
     row.classList.add('selected-row');
 
-    // Botones dinámicos según si es Alumno o es una Baja
+    // 3. Decidimos qué botones mostrar según si es Alumno o Baja
     let actionsHtml = "";
     if (esActivo) {
         actionsHtml = `
             <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
             <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-            <button class="action-btn-icon delete" title="Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+            <button class="action-btn-icon delete" title="Dar de Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
         `;
     } else {
         actionsHtml = `
@@ -183,34 +189,47 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
     }
 
     const isMobile = window.innerWidth <= 900;
+
     if (isMobile) {
-        document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
+        // MÓVIL: Panel desde abajo
+        document.getElementById('sheet-alumno-name').innerText = (nombre + " " + apellidos).toUpperCase();
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
     } else {
+        // ESCRITORIO: Barra flotante
         const bar = document.getElementById('action-bar-desktop');
         bar.innerHTML = actionsHtml;
         bar.classList.remove('hidden');
 
+        // Cálculo de posición "mágica"
         const rect = row.getBoundingClientRect();
-        // Centrado vertical y pegado a la zona del nombre/dni
-        bar.style.top = `${rect.top + (rect.height / 2) - 22}px`;
-        bar.style.left = `${rect.left + 250}px`; 
+        
+        // Ajuste fino: la centramos verticalmente respecto a la fila
+        // y la alejamos un poco de la zona del nombre
+        bar.style.top = (rect.top + (rect.height / 2) - 22) + "px";
+        bar.style.left = (rect.left + 300) + "px"; 
     }
+
+    // Evitamos que el clic se propague al documento y cierre la barra al instante
     if (event) event.stopPropagation();
 }
 
 // Cerrar acciones al hacer clic fuera
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('tr') && !e.target.closest('.action-bar-desktop')) {
+    // Si el clic NO es en una fila Y NO es dentro de la propia barra de acciones...
+    if (!e.target.closest('tr') && !e.target.closest('.action-bar-desktop') && !e.target.closest('.bottom-sheet-content')) {
         closeAlumnoActions();
     }
 });
 
 function closeAlumnoActions() {
+    // Quitamos el color rojo de todas las filas
     document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
+    
+    // Escondemos los contenedores
     const bar = document.getElementById('action-bar-desktop');
     const sheet = document.getElementById('bottom-sheet-mobile');
+    
     if (bar) bar.classList.add('hidden');
     if (sheet) sheet.classList.add('hidden');
 }
