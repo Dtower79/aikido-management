@@ -183,8 +183,46 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .footer-logo-mini { height: 20px; vertical-align: middle; }
 
 /* --- TOOLBAR --- */
-.toolbar { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; width: 100%; }
-.search-box { background: var(--bg-header); border: 1px solid var(--border); border-radius: 8px; padding: 8px 15px; display: flex; align-items: center; min-width: 250px; flex: 1; }
+.toolbar { 
+    display: flex; 
+    align-items: center; 
+    gap: 20px; 
+    flex-wrap: nowrap; /* Evitamos que salte de línea en escritorio */
+}
+
+.selected-student-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    text-transform: uppercase;
+    border-right: 1px solid var(--border);
+    padding-right: 12px;
+    margin-right: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 4px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--accent);
+    animation: fadeIn 0.3s ease;
+}
+
+.search-box { 
+    flex: 0 1 350px; /* Ancho fijo máximo de 350px para la búsqueda */
+}
 .search-box input { background: transparent; border: none; color: white; outline: none; width: 100%; margin-left: 10px; }
 
 .btn-pdf { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; }
