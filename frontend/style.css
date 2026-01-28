@@ -224,41 +224,72 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     flex: 1;
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* Todo a la derecha */
-    gap: 10px;
-    height: 100%;
-    padding: 0 15px;
+    justify-content: space-between; /* Distribuye: vacio - nombre - iconos */
+    gap: 0;
+    height: 45px;
+    padding: 0 20px;
     border-radius: 12px;
     transition: all 0.3s ease;
-    opacity: 0; /* Oculto por defecto */
+    opacity: 0;
     pointer-events: none;
 }
 
 .toolbar-actions-area.active {
     opacity: 1;
     pointer-events: all;
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(239, 68, 68, 0.08);
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .student-tag {
-    font-size: 0.8rem;
+    flex: 1; /* Toma todo el espacio del medio */
+    text-align: center; /* Centra el texto en ese espacio */
+    font-size: 0.85rem;
     font-weight: 800;
     color: var(--accent);
     text-transform: uppercase;
-    margin-right: 10px;
-    border-right: 1px solid var(--border);
-    padding-right: 15px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 15px;
 }
 
-
+.actions-buttons-wrap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding-left: 15px;
+    border-left: 1px solid rgba(255,255,255,0.1); /* Separador visual sutil */
+}
 
 .search-box { 
-    flex: 0 1 300px; /* El buscador ya no se estira infinito */
+    display: flex; 
+    align-items: center; /* Centra verticalmente lupa e input */
+    background: var(--bg-header); 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    padding: 0 15px; /* Padding lateral equilibrado */
+    height: 45px; /* Altura fija para control total */
+    flex: 0 1 300px;
 }
 
-.search-box input { background: transparent; border: none; color: white; outline: none; width: 100%; margin-left: 10px; }
+.search-box i {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-right: 10px; /* Espacio fijo con el texto */
+    display: flex;
+    align-items: center;
+}
+
+.search-box input { 
+    background: transparent; 
+    border: none; 
+    color: white; 
+    outline: none; 
+    width: 100%; 
+    height: 100%; /* Ocupa toda la altura para centrar el texto */
+    font-size: 0.9rem;
+}
 
 .btn-pdf { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; }
 .action-btn { background: var(--primary); color: white; border: none; padding: 0 25px; border-radius: 6px; font-weight: 700; cursor: pointer; height: 45px; display: inline-flex; align-items: center; justify-content: center; gap: 15px; }
@@ -267,7 +298,10 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .font-tool button { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); cursor: pointer; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
 
 /* Iconos de acciones */
-.action-btn-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; font-size: 1.1rem; transition: 0.2s; margin: 0 2px; }
+.action-btn-icon {
+    padding: 8px !important;
+    font-size: 1.1rem !important;
+}
 .action-btn-icon:hover { color: var(--primary); transform: scale(1.2); }
 .action-btn-icon.delete:hover { color: var(--accent); }
 .action-btn-icon.restore:hover { color: #22c55e; }

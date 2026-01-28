@@ -193,8 +193,9 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
         
         if (container) {
             container.innerHTML = `
+                <div style="flex: 1; visibility: hidden;"></div> <!-- Espaciador invisible a la izquierda -->
                 <span class="student-tag">${nombre} ${apellidos}</span>
-                ${actionsHtml}
+                <div class="actions-buttons-wrap">${actionsHtml}</div>
             `;
             container.classList.add('active');
         }
