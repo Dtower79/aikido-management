@@ -416,15 +416,23 @@ async function generateIndividualHistory(id, nombre, apellidos) {
 }
 
 // 2. GENERADOR DE INFORMES GENERALES
+// 2. GENERADOR DE INFORMES GENERALES (CORREGIDO: Modal + Fix Multi-página)
 async function generateReport(type) {
-    document.getElementById('report-modal').classList.add('hidden');
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
     const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
+    // 1. Validar fecha con Modal en lugar de Alert
+    if (type === 'attendance' && !attendanceDate) {
+        showModal("Aviso", "Por favor, selecciona una fecha en el calendario para generar el informe de asistencia.");
+        return;
+    }
+
+    document.getElementById('report-modal').classList.add('hidden');
+
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
+    const doc = new jsPDF('l', 'mm', 'a4'); 
     const logoImg = new Image();
     logoImg.src = 'img/logo-arashi-informe.png';
 
@@ -440,7 +448,6 @@ async function generateReport(type) {
 
         try {
             if (type === 'attendance') {
-                if (!attendanceDate) { alert("Selecciona una fecha."); return; }
                 title = "ASISTENCIA DIARIA - TATAMI";
                 subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
                 
@@ -457,8 +464,8 @@ async function generateReport(type) {
                     const cla = parseRelation(a.clase);
                     let horaStr = "--:--";
                     if(cla?.Fecha_Hora) {
-                        const d = new Date(cla.Fecha_Hora);
-                        horaStr = d.getUTCHours().toString().padStart(2, '0') + ":" + d.getUTCMinutes().toString().padStart(2, '0') + "h";
+                        const [f, resto] = cla.Fecha_Hora.split('T');
+                        horaStr = resto.substring(0, 5) + "h";
                     }
                     return [
                         alu ? `${(alu.apellidos||'').toUpperCase()}, ${alu.nombre||''}` : 'DESCONOCIDO',
@@ -517,11 +524,17 @@ async function generateReport(type) {
                 });
             }
 
+            // RENDERIZADO TABLA: Fix solapamiento segunda página
             doc.autoTable({
-                startY: 25, head: [headRow], body: body, theme: 'grid',
+                startY: 30, // Margen inicial primera página
+                margin: { top: 30 }, // Margen superior para páginas siguientes (2, 3...)
+                head: [headRow], 
+                body: body, 
+                theme: 'grid',
                 styles: { fontSize: 6, cellPadding: 1.5, overflow: 'linebreak' },
                 headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
-                didDrawPage: (d) => {
+                didDrawPage: (data) => {
+                    // Este código se ejecuta en TODAS las páginas
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.setFont("helvetica", "bold");
                     doc.text(title, pageWidth / 2, 12, { align: 'center' });
@@ -532,7 +545,7 @@ async function generateReport(type) {
             doc.save(`Informe_Arashi_${type}.pdf`);
         } catch (e) { 
             console.error(e);
-            alert("Error al generar el PDF. Revisa la consola."); 
+            showModal("Error", "No se ha podido generar el informe. Revisa la conexión."); 
         }
     };
 }
