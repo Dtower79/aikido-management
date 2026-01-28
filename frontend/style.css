@@ -139,8 +139,21 @@ td { padding: 12px 15px; border-bottom: 1px solid var(--border); white-space: no
 tr:hover td { background: rgba(255,255,255,0.03) !important; }
 
 /* Columna de Acciones pegada a la derecha */
-.sticky-col { position: sticky; right: 0; background-color: var(--bg-header) !important; z-index: 12; border-left: 2px solid var(--border); text-align: center !important; }
-td.sticky-col { background-color: var(--bg-card) !important; z-index: 9; box-shadow: -6px 0 15px rgba(0,0,0,0.5); }
+/* Columna de Acciones: ya no es fija para no tapar datos */
+.sticky-col { 
+    position: relative !important; /* Cambiado de sticky a relative */
+    right: auto !important; 
+    background-color: transparent !important; 
+    z-index: 1; 
+    border-left: 1px solid var(--border); 
+    text-align: center !important; 
+    width: 120px;
+}
+
+td.sticky-col { 
+    background-color: rgba(255,255,255,0.02) !important; 
+    box-shadow: none !important; 
+}
 tr:hover td.sticky-col { background-color: #262f3f !important; }
 
 /* --- CARDS --- */

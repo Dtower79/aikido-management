@@ -160,12 +160,44 @@ if (formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
-        const alumnoData = { nombre: document.getElementById('new-nombre').value, apellidos: document.getElementById('new-apellidos').value, dni: document.getElementById('new-dni').value, fecha_nacimiento: document.getElementById('new-nacimiento').value || null, fecha_inicio: document.getElementById('new-alta').value || null, email: document.getElementById('new-email').value, telefono: document.getElementById('new-telefono').value, direccion: document.getElementById('new-direccion').value, poblacion: document.getElementById('new-poblacion').value, cp: document.getElementById('new-cp').value, dojo: document.getElementById('new-dojo').value, grupo: document.getElementById('new-grupo').value, grado: document.getElementById('new-grado').value, seguro_pagado: document.getElementById('new-seguro').checked, activo: true };
+        const alumnoData = { 
+            nombre: document.getElementById('new-nombre').value, 
+            apellidos: document.getElementById('new-apellidos').value, 
+            dni: document.getElementById('new-dni').value, 
+            fecha_nacimiento: document.getElementById('new-nacimiento').value || null, 
+            fecha_inicio: document.getElementById('new-alta').value || null, 
+            email: document.getElementById('new-email').value, 
+            telefono: document.getElementById('new-telefono').value, 
+            direccion: document.getElementById('new-direccion').value, 
+            poblacion: document.getElementById('new-poblacion').value, 
+            cp: document.getElementById('new-cp').value, 
+            dojo: document.getElementById('new-dojo').value, 
+            grupo: document.getElementById('new-grupo').value, 
+            grado: document.getElementById('new-grado').value, 
+            seguro_pagado: document.getElementById('new-seguro').checked, 
+            activo: true 
+        };
+        
         try {
-            const method = id ? 'PUT' : 'POST'; const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
-            const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: alumnoData }) });
-            if (res.ok) showModal("Éxito", "Guardado.", () => { showSection('alumnos'); resetForm(); }); else showModal("Error", "No se pudo guardar.");
-        } catch { showModal("Error", "Fallo de conexión."); }
+            const method = id ? 'PUT' : 'POST'; 
+            const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
+            const res = await fetch(url, { 
+                method: method, 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, 
+                body: JSON.stringify({ data: alumnoData }) 
+            });
+            
+            if (res.ok) {
+                showModal("¡OSS!", id ? "Los datos del alumno se han actualizado correctamente." : "Alumno registrado con éxito.", () => { 
+                    showSection('alumnos'); 
+                    resetForm(); 
+                });
+            } else { 
+                showModal("Error", "No se han podido guardar los cambios. Revisa los datos."); 
+            }
+        } catch (error) { 
+            showModal("Error", "Fallo de conexión con el Dojo."); 
+        }
     });
 }
 
@@ -291,7 +323,7 @@ async function generateReport(type) {
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape para que quepa todo
+    const doc = new jsPDF('l', 'mm', 'a4');
     const logoImg = new Image();
     logoImg.src = 'img/logo-arashi-informe.png';
 
@@ -303,17 +335,14 @@ async function generateReport(type) {
 
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
         let headRow = [], body = [], title = "", subText = "";
 
         try {
-            // --- INFORME DE ASISTENCIA (POR FECHA) ---
             if (type === 'attendance') {
                 if (!attendanceDate) { alert("Selecciona una fecha."); return; }
                 title = "ASISTENCIA DIARIA - TATAMI";
                 subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
                 
-                // Filtro "Profundo" a través de la relación clase.Fecha_Hora
                 let apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
                 if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
 
@@ -341,7 +370,6 @@ async function generateReport(type) {
                 });
 
             } else {
-                // --- INFORMES GENERALES (AMPLIADOS CON DIRECCIÓN/CP/HORAS) ---
                 const isBaja = type.startsWith('bajas_');
                 title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO COMPLETO ALUMNOS";
                 if (!isBaja && type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
@@ -350,13 +378,12 @@ async function generateReport(type) {
                 subText = `${isBaja ? 'Alumnos Inactivos' : 'Alumnos Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'} | ${new Date().toLocaleDateString()}`;
 
                 let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
-                if (dojoFilterId) url += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+                if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
 
-                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+                const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
                 const json = await res.json();
                 let list = json.data || [];
 
-                // Ordenación
                 list.sort((a, b) => {
                     const pA = a.attributes || a; const pB = b.attributes || b;
                     if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
@@ -381,7 +408,7 @@ async function generateReport(type) {
                         p.seguro_pagado ? 'PAGADO' : 'NO',
                         normalizePhone(p.telefono),
                         p.email || '-',
-                        (p.direccion || '').substring(0, 30), // Truncar si es muy larga
+                        (p.direccion || '').substring(0, 30),
                         ciudadFull
                     ];
                     if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
@@ -389,23 +416,10 @@ async function generateReport(type) {
                 });
             }
 
-            // Renderizado Tabla (Fuente 6 para que quepa todo)
             doc.autoTable({
                 startY: 25, head: [headRow], body: body, theme: 'grid',
                 styles: { fontSize: 6, cellPadding: 1.5, overflow: 'linebreak' },
                 headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
-                columnStyles: {
-                    0: { cellWidth: 25 }, // Apellidos
-                    4: { cellWidth: 10, halign: 'center' }, // Horas
-                    5: { cellWidth: 12, halign: 'center' }  // Seguro
-                },
-                didParseCell: (data) => {
-                    if (data.section === 'body') {
-                        const t = data.cell.raw;
-                        if (t === 'ASISTIÓ' || t === 'PAGADO') data.cell.styles.textColor = [0, 128, 0];
-                        if (t === 'NO SE PRESENTÓ' || t === 'NO') data.cell.styles.textColor = [190, 0, 0];
-                    }
-                },
                 didDrawPage: (d) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.setFont("helvetica", "bold");
@@ -415,7 +429,10 @@ async function generateReport(type) {
                 }
             });
             doc.save(`Informe_Arashi_${type}.pdf`);
-        } catch (e) { alert("Error PDF"); console.error(e); }
+        } catch (e) { 
+            console.error(e);
+            alert("Error al generar el PDF. Revisa la consola."); 
+        }
     };
 }
 
@@ -577,3 +594,27 @@ function setupDragScroll() {
 function toggleMobileMenu() { document.querySelector('.sidebar').classList.toggle('open'); }
 function scrollToTop() { const c = document.querySelector('.content'); if (c) c.scrollTo({ top: 0, behavior: 'smooth' }); else window.scrollTo({ top: 0, behavior: 'smooth' }); }
 const ca = document.querySelector('.content'); if (ca) { ca.addEventListener('scroll', () => { const b = document.getElementById('btn-scroll-top'); if (ca.scrollTop > 300) b.classList.add('visible'); else b.classList.remove('visible'); }); }
+
+function showModal(titulo, mensaje, callbackOk = null) {
+    const modal = document.getElementById('custom-modal');
+    document.getElementById('modal-title').innerText = titulo;
+    document.getElementById('modal-message').innerText = mensaje;
+    
+    const btnOk = document.getElementById('modal-btn-ok');
+    const btnCancel = document.getElementById('modal-btn-cancel');
+    
+    modal.classList.remove('hidden');
+    
+    btnOk.onclick = () => {
+        modal.classList.add('hidden');
+        if (callbackOk) callbackOk();
+    };
+    
+    btnCancel.onclick = () => {
+        modal.classList.add('hidden');
+    };
+}
+
+function closeModal() {
+    document.getElementById('custom-modal').classList.add('hidden');
+}
