@@ -182,12 +182,12 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
     const isMobile = window.innerWidth <= 900;
 
     if (isMobile) {
-        // En móvil mantenemos el Bottom Sheet (es lo mejor para el dedo)
+        // En móvil usamos el Bottom Sheet (Panel inferior)
         document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
     } else {
-        // EN ESCRITORIO: Inyectar en la barra correspondiente
+        // EN ESCRITORIO: Inyectar en la barra correspondiente del toolbar (Actions Alumnos o Bajas)
         const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
         const container = document.getElementById(targetId);
         
@@ -204,10 +204,10 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
 
 // También actualizamos closeAlumnoActions para limpiar la barra
 function closeAlumnoActions() {
-    // Quitar resaltado de filas
+    // Quitar resaltado de todas las filas
     document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
     
-    // Limpiar y ocultar áreas de la toolbar
+    // Limpiar y ocultar áreas de la toolbar (tanto alumnos como bajas)
     ['actions-alumnos', 'actions-bajas'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -216,7 +216,7 @@ function closeAlumnoActions() {
         }
     });
 
-    // Ocultar móvil
+    // Ocultar panel móvil
     const sheet = document.getElementById('bottom-sheet-mobile');
     if (sheet) sheet.classList.add('hidden');
 }
