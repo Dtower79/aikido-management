@@ -107,52 +107,92 @@ function togglePassword(i, icon) { const x = document.getElementById(i); if (x.t
 // --- CARGA ALUMNOS (Corrección Botón Borrar) ---
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    tbody.innerHTML = `<tr><td colspan="12">Cargando...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10">Cargando...</td></tr>`;
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
+
     try {
-        const res = await fetch(`${API_URL}/api/alumnos?populate=dojo&${filter}&${sort}&pagination[limit]=500`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const res = await fetch(`${API_URL}/api/alumnos?populate=dojo&${filter}&${sort}&pagination[limit]=500`, { 
+            headers: { 'Authorization': `Bearer ${jwtToken}` } 
+        });
         const json = await res.json();
-        const data = json.data || [];
         tbody.innerHTML = '';
-        data.forEach(a => {
+        
+        (json.data || []).forEach(a => {
             const p = a.attributes || a;
             const id = a.documentId;
-            const horas = parseFloat(p.horas_acumuladas || 0).toFixed(1);
             const safeNombre = escapeQuotes(p.nombre || '');
             const safeApellidos = escapeQuotes(p.apellidos || '');
             
-            let rowHTML = `
+            const tr = document.createElement('tr');
+            tr.id = `row-${id}`;
+            // Al hacer clic, disparamos la magia
+            tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e);
+            
+            tr.innerHTML = `
                 ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
                 <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
                 <td>${p.nombre || ''}</td>
                 <td>${p.dni || ''}</td>
                 <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
-                ${activos ? `<td style="font-weight:bold; color:var(--primary)">${horas}h</td>` : ''}
+                ${activos ? `<td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>` : ''}
                 <td><span class="${p.seguro_pagado ? 'badge-ok' : 'badge-no'}">${p.seguro_pagado ? 'SÍ' : 'NO'}</span></td>
                 <td>${normalizePhone(p.telefono)}</td>
                 <td>${getDojoName(p.dojo)}</td>
+                ${activos ? `<td>${formatDateDisplay(p.fecha_inicio)}</td>` : ''}
             `;
-            
-            if (activos) {
-                rowHTML += `<td>${formatDateDisplay(p.fecha_inicio)}</td>`;
-                // Usamos safeNombre y safeApellidos para que no rompa el HTML
-                rowHTML += `
-                    <td class="sticky-col">
-                        <button class="action-btn-icon" title="Ver Historial" onclick="generateIndividualHistory('${id}', '${safeNombre}', '${safeApellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
-                        <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-                        <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${safeNombre}')"><i class="fa-solid fa-user-xmark"></i></button>
-                    </td>`;
-            } else {
-                rowHTML += `
-                    <td class="sticky-col">
-                        <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${safeNombre}')"><i class="fa-solid fa-rotate-left"></i></button>
-                        <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${safeNombre}')"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>`;
-            }
-            tbody.innerHTML += `<tr>${rowHTML}</tr>`;
+            tbody.appendChild(tr);
         });
-    } catch (e) { console.error(e); tbody.innerHTML = `<tr><td colspan="12">Error de carga.</td></tr>`; }
+    } catch (e) { tbody.innerHTML = `<tr><td colspan="10">Error de carga.</td></tr>`; }
+}
+
+function handleAlumnoSelection(id, nombre, apellidos, event) {
+    // 1. Limpiar selección anterior
+    document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
+    
+    // 2. Resaltar fila actual
+    const row = document.getElementById(`row-${id}`);
+    row.classList.add('selected-row');
+
+    const isMobile = window.innerWidth <= 900;
+    const actionsHtml = `
+        <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+        <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="action-btn-icon delete" title="Dar de Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+    `;
+
+    if (isMobile) {
+        // --- MÓVIL: Bottom Sheet ---
+        document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
+        document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
+        document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
+    } else {
+        // --- ESCRITORIO: Barra Flotante ---
+        const bar = document.getElementById('action-bar-desktop');
+        bar.innerHTML = actionsHtml;
+        bar.classList.remove('hidden');
+
+        // Posicionamiento inteligente al lado de la fila
+        const rect = row.getBoundingClientRect();
+        bar.style.top = `${rect.top + (rect.height / 2) - (bar.offsetHeight / 2)}px`;
+        bar.style.left = `${rect.right + 20}px`;
+    }
+
+    // Detener propagación para que el clic fuera funcione
+    if (event) event.stopPropagation();
+}
+
+// Cerrar acciones al hacer clic fuera
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('tr') && !e.target.closest('.action-bar-desktop') && !e.target.closest('.bottom-sheet-content')) {
+        closeAlumnoActions();
+    }
+});
+
+function closeAlumnoActions() {
+    document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
+    document.getElementById('action-bar-desktop').classList.add('hidden');
+    document.getElementById('bottom-sheet-mobile').classList.add('hidden');
 }
 
 const formAlumno = document.getElementById('form-nuevo-alumno');

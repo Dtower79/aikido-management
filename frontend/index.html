@@ -294,5 +294,17 @@
 
     <script src="app.js"></script>
     <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+    <!-- Barra Flotante Escritorio -->
+<div id="action-bar-desktop" class="action-bar-desktop hidden"></div>
+
+<!-- Panel Inferior Móvil (Bottom Sheet) -->
+<div id="bottom-sheet-mobile" class="bottom-sheet-overlay hidden" onclick="closeAlumnoActions()">
+    <div class="bottom-sheet-content" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <h3 id="sheet-alumno-name">Nombre Alumno</h3>
+        <div id="sheet-actions-container"></div>
+        <button class="action-btn secondary" style="width:100%; margin-top:15px;" onclick="closeAlumnoActions()">Cerrar</button>
+    </div>
+</div>
 </body>
 </html>
