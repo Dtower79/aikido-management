@@ -120,9 +120,11 @@
                     <div class="toolbar">
                         <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> CENTRO INFORMES</button>
                         <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
-                        <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI..."></div>
-                        <!-- Nuevo contenedor de acciones en la barra superior -->
-                        <div id="actions-alumnos" class="toolbar-actions-area"></div>
+                        <div class="search-box">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI...">
+</div>
+<div id="actions-alumnos" class="toolbar-actions-area"></div>
                     </div>
                 </header>
                 <div class="table-container drag-scroll">
@@ -150,9 +152,11 @@
                 <header class="section-header"><h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2></header>
                 <div class="toolbar">
                     <div class="font-tool"><button onclick="changeFontSize('table-bajas', -1)">A-</button><button onclick="changeFontSize('table-bajas', 1)">A+</button></div>
-                    <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="search-baja" placeholder="Buscar baja..."></div>
-                    <!-- Nuevo contenedor de acciones en la barra superior para Bajas -->
-                    <div id="actions-bajas" class="toolbar-actions-area"></div>
+                    <div class="search-box">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="text" id="search-baja" placeholder="Buscar baja...">
+</div>
+<div id="actions-bajas" class="toolbar-actions-area"></div>
                 </div>
                 <div class="table-container drag-scroll">
                     <table id="table-bajas">

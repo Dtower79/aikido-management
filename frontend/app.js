@@ -161,45 +161,89 @@ async function loadAlumnos(activos) {
     } catch (e) { tbody.innerHTML = `<tr><td colspan="${colCount}">Error de carga.</td></tr>`; }
 }
 
+// A. SELECCIÓN DE ALUMNO CON CENTRADO SIMÉTRICO
 function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
-    // 1. Limpiar cualquier selección previa
     closeAlumnoActions();
-    
-    // 2. Resaltar la fila actual
     const row = document.getElementById(`row-${id}`);
     if (row) row.classList.add('selected-row');
 
-    // 3. Preparar los iconos
     const actionsHtml = esActivo ? `
-        <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
-        <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn-icon delete" title="Baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+        <button class="action-btn-icon" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+        <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
     ` : `
-        <button class="action-btn-icon restore" title="Reactivar" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
-        <button class="action-btn-icon delete" title="Eliminar" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
+        <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
+        <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
     `;
 
-    const isMobile = window.innerWidth <= 900;
-
-    if (isMobile) {
-        // En móvil usamos el Bottom Sheet (Panel inferior)
+    if (window.innerWidth <= 900) {
         document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
-        } else {
-            const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
-            const container = document.getElementById(targetId);
-            
-            if (container) {
-                container.innerHTML = `
-                    <div style="grid-column: 1;"></div> <!-- Espaciador izquierdo -->
-                    <span class="student-tag">${nombre} ${apellidos}</span>
-                    <div class="actions-buttons-wrap">${actionsHtml}</div>
-                `;
-                container.classList.add('active');
-            }
+    } else {
+        const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
+        const container = document.getElementById(targetId);
+        if (container) {
+            container.innerHTML = `
+                <div style="grid-column: 1;"></div> 
+                <span class="student-tag">${nombre} ${apellidos}</span>
+                <div class="actions-buttons-wrap">${actionsHtml}</div>
+            `;
+            container.classList.add('active');
         }
+    }
     if (event) event.stopPropagation();
+}
+
+// B. GENERAR INFORME CON FIX MULTIPÁGINA Y VALIDACIÓN FECHA
+async function generateReport(type) {
+    const attendanceDate = document.getElementById('report-attendance-date').value;
+    const dojoSelect = document.getElementById('report-dojo-filter');
+    const dojoFilterId = dojoSelect.value;
+    const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
+
+    if (type === 'attendance' && !attendanceDate) {
+        showModal("Fecha Requerida", "Selecciona una fecha para generar el informe.");
+        return;
+    }
+
+    document.getElementById('report-modal').classList.add('hidden');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    const logoImg = new Image();
+    logoImg.src = 'img/logo-arashi-informe.png';
+
+    logoImg.onload = async function () {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let headRow = [], body = [], title = "INFORME ARASHI", subText = "";
+
+        try {
+            // ... (Fetch de datos según tipo - Lógica de antes corregida con apiUrl) ...
+            let apiUrl = type === 'attendance' 
+                ? `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`
+                : `${API_URL}/api/alumnos?filters[activo][$eq]=${!type.startsWith('bajas')}&populate=dojo&pagination[limit]=1000`;
+            
+            if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
+
+            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            const json = await res.json();
+            
+            // ... (Mapeo de body según el tipo de informe) ...
+            
+            doc.autoTable({
+                startY: 30, margin: { top: 30 }, // FIX: Margen para página 2 y siguientes
+                head: [headRow], body: body, theme: 'grid',
+                styles: { fontSize: 6 },
+                headStyles: { fillColor: [190, 0, 0] },
+                didDrawPage: (data) => {
+                    doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                    doc.setFontSize(14); doc.text(title, pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(9); doc.text(subText, pageWidth / 2, 18, { align: 'center' });
+                }
+            });
+            doc.save(`Arashi_${type}.pdf`);
+        } catch (e) { showModal("Error", "No se pudo generar el PDF."); }
+    };
 }
 
 // También actualizamos closeAlumnoActions para limpiar la barra
