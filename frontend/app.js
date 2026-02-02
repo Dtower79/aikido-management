@@ -600,11 +600,11 @@ async function exportBackupExcel() {
     const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
     const originalText = btn.innerHTML;
     
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PREPARANDO...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO INFORME...';
     btn.disabled = true;
 
     try {
-        // 1. Obtener y Ordenar Datos
+        // 1. Obtención de datos y ordenación alfabética
         let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000&filters[activo][$eq]=true`;
         if (dojoFilter) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
 
@@ -612,7 +612,6 @@ async function exportBackupExcel() {
         const json = await res.json();
         let data = json.data || [];
 
-        // Ordenación por Apellidos
         data.sort((a, b) => {
             const nomA = (a.attributes?.apellidos || a.apellidos || "").toUpperCase();
             const nomB = (b.attributes?.apellidos || b.apellidos || "").toUpperCase();
@@ -620,125 +619,148 @@ async function exportBackupExcel() {
         });
 
         const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet('LISTADO OFICIAL');
+        const sheet = workbook.addWorksheet('Listado Oficial Alumnos');
 
-        // 2. Configuración de Impresión (Apaisado y Ajuste a página)
+        // 2. Configuración de página para impresión profesional
         sheet.pageSetup.orientation = 'landscape';
+        sheet.pageSetup.paperSize = 9; // A4
         sheet.pageSetup.fitToPage = true;
         sheet.pageSetup.fitToWidth = 1;
-        sheet.pageSetup.margins = { left: 0.2, right: 0.2, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
+        sheet.pageSetup.margins = { left: 0.25, right: 0.25, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 };
 
-        // 3. Definir Columnas (Todos los campos de Alumnos)
+        // 3. Definición de Columnas con encabezados descriptivos
         sheet.columns = [
-            { header: 'APELLIDOS', key: 'apellidos', width: 25 },
-            { header: 'NOMBRE', key: 'nombre', width: 15 },
-            { header: 'DNI', key: 'dni', width: 12 },
-            { header: 'F. NAC.', key: 'nacimiento', width: 11 },
-            { header: 'DIRECCIÓN', key: 'direccion', width: 25 },
-            { header: 'POBLACIÓN', key: 'poblacion', width: 15 },
-            { header: 'CP', key: 'cp', width: 7 },
-            { header: 'TELÉFONO', key: 'tel', width: 12 },
-            { header: 'EMAIL', key: 'email', width: 25 },
-            { header: 'DOJO', key: 'dojo', width: 18 },
-            { header: 'GRUPO', key: 'grupo', width: 12 },
-            { header: 'GRADO', key: 'grado', width: 10 },
-            { header: 'SEGURO', key: 'seguro', width: 9 },
-            { header: 'HORAS', key: 'horas', width: 8 }
+            { header: 'APELLIDOS DEL ALUMNO', key: 'apellidos', width: 30 },
+            { header: 'NOMBRE', key: 'nombre', width: 18 },
+            { header: 'DNI / NIE', key: 'dni', width: 14 },
+            { header: 'FECHA NAC.', key: 'nacimiento', width: 12 },
+            { header: 'DOMICILIO COMPLETO', key: 'direccion', width: 35 },
+            { header: 'POBLACIÓN', key: 'poblacion', width: 20 },
+            { header: 'C.P.', key: 'cp', width: 8 },
+            { header: 'TELÉFONO', key: 'tel', width: 14 },
+            { header: 'CORREO ELECTRÓNICO', key: 'email', width: 28 },
+            { header: 'DOJO ASIGNADO', key: 'dojo', width: 22 },
+            { header: 'GRUPO / HORARIO', key: 'grupo', width: 15 },
+            { header: 'GRADO ACTUAL', key: 'grado', width: 12 },
+            { header: 'ESTADO SEGURO', key: 'seguro', width: 14 },
+            { header: 'TOTAL HORAS', key: 'horas', width: 10 }
         ];
 
-        // 4. Encabezado Corporativo (Filas 1 a 3)
-        sheet.mergeCells('A1:N3');
-        const titleRow = sheet.getCell('A1');
-        titleRow.value = 'ARASHI GROUP AIKIDO - LISTADO OFICIAL DE ALUMNOS';
-        titleRow.font = { name: 'Arial Black', size: 16, color: { argb: 'FFFFFFFF' } };
-        titleRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; // Fondo Azul Oscuro
-        titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+        // 4. BLOQUE DE ENCABEZADO CORPORATIVO (Filas 1 a 3)
+        // Fondo oscuro para todo el bloque superior
+        for(let i=1; i<=3; i++) {
+            const row = sheet.getRow(i);
+            row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } };
+        }
 
-        // 5. Espacio para el logo y Datos del listado
-        sheet.addRow([]); // Fila 4 vacía
-        sheet.mergeCells('A5:N5');
-        const infoRow = sheet.getCell('A5');
-        const hoy = new Date().toLocaleDateString();
-        infoRow.value = `Documento generado el: ${hoy} | Estado: Alumnos Activos`;
-        infoRow.font = { italic: true, size: 10 };
-        infoRow.alignment = { horizontal: 'right' };
+        // Título Principal (Fila 1 y 2)
+        sheet.mergeCells('A1:N2');
+        const mainTitle = sheet.getCell('A1');
+        mainTitle.value = 'ARASHI GROUP AIKIDO - GESTIÓN INTEGRAL DE ALUMNOS';
+        mainTitle.font = { name: 'Arial', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+        mainTitle.alignment = { vertical: 'middle', horizontal: 'center' };
 
-        // 6. Estilo de Cabecera de Tabla (Fila 6)
-        const headerRow = sheet.getRow(6);
-        headerRow.height = 20;
-        headerRow.eachCell((cell) => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } };
+        // Subtítulo de Información (Fila 3 - Según tu petición)
+        sheet.mergeCells('A3:N3');
+        const subTitle = sheet.getCell('A3');
+        const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        subTitle.value = `INFORME DE AUDITORÍA INTERNA | EMISIÓN: ${hoy} | STATUS: ALUMNOS ACTIVOS EN TATAMI`;
+        subTitle.font = { name: 'Arial', size: 10, bold: false, color: { argb: 'FFFFFFFF' } };
+        subTitle.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        sheet.addRow([]); // Fila 4 de separación (blanca)
+
+        // 5. DISEÑO DE CABECERA DE TABLA (Fila 5)
+        const tableHeader = sheet.getRow(5);
+        tableHeader.height = 25;
+        tableHeader.eachCell((cell) => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } }; // Rojo Arashi
             cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 9 };
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.border = { bottom: { style: 'medium', color: { argb: 'FF000000' } } };
+            cell.border = {
+                top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'medium'}, right: {style:'thin'}
+            };
         });
 
-        // 7. Carga de Datos
-        data.forEach((item) => {
+        // 6. INSERCIÓN DE DATOS CON ESTILO CEBRA
+        data.forEach((item, index) => {
             const p = item.attributes || item;
             const row = sheet.addRow({
                 apellidos: (p.apellidos || '').toUpperCase(),
                 nombre: p.nombre || '',
                 dni: p.dni || '',
                 nacimiento: formatDateExcel(p.fecha_nacimiento),
-                direccion: p.direccion || '',
-                poblacion: p.poblacion || '',
+                direccion: (p.direccion || '').toUpperCase(),
+                poblacion: (p.poblacion || '').toUpperCase(),
                 cp: p.cp || '',
                 tel: normalizePhone(p.telefono),
                 email: p.email || '',
-                dojo: getDojoName(p.dojo),
-                grupo: p.grupo || 'Full Time',
+                dojo: getDojoName(p.dojo).toUpperCase(),
+                grupo: (p.grupo || 'Full Time').toUpperCase(),
                 grado: normalizeGrade(p.grado),
-                seguro: p.seguro_pagado ? 'PAGADO' : 'PENDIENTE',
+                seguro: p.seguro_pagado ? 'GARANTIZADO' : 'NO CUBIERTO',
                 horas: parseFloat(p.horas_acumuladas || 0).toFixed(1)
             });
 
-            // Estilos de celda de datos
+            // Estilo filas alternas para lectura fácil
+            const bgColor = (index % 2 === 0) ? 'FFFFFFFF' : 'FFF9FAFB';
+            
             row.eachCell((cell, colNumber) => {
-                cell.font = { size: 9 };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                cell.font = { size: 9, color: { argb: 'FF1F2937' } };
+                cell.border = { bottom: { style: 'thin', color: { argb: 'FFEDF2F7' } } };
                 cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-                if (colNumber >= 12) cell.alignment = { horizontal: 'center' }; // Grado, Seguro, Horas centrados
+                
+                // Centrar columnas específicas
+                if ([3, 4, 7, 12, 13, 14].includes(colNumber)) {
+                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                }
             });
 
-            // Formato condicional Seguro
-            const sCell = row.getCell(13);
+            // Formato condicional SEGURO
+            const seguroCell = row.getCell(13);
             if (p.seguro_pagado) {
-                sCell.font = { color: { argb: 'FF008000' }, bold: true, size: 9 };
+                seguroCell.font = { color: { argb: 'FF15803D' }, bold: true, size: 9 };
             } else {
-                sCell.font = { color: { argb: 'FFFF0000' }, bold: true, size: 9 };
+                seguroCell.font = { color: { argb: 'FFB91C1C' }, bold: true, size: 9 };
             }
+
+            // Formato HORAS
+            row.getCell(14).font = { bold: true, color: { argb: 'FF3B82F6' } };
         });
 
-        // 8. Intentar añadir Logo (Si existe en la ruta relativa)
+        // 7. INSERCIÓN DEL LOGO CORPORATIVO (logo-arashi.png)
         try {
-            const response = await fetch('img/logo-arashi-informe.png');
+            const response = await fetch('img/logo-arashi.png');
             const blob = await response.blob();
             const arrayBuffer = await blob.arrayBuffer();
             const logoId = workbook.addImage({
                 buffer: arrayBuffer,
                 extension: 'png',
             });
-            // Colocar el logo en la parte superior izquierda del título
+            // Posicionar logo en la esquina superior izquierda (celda A1)
             sheet.addImage(logoId, {
-                tl: { col: 0.2, row: 0.2 },
-                ext: { width: 50, height: 50 }
+                tl: { col: 0.1, row: 0.1 },
+                ext: { width: 55, height: 55 }
             });
-        } catch (e) { console.log("Logo no disponible para Excel"); }
+        } catch (e) { console.warn("Aviso: logo-arashi.png no encontrado en la ruta img/"); }
 
-        // 9. Descarga
+        // 8. FINALIZACIÓN Y DESCARGA
         const buffer = await workbook.xlsx.writeBuffer();
-        const blobDownload = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = window.URL.createObjectURL(blobDownload);
+        const fileBlob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(fileBlob);
         const a = document.createElement('a');
+        const ts = new Date().getTime();
+        
         a.href = url;
-        a.download = `Listado_Oficial_Arashi_${new Date().getFullYear()}.xlsx`;
+        a.download = `EXP_ALUMNOS_ARASHI_${ts}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
 
     } catch (e) {
         console.error(e);
-        showModal("Error", "Error al procesar el archivo Excel.");
+        showModal("Error de Sistema", "No se ha podido generar el informe corporativo.");
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
