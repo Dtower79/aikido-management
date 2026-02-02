@@ -197,14 +197,13 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
 
 // B. GENERAR INFORME CON FIX MULTIPÁGINA Y VALIDACIÓN FECHA
 async function generateReport(type) {
-    const dateEl = document.getElementById('report-attendance-date');
-    const attendanceDate = dateEl ? dateEl.value : "";
+    const attendanceDate = document.getElementById('report-attendance-date').value;
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect ? dojoSelect.value : "";
     const dojoFilterName = dojoSelect ? dojoSelect.options[dojoSelect.selectedIndex].text : "";
 
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Fecha Requerida", "Selecciona una fecha para ver la asistencia.");
+        showModal("Fecha Requerida", "Selecciona una fecha.");
         return;
     }
 
@@ -217,50 +216,56 @@ async function generateReport(type) {
 
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
-        let headRow = [], body = [], title = "", subText = "";
-
+        
         try {
-            // 1. CONSTRUCCIÓN DE URL CON POPULATE EXPLÍCITO PARA V5
             let apiUrl = "";
+            // Cambiamos el populate a formato array, que es el más estable en Strapi v5
             if (type === 'attendance') {
-                title = "ASISTENCIA DIARIA - TATAMI";
-                subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
-                // Filtro de fecha de inicio a fin del día y población profunda de alumno -> dojo
                 apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${attendanceDate}T00:00:00.000Z&filters[clase][Fecha_Hora][$lte]=${attendanceDate}T23:59:59.999Z&populate[alumno][populate][0]=dojo&populate[clase]=true&pagination[limit]=500`;
             } else {
-                const soloActivos = !type.startsWith('bajas');
-                title = soloActivos ? "LISTADO DE ALUMNOS" : "HISTÓRICO DE BAJAS";
-                subText = `${soloActivos ? 'Activos' : 'Inactivos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'} | ${new Date().toLocaleDateString()}`;
-                // Población explícita del dojo para alumnos
-                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${soloActivos}&populate[0]=dojo&pagination[limit]=1000`;
+                const activo = !type.startsWith('bajas');
+                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${activo}&populate[0]=dojo&pagination[limit]=1000`;
             }
 
-            if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+            if (dojoFilterId) {
+                // Filtro de dojo corregido para relaciones en v5
+                apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+            }
 
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
             const json = await res.json();
-            const list = json.data || [];
+            
+            // --- DIAGNÓSTICO: Mira la consola del navegador (F12) al generar el PDF ---
+            console.log("DATOS RECIBIDOS DE STRAPI:", json.data);
 
-            // 2. PROCESAMIENTO DE DATOS
+            const isBaja = type.startsWith('bajas');
+            let headRow = [];
+            let body = [];
+            let title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO DE ALUMNOS";
+            if (type === 'attendance') title = "ASISTENCIA DIARIA - TATAMI";
+
             if (type === 'attendance') {
                 headRow = ['Alumno', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
-                body = list.map(item => {
+                body = (json.data || []).map(item => {
                     const a = item.attributes || item;
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
+                    const dName = alu ? getDojoName(alu.dojo) : "NO DISP";
                     let hStr = "--:--";
                     if(cla?.Fecha_Hora) hStr = cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h";
+                    
                     return [
                         alu ? `${(alu.apellidos||'').toUpperCase()}, ${alu.nombre||''}` : 'DESCONOCIDO',
                         alu?.dni || '-',
-                        getDojoName(alu?.dojo),
+                        dName,
                         cla?.Tipo || 'General',
                         hStr,
-                        (a.Estado || a.estado || 'Confirmado').toUpperCase()
+                        (a.Estado || 'Confirmado').toUpperCase()
                     ];
                 });
             } else {
-                // Ordenación
+                // Ordenación manual para asegurar consistencia
+                let list = json.data || [];
                 list.sort((a, b) => {
                     const pA = a.attributes || a; const pB = b.attributes || b;
                     if (type === 'insurance') {
@@ -270,67 +275,66 @@ async function generateReport(type) {
                     return (pA.apellidos || '').localeCompare(pB.apellidos || '');
                 });
 
-                const isBaja = type.startsWith('bajas');
-                // Definición idéntica de columnas para evitar desajustes
-                headRow = isBaja ? ['Baja'] : [];
-                headRow = headRow.concat(['Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad']);
-
-                body = list.map(item => {
-                    const p = item.attributes || item;
-                    const row = [
-                        (p.apellidos || '').toUpperCase(),
-                        p.nombre || '',
-                        p.dni || '',
-                        getDojoName(p.dojo), // AQUÍ ESTÁ EL DOJO
-                        normalizeGrade(p.grado),
-                        parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
-                        p.seguro_pagado ? 'SÍ' : 'NO',
-                        normalizePhone(p.telefono),
-                        p.email || '-',
-                        (p.direccion || '').substring(0, 25),
-                        `${p.cp || ''} ${p.poblacion || ''}`.trim()
-                    ];
-                    if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
-                    return row;
-                });
+                // Definimos las columnas UNA POR UNA para Bajas y Activos
+                if (isBaja) {
+                    headRow = ['Baja', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
+                    body = list.map(item => {
+                        const p = item.attributes || item;
+                        return [
+                            formatDateDisplay(p.fecha_baja),
+                            (p.apellidos || '').toUpperCase(),
+                            p.nombre || '',
+                            p.dni || '',
+                            getDojoName(p.dojo), // Columna 5
+                            normalizeGrade(p.grado),
+                            parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
+                            p.seguro_pagado ? 'SÍ' : 'NO',
+                            normalizePhone(p.telefono),
+                            p.email || '-',
+                            (p.direccion || '').substring(0, 25),
+                            `${p.cp || ''} ${p.poblacion || ''}`.trim()
+                        ];
+                    });
+                } else {
+                    headRow = ['Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
+                    body = list.map(item => {
+                        const p = item.attributes || item;
+                        return [
+                            (p.apellidos || '').toUpperCase(),
+                            p.nombre || '',
+                            p.dni || '',
+                            getDojoName(p.dojo), // Columna 4
+                            normalizeGrade(p.grado),
+                            parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
+                            p.seguro_pagado ? 'SÍ' : 'NO',
+                            normalizePhone(p.telefono),
+                            p.email || '-',
+                            (p.direccion || '').substring(0, 25),
+                            `${p.cp || ''} ${p.poblacion || ''}`.trim()
+                        ];
+                    });
+                }
             }
 
-            if (body.length === 0) {
-                showModal("Sin Datos", "No se han encontrado registros para este día o filtros.");
-                return;
-            }
-
-            // 3. GENERACIÓN DEL PDF
             doc.autoTable({
                 startY: 30,
-                margin: { top: 35, bottom: 20 },
+                margin: { top: 35 },
                 head: [headRow],
                 body: body,
                 theme: 'grid',
-                styles: { fontSize: 6, cellPadding: 1.2, valign: 'middle' },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
-                columnStyles: {
-                    0: { cellWidth: isBaja ? 18 : 'auto' }, // Fecha Baja
-                    3: { cellWidth: 20 }, // DNI
-                    4: { cellWidth: 25 }, // DOJO (Forzamos ancho para que se vea)
-                },
+                styles: { fontSize: 6, cellPadding: 1.2 },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-                    doc.setFontSize(14); doc.setFont("helvetica", "bold");
-                    doc.text(title, pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); doc.setFont("helvetica", "normal");
-                    doc.text(subText, pageWidth / 2, 18, { align: 'center' });
-                    // Pie de página
-                    doc.setFontSize(7);
-                    doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth - 20, 285);
+                    doc.setFontSize(14); doc.text(title, pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(9); doc.text(subText, pageWidth / 2, 18, { align: 'center' });
                 }
             });
-
             doc.save(`Arashi_Informe_${type}.pdf`);
 
         } catch (e) {
-            console.error("Error en Informe:", e);
-            showModal("Error", "No se pudo conectar con la base de datos.");
+            console.error(e);
+            showModal("Error", "Error al generar el PDF.");
         }
     };
 }
