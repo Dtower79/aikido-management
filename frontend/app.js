@@ -229,7 +229,6 @@ async function generateReport(type) {
                 title = "ASISTENCIA DIARIA - TATAMI";
                 subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
                 
-                // Filtro robusto de fecha para evitar desfases de horas (00:00 a 23:59)
                 let apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${attendanceDate}T00:00:00.000Z&filters[clase][Fecha_Hora][$lte]=${attendanceDate}T23:59:59.999Z&populate[alumno][populate]=dojo&populate[clase]=true&pagination[limit]=500`;
                 if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
 
@@ -252,7 +251,7 @@ async function generateReport(type) {
                         getDojoName(alu?.dojo),
                         cla?.Tipo || 'General',
                         horaStr,
-                        a.Estado === 'Asistio' ? 'ASISTIÓ' : 'CONFIRMADO (NO VALIDADO)'
+                        a.Estado === 'Asistio' ? 'ASISTIÓ' : 'CONFIRMADO'
                     ];
                 });
             } else {
@@ -270,34 +269,31 @@ async function generateReport(type) {
                 const json = await res.json();
                 let list = json.data || [];
 
-                // LÓGICA DE ORDENACIÓN MEJORADA
                 list.sort((a, b) => {
                     const pA = a.attributes || a; const pB = b.attributes || b;
-                    
                     if (type === 'insurance') {
-                        // 1º Por seguro (Pagados arriba)
                         if (pA.seguro_pagado !== pB.seguro_pagado) return pA.seguro_pagado ? -1 : 1;
-                        // 2º Por apellidos
                         return (pA.apellidos || '').localeCompare(pB.apellidos || '');
                     }
                     if (type === 'bajas_date') return new Date(pB.fecha_baja) - new Date(pA.fecha_baja);
                     if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
-                    if (type === 'age') return new Date(pA.fecha_nacimiento || '0') - new Date(pB.fecha_nacimiento || '0');
-                    
                     return (pA.apellidos || '').localeCompare(pB.apellidos || '');
                 });
 
-                // Columnas completas para todos incluyendo Bajas
-                headRow = ['Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
-                if (isBaja) headRow.unshift('Baja');
+                // DEFINICIÓN DE CABECERAS (Orden estricto)
+                if (isBaja) {
+                    headRow = ['Baja', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
+                } else {
+                    headRow = ['Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
+                }
 
                 body = list.map(item => {
                     const p = item.attributes || item;
-                    const row = [
+                    const rowData = [
                         (p.apellidos || '').toUpperCase(),
                         p.nombre || '',
                         p.dni || '',
-                        getDojoName(p.dojo),
+                        getDojoName(p.dojo), // <-- AHORA SÍ EN SU SITIO
                         normalizeGrade(p.grado),
                         parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
                         p.seguro_pagado ? 'SÍ' : 'NO',
@@ -306,13 +302,13 @@ async function generateReport(type) {
                         (p.direccion || '').substring(0, 30),
                         `${p.cp || ''} ${p.poblacion || ''}`.trim()
                     ];
-                    if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
-                    return row;
+                    if (isBaja) rowData.unshift(formatDateDisplay(p.fecha_baja));
+                    return rowData;
                 });
             }
 
             if (body.length === 0) {
-                showModal("Sin Datos", "No se han encontrado registros para los filtros seleccionados.");
+                showModal("Sin Datos", "No se han encontrado registros.");
                 return;
             }
 
@@ -335,7 +331,7 @@ async function generateReport(type) {
             doc.save(`Arashi_Informe_${type}.pdf`);
         } catch (e) {
             console.error(e);
-            showModal("Error", "Fallo al conectar con el servidor del Dojo.");
+            showModal("Error", "Fallo al generar el informe.");
         }
     };
 }
