@@ -225,8 +225,7 @@ async function generateReport(type) {
                 apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${attendanceDate}T00:00:00.000Z&filters[clase][Fecha_Hora][$lte]=${attendanceDate}T23:59:59.999Z&populate[alumno][populate][0]=dojo&populate[clase]=true&pagination[limit]=500`;
             } else {
                 const soloActivos = !type.startsWith('bajas');
-                // IMPORTANTE: Cambiamos el formato de populate para Strapi v5
-                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${soloActivos}&populate[dojo][fields][0]=nombre&pagination[limit]=1000`;
+                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${soloActivos}&populate[dojo]=true&pagination[limit]=1000`;
             }
 
             if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
@@ -235,21 +234,10 @@ async function generateReport(type) {
             const json = await res.json();
             const list = json.data || [];
 
-            // --- BLOQUE DE LOGS PARA DIAGNÓSTICO ---
-            console.log("--- DEBUG REPORTE ---");
-            console.log("Tipo de informe:", type);
-            console.log("Total registros recibidos:", list.length);
-            if (list.length > 0) {
-                console.log("Estructura del primer registro:", list[0]);
-                const pTemp = list[0].attributes || list[0];
-                console.log("Contenido del campo DOJO:", pTemp.dojo);
-            }
-            // ---------------------------------------
-
             if (type === 'attendance') {
                 title = "ASISTENCIA DIARIA - TATAMI";
                 subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
-                headRow = ['Alumno', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
+                headRow = [['Alumno', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado']];
                 body = list.map(item => {
                     const a = item.attributes || item;
                     const alu = parseRelation(a.alumno);
@@ -259,7 +247,7 @@ async function generateReport(type) {
                     return [
                         alu ? `${(alu.apellidos||'').toUpperCase()}, ${alu.nombre||''}` : 'DESCONOCIDO',
                         alu?.dni || '-',
-                        alu ? getDojoName(alu.dojo) : 'NO DISP',
+                        getDojoName(alu?.dojo),
                         cla?.Tipo || 'General',
                         hStr,
                         (a.Estado || 'Confirmado').toUpperCase()
@@ -268,7 +256,7 @@ async function generateReport(type) {
             } else {
                 const isBaja = type.startsWith('bajas');
                 title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO DE ALUMNOS";
-                subText = `${isBaja ? 'Inactivos' : 'Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
+                subText = `${isBaja ? 'Alumnos Inactivos' : 'Alumnos Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
 
                 list.sort((a, b) => {
                     const pA = a.attributes || a; const pB = b.attributes || b;
@@ -279,58 +267,49 @@ async function generateReport(type) {
                     return (pA.apellidos || '').localeCompare(pB.apellidos || '');
                 });
 
-                // DEFINICIÓN DE COLUMNAS FIJAS
+                // DEFINICIÓN FORZADA DE CABECERAS
                 if (isBaja) {
-                    headRow = ['Baja', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono'];
-                    body = list.map(item => {
-                        const p = item.attributes || item;
-                        // Intentamos extraer el nombre del dojo de 3 formas distintas para v5
-                        let dojoName = "SIN ASIGNAR";
-                        const dObj = p.dojo?.data?.attributes || p.dojo?.attributes || p.dojo?.data || p.dojo;
-                        if (dObj && dObj.nombre) dojoName = dObj.nombre.replace("Aikido Arashi ", "");
-
-                        return [
-                            formatDateDisplay(p.fecha_baja),
-                            (p.apellidos || '').toUpperCase(),
-                            p.nombre || '',
-                            p.dni || '',
-                            dojoName, // Columna Dojo
-                            normalizeGrade(p.grado),
-                            parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
-                            p.seguro_pagado ? 'SÍ' : 'NO',
-                            normalizePhone(p.telefono)
-                        ];
-                    });
+                    headRow = [['Baja', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad']];
                 } else {
-                    headRow = ['Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono'];
-                    body = list.map(item => {
-                        const p = item.attributes || item;
-                        let dojoName = "SIN ASIGNAR";
-                        const dObj = p.dojo?.data?.attributes || p.dojo?.attributes || p.dojo?.data || p.dojo;
-                        if (dObj && dObj.nombre) dojoName = dObj.nombre.replace("Aikido Arashi ", "");
-
-                        return [
-                            (p.apellidos || '').toUpperCase(),
-                            p.nombre || '',
-                            p.dni || '',
-                            dojoName, // Columna Dojo
-                            normalizeGrade(p.grado),
-                            parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
-                            p.seguro_pagado ? 'SÍ' : 'NO',
-                            normalizePhone(p.telefono)
-                        ];
-                    });
+                    headRow = [['Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad']];
                 }
+
+                body = list.map(item => {
+                    const p = item.attributes || item;
+                    const row = [
+                        (p.apellidos || '').toUpperCase(),
+                        p.nombre || '',
+                        p.dni || '',
+                        getDojoName(p.dojo), // COLUMNA DOJO (Índice 3 o 4)
+                        normalizeGrade(p.grado),
+                        parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
+                        p.seguro_pagado ? 'SÍ' : 'NO',
+                        normalizePhone(p.telefono),
+                        p.email || '-',
+                        (p.direccion || '').substring(0, 20),
+                        `${p.cp || ''} ${p.poblacion || ''}`.trim()
+                    ];
+                    if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
+                    return row;
+                });
+            }
+
+            if (body.length === 0) {
+                showModal("Aviso", "No se han encontrado datos.");
+                return;
             }
 
             doc.autoTable({
                 startY: 30,
                 margin: { top: 35 },
-                head: [headRow],
+                head: headRow,
                 body: body,
                 theme: 'grid',
-                styles: { fontSize: 7, cellPadding: 2 },
+                styles: { fontSize: 5.5, cellPadding: 1 }, // Bajamos un poco la letra para que quepan las 12 columnas
                 headStyles: { fillColor: [190, 0, 0], halign: 'center' },
+                columnStyles: {
+                    4: { cellWidth: 22 }, // Forzamos ancho a la columna DOJO
+                },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.text(title, pageWidth / 2, 12, { align: 'center' });
@@ -341,7 +320,7 @@ async function generateReport(type) {
 
         } catch (e) {
             console.error(e);
-            showModal("Error", "Error al procesar los datos.");
+            showModal("Error", "Fallo al generar informe.");
         }
     };
 }
