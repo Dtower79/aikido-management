@@ -595,11 +595,14 @@ async function generateReport(type) {
 }
 
 // --- EXPORTAR EXCEL ---
+// --- EXPORTAR EXCEL PROFESIONAL (RECONSTRUIDO) ---
 async function exportBackupExcel() {
     const dojoFilter = document.getElementById('export-dojo-filter').value;
     const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
     const originalText = btn.innerHTML;
+    
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO...';
+    btn.disabled = true;
 
     try {
         let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
@@ -610,49 +613,101 @@ async function exportBackupExcel() {
         const data = json.data || [];
 
         const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet('Alumnos');
+        const sheet = workbook.addWorksheet('Alumnos Arashi');
 
-        for (let i = 1; i <= 6; i++) {
-            const row = sheet.getRow(i);
-            row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } };
-        }
+        // 1. CONFIGURACIÓN DE COLUMNAS (Anchos profesionales)
+        sheet.columns = [
+            { header: 'APELLIDOS', key: 'apellidos', width: 30 },
+            { header: 'NOMBRE', key: 'nombre', width: 20 },
+            { header: 'DNI', key: 'dni', width: 15 },
+            { header: 'GRADO', key: 'grado', width: 12 },
+            { header: 'HORAS', key: 'horas', width: 10 },
+            { header: 'SEGURO', key: 'seguro', width: 10 },
+            { header: 'TELÉFONO', key: 'tel', width: 15 },
+            { header: 'DOJO', key: 'dojo', width: 25 },
+            { header: 'FECHA ALTA', key: 'alta', width: 15 },
+            { header: 'EMAIL', key: 'email', width: 35 }
+        ];
 
-        sheet.mergeCells('A2:M3');
-        const titleCell = sheet.getCell('A2');
-        titleCell.value = `            ARASHI GROUP AIKIDO - LISTADO OFICIAL (${new Date().toLocaleDateString('es-ES')})`;
-        titleCell.font = { name: 'Arial', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
-        titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-
-        const headers = ['APELLIDOS', 'NOMBRE', 'DNI', 'FECHA NAC', 'DIRECCIÓN', 'POBLACIÓN', 'CP', 'EMAIL', 'DOJO', 'GRUPO', 'ALTA', 'GRADO', 'SEGURO', 'HORAS'];
-        const headerRow = sheet.getRow(8);
-        headerRow.values = headers;
+        // 2. DISEÑO DE LA CABECERA (Fila 1)
+        const headerRow = sheet.getRow(1);
+        headerRow.height = 30;
         
         headerRow.eachCell((cell) => {
-            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } };
-            cell.alignment = { horizontal: 'center' };
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFEF4444' } // Rojo Arashi
+            };
+            cell.font = {
+                color: { argb: 'FFFFFFFF' },
+                bold: true,
+                size: 11
+            };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+                top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}
+            };
         });
 
+        // 3. INSERCIÓN DE DATOS
         data.forEach(item => {
             const p = item.attributes || item;
-            sheet.addRow([
-                (p.apellidos || '').toUpperCase(), p.nombre || '', p.dni || '',
-                formatDateExcel(p.fecha_nacimiento), p.direccion || '', p.poblacion || '', p.cp || '',
-                p.email || '', getDojoName(p.dojo), p.grupo || 'Full Time',
-                formatDateExcel(p.fecha_inicio), p.grado || '',
-                p.seguro_pagado ? 'SI' : 'NO', p.horas_acumuladas || 0
-            ]);
+            const row = sheet.addRow({
+                apellidos: (p.apellidos || '').toUpperCase(),
+                nombre: p.nombre || '',
+                dni: p.dni || '',
+                grado: normalizeGrade(p.grado),
+                horas: parseFloat(p.horas_acumuladas || 0).toFixed(1),
+                seguro: p.seguro_pagado ? 'SÍ' : 'NO',
+                tel: normalizePhone(p.telefono),
+                dojo: getDojoName(p.dojo),
+                alta: formatDateDisplay(p.fecha_inicio),
+                email: p.email || '-'
+            });
+
+            // Alineación de datos
+            row.eachCell((cell) => {
+                cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+                cell.border = {
+                    bottom: {style:'thin', color: {argb: 'FFEEEEEE'}}
+                };
+            });
+
+            // Formato condicional para horas (color azul si tiene horas)
+            row.getCell('horas').font = { color: { argb: 'FF3B82F6' }, bold: true };
+            row.getCell('horas').alignment = { horizontal: 'center' };
+            
+            // Formato condicional para seguro
+            const seguroCell = row.getCell('seguro');
+            seguroCell.alignment = { horizontal: 'center' };
+            if (p.seguro_pagado) {
+                seguroCell.font = { color: { argb: 'FF22C55E' }, bold: true };
+            } else {
+                seguroCell.font = { color: { argb: 'FFEF4444' } };
+            }
         });
 
+        // 4. GENERACIÓN DEL ARCHIVO
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `Arashi_Listado_${new Date().getFullYear()}.xlsx`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        const fecha = new Date().toLocaleDateString().replace(/\//g, '-');
+        
+        a.href = url;
+        a.download = `Listado_Arashi_${fecha}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-    } catch (e) { showModal("Error", "Falló exportación."); }
-    finally { btn.innerHTML = originalText; }
+    } catch (e) {
+        console.error(e);
+        showModal("Error", "No se ha podido generar el archivo Excel.");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 function confirmResetInsurance() { showModal("⚠️ ATENCIÓN", "¿Resetear TODOS los seguros?", () => runResetProcess()); }
