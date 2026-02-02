@@ -197,20 +197,21 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
 
 // B. GENERAR INFORME CON FIX MULTIPÁGINA Y VALIDACIÓN FECHA
 async function generateReport(type) {
-    const attendanceDate = document.getElementById('report-attendance-date').value;
+    const dateEl = document.getElementById('report-attendance-date');
+    const attendanceDate = dateEl ? dateEl.value : "";
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect ? dojoSelect.value : "";
     const dojoFilterName = dojoSelect ? dojoSelect.options[dojoSelect.selectedIndex].text : "";
 
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Fecha Requerida", "Selecciona una fecha en el calendario superior.");
+        showModal("Fecha Requerida", "Selecciona una fecha para ver la asistencia.");
         return;
     }
 
     document.getElementById('report-modal').classList.add('hidden');
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); // Paisaje para que quepa todo
+    const doc = new jsPDF('l', 'mm', 'a4'); 
     const logoImg = new Image();
     logoImg.src = 'img/logo-arashi-informe.png';
 
@@ -219,25 +220,29 @@ async function generateReport(type) {
         let headRow = [], body = [], title = "", subText = "";
 
         try {
-            // 1. OBTENCIÓN DE DATOS (Asegurando populate=dojo)
+            // 1. CONSTRUCCIÓN DE URL CON POPULATE EXPLÍCITO PARA V5
             let apiUrl = "";
             if (type === 'attendance') {
-                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${attendanceDate}T00:00:00.000Z&filters[clase][Fecha_Hora][$lte]=${attendanceDate}T23:59:59.999Z&populate[alumno][populate]=dojo&populate[clase]=true&pagination[limit]=500`;
+                title = "ASISTENCIA DIARIA - TATAMI";
+                subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
+                // Filtro de fecha de inicio a fin del día y población profunda de alumno -> dojo
+                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${attendanceDate}T00:00:00.000Z&filters[clase][Fecha_Hora][$lte]=${attendanceDate}T23:59:59.999Z&populate[alumno][populate][0]=dojo&populate[clase]=true&pagination[limit]=500`;
             } else {
                 const soloActivos = !type.startsWith('bajas');
-                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${soloActivos}&populate=dojo&pagination[limit]=1000`;
+                title = soloActivos ? "LISTADO DE ALUMNOS" : "HISTÓRICO DE BAJAS";
+                subText = `${soloActivos ? 'Activos' : 'Inactivos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'} | ${new Date().toLocaleDateString()}`;
+                // Población explícita del dojo para alumnos
+                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${soloActivos}&populate[0]=dojo&pagination[limit]=1000`;
             }
 
             if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
 
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
             const json = await res.json();
-            let list = json.data || [];
+            const list = json.data || [];
 
-            // 2. LÓGICA DE ASISTENCIA DIARIA
+            // 2. PROCESAMIENTO DE DATOS
             if (type === 'attendance') {
-                title = "ASISTENCIA DIARIA - TATAMI";
-                subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
                 headRow = ['Alumno', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
                 body = list.map(item => {
                     const a = item.attributes || item;
@@ -251,16 +256,10 @@ async function generateReport(type) {
                         getDojoName(alu?.dojo),
                         cla?.Tipo || 'General',
                         hStr,
-                        a.Estado === 'Asistio' ? 'ASISTIÓ' : 'CONFIRMADO'
+                        (a.Estado || a.estado || 'Confirmado').toUpperCase()
                     ];
                 });
-            } 
-            // 3. LÓGICA DE ALUMNOS (ACTIVOS O BAJAS)
-            else {
-                const isBaja = type.startsWith('bajas');
-                title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO ALUMNOS";
-                subText = `${isBaja ? 'Inactivos' : 'Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'} | ${new Date().toLocaleDateString()}`;
-
+            } else {
                 // Ordenación
                 list.sort((a, b) => {
                     const pA = a.attributes || a; const pB = b.attributes || b;
@@ -271,72 +270,67 @@ async function generateReport(type) {
                     return (pA.apellidos || '').localeCompare(pB.apellidos || '');
                 });
 
-                // DEFINICIÓN DE COLUMNAS SEGÚN TIPO
-                if (isBaja) {
-                    headRow = ['Baja', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
-                    body = list.map(item => {
-                        const p = item.attributes || item;
-                        return [
-                            formatDateDisplay(p.fecha_baja),
-                            (p.apellidos || '').toUpperCase(),
-                            p.nombre || '',
-                            p.dni || '',
-                            getDojoName(p.dojo), // POSICIÓN 4: DOJO
-                            normalizeGrade(p.grado),
-                            parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
-                            p.seguro_pagado ? 'SÍ' : 'NO',
-                            normalizePhone(p.telefono),
-                            p.email || '-',
-                            (p.direccion || '').substring(0, 25),
-                            `${p.cp || ''} ${p.poblacion || ''}`.trim()
-                        ];
-                    });
-                } else {
-                    headRow = ['Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
-                    body = list.map(item => {
-                        const p = item.attributes || item;
-                        return [
-                            (p.apellidos || '').toUpperCase(),
-                            p.nombre || '',
-                            p.dni || '',
-                            getDojoName(p.dojo), // POSICIÓN 3: DOJO
-                            normalizeGrade(p.grado),
-                            parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
-                            p.seguro_pagado ? 'SÍ' : 'NO',
-                            normalizePhone(p.telefono),
-                            p.email || '-',
-                            (p.direccion || '').substring(0, 25),
-                            `${p.cp || ''} ${p.poblacion || ''}`.trim()
-                        ];
-                    });
-                }
+                const isBaja = type.startsWith('bajas');
+                // Definición idéntica de columnas para evitar desajustes
+                headRow = isBaja ? ['Baja'] : [];
+                headRow = headRow.concat(['Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad']);
+
+                body = list.map(item => {
+                    const p = item.attributes || item;
+                    const row = [
+                        (p.apellidos || '').toUpperCase(),
+                        p.nombre || '',
+                        p.dni || '',
+                        getDojoName(p.dojo), // AQUÍ ESTÁ EL DOJO
+                        normalizeGrade(p.grado),
+                        parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
+                        p.seguro_pagado ? 'SÍ' : 'NO',
+                        normalizePhone(p.telefono),
+                        p.email || '-',
+                        (p.direccion || '').substring(0, 25),
+                        `${p.cp || ''} ${p.poblacion || ''}`.trim()
+                    ];
+                    if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
+                    return row;
+                });
             }
 
             if (body.length === 0) {
-                showModal("Aviso", "No hay datos con estos filtros.");
+                showModal("Sin Datos", "No se han encontrado registros para este día o filtros.");
                 return;
             }
 
+            // 3. GENERACIÓN DEL PDF
             doc.autoTable({
                 startY: 30,
-                margin: { top: 35 },
+                margin: { top: 35, bottom: 20 },
                 head: [headRow],
                 body: body,
                 theme: 'grid',
-                styles: { fontSize: 6, cellPadding: 1.2 },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
+                styles: { fontSize: 6, cellPadding: 1.2, valign: 'middle' },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: isBaja ? 18 : 'auto' }, // Fecha Baja
+                    3: { cellWidth: 20 }, // DNI
+                    4: { cellWidth: 25 }, // DOJO (Forzamos ancho para que se vea)
+                },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.setFont("helvetica", "bold");
                     doc.text(title, pageWidth / 2, 12, { align: 'center' });
                     doc.setFontSize(9); doc.setFont("helvetica", "normal");
                     doc.text(subText, pageWidth / 2, 18, { align: 'center' });
+                    // Pie de página
+                    doc.setFontSize(7);
+                    doc.text(`Página ${doc.internal.getNumberOfPages()}`, pageWidth - 20, 285);
                 }
             });
-            doc.save(`Arashi_${type}.pdf`);
+
+            doc.save(`Arashi_Informe_${type}.pdf`);
+
         } catch (e) {
-            console.error(e);
-            showModal("Error", "Error al generar informe.");
+            console.error("Error en Informe:", e);
+            showModal("Error", "No se pudo conectar con la base de datos.");
         }
     };
 }
