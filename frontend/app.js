@@ -204,14 +204,14 @@ async function generateReport(type) {
     const dojoFilterName = dojoSelect ? dojoSelect.options[dojoSelect.selectedIndex].text : "";
 
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Fecha Requerida", "Selecciona una fecha.");
+        showModal("Fecha Requerida", "Selecciona una fecha en el calendario.");
         return;
     }
 
     document.getElementById('report-modal').classList.add('hidden');
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); 
+    const doc = new jsPDF('l', 'mm', 'a4'); // Paisaje (Landscape)
     const logoImg = new Image();
     logoImg.src = 'img/logo-arashi-informe.png';
 
@@ -219,12 +219,13 @@ async function generateReport(type) {
         const pageWidth = doc.internal.pageSize.getWidth();
         
         try {
+            // 1. OBTENCIÓN DE DATOS (Forzamos populate profundo para v5)
             let apiUrl = "";
             if (type === 'attendance') {
-                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${attendanceDate}T00:00:00.000Z&filters[clase][Fecha_Hora][$lte]=${attendanceDate}T23:59:59.999Z&populate[alumno][populate][dojo]=true&populate[clase]=true&pagination[limit]=500`;
+                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${attendanceDate}T00:00:00.000Z&filters[clase][Fecha_Hora][$lte]=${attendanceDate}T23:59:59.999Z&populate[alumno][populate][0]=dojo&populate[clase]=true&pagination[limit]=500`;
             } else {
-                const soloActivos = !type.startsWith('bajas');
-                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${soloActivos}&populate[dojo]=true&pagination[limit]=1000`;
+                const activo = !type.startsWith('bajas');
+                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${activo}&populate[dojo]=true&pagination[limit]=1000`;
             }
 
             if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
@@ -233,104 +234,97 @@ async function generateReport(type) {
             const json = await res.json();
             const list = json.data || [];
 
-            // --- LOG PARA TI (F12) ---
-            console.log("Datos de Strapi:", list);
-
+            // 2. TÍTULOS
             const isBaja = type.startsWith('bajas');
             let title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO DE ALUMNOS";
-            let subText = `${isBaja ? 'Inactivos' : 'Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'} | ${new Date().toLocaleDateString()}`;
-            
+            if (type === 'attendance') title = "ASISTENCIA DIARIA - TATAMI";
+            const subText = `${isBaja ? 'Inactivos' : 'Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'} | ${attendanceDate || new Date().toLocaleDateString()}`;
+
+            // 3. ESTRUCTURA RÍGIDA DE COLUMNAS (Para que quepan 12)
+            let head = [];
+            let body = [];
+
             if (type === 'attendance') {
-                title = "ASISTENCIA DIARIA - TATAMI";
-                subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
-            }
-
-            // DEFINICIÓN DE COLUMNAS PROFESIONAL (Fuerza la aparición de cada una)
-            let columns = [];
-            if (type === 'attendance') {
-                columns = [
-                    { header: 'Alumno', dataKey: 'alumno' },
-                    { header: 'DNI', dataKey: 'dni' },
-                    { header: 'Dojo', dataKey: 'dojo' },
-                    { header: 'Clase', dataKey: 'clase' },
-                    { header: 'Hora', dataKey: 'hora' },
-                    { header: 'Estado', dataKey: 'estado' }
-                ];
-            } else {
-                if (isBaja) columns.push({ header: 'Baja', dataKey: 'baja' });
-                columns = columns.concat([
-                    { header: 'Apellidos', dataKey: 'apellidos' },
-                    { header: 'Nombre', dataKey: 'nombre' },
-                    { header: 'DNI', dataKey: 'dni' },
-                    { header: 'Dojo', dataKey: 'dojo' }, // COLUMNA CRÍTICA
-                    { header: 'Grado', dataKey: 'grado' },
-                    { header: 'Horas', dataKey: 'horas' },
-                    { header: 'Seguro', dataKey: 'seguro' },
-                    { header: 'Teléfono', dataKey: 'tel' },
-                    { header: 'Email', dataKey: 'email' },
-                    { header: 'Dirección', dataKey: 'dir' },
-                    { header: 'CP/Ciudad', dataKey: 'city' }
-                ]);
-            }
-
-            // MAPEADO DE DATOS (Cuerpo del reporte)
-            const body = list.map(item => {
-                const p = item.attributes || item;
-                if (type === 'attendance') {
-                    const alu = parseRelation(p.alumno);
-                    const cla = parseRelation(p.clase);
-                    return {
-                        alumno: alu ? `${(alu.apellidos||'').toUpperCase()}, ${alu.nombre||''}` : '---',
-                        dni: alu?.dni || '---',
-                        dojo: getDojoName(alu?.dojo),
-                        clase: cla?.Tipo || 'General',
-                        hora: cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
-                        estado: (p.Estado || 'Confirmado').toUpperCase()
-                    };
-                } else {
-                    return {
-                        baja: formatDateDisplay(p.fecha_baja),
-                        apellidos: (p.apellidos || '').toUpperCase(),
-                        nombre: p.nombre || '',
-                        dni: p.dni || '',
-                        dojo: getDojoName(p.dojo),
-                        grado: normalizeGrade(p.grado),
-                        horas: parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
-                        seguro: p.seguro_pagado ? 'SÍ' : 'NO',
-                        tel: normalizePhone(p.telefono),
-                        email: p.email || '-',
-                        dir: (p.direccion || '').substring(0, 20),
-                        city: `${p.cp || ''} ${p.poblacion || ''}`.trim()
-                    };
-                }
-            });
-
-            if (body.length === 0) {
-                showModal("Aviso", "No hay datos para mostrar.");
-                return;
-            }
-
-            // ORDENACIÓN FINAL (Solo para alumnos)
-            if (type !== 'attendance') {
-                body.sort((a, b) => {
-                    if (type === 'insurance') {
-                        if (a.seguro !== b.seguro) return a.seguro === 'SÍ' ? -1 : 1;
-                    }
-                    return a.apellidos.localeCompare(b.apellidos);
+                head = [['Alumno', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado']];
+                body = list.map(item => {
+                    const a = item.attributes || item;
+                    const alu = parseRelation(a.alumno);
+                    const cla = parseRelation(a.clase);
+                    return [
+                        alu ? `${(alu.apellidos||'').toUpperCase()}, ${alu.nombre||''}` : '---',
+                        alu?.dni || '---',
+                        alu ? getDojoName(alu.dojo) : '---',
+                        cla?.Tipo || 'General',
+                        cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
+                        (a.Estado || 'Confirmado').toUpperCase()
+                    ];
                 });
+            } else {
+                // Ordenación por apellidos
+                list.sort((a, b) => {
+                    const valA = (a.attributes?.apellidos || a.apellidos || "").toUpperCase();
+                    const valB = (b.attributes?.apellidos || b.apellidos || "").toUpperCase();
+                    return valA.localeCompare(valB);
+                });
+
+                // DEFINIMOS LAS 12 COLUMNAS PARA BAJAS O 11 PARA ACTIVOS
+                if (isBaja) {
+                    head = [['Baja', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad']];
+                    body = list.map(item => {
+                        const p = item.attributes || item;
+                        return [
+                            formatDateDisplay(p.fecha_baja),
+                            (p.apellidos || '').toUpperCase(),
+                            p.nombre || '',
+                            p.dni || '',
+                            getDojoName(p.dojo),
+                            normalizeGrade(p.grado),
+                            parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
+                            p.seguro_pagado ? 'SÍ' : 'NO',
+                            normalizePhone(p.telefono),
+                            p.email || '-',
+                            (p.direccion || '').substring(0, 20),
+                            `${p.cp || ''} ${p.poblacion || ''}`.trim()
+                        ];
+                    });
+                } else {
+                    head = [['Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad']];
+                    body = list.map(item => {
+                        const p = item.attributes || item;
+                        return [
+                            (p.apellidos || '').toUpperCase(),
+                            p.nombre || '',
+                            p.dni || '',
+                            getDojoName(p.dojo),
+                            normalizeGrade(p.grado),
+                            parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
+                            p.seguro_pagado ? 'SÍ' : 'NO',
+                            normalizePhone(p.telefono),
+                            p.email || '-',
+                            (p.direccion || '').substring(0, 20),
+                            `${p.cp || ''} ${p.poblacion || ''}`.trim()
+                        ];
+                    });
+                }
             }
 
+            // 4. GENERACIÓN DEL PDF (Ajuste de anchos para que quepa todo)
             doc.autoTable({
                 startY: 30,
-                margin: { top: 35 },
-                columns: columns,
+                margin: { top: 35, left: 10, right: 10 },
+                head: head,
                 body: body,
                 theme: 'grid',
-                styles: { fontSize: 5.5, cellPadding: 1, overflow: 'ellipsize' },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
+                styles: { 
+                    fontSize: 5, // Bajamos a 5 para que las 12 columnas quepan sin saltos
+                    cellPadding: 1, 
+                    overflow: 'linebreak' 
+                },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
                 columnStyles: {
-                    dojo: { cellWidth: 25 }, // FORZAMOS EL ANCHO DEL DOJO
-                    apellidos: { cellWidth: 'auto' }
+                    0: { cellWidth: isBaja ? 15 : 'auto' }, // Fecha Baja
+                    4: { cellWidth: 22 }, // FORZAMOS EL ANCHO DEL DOJO
+                    10: { cellWidth: 35 }, // Dirección más ancha
                 },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
@@ -341,11 +335,11 @@ async function generateReport(type) {
                 }
             });
 
-            doc.save(`Arashi_${type}.pdf`);
+            doc.save(`Arashi_Informe_${type}.pdf`);
 
         } catch (e) {
             console.error(e);
-            showModal("Error", "Fallo técnico al generar informe.");
+            showModal("Error", "Fallo al conectar con Strapi.");
         }
     };
 }
