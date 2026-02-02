@@ -595,115 +595,150 @@ async function generateReport(type) {
 }
 
 // --- EXPORTAR EXCEL ---
-// --- EXPORTAR EXCEL PROFESIONAL (RECONSTRUIDO) ---
 async function exportBackupExcel() {
     const dojoFilter = document.getElementById('export-dojo-filter').value;
     const btn = document.querySelector('button[onclick="exportBackupExcel()"]');
     const originalText = btn.innerHTML;
     
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> GENERANDO...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PREPARANDO...';
     btn.disabled = true;
 
     try {
-        let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000`;
+        // 1. Obtener y Ordenar Datos
+        let apiUrl = `${API_URL}/api/alumnos?populate=dojo&pagination[limit]=2000&filters[activo][$eq]=true`;
         if (dojoFilter) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilter}`;
 
         const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        const data = json.data || [];
+        let data = json.data || [];
 
-        const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet('Alumnos Arashi');
-
-        // 1. CONFIGURACIÓN DE COLUMNAS (Anchos profesionales)
-        sheet.columns = [
-            { header: 'APELLIDOS', key: 'apellidos', width: 30 },
-            { header: 'NOMBRE', key: 'nombre', width: 20 },
-            { header: 'DNI', key: 'dni', width: 15 },
-            { header: 'GRADO', key: 'grado', width: 12 },
-            { header: 'HORAS', key: 'horas', width: 10 },
-            { header: 'SEGURO', key: 'seguro', width: 10 },
-            { header: 'TELÉFONO', key: 'tel', width: 15 },
-            { header: 'DOJO', key: 'dojo', width: 25 },
-            { header: 'FECHA ALTA', key: 'alta', width: 15 },
-            { header: 'EMAIL', key: 'email', width: 35 }
-        ];
-
-        // 2. DISEÑO DE LA CABECERA (Fila 1)
-        const headerRow = sheet.getRow(1);
-        headerRow.height = 30;
-        
-        headerRow.eachCell((cell) => {
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFEF4444' } // Rojo Arashi
-            };
-            cell.font = {
-                color: { argb: 'FFFFFFFF' },
-                bold: true,
-                size: 11
-            };
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.border = {
-                top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}
-            };
+        // Ordenación por Apellidos
+        data.sort((a, b) => {
+            const nomA = (a.attributes?.apellidos || a.apellidos || "").toUpperCase();
+            const nomB = (b.attributes?.apellidos || b.apellidos || "").toUpperCase();
+            return nomA.localeCompare(nomB);
         });
 
-        // 3. INSERCIÓN DE DATOS
-        data.forEach(item => {
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('LISTADO OFICIAL');
+
+        // 2. Configuración de Impresión (Apaisado y Ajuste a página)
+        sheet.pageSetup.orientation = 'landscape';
+        sheet.pageSetup.fitToPage = true;
+        sheet.pageSetup.fitToWidth = 1;
+        sheet.pageSetup.margins = { left: 0.2, right: 0.2, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
+
+        // 3. Definir Columnas (Todos los campos de Alumnos)
+        sheet.columns = [
+            { header: 'APELLIDOS', key: 'apellidos', width: 25 },
+            { header: 'NOMBRE', key: 'nombre', width: 15 },
+            { header: 'DNI', key: 'dni', width: 12 },
+            { header: 'F. NAC.', key: 'nacimiento', width: 11 },
+            { header: 'DIRECCIÓN', key: 'direccion', width: 25 },
+            { header: 'POBLACIÓN', key: 'poblacion', width: 15 },
+            { header: 'CP', key: 'cp', width: 7 },
+            { header: 'TELÉFONO', key: 'tel', width: 12 },
+            { header: 'EMAIL', key: 'email', width: 25 },
+            { header: 'DOJO', key: 'dojo', width: 18 },
+            { header: 'GRUPO', key: 'grupo', width: 12 },
+            { header: 'GRADO', key: 'grado', width: 10 },
+            { header: 'SEGURO', key: 'seguro', width: 9 },
+            { header: 'HORAS', key: 'horas', width: 8 }
+        ];
+
+        // 4. Encabezado Corporativo (Filas 1 a 3)
+        sheet.mergeCells('A1:N3');
+        const titleRow = sheet.getCell('A1');
+        titleRow.value = 'ARASHI GROUP AIKIDO - LISTADO OFICIAL DE ALUMNOS';
+        titleRow.font = { name: 'Arial Black', size: 16, color: { argb: 'FFFFFFFF' } };
+        titleRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1120' } }; // Fondo Azul Oscuro
+        titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        // 5. Espacio para el logo y Datos del listado
+        sheet.addRow([]); // Fila 4 vacía
+        sheet.mergeCells('A5:N5');
+        const infoRow = sheet.getCell('A5');
+        const hoy = new Date().toLocaleDateString();
+        infoRow.value = `Documento generado el: ${hoy} | Estado: Alumnos Activos`;
+        infoRow.font = { italic: true, size: 10 };
+        infoRow.alignment = { horizontal: 'right' };
+
+        // 6. Estilo de Cabecera de Tabla (Fila 6)
+        const headerRow = sheet.getRow(6);
+        headerRow.height = 20;
+        headerRow.eachCell((cell) => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } };
+            cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 9 };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = { bottom: { style: 'medium', color: { argb: 'FF000000' } } };
+        });
+
+        // 7. Carga de Datos
+        data.forEach((item) => {
             const p = item.attributes || item;
             const row = sheet.addRow({
                 apellidos: (p.apellidos || '').toUpperCase(),
                 nombre: p.nombre || '',
                 dni: p.dni || '',
-                grado: normalizeGrade(p.grado),
-                horas: parseFloat(p.horas_acumuladas || 0).toFixed(1),
-                seguro: p.seguro_pagado ? 'SÍ' : 'NO',
+                nacimiento: formatDateExcel(p.fecha_nacimiento),
+                direccion: p.direccion || '',
+                poblacion: p.poblacion || '',
+                cp: p.cp || '',
                 tel: normalizePhone(p.telefono),
+                email: p.email || '',
                 dojo: getDojoName(p.dojo),
-                alta: formatDateDisplay(p.fecha_inicio),
-                email: p.email || '-'
+                grupo: p.grupo || 'Full Time',
+                grado: normalizeGrade(p.grado),
+                seguro: p.seguro_pagado ? 'PAGADO' : 'PENDIENTE',
+                horas: parseFloat(p.horas_acumuladas || 0).toFixed(1)
             });
 
-            // Alineación de datos
-            row.eachCell((cell) => {
+            // Estilos de celda de datos
+            row.eachCell((cell, colNumber) => {
+                cell.font = { size: 9 };
                 cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-                cell.border = {
-                    bottom: {style:'thin', color: {argb: 'FFEEEEEE'}}
-                };
+                if (colNumber >= 12) cell.alignment = { horizontal: 'center' }; // Grado, Seguro, Horas centrados
             });
 
-            // Formato condicional para horas (color azul si tiene horas)
-            row.getCell('horas').font = { color: { argb: 'FF3B82F6' }, bold: true };
-            row.getCell('horas').alignment = { horizontal: 'center' };
-            
-            // Formato condicional para seguro
-            const seguroCell = row.getCell('seguro');
-            seguroCell.alignment = { horizontal: 'center' };
+            // Formato condicional Seguro
+            const sCell = row.getCell(13);
             if (p.seguro_pagado) {
-                seguroCell.font = { color: { argb: 'FF22C55E' }, bold: true };
+                sCell.font = { color: { argb: 'FF008000' }, bold: true, size: 9 };
             } else {
-                seguroCell.font = { color: { argb: 'FFEF4444' } };
+                sCell.font = { color: { argb: 'FFFF0000' }, bold: true, size: 9 };
             }
         });
 
-        // 4. GENERACIÓN DEL ARCHIVO
+        // 8. Intentar añadir Logo (Si existe en la ruta relativa)
+        try {
+            const response = await fetch('img/logo-arashi-informe.png');
+            const blob = await response.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+            const logoId = workbook.addImage({
+                buffer: arrayBuffer,
+                extension: 'png',
+            });
+            // Colocar el logo en la parte superior izquierda del título
+            sheet.addImage(logoId, {
+                tl: { col: 0.2, row: 0.2 },
+                ext: { width: 50, height: 50 }
+            });
+        } catch (e) { console.log("Logo no disponible para Excel"); }
+
+        // 9. Descarga
         const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = window.URL.createObjectURL(blob);
+        const blobDownload = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blobDownload);
         const a = document.createElement('a');
-        const fecha = new Date().toLocaleDateString().replace(/\//g, '-');
-        
         a.href = url;
-        a.download = `Listado_Arashi_${fecha}.xlsx`;
+        a.download = `Listado_Oficial_Arashi_${new Date().getFullYear()}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
 
     } catch (e) {
         console.error(e);
-        showModal("Error", "No se ha podido generar el archivo Excel.");
+        showModal("Error", "Error al procesar el archivo Excel.");
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
