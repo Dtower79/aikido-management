@@ -659,7 +659,7 @@ async function exportBackupExcel() {
         sheet.mergeCells('A3:N3');
         const subTitle = sheet.getCell('A3');
         const hoy = new Date().toLocaleDateString('es-ES');
-        subTitle.value = `INFORME OFICIAL DE AUDITORÍA | EMISIÓN: ${hoy} | STATUS: ALUMNOS ACTIVOS EN TATAMI`;
+        subTitle.value = `DATOS DE USUARIOS | EMISIÓN: ${hoy} | ALUMNOS ACTIVOS EN TATAMI`;
         subTitle.font = { name: 'Arial', size: 10, color: { argb: 'FFFFFFFF' } };
         subTitle.alignment = { vertical: 'middle', horizontal: 'center' };
 
@@ -693,7 +693,7 @@ async function exportBackupExcel() {
                 getDojoName(p.dojo).toUpperCase(),
                 (p.group || p.grupo || 'FULL TIME').toUpperCase(),
                 normalizeGrade(p.grado),
-                p.seguro_pagado ? 'GARANTIZADO' : 'PENDIENTE',
+                p.seguro_pagado ? 'PAGADO' : 'PENDIENTE',
                 parseFloat(p.horas_acumuladas || 0).toFixed(1)
             ]);
 
