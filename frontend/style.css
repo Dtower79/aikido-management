@@ -354,37 +354,75 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 
 /* --- MOBILE --- */
 /* --- MOBILE REFINADO --- */
+/* --- REDISEÑO FORMULARIO MÓVIL PREMIUM --- */
 @media (max-width: 900px) {
-    .dashboard-container { flex-direction: column; }
-    .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); position: relative; }
-    .sidebar-header { justify-content: space-between; padding: 10px 20px; }
-    .logo-img-sidebar { max-width: 100px; }
-    .sidebar-footer { display: none; } 
-    
-    /* Menú móvil oculto por defecto */
-    .menu { display: none; width: 100%; padding: 0; }
-    .sidebar.open .menu { display: block; background: var(--bg-card); border-top: 1px solid var(--border); }
-    .mobile-menu-toggle { display: block; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
-
-    /* SECCIONES: Asegurar que el contenido sea visible y no se tape */
-    .section { padding: 20px; padding-bottom: 100px; display: block; width: 100%; box-sizing: border-box; }
-    .section.hidden { display: none !important; } /* Forzar ocultación */
-    
-    /* FORMULARIOS EN MÓVIL: Evitar anchos fijos */
-    .form-card { padding: 15px; margin: 0; max-width: 100%; }
-    .form-row { flex-direction: column; gap: 10px; }
-
-    /* FOOTER INTELIGENTE: Se esconde abajo y solo sube al interactuar */
-    .main-footer { 
-        left: 0; width: 100%; 
-        transform: translateY(100%); /* Escondido por defecto */
-        transition: transform 0.3s ease;
-        padding: 15px;
+    /* 1. Espaciado Global: El padding-bottom es vital para que los botones no se peguen */
+    .section { 
+        padding: 15px; 
+        padding-bottom: 150px !important; /* Espacio extra al final para el pulgar */
         height: auto;
     }
-    .footer-trigger:hover ~ .main-footer, .main-footer:hover { transform: translateY(0); }
 
-    /* TABLAS: Scroll lateral suave */
-    table { min-width: 800px; }
-    .table-container { -webkit-overflow-scrolling: touch; }
+    /* 2. Tarjeta del Formulario (Efecto Glassmorphism) */
+    .form-card { 
+        background: rgba(30, 41, 59, 0.5) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px;
+        padding: 20px;
+        margin-top: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    /* 3. Campos de texto y Selects (Más grandes y modernos) */
+    .form-group { margin-bottom: 18px; }
+    .form-group label { 
+        font-size: 0.75rem; 
+        text-transform: uppercase; 
+        letter-spacing: 1px; 
+        color: var(--accent); /* Rojo Arashi para los títulos de campo */
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .form-group input, .form-group select { 
+        height: 50px; /* Altura cómoda para el dedo */
+        background: rgba(15, 23, 42, 0.8) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px;
+        font-size: 1rem;
+        padding: 0 15px;
+    }
+
+    /* 4. Caja de Seguro (Ajuste visual) */
+    .seguro-box {
+        flex-direction: column;
+        gap: 15px;
+        padding: 20px;
+        border-radius: 15px;
+        background: rgba(239, 68, 68, 0.05);
+        border: 1px dashed rgba(239, 68, 68, 0.3);
+    }
+
+    /* 5. BOTONES (El arreglo maestro) */
+    .form-actions { 
+        flex-direction: column-reverse; /* El botón principal queda arriba del secundario */
+        gap: 12px; 
+        width: 100%;
+        margin-top: 30px;
+    }
+
+    .form-actions .action-btn { 
+        width: 100% !important; /* Botones a ancho completo */
+        height: 55px;
+        border-radius: 15px;
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+    }
+
+    /* Botón Guardar con sombra Arashi */
+    #btn-submit-alumno {
+        background: var(--accent) !important;
+        box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+    }
 }
