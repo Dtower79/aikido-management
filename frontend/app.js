@@ -58,32 +58,37 @@ function showDashboard() {
 }
 
 function showSection(id) {
-    // 1. Ocultamos TODAS las secciones sin excepción
+    // 1. Ocultamos TODAS las secciones y limpiamos estados
     document.querySelectorAll('.section').forEach(s => {
         s.classList.add('hidden');
-        // Quitamos estilos en línea que hayamos podido añadir por error
-        s.style.display = ""; 
+        s.classList.remove('active', 'welcome-flex'); // Quitamos las clases que centran el logo
     });
     
-    // 2. Mostramos la que toca
+    // 2. Mostramos la que queremos
     const targetSection = document.getElementById(`sec-${id}`);
     if (targetSection) {
         targetSection.classList.remove('hidden');
+        targetSection.classList.add('active');
+        // Si es bienvenida, le devolvemos su clase de centrado
+        if (id === 'welcome') targetSection.classList.add('welcome-flex');
     }
     
-    // ... resto de la función (botones, cargas de alumnos, etc.) ...
-    
-    // 4. AUTO-CERRAR MENÚ EN MÓVIL (Asegúrate de que esto esté)
+    // 3. Gestionamos los botones del menú
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.getElementById(`btn-nav-${id}`);
+    if(activeBtn) activeBtn.classList.add('active');
+
+    // 4. Cerrar menú hamburguesa automáticamente
     const sidebar = document.querySelector('.sidebar');
     if (sidebar && sidebar.classList.contains('open')) {
         sidebar.classList.remove('open');
     }
 
-    // 5. Cargas específicas (alumnos, dojos, etc.)
+    // 5. Cargas de datos
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
-    // ... etc
+    if (id === 'status') runDiagnostics();
 }
 
 // --- UTILS ---
