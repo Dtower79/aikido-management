@@ -354,75 +354,91 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 
 /* --- MOBILE --- */
 /* --- MOBILE REFINADO --- */
-/* --- REDISEÑO FORMULARIO MÓVIL PREMIUM --- */
+/* --- MOBILE REPARADO Y PREMIUM --- */
 @media (max-width: 900px) {
-    /* 1. Espaciado Global: El padding-bottom es vital para que los botones no se peguen */
+    .dashboard-container { flex-direction: column; }
+
+    /* Barra lateral: ahora sí se oculta correctamente */
+    .sidebar { 
+        width: 100%; 
+        height: auto; 
+        position: relative; 
+        border-right: none; 
+        z-index: 1000;
+    }
+    
+    .sidebar-header { justify-content: space-between; padding: 10px 20px; }
+    
+    /* El menú solo aparece cuando se pulsa la hamburguesa */
+    .menu { 
+        display: none; 
+        width: 100%; 
+        padding: 0; 
+        background: var(--bg-header);
+    }
+    .sidebar.open .menu { display: block; }
+    .mobile-menu-toggle { display: block; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+
+    /* CONTENIDO: Ocupa todo el ancho */
+    .content { width: 100%; margin: 0; flex: 1; }
+
     .section { 
         padding: 15px; 
-        padding-bottom: 150px !important; /* Espacio extra al final para el pulgar */
-        height: auto;
+        padding-bottom: 150px !important; /* Espacio para que los botones respiren */
     }
 
-    /* 2. Tarjeta del Formulario (Efecto Glassmorphism) */
+    /* BIENVENIDA: Logo centrado real */
+    #sec-welcome {
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 70vh;
+    }
+
+    /* FORMULARIO PREMIUM */
     .form-card { 
         background: rgba(30, 41, 59, 0.5) !important;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         border-radius: 20px;
         padding: 20px;
-        margin-top: 10px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
-    /* 3. Campos de texto y Selects (Más grandes y modernos) */
-    .form-group { margin-bottom: 18px; }
     .form-group label { 
-        font-size: 0.75rem; 
-        text-transform: uppercase; 
-        letter-spacing: 1px; 
-        color: var(--accent); /* Rojo Arashi para los títulos de campo */
-        font-weight: 700;
-        margin-bottom: 8px;
+        color: var(--accent); 
+        font-weight: 700; 
+        font-size: 0.75rem;
+        margin-bottom: 5px;
     }
 
     .form-group input, .form-group select { 
-        height: 50px; /* Altura cómoda para el dedo */
-        background: rgba(15, 23, 42, 0.8) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 12px;
-        font-size: 1rem;
-        padding: 0 15px;
+        height: 48px;
+        border-radius: 10px;
+        background: #0f172a !important;
     }
 
-    /* 4. Caja de Seguro (Ajuste visual) */
-    .seguro-box {
-        flex-direction: column;
-        gap: 15px;
-        padding: 20px;
-        border-radius: 15px;
-        background: rgba(239, 68, 68, 0.05);
-        border: 1px dashed rgba(239, 68, 68, 0.3);
-    }
-
-    /* 5. BOTONES (El arreglo maestro) */
+    /* BOTONES: Uno encima de otro para que sean fáciles de pulsar */
     .form-actions { 
-        flex-direction: column-reverse; /* El botón principal queda arriba del secundario */
-        gap: 12px; 
-        width: 100%;
-        margin-top: 30px;
+        flex-direction: column-reverse; 
+        gap: 10px; 
+        margin-top: 25px;
     }
 
     .form-actions .action-btn { 
-        width: 100% !important; /* Botones a ancho completo */
-        height: 55px;
-        border-radius: 15px;
-        font-size: 0.9rem;
-        letter-spacing: 1px;
+        width: 100% !important; 
+        height: 50px;
+        border-radius: 12px;
     }
 
-    /* Botón Guardar con sombra Arashi */
-    #btn-submit-alumno {
-        background: var(--accent) !important;
-        box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+    /* FOOTER: Solo sale si corres el dedo */
+    .main-footer { 
+        left: 0; width: 100%; 
+        transform: translateY(100%);
     }
+    .footer-trigger:hover ~ .main-footer, .main-footer:hover { transform: translateY(0); }
+
+    /* TABLAS: Ajuste para que no se deformen */
+    .table-container { width: 100%; overflow-x: auto; }
+    table { min-width: 700px; }
 }
