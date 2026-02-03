@@ -169,27 +169,28 @@ async function loadAlumnos(activos) {
 
 // A. SELECCIÓN DE ALUMNO CON CENTRADO SIMÉTRICO
 function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
-    closeAlumnoActions(); // Limpiar selección previa
+    closeAlumnoActions(); // Limpiar cualquier selección anterior
+    
     const row = document.getElementById(`row-${id}`);
     if (row) row.classList.add('selected-row');
 
-    // Generamos el HTML de los botones (idéntico al de PC)
+    // Generar los botones de acción con el diseño de iconos
     const actionsHtml = esActivo ? `
-        <button class="action-btn-icon" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
-        <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+        <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+        <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="action-btn-icon delete" title="Dar de baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
     ` : `
-        <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
-        <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
+        <button class="action-btn-icon restore" title="Reactivar" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
+        <button class="action-btn-icon delete" title="Eliminar Permanente" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
     `;
 
     if (window.innerWidth <= 900) {
-        // MÓVIL: Usamos el Bottom Sheet (Panel inferior)
+        // MÓVIL: Rellenamos y mostramos el Bottom Sheet
         document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
     } else {
-        // DESKTOP: Barra superior (toolbar)
+        // DESKTOP: Barra superior tradicional
         const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
         const container = document.getElementById(targetId);
         if (container) {
@@ -355,10 +356,10 @@ async function generateReport(type) {
 
 // También actualizamos closeAlumnoActions para limpiar la barra
 function closeAlumnoActions() {
-    // Quitar resaltado de todas las filas
+    // 1. Quitar resaltado de las filas
     document.querySelectorAll('tr.selected-row').forEach(r => r.classList.remove('selected-row'));
     
-    // Limpiar y ocultar áreas de la toolbar (tanto alumnos como bajas)
+    // 2. Limpiar barras de escritorio
     ['actions-alumnos', 'actions-bajas'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -367,7 +368,7 @@ function closeAlumnoActions() {
         }
     });
 
-    // Ocultar panel móvil
+    // 3. Ocultar el Bottom Sheet móvil
     const sheet = document.getElementById('bottom-sheet-mobile');
     if (sheet) sheet.classList.add('hidden');
 }
@@ -950,6 +951,7 @@ function toggleMobileMenu() {
         sidebar.classList.toggle('open');
     }
 }
+
 function scrollToTop() { const c = document.querySelector('.content'); if (c) c.scrollTo({ top: 0, behavior: 'smooth' }); else window.scrollTo({ top: 0, behavior: 'smooth' }); }
 const ca = document.querySelector('.content'); if (ca) { ca.addEventListener('scroll', () => { const b = document.getElementById('btn-scroll-top'); if (ca.scrollTop > 300) b.classList.add('visible'); else b.classList.remove('visible'); }); }
 

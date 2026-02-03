@@ -460,4 +460,70 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         justify-content: center;
         height: 80vh;
     }
+    /* --- BOTTOM SHEET (PANEL DE ACCIONES MÓVIL) --- */
+    .bottom-sheet-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 11000;
+        display: flex;
+        align-items: flex-end; /* Lo pega abajo */
+        transition: opacity 0.3s ease;
+    }
+
+    .bottom-sheet-content {
+        width: 100%;
+        background: #162032;
+        border-top: 3px solid var(--accent);
+        border-radius: 25px 25px 0 0;
+        padding: 25px;
+        transform: translateY(0);
+        transition: transform 0.3s ease-out;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    }
+
+    .sheet-handle {
+        width: 40px;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        margin: 0 auto 20px;
+    }
+
+    #sheet-alumno-name {
+        font-size: 1.1rem;
+        color: white;
+        text-align: center;
+        margin-bottom: 25px;
+        text-transform: uppercase;
+        font-weight: 800;
+    }
+
+    /* Contenedor de los círculos de acción */
+    #sheet-actions-container {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    /* Iconos de acción circulares y grandes */
+    #sheet-actions-container .action-btn-icon {
+        width: 65px;
+        height: 65px;
+        border-radius: 50% !important;
+        background: rgba(255,255,255,0.05) !important;
+        color: white !important;
+        font-size: 1.5rem !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border) !important;
+    }
+
+    #sheet-actions-container .action-btn-icon.delete {
+        color: var(--accent) !important;
+        border-color: rgba(239, 68, 68, 0.3) !important;
+    }
 }
