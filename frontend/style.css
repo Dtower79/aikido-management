@@ -67,9 +67,26 @@ body {
 .dashboard-container { display: flex; height: 100vh; }
 
 .sidebar { width: 250px; background: var(--bg-header); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; transition: all 0.3s ease; z-index: 100; }
-.sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid var(--border); display: flex; justify-content: center; align-items: center; }
+    .sidebar-header { 
+        height: 70px; 
+        display: flex !important; 
+        align-items: center; 
+        justify-content: space-between; 
+        padding: 0 20px; 
+        width: 100%;
+        box-sizing: border-box;
+    }
 .logo-img-sidebar { max-width: 140px; }
-.mobile-menu-toggle { display: none; }
+    .mobile-menu-toggle { 
+        display: block !important; 
+        background: none; 
+        border: none; 
+        color: white !important; 
+        font-size: 1.8rem; 
+        cursor: pointer;
+        z-index: 10001; /* Por encima de todo */
+        padding: 10px;
+    }
 
 .menu { flex: 1; padding: 20px 10px; overflow-y: auto; }
 

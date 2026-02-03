@@ -34,34 +34,36 @@
     </div>
 
     <div id="dashboard" class="dashboard-container hidden">
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar">
-                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
-                    <i class="fa-solid fa-bars"></i>
+        
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar">
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+        
+        <nav class="menu" id="main-menu">
+            <button class="menu-btn" id="btn-nav-nuevo" onclick="showSection('nuevo-alumno')"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
+            <button class="menu-btn" id="btn-nav-dojos" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
+            <button class="menu-btn" id="btn-nav-alumnos" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos</button>
+            <button class="menu-btn" id="btn-nav-bajas" onclick="showSection('bajas')"><i class="fa-solid fa-user-xmark"></i> Histórico Bajas</button>
+            
+            <div class="sidebar-sep">Área Técnica</div>
+            <button class="menu-btn" id="btn-nav-status" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
+            
+            <div class="sidebar-footer-mobile">
+                <button class="logout-btn" onclick="logout()" style="width:100%; margin-top:10px; border:1px solid var(--accent); color:var(--accent); background:transparent; padding:10px; border-radius:8px;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Salir
                 </button>
             </div>
-            
-            <nav class="menu" id="main-menu">
-                <button class="menu-btn" id="btn-nav-nuevo" onclick="showSection('nuevo-alumno')"><i class="fa-solid fa-user-plus"></i> Nuevo Alumno</button>
-                <button class="menu-btn" id="btn-nav-dojos" onclick="showSection('dojos')"><i class="fa-solid fa-torii-gate"></i> Dojos</button>
-                <button class="menu-btn" id="btn-nav-alumnos" onclick="showSection('alumnos')"><i class="fa-solid fa-users"></i> Alumnos</button>
-                <button class="menu-btn" id="btn-nav-bajas" onclick="showSection('bajas')"><i class="fa-solid fa-user-xmark"></i> Histórico Bajas</button>
-                
-                <div class="sidebar-sep">Área Técnica</div>
-                <button class="menu-btn" id="btn-nav-status" onclick="showSection('status')"><i class="fa-solid fa-heart-pulse"></i> Estado del Sistema</button>
-                
-                <div class="sidebar-footer-mobile">
-                    <button class="logout-btn" onclick="logout()" style="width:100%; margin-top:10px; border:1px solid var(--accent); color:var(--accent); background:transparent; padding:10px; border-radius:8px;">
-                        <i class="fa-solid fa-right-from-bracket"></i> Salir
-                    </button>
-                </div>
-            </nav>
-    
-    <div class="sidebar-footer desktop-only">
-        <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+        </nav>
+        
+        <div class="sidebar-footer desktop-only">
+            <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+        </div>
     </div>
-</div>
+
 
         <main class="content">
             <div id="sec-welcome" class="section active welcome-flex">
