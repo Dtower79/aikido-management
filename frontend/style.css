@@ -357,10 +357,10 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 /* --- MOBILE --- */
 
 @media (max-width: 900px) {
-    /* 1. Estructura fija para evitar saltos */
+    /* 1. Estructura fija de la App */
     .dashboard-container { flex-direction: column; height: 100vh; overflow: hidden; }
 
-    /* 2. Sidebar como Header Superior */
+    /* 2. Header Superior Fijo */
     .sidebar { 
         width: 100% !important; 
         height: 70px !important; 
@@ -371,13 +371,11 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         border-bottom: 1px solid var(--border);
     }
     
-    .sidebar-header { height: 70px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
-    .logo-img-sidebar { max-height: 45px; width: auto; }
-
-    /* Ocultar botones de escritorio */
+    .sidebar-header { height: 70px; padding: 0 20px; display: flex !important; align-items: center; justify-content: space-between; }
+    .logo-img-sidebar { max-height: 40px; width: auto; }
     .desktop-only, .sidebar-sep, .sidebar-footer { display: none !important; }
 
-    /* 3. Menú Desplegable (Capa flotante) */
+    /* Menú Desplegable */
     .menu { 
         display: none; 
         position: absolute;
@@ -386,39 +384,80 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         border-bottom: 3px solid var(--accent);
         flex-direction: column;
         padding: 10px 0;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        z-index: 10000;
     }
     .sidebar.open .menu { display: flex !important; }
 
-    /* 4. El Área de Contenido (Ajustada para el header fijo) */
+    /* 3. Área de Contenido con Scroll Real */
     .content { 
-        margin-top: 70px; /* Hueco para la sidebar fija */
+        margin-top: 70px; /* Hueco para el header fijo */
         height: calc(100vh - 70px);
         overflow-y: auto !important; 
         -webkit-overflow-scrolling: touch;
+        display: block;
     }
 
     .section { 
         padding: 20px; 
-        padding-bottom: 180px !important; /* Más espacio al final */
-        width: 100%;
+        padding-bottom: 200px !important; /* MUCHO AIRE AL FINAL para que el botón no pegue abajo */
+        min-height: 100%;
+        height: auto !important;
         box-sizing: border-box;
     }
 
-    /* 5. Bienvenida: Logo CENTRADO ABSOLUTO */
-    #sec-welcome.welcome-flex {
+    /* 4. FORMULARIO: Corregir relieve y colores */
+    .form-card { 
+        background: rgba(30, 41, 59, 0.7) !important; 
+        border-radius: 20px; 
+        border: 1px solid var(--border);
+        height: auto !important; /* El relieve ahora cubrirá TODO el contenido */
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .form-group { width: 100%; }
+    
+    .form-group label { 
+        color: var(--text) !important; /* Volvemos al color claro original */
+        font-weight: 600; 
+        font-size: 0.9rem; 
+        margin-bottom: 8px;
+    }
+
+    .form-group input, .form-group select { 
+        background: #0f172a !important;
+        height: 48px;
+        border-radius: 10px;
+        font-size: 1rem;
+    }
+
+    /* 5. BOTONES: Espaciados y cómodos */
+    .form-actions { 
+        flex-direction: column; /* Apilados: Guardar arriba, Cancelar abajo */
+        gap: 15px; 
+        margin-top: 30px;
+        padding-bottom: 20px;
+    }
+
+    .form-actions .action-btn { 
+        width: 100% !important; 
+        height: 55px; 
+        border-radius: 12px;
+        font-size: 1rem;
+    }
+
+    /* El botón cancelar ahora tendrá un poco de transparencia para no pesar tanto visualmente */
+    .form-actions .secondary {
+        background: rgba(255,255,255,0.05) !important;
+        color: var(--text-muted) !important;
+    }
+
+    /* 6. Bienvenida centrada */
+    #sec-welcome.active {
         display: flex !important;
-        height: 100%;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        margin: 0;
+        height: 80vh;
     }
-    .logo-welcome { width: 70%; max-width: 300px; margin-bottom: 100px; }
-
-    /* 6. Formulario Limpio */
-    .form-card { background: rgba(30, 41, 59, 0.7) !important; border-radius: 20px; border: 1px solid var(--border); }
-    .form-group label { color: var(--accent); font-weight: 800; font-size: 0.8rem; }
-    .form-actions { flex-direction: column-reverse; gap: 12px; margin-top: 30px; }
-    .form-actions .action-btn { width: 100%; height: 55px; border-radius: 15px; }
 }
