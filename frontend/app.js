@@ -58,26 +58,35 @@ function showDashboard() {
 }
 
 function showSection(id) {
-    // 1. Ocultar TODO y limpiar clases de centrado
+    // 1. Ocultar TODAS las secciones y quitarles CUALQUIER clase de visibilidad
     document.querySelectorAll('.section').forEach(s => {
         s.classList.add('hidden');
         s.classList.remove('active', 'welcome-flex');
+        s.style.display = "none"; // Forzado por JS para evitar conflictos de CSS
     });
     
-    // 2. Mostrar solo la sección elegida
+    // 2. Mostrar SOLAMENTE la sección elegida
     const targetSection = document.getElementById(`sec-${id}`);
     if (targetSection) {
         targetSection.classList.remove('hidden');
-        targetSection.classList.add('active');
-        // Si volvemos al inicio, aplicamos flex para centrar el logo
-        if (id === 'welcome') targetSection.classList.add('welcome-flex');
+        targetSection.style.display = (id === 'welcome') ? "flex" : "block";
+        if (id === 'welcome') targetSection.classList.add('welcome-flex', 'active');
     }
     
-    // 3. Cerrar el menú hamburguesa
+    // 3. Quitar el "active" de los botones del menú
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.getElementById(`btn-nav-${id}`);
+    if(activeBtn) activeBtn.classList.add('active');
+
+    // 4. Cerrar el menú hamburguesa
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) sidebar.classList.remove('open');
 
-    // 4. Cargar datos si es necesario
+    // 5. Scroll al inicio de la sección
+    const contentArea = document.querySelector('.content');
+    if (contentArea) contentArea.scrollTo(0, 0);
+
+    // 6. Cargas de datos
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();

@@ -87,36 +87,21 @@ body {
 /* --- CONTENT --- */
 .content { flex: 1; background: radial-gradient(circle at top left, #1e293b, #0f172a); display: flex; flex-direction: column; overflow: hidden; position: relative; }
 .section { flex: 1; overflow-y: auto; padding: 30px; padding-bottom: 30px; }
-/* --- BIENVENIDA CENTRADA Y RESPETUOSA --- */
-#sec-welcome {
-    /* Usamos flex para centrar el contenido */
-    display: flex;
+.welcome-flex { 
+    display: flex; 
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    
-    /* Ocupa todo el alto disponible del contenedor padre */
-    height: 100%;
-    min-height: 80vh; /* Para que en móviles se vea centrado respecto al área visible */
-    width: 100%;
-    
-    padding: 0 !important;
-    margin: 0;
-    overflow: hidden; /* Evita que el logo genere scroll propio */
+    align-items: center; 
+    justify-content: center; 
+    height: 100%; 
+    width: 100%; 
+    min-height: 70vh; /* Asegura espacio suficiente para centrar verticalmente */
 }
-
-/* IMPORTANTE: Aseguramos que cuando tenga la clase hidden desaparezca TOTALMENTE */
-.section.hidden {
-    display: none !important;
-}
-
-.logo-welcome {
-    width: 70%;
-    max-width: 350px;
+.logo-welcome { 
+    width: 80%;
+    max-width: 400px; 
     height: auto;
-    filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.2));
-    /* Evita que el logo capture eventos de ratón si algo fallara */
-    pointer-events: none; 
+    filter: drop-shadow(0 0 25px rgba(239, 68, 68, 0.2)); 
+    display: block;
 }
 
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 15px; }
@@ -353,92 +338,70 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .dojo-link-btn { display: block; width: fit-content; margin: 20px auto 0; padding: 10px 25px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; text-align: center; transition: 0.3s; text-transform: uppercase; }
 
 /* --- MOBILE --- */
-/* --- MOBILE REFINADO --- */
-/* --- MOBILE REPARADO Y PREMIUM --- */
-@media (max-width: 900px) {
-    .dashboard-container { flex-direction: column; }
 
-    /* Barra lateral: ahora sí se oculta correctamente */
+@media (max-width: 900px) {
+    /* 1. Estructura fija para evitar saltos */
+    .dashboard-container { flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* 2. Sidebar como Header Superior */
     .sidebar { 
-        width: 100%; 
-        height: auto; 
-        position: relative; 
-        border-right: none; 
-        z-index: 1000;
+        width: 100% !important; 
+        height: 70px !important; 
+        position: fixed;
+        top: 0; left: 0;
+        z-index: 9999;
+        background: var(--bg-header);
+        border-bottom: 1px solid var(--border);
     }
     
-    .sidebar-header { justify-content: space-between; padding: 10px 20px; }
-    
-    /* El menú solo aparece cuando se pulsa la hamburguesa */
+    .sidebar-header { height: 70px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
+    .logo-img-sidebar { max-height: 45px; width: auto; }
+
+    /* Ocultar botones de escritorio */
+    .desktop-only, .sidebar-sep, .sidebar-footer { display: none !important; }
+
+    /* 3. Menú Desplegable (Capa flotante) */
     .menu { 
         display: none; 
-        width: 100%; 
-        padding: 0; 
-        background: var(--bg-header);
+        position: absolute;
+        top: 70px; left: 0; width: 100%;
+        background: #0b1120;
+        border-bottom: 3px solid var(--accent);
+        flex-direction: column;
+        padding: 10px 0;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     }
-    .sidebar.open .menu { display: block; }
-    .mobile-menu-toggle { display: block; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+    .sidebar.open .menu { display: flex !important; }
 
-    /* CONTENIDO: Ocupa todo el ancho */
-    .content { width: 100%; margin: 0; flex: 1; }
+    /* 4. El Área de Contenido (Ajustada para el header fijo) */
+    .content { 
+        margin-top: 70px; /* Hueco para la sidebar fija */
+        height: calc(100vh - 70px);
+        overflow-y: auto !important; 
+        -webkit-overflow-scrolling: touch;
+    }
 
     .section { 
-        padding: 15px; 
-        padding-bottom: 150px !important; /* Espacio para que los botones respiren */
+        padding: 20px; 
+        padding-bottom: 180px !important; /* Más espacio al final */
+        width: 100%;
+        box-sizing: border-box;
     }
 
-    /* BIENVENIDA: Logo centrado real */
-    #sec-welcome {
+    /* 5. Bienvenida: Logo CENTRADO ABSOLUTO */
+    #sec-welcome.welcome-flex {
         display: flex !important;
+        height: 100%;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        min-height: 70vh;
+        margin: 0;
     }
+    .logo-welcome { width: 70%; max-width: 300px; margin-bottom: 100px; }
 
-    /* FORMULARIO PREMIUM */
-    .form-card { 
-        background: rgba(30, 41, 59, 0.5) !important;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 20px;
-        padding: 20px;
-    }
-
-    .form-group label { 
-        color: var(--accent); 
-        font-weight: 700; 
-        font-size: 0.75rem;
-        margin-bottom: 5px;
-    }
-
-    .form-group input, .form-group select { 
-        height: 48px;
-        border-radius: 10px;
-        background: #0f172a !important;
-    }
-
-    /* BOTONES: Uno encima de otro para que sean fáciles de pulsar */
-    .form-actions { 
-        flex-direction: column-reverse; 
-        gap: 10px; 
-        margin-top: 25px;
-    }
-
-    .form-actions .action-btn { 
-        width: 100% !important; 
-        height: 50px;
-        border-radius: 12px;
-    }
-
-    /* FOOTER: Solo sale si corres el dedo */
-    .main-footer { 
-        left: 0; width: 100%; 
-        transform: translateY(100%);
-    }
-    .footer-trigger:hover ~ .main-footer, .main-footer:hover { transform: translateY(0); }
-
-    /* TABLAS: Ajuste para que no se deformen */
-    .table-container { width: 100%; overflow-x: auto; }
-    table { min-width: 700px; }
+    /* 6. Formulario Limpio */
+    .form-card { background: rgba(30, 41, 59, 0.7) !important; border-radius: 20px; border: 1px solid var(--border); }
+    .form-group label { color: var(--accent); font-weight: 800; font-size: 0.8rem; }
+    .form-actions { flex-direction: column-reverse; gap: 12px; margin-top: 30px; }
+    .form-actions .action-btn { width: 100%; height: 55px; border-radius: 15px; }
 }
