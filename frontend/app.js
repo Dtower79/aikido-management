@@ -425,8 +425,8 @@ if (formAlumno) {
             
             if (res.ok) {
                 showModal("¡OSS!", id ? "Los datos del alumno se han actualizado correctamente." : "Alumno registrado con éxito.", () => { 
-                    showSection('alumnos'); 
                     resetForm(); 
+                    showSection('alumnos'); // Mandamos a la lista solo después de guardar con éxito
                 });
             } else { 
                 showModal("Error", "No se han podido guardar los cambios. Revisa los datos."); 
@@ -468,16 +468,20 @@ function resetForm() {
     if (f) f.reset(); 
     
     // Resetear visuales de seguro
-    document.getElementById('seguro-status-text').innerText = "NO PAGADO"; 
-    document.getElementById('seguro-status-text').style.color = "#ef4444"; 
+    const statusTxt = document.getElementById('seguro-status-text');
+    if (statusTxt) {
+        statusTxt.innerText = "NO PAGADO"; 
+        statusTxt.style.color = "#ef4444"; 
+    }
     
-    // Resetear ID de edición
-    document.getElementById('edit-id').value = ""; 
-    document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO"; 
-    document.getElementById('btn-cancelar-edit').classList.add('hidden'); 
+    // Resetear ID de edición y textos de botones
+    const editId = document.getElementById('edit-id');
+    const btnSubmit = document.getElementById('btn-submit-alumno');
+    const btnCancel = document.getElementById('btn-cancelar-edit');
     
-    // Volver a la lista de alumnos
-    showSection('alumnos'); 
+    if (editId) editId.value = ""; 
+    if (btnSubmit) btnSubmit.innerText = "GUARDAR ALUMNO"; 
+    if (btnCancel) btnCancel.classList.add('hidden'); 
 }
 
 function confirmarEstado(id, activo, nombre) { showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => { const fecha = activo ? null : new Date().toISOString().split('T')[0]; await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) }); showSection(activo ? 'alumnos' : 'bajas'); }); }
