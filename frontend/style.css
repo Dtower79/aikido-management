@@ -87,33 +87,36 @@ body {
 /* --- CONTENT --- */
 .content { flex: 1; background: radial-gradient(circle at top left, #1e293b, #0f172a); display: flex; flex-direction: column; overflow: hidden; position: relative; }
 .section { flex: 1; overflow-y: auto; padding: 30px; padding-bottom: 30px; }
-/* --- BIENVENIDA CENTRADA ABSOLUTA --- */
-#sec-welcome.welcome-flex {
-    display: flex !important;
+/* --- BIENVENIDA CENTRADA Y RESPETUOSA --- */
+#sec-welcome {
+    /* Usamos flex para centrar el contenido */
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    /* Usamos min-height para que ocupe todo el espacio entre el header y el final de la pantalla */
-    height: 100%; 
+    
+    /* Ocupa todo el alto disponible del contenedor padre */
+    height: 100%;
+    min-height: 80vh; /* Para que en móviles se vea centrado respecto al área visible */
     width: 100%;
-    padding: 0 !important; /* Quitamos el padding de 30px para que el centro sea real */
+    
+    padding: 0 !important;
     margin: 0;
-    position: absolute; /* Se ajusta al contenedor .content que ya tiene position: relative */
-    top: 0;
-    left: 0;
+    overflow: hidden; /* Evita que el logo genere scroll propio */
+}
+
+/* IMPORTANTE: Aseguramos que cuando tenga la clase hidden desaparezca TOTALMENTE */
+.section.hidden {
+    display: none !important;
 }
 
 .logo-welcome {
-    width: 75%; /* Un poco más pequeño para que respire mejor en el centro */
-    max-width: 380px;
+    width: 70%;
+    max-width: 350px;
     height: auto;
-    filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.25));
-    transition: transform 0.5s ease;
-}
-
-/* Efecto sutil para que no parezca una imagen estática */
-.logo-welcome:hover {
-    transform: scale(1.02);
+    filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.2));
+    /* Evita que el logo capture eventos de ratón si algo fallara */
+    pointer-events: none; 
 }
 
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 15px; }
