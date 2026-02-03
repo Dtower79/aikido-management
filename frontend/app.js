@@ -58,37 +58,29 @@ function showDashboard() {
 }
 
 function showSection(id) {
-    // 1. Ocultamos TODAS las secciones y limpiamos estados
+    // 1. Ocultar TODO y limpiar clases de centrado
     document.querySelectorAll('.section').forEach(s => {
         s.classList.add('hidden');
-        s.classList.remove('active', 'welcome-flex'); // Quitamos las clases que centran el logo
+        s.classList.remove('active', 'welcome-flex');
     });
     
-    // 2. Mostramos la que queremos
+    // 2. Mostrar solo la sección elegida
     const targetSection = document.getElementById(`sec-${id}`);
     if (targetSection) {
         targetSection.classList.remove('hidden');
         targetSection.classList.add('active');
-        // Si es bienvenida, le devolvemos su clase de centrado
+        // Si volvemos al inicio, aplicamos flex para centrar el logo
         if (id === 'welcome') targetSection.classList.add('welcome-flex');
     }
     
-    // 3. Gestionamos los botones del menú
-    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
-    const activeBtn = document.getElementById(`btn-nav-${id}`);
-    if(activeBtn) activeBtn.classList.add('active');
-
-    // 4. Cerrar menú hamburguesa automáticamente
+    // 3. Cerrar el menú hamburguesa
     const sidebar = document.querySelector('.sidebar');
-    if (sidebar && sidebar.classList.contains('open')) {
-        sidebar.classList.remove('open');
-    }
+    if (sidebar) sidebar.classList.remove('open');
 
-    // 5. Cargas de datos
+    // 4. Cargar datos si es necesario
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
-    if (id === 'status') runDiagnostics();
 }
 
 // --- UTILS ---
