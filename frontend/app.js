@@ -58,13 +58,18 @@ function showDashboard() {
 }
 
 function showSection(id) {
-    // 1. Ocultamos TODAS las secciones, incluida la de bienvenida
-    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+    // 1. Ocultamos TODAS las secciones y quitamos clases de estado
+    document.querySelectorAll('.section').forEach(s => {
+        s.classList.add('hidden');
+        s.classList.remove('active'); // Limpiamos para evitar conflictos visuales
+    });
     
-    // 2. Mostramos solo la que queremos
+    // 2. Mostramos la sección seleccionada
     const targetSection = document.getElementById(`sec-${id}`);
     if (targetSection) {
         targetSection.classList.remove('hidden');
+        // Si es bienvenida o formulario, nos aseguramos que no se oculte nada
+        targetSection.style.display = "block"; 
     }
     
     // 3. Gestionamos los botones del menú
@@ -72,7 +77,13 @@ function showSection(id) {
     const activeBtn = document.getElementById(`btn-nav-${id}`);
     if(activeBtn) activeBtn.classList.add('active');
 
-    // 4. Cargas específicas
+    // 4. AUTO-CERRAR MENÚ EN MÓVIL
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+    }
+
+    // 5. Cargas específicas de datos
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
@@ -82,7 +93,7 @@ function showSection(id) {
         if (!isEditing) resetForm(); 
     }
     
-    // 5. Cerramos cualquier menú de acciones abierto al cambiar de sección
+    // 6. Cerramos cualquier menú de acciones flotante
     if (typeof closeAlumnoActions === 'function') closeAlumnoActions();
 }
 
@@ -163,10 +174,11 @@ async function loadAlumnos(activos) {
 
 // A. SELECCIÓN DE ALUMNO CON CENTRADO SIMÉTRICO
 function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
-    closeAlumnoActions();
+    closeAlumnoActions(); // Limpiar selección previa
     const row = document.getElementById(`row-${id}`);
     if (row) row.classList.add('selected-row');
 
+    // Generamos el HTML de los botones (idéntico al de PC)
     const actionsHtml = esActivo ? `
         <button class="action-btn-icon" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
         <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
@@ -177,10 +189,12 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
     `;
 
     if (window.innerWidth <= 900) {
+        // MÓVIL: Usamos el Bottom Sheet (Panel inferior)
         document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
     } else {
+        // DESKTOP: Barra superior (toolbar)
         const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
         const container = document.getElementById(targetId);
         if (container) {
