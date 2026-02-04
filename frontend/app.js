@@ -475,33 +475,21 @@ if (formAlumno) {
 }
 
 async function editarAlumno(documentId) {
+    // 1. Cerramos el panel de acciones inmediatamente
     closeAlumnoActions();
     
     try {
-        // Cambiamos la sintaxis del populate para que Strapi Cloud no de error 400
-        const url = `${API_URL}/api/alumnos/${documentId}?populate[0]=dojo&populate[1]=seminarios`;
+        // 2. Consulta a Strapi (Traemos todo, incluidos los seminarios)
+        const url = `${API_URL}/api/alumnos/${documentId}?populate=*`;
         const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         
-        // COMPROBACIÓN DE SEGURIDAD: Si no hay datos, lanzamos error controlado
-        if (!json || !json.data) {
-            console.error("Respuesta de Strapi sin datos:", json);
-            showModal("Error", "No se encontró el alumno en la base de datos.");
-            return;
-        }
+        if (!json || !json.data) return;
 
         const data = json.data; 
-        const p = data.attributes || data; // Compatible v4 y v5
+        const p = data.attributes || data;
         
-        // 2. La carga de filas (Cambiado a 'p.seminarios')
-        const containerSem = document.getElementById('seminarios-list');
-        if (containerSem) {
-            containerSem.innerHTML = "";
-            const sems = p.seminarios || []; // <--- CAMBIADO
-            sems.forEach(s => addSeminarioRow(s));
-        }
-
-        // Rellenar campos
+        // 3. Rellenar campos básicos del formulario
         document.getElementById('edit-id').value = data.documentId || documentId;
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
@@ -516,40 +504,46 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
+        // 4. Estado del Seguro
         const chk = document.getElementById('new-seguro'); 
         const txt = document.getElementById('seguro-status-text'); 
-        chk.checked = p.seguro_pagado === true; 
-        if (chk.checked) { 
-            txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; 
-        } else { 
-            txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; 
+        if (chk && txt) {
+            chk.checked = p.seguro_pagado === true; 
+            txt.innerText = chk.checked ? "PAGADO" : "NO PAGADO";
+            txt.style.color = chk.checked ? "#22c55e" : "#ef4444";
         }
         
+        // 5. Selección de Dojo
         let dojoId = "";
         if (p.dojo) { 
-            // Manejo de relación v5
             dojoId = p.dojo.documentId || (p.dojo.data ? p.dojo.data.documentId : "");
         }
         const selectDojo = document.getElementById('new-dojo'); 
         if (dojoId && selectDojo) { selectDojo.value = dojoId; }
         
-        // Cargar Horas y Seminarios
-        document.getElementById('new-horas').value = p.horas_acumuladas || 0;
-        const containerSem = document.getElementById('seminarios-list');
-        if (containerSem) {
-            containerSem.innerHTML = "";
-            const sems = p.seminarios_repetible || [];
+        // 6. CARGAR HORAS (Asegúrate de que el ID sea 'new-horas')
+        const inputHoras = document.getElementById('new-horas');
+        if (inputHoras) inputHoras.value = p.horas_acumuladas || 0;
+
+        // 7. CARGAR SEMINARIOS (Aquí estaba el error de duplicado)
+        const listaSeminarios = document.getElementById('seminarios-list');
+        if (listaSeminarios) {
+            listaSeminarios.innerHTML = ""; // Limpiamos la lista
+            const sems = p.seminarios || []; // Usamos el nombre exacto de tu Strapi
             sems.forEach(s => addSeminarioRow(s));
         }
 
+        // 8. Actualizar sugerencias y cambiar textos de la interfaz
+        updateSeminariosDatalists();
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; 
         document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
         
+        // 9. Mostrar la sección del formulario
         showSection('nuevo-alumno');
 
     } catch (error) { 
-        console.error("Error crítico en editarAlumno:", error);
-        showModal("Error", "Fallo de conexión al intentar editar."); 
+        console.error("Error en editarAlumno:", error);
+        showModal("Error", "No se han podido cargar los datos."); 
     }
 }
 
