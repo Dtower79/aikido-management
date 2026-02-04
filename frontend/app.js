@@ -413,6 +413,8 @@ if (formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
+        
+        // Construcción del objeto de datos para Strapi
         const alumnoData = { 
             nombre: document.getElementById('new-nombre').value, 
             apellidos: document.getElementById('new-apellidos').value, 
@@ -427,15 +429,15 @@ if (formAlumno) {
             dojo: document.getElementById('new-dojo').value, 
             grupo: document.getElementById('new-grupo').value, 
             grado: document.getElementById('new-grado').value, 
-            seguro_pagado: document.getElementById('new-seguro').checked, 
-            activo: true 
+            seguro_pagado: document.getElementById('new-seguro').checked,
+            // NUEVOS CAMPOS:
             horas_acumuladas: parseFloat(document.getElementById('new-horas').value) || 0,
             seminarios_repetible: Array.from(document.querySelectorAll('.seminario-row')).map(row => ({
                 sensei: row.querySelector('.sem-sensei').value,
                 ciudad: row.querySelector('.sem-ciudad').value,
                 pais: row.querySelector('.sem-pais').value,
                 mes: row.querySelector('.sem-mes').value,
-                any: parseInt(row.querySelector('.sem-any').value) // Nombre exacto de Strapi
+                any: parseInt(row.querySelector('.sem-any').value)
             })),
             activo: true 
         };
@@ -452,7 +454,7 @@ if (formAlumno) {
             if (res.ok) {
                 showModal("¡OSS!", id ? "Los datos del alumno se han actualizado correctamente." : "Alumno registrado con éxito.", () => { 
                     resetForm(); 
-                    showSection('alumnos'); // Mandamos a la lista solo después de guardar con éxito
+                    showSection('alumnos'); 
                 });
             } else { 
                 showModal("Error", "No se han podido guardar los cambios. Revisa los datos."); 
