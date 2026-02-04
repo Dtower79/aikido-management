@@ -41,7 +41,9 @@ body {
 }
 
 .logo-img-login { max-width: 180px; margin-bottom: 30px; }
-
+.mobile-menu-toggle { 
+    display: none !important; 
+}
 .input-group { position: relative; margin-bottom: 15px; text-align: left; }
 .input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
 
@@ -550,13 +552,15 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         color: var(--accent) !important;
         border-color: rgba(239, 68, 68, 0.3) !important;
     }
-        .mobile-menu-toggle { 
-        display: block !important; /* Solo aparece aquí */
-        background: none; 
+    .mobile-menu-toggle { 
+        display: block !important; /* Solo se activa en móvil */
+        background: none !important; /* Quitamos ese fondo blanco que se ve en tu foto */
         border: none; 
-        color: white; 
+        color: white !important; 
         font-size: 1.8rem; 
         cursor: pointer;
+        padding: 0;
+        margin: 0;
     }
 
     
