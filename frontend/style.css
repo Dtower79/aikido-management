@@ -378,10 +378,24 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 /* --- MOBILE --- */
 
 @media (max-width: 900px) {
+    /* --- 1. AJUSTE LOGIN (Márgenes y Relieve) --- */
+    .login-container { 
+        padding: 20px; /* Evita que la tarjeta toque los bordes del móvil */
+        box-sizing: border-box; 
+    }
+    .login-box { 
+        width: 100% !important; 
+        max-width: 340px; /* Tamaño ideal para móvil */
+        margin: 0 auto;
+        border-radius: 28px !important; /* Bordes más suaves */
+        box-shadow: 0 20px 40px rgba(0,0,0,0.6) !important; /* Relieve más profundo */
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
     /* 1. Estructura fija de la App */
     .dashboard-container { flex-direction: column; height: 100vh; overflow: hidden; }
 
-    /* 2. Header Superior Fijo */
+    /* 2. Header Superior Fijo (Ajuste de alineación) */
     .sidebar { 
         width: 100% !important; 
         height: 70px !important; 
@@ -392,8 +406,22 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         border-bottom: 1px solid var(--border);
     }
     
-    .sidebar-header { height: 70px; padding: 0 20px; display: flex !important; align-items: center; justify-content: space-between; }
-    .logo-img-sidebar { max-height: 40px; width: auto; }
+    .sidebar-header { 
+        height: 70px; 
+        padding: 0 20px; 
+        display: flex !important; 
+        flex-direction: row !important; /* Asegura que estén en línea */
+        align-items: center !important; 
+        justify-content: space-between !important; 
+        min-height: auto !important; /* Importante para que no herede el alto de PC */
+    }
+    /* Logo de la cabecera ajustado */
+    .logo-img-sidebar { 
+        max-height: 35px !important; 
+        width: auto !important; 
+        margin: 0 !important;
+    }
+    
     .desktop-only, .sidebar-sep, .sidebar-footer { display: none !important; }
 
     /* Menú Desplegable */
@@ -420,7 +448,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 
     .section { 
         padding: 20px; 
-        padding-bottom: 200px !important; /* MUCHO AIRE AL FINAL para que el botón no pegue abajo */
+        padding-bottom: 200px !important; 
         min-height: 100%;
         height: auto !important;
         box-sizing: border-box;
@@ -431,7 +459,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         background: rgba(30, 41, 59, 0.7) !important; 
         border-radius: 20px; 
         border: 1px solid var(--border);
-        height: auto !important; /* El relieve ahora cubrirá TODO el contenido */
+        height: auto !important; 
         padding: 20px;
         margin-bottom: 30px;
     }
@@ -439,7 +467,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     .form-group { width: 100%; }
     
     .form-group label { 
-        color: var(--text) !important; /* Volvemos al color claro original */
+        color: var(--text) !important; 
         font-weight: 600; 
         font-size: 0.9rem; 
         margin-bottom: 8px;
@@ -454,7 +482,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 
     /* 5. BOTONES: Espaciados y cómodos */
     .form-actions { 
-        flex-direction: column; /* Apilados: Guardar arriba, Cancelar abajo */
+        flex-direction: column; 
         gap: 15px; 
         margin-top: 30px;
         padding-bottom: 20px;
@@ -467,7 +495,6 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         font-size: 1rem;
     }
 
-    /* El botón cancelar ahora tendrá un poco de transparencia para no pesar tanto visualmente */
     .form-actions .secondary {
         background: rgba(255,255,255,0.05) !important;
         color: var(--text-muted) !important;
@@ -489,7 +516,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         backdrop-filter: blur(4px);
         z-index: 11000;
         display: flex;
-        align-items: flex-end; /* Lo pega abajo */
+        align-items: flex-end; 
         transition: opacity 0.3s ease;
     }
 
@@ -521,7 +548,6 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         font-weight: 800;
     }
 
-    /* Contenedor de los círculos de acción */
     #sheet-actions-container {
         display: flex;
         justify-content: space-around;
@@ -529,7 +555,6 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         margin-bottom: 20px;
     }
 
-    /* Iconos de acción circulares y grandes */
     #sheet-actions-container .action-btn-icon {
         width: 65px;
         height: 65px;
@@ -543,7 +568,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         border: 1px solid var(--border) !important;
     }
     .console-body { 
-        color: #33ff00 !important; /* Verde neón forzado */
+        color: #33ff00 !important; 
         font-family: 'Courier New', monospace;
         font-size: 0.85rem;
     }
@@ -553,8 +578,8 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         border-color: rgba(239, 68, 68, 0.3) !important;
     }
     .mobile-menu-toggle { 
-        display: block !important; /* Solo se activa en móvil */
-        background: none !important; /* Quitamos ese fondo blanco que se ve en tu foto */
+        display: block !important; 
+        background: none !important; 
         border: none; 
         color: white !important; 
         font-size: 1.8rem; 
@@ -562,6 +587,4 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         padding: 0;
         margin: 0;
     }
-
-    
 }
