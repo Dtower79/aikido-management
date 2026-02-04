@@ -565,18 +565,38 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         margin-bottom: 20px;
     }
 
+/* Contenedor individual de cada acción (Icono + Texto) */
+    .action-item-wrap {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important; /* Centrado horizontal perfecto */
+        justify-content: center !important;
+        gap: 8px;
+        flex: 1; /* Distribuye el espacio equitativamente */
+    }
+
+    /* Etiquetas de texto */
+    .action-item-label {
+        font-size: 0.75rem !important;
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        text-align: center; /* Asegura que el texto se centre en su propio eje */
+        width: 100%;
+        display: block;
+    }
+
+    /* Botones circulares */
     #sheet-actions-container .action-btn-icon {
-        width: 65px;
-        height: 65px;
-        border-radius: 50% !important;
-        background: rgba(255,255,255,0.05) !important;
-        color: white !important;
-        font-size: 1.5rem !important;
-        display: flex;
+        width: 60px !important;
+        height: 60px !important;
+        margin: 0 !important; /* Eliminamos cualquier margen que lo mueva */
+        display: flex !important;
         align-items: center;
         justify-content: center;
-        border: 1px solid var(--border) !important;
+        border-radius: 50% !important;
     }
+    
     .console-body { 
         color: #33ff00 !important; 
         font-family: 'Courier New', monospace;
