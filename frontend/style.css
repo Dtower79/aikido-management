@@ -334,44 +334,42 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 /* 1. Forzamos que la tarjeta crezca con el contenido y no se corte */
 #sec-nuevo-alumno .form-card {
     height: auto !important;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    
 }
 
 /* 2. Estilo del separador en PC para que cruce toda la tarjeta */
 #sec-nuevo-alumno .sidebar-sep {
-    width: 100%;
-    margin: 30px 0 20px 0;
+    grid-column: 1 / -1;
+    margin: 35px 0 20px 0;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border);
     color: var(--text-muted);
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
 }
 
 /* 3. Alineación de la fila de Horas y Botón Añadir en PC */
 #sec-nuevo-alumno .form-row:has(#new-horas) {
-    display: flex;
-    flex-direction: row; /* En PC van de lado a lado */
-    align-items: flex-end;
-    gap: 25px;
-    width: 100%;
-    margin-bottom: 20px;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    gap: 20px;
+}
+
+/* Limitamos el contenedor de las horas para que no se estire */
+#sec-nuevo-alumno .form-row:has(#new-horas) .form-group:first-child {
+    flex: 0 0 130px !important; /* Ancho fijo para el bloque de horas */
 }
 
 /* 4. Estilo específico del botón añadir en PC para que no flote solo */
 #sec-nuevo-alumno button[onclick="addSeminarioRow()"] {
+    flex: 0 0 auto; /* El botón solo ocupa lo que necesita su texto */
     border: 1px solid var(--accent) !important;
     color: var(--accent) !important;
     background: transparent;
     font-weight: bold;
-    height: 48px; /* Misma altura que el input de horas */
-    width: auto;
-    min-width: 220px;
-    transition: 0.3s ease;
+    height: 48px;
+    padding: 0 25px;
+    border-radius: 8px;
+    cursor: pointer;
 }
 
 #sec-nuevo-alumno button[onclick="addSeminarioRow()"]:hover {
@@ -558,8 +556,11 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 }
 
 #new-horas {
-    max-width: 40px !important;
+    width: 130px !important;
     text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary);
 }
 
 /* Estilo del botón añadir en PC */
