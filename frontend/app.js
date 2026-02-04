@@ -913,11 +913,11 @@ async function loadDojosCards() {
         if(data.length === 0) { grid.innerHTML = '<p>No hay dojos.</p>'; return; }
 
         data.forEach(d => { 
-            // FIX: Normalizar lectura de Strapi v5
             const p = d.attributes || d; 
-            const cleanName = (p.nombre || 'Dojo Desconocido').replace(/Aikido\s+/gi, '').trim(); 
+            const cleanName = (p.nombre || 'Dojo').replace(/Aikido\s+/gi, '').trim(); 
             const addr = p.direccion ? p.direccion.replace(/\n/g, '<br>') : 'NO DISP'; 
             
+            // Estructura limpia para que el CSS de tarjetas funcione
             grid.innerHTML += `
                 <div class="dojo-card">
                     <div class="dojo-header"><h3><i class="fa-solid fa-torii-gate"></i> ${cleanName}</h3></div>
@@ -925,11 +925,11 @@ async function loadDojosCards() {
                         <div class="dojo-info-row"><i class="fa-solid fa-map-location-dot"></i><span>${addr}<br><strong>${p.cp || ''} ${p.poblacion || ''}</strong></span></div>
                         <div class="dojo-info-row"><i class="fa-solid fa-phone"></i><span>${p.telefono || 'NO DISP'}</span></div>
                         <div class="dojo-info-row"><i class="fa-solid fa-envelope"></i><span>${p.email || 'NO DISP'}</span></div>
-                        <a href="${p.web || '#'}" target="_blank" class="dojo-link-btn">WEB OFICIAL</a>
+                        <a href="${p.web || '#'}" target="_blank" class="dojo-link-btn" style="display:block; text-align:center; margin-top:15px; background:var(--primary); color:white; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold;">WEB OFICIAL</a>
                     </div>
                 </div>`; 
         }); 
-    } catch(e) { console.error(e); grid.innerHTML = '<p style="color:red">Error al cargar dojos.</p>'; } 
+    } catch(e) { grid.innerHTML = '<p style="color:red">Error al cargar dojos.</p>'; } 
 }
 
 async function loadDojosSelect() {
