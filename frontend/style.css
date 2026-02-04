@@ -381,19 +381,17 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 @media (max-width: 900px) {
     /* --- 1. AJUSTE LOGIN (Márgenes y Relieve) --- */
     .login-container { 
-        padding: 20px; /* Evita que la tarjeta toque los bordes del móvil */
+        padding: 20px; 
         box-sizing: border-box; 
     }
     .login-box { 
         width: 100% !important; 
-        max-width: 340px; /* Tamaño ideal para móvil */
+        max-width: 340px; 
         margin: 0 auto;
-        border-radius: 28px !important; /* Bordes más suaves */
-        box-shadow: 0 20px 40px rgba(0,0,0,0.6) !important; /* Relieve más profundo */
+        border-radius: 28px !important; 
+        box-shadow: 0 20px 40px rgba(0,0,0,0.6) !important; 
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
-
-
 
     /* 1. Estructura fija de la App */
     .dashboard-container { flex-direction: column; height: 100vh; overflow: hidden; }
@@ -413,26 +411,24 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         height: 70px; 
         padding: 0 20px; 
         display: flex !important; 
-        flex-direction: row !important; /* Asegura que estén en línea */
+        flex-direction: row !important; 
         align-items: center !important; 
         justify-content: space-between !important; 
-        min-height: auto !important; /* Importante para que no herede el alto de PC */
+        min-height: auto !important; 
     }
-    /* Logo de la cabecera ajustado */
     .logo-img-sidebar { 
         max-height: 35px !important; 
         width: auto !important; 
         margin: 0 !important;
     }
-        .logo-welcome { 
+    .logo-welcome { 
         width: 70%; 
         max-width: 300px; 
         margin-bottom: 100px; 
-        /* AJUSTE ÓPTICO: Lo movemos 15 píxeles a la izquierda */
         transform: translateX(-15px); 
     }
     
-    .desktop-only, .sidebar-sep, .sidebar-footer { display: none !important; }
+    .desktop-only, .sidebar-sep.desktop-only, .sidebar-footer { display: none !important; }
 
     /* Menú Desplegable */
     .menu { 
@@ -449,7 +445,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 
     /* 3. Área de Contenido con Scroll Real */
     .content { 
-        margin-top: 70px; /* Hueco para el header fijo */
+        margin-top: 70px; 
         height: calc(100vh - 70px);
         overflow-y: auto !important; 
         -webkit-overflow-scrolling: touch;
@@ -490,6 +486,35 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         font-size: 1rem;
     }
 
+    /* --- AJUSTE TÉCNICO: Integración de la nueva sección en Móvil --- */
+/* --- AJUSTE TÉCNICO PC --- */
+#sec-nuevo-alumno .sidebar-sep {
+    grid-column: 1 / -1;
+    margin-top: 30px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+}
+
+/* Alineación de la fila de Horas y Botón en PC */
+#sec-nuevo-alumno .form-row:has(#new-horas) {
+    display: flex;
+    align-items: flex-end;
+    gap: 30px;
+}
+
+/* Estilo del botón añadir en PC */
+button[onclick="addSeminarioRow()"] {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+button[onclick="addSeminarioRow()"]:hover {
+    background: var(--accent) !important;
+    color: white !important;
+}
     /* 5. BOTONES: Espaciados y cómodos */
     .form-actions { 
         flex-direction: column; 
@@ -565,17 +590,14 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         margin-bottom: 20px;
     }
 
-/* Contenedor individual de cada acción (Icono + Texto) */
     .action-item-wrap {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
-        justify-content: center !important;
-        gap: 2px !important; /* Casi pegados */
+        gap: 2px !important; 
         flex: 1; 
     }
 
-    /* Etiquetas de texto */
     .action-item-label {
         font-size: 0.8rem !important; 
         color: var(--text-muted);
@@ -584,24 +606,22 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         margin-top: 5px;
     }
     
-    /* Botones circulares */
     #sheet-actions-container .action-btn-icon {
-        width: 75px !important;  /* Aumentado de 60 a 75 */
-        height: 75px !important; /* Aumentado de 60 a 75 */
+        width: 75px !important;  
+        height: 75px !important; 
         border-radius: 50% !important;
         background: rgba(255,255,255,0.05) !important;
         border: 1px solid var(--border) !important;
         color: white !important;
         display: flex !important;
         align-items: center !important;
-        justify-content: center !important;
+        justify-content: center;
         margin: 0 !important;
         padding: 0 !important;
     }
 
-    /* 3. Icono interno (FontAwesome): Mucho más grande */
     #sheet-actions-container .action-btn-icon i {
-        font-size: 2.2rem !important; /* Tamaño de icono masivo */
+        font-size: 2.2rem !important; 
     }
 
     .console-body { 
