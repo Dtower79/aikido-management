@@ -45,15 +45,32 @@ body {
 .input-group { position: relative; margin-bottom: 15px; text-align: left; }
 .input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
 
+/* --- INPUTS DE LOGIN SIEMPRE OSCUROS --- */
 .input-group input { 
     width: 100%; 
-    padding: 12px 12px 12px 45px; 
-    background: #0f172a; 
-    border: 1px solid var(--border); 
-    border-radius: 6px; 
-    color: white; 
+    padding: 14px 15px 14px 45px !important; 
+    background-color: #0f172a !important; /* Fondo azul oscuro Arashi */
+    border: 1px solid var(--border) !important; 
+    border-radius: 10px; 
+    color: white !important; /* Letras blancas */
     box-sizing: border-box; 
-    padding-right: 40px;
+    font-size: 1rem;
+    outline: none;
+}
+
+/* TRUCO MAESTRO: Eliminar el fondo claro del autorrelleno del navegador */
+.input-group input:-webkit-autofill,
+.input-group input:-webkit-autofill:hover, 
+.input-group input:-webkit-autofill:focus, 
+.input-group input:-webkit-autofill:active {
+    -webkit-text-fill-color: white !important;
+    -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important; /* Rellena el interior con el color oscuro */
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Color del texto sugerido (placeholder) */
+.input-group input::placeholder {
+    color: var(--text-muted);
 }
 
 .login-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; }
