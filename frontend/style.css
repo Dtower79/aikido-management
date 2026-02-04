@@ -540,6 +540,48 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 
     
 /* --- AJUSTE TÉCNICO PC --- */
+.tecnico-header {
+    grid-column: 1 / -1;
+    margin: 40px 0 20px 0 !important;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent) !important; /* Rojo Arashi para resaltar la sección */
+    font-weight: 800;
+}
+
+.technical-row {
+    display: flex !important;
+    align-items: flex-end !important;
+    gap: 20px !important;
+}
+
+.hours-group {
+    flex: 0 0 150px !important; /* Cuadro de horas pequeño */
+}
+
+#new-horas {
+    text-align: center;
+    font-weight: bold;
+    color: var(--primary);
+    font-size: 1.2rem;
+}
+
+.add-sem-btn {
+    background: transparent !important;
+    border: 1px solid var(--accent) !important;
+    color: var(--accent) !important;
+    height: 48px;
+    width: auto !important;
+    padding: 0 30px !important;
+    transition: 0.3s;
+}
+
+.add-sem-btn:hover {
+    background: var(--accent) !important;
+    color: white !important;
+}
+
+
 #sec-nuevo-alumno .sidebar-sep {
     grid-column: 1 / -1;
     margin-top: 30px;
@@ -703,5 +745,19 @@ button[onclick="addSeminarioRow()"]:hover {
         cursor: pointer;
         padding: 0;
         margin: 0;
+    }
+    .technical-row {
+        flex-direction: column !important;
+        gap: 15px !important;
+    }
+
+    .hours-group, .add-btn-group {
+        width: 100% !important;
+        flex: none !important;
+    }
+
+    .add-sem-btn {
+        width: 100% !important;
+        height: 55px !important;
     }
 }

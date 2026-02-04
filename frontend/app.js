@@ -414,17 +414,14 @@ if (formAlumno) {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
         
-        // Mapeo seguro de seminarios para evitar errores 400
+        // Mapeo de seminarios (Aseguramos que 'any' sea un número)
         const seminariosData = Array.from(document.querySelectorAll('[id^="sem-"]')).map(row => {
-            const anyInput = row.querySelector('.sem-any');
-            const anyValue = parseInt(anyInput.value);
-            
+            const anyValue = parseInt(row.querySelector('.sem-any').value);
             return {
                 sensei: row.querySelector('.sem-sensei').value || "",
                 ciudad: row.querySelector('.sem-ciudad').value || "",
                 pais: row.querySelector('.sem-pais').value || "",
                 mes: row.querySelector('.sem-mes').value || "",
-                // Si el año no es válido, enviamos el año actual para que Strapi no de error 400
                 any: isNaN(anyValue) ? new Date().getFullYear() : anyValue
             };
         });
@@ -445,7 +442,7 @@ if (formAlumno) {
             grado: document.getElementById('new-grado').value, 
             seguro_pagado: document.getElementById('new-seguro').checked,
             horas_acumuladas: parseFloat(document.getElementById('new-horas').value) || 0,
-            seminarios: seminariosData,
+            seminarios: seminariosData, // Nombre exacto de tu Strapi
             activo: true 
         };
         
@@ -464,9 +461,7 @@ if (formAlumno) {
                     showSection('alumnos'); 
                 });
             } else { 
-                const errorData = await res.json();
-                console.error("Error de Strapi:", errorData);
-                showModal("Error", "Revisa que el nombre del campo seminarios_repetible sea exacto en Strapi."); 
+                showModal("Error", "No se pudo guardar. Revisa la consola."); 
             }
         } catch (error) { 
             showModal("Error", "Fallo de conexión."); 
@@ -475,21 +470,13 @@ if (formAlumno) {
 }
 
 async function editarAlumno(documentId) {
-    // 1. Cerramos el panel de acciones inmediatamente
     closeAlumnoActions();
-    
     try {
-        // 2. Consulta a Strapi (Traemos todo, incluidos los seminarios)
-        const url = `${API_URL}/api/alumnos/${documentId}?populate=*`;
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=*`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        
-        if (!json || !json.data) return;
-
         const data = json.data; 
         const p = data.attributes || data;
         
-        // 3. Rellenar campos básicos del formulario
         document.getElementById('edit-id').value = data.documentId || documentId;
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
@@ -504,47 +491,30 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // 4. Estado del Seguro
+        // Seguro
         const chk = document.getElementById('new-seguro'); 
         const txt = document.getElementById('seguro-status-text'); 
-        if (chk && txt) {
-            chk.checked = p.seguro_pagado === true; 
-            txt.innerText = chk.checked ? "PAGADO" : "NO PAGADO";
-            txt.style.color = chk.checked ? "#22c55e" : "#ef4444";
-        }
+        chk.checked = p.seguro_pagado === true; 
+        txt.innerText = chk.checked ? "PAGADO" : "NO PAGADO";
+        txt.style.color = chk.checked ? "#22c55e" : "#ef4444";
         
-        // 5. Selección de Dojo
-        let dojoId = "";
-        if (p.dojo) { 
-            dojoId = p.dojo.documentId || (p.dojo.data ? p.dojo.data.documentId : "");
-        }
-        const selectDojo = document.getElementById('new-dojo'); 
-        if (dojoId && selectDojo) { selectDojo.value = dojoId; }
-        
-        // 6. CARGAR HORAS (Asegúrate de que el ID sea 'new-horas')
-        const inputHoras = document.getElementById('new-horas');
-        if (inputHoras) inputHoras.value = p.horas_acumuladas || 0;
+        // Dojo
+        let dojoId = p.dojo?.documentId || p.dojo?.data?.documentId || "";
+        document.getElementById('new-dojo').value = dojoId;
 
-        // 7. CARGAR SEMINARIOS (Aquí estaba el error de duplicado)
-        const listaSeminarios = document.getElementById('seminarios-list');
-        if (listaSeminarios) {
-            listaSeminarios.innerHTML = ""; // Limpiamos la lista
-            const sems = p.seminarios || []; // Usamos el nombre exacto de tu Strapi
-            sems.forEach(s => addSeminarioRow(s));
-        }
+        // --- CARGA TÉCNICA ---
+        document.getElementById('new-horas').value = p.horas_acumuladas || 0;
+        const containerSem = document.getElementById('seminarios-list');
+        containerSem.innerHTML = ""; // Limpiar antes
+        (p.seminarios || []).forEach(s => addSeminarioRow(s));
 
-        // 8. Actualizar sugerencias y cambiar textos de la interfaz
-        updateSeminariosDatalists();
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; 
         document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
         
-        // 9. Mostrar la sección del formulario
+        updateSeminariosDatalists();
         showSection('nuevo-alumno');
 
-    } catch (error) { 
-        console.error("Error en editarAlumno:", error);
-        showModal("Error", "No se han podido cargar los datos."); 
-    }
+    } catch (e) { showModal("Error", "No se pudieron cargar los datos."); }
 }
 
 function resetForm() { 
