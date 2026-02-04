@@ -98,14 +98,6 @@ body {
         max-width: 150px; 
         height: auto;
         display: block;
-    }.sidebar-header { 
-        height: 70px; 
-        display: flex !important; 
-        align-items: center; 
-        justify-content: space-between; 
-        padding: 0 20px; 
-        width: 100%;
-        box-sizing: border-box;
     }
 .logo-img-sidebar { max-width: 140px; }
     .mobile-menu-toggle { 
