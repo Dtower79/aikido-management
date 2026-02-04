@@ -1112,21 +1112,35 @@ function addSeminarioRow(data = {}) {
     const container = document.getElementById('seminarios-list');
     const rowId = Date.now();
     const div = document.createElement('div');
-    div.className = 'form-card seminario-row';
+    div.className = 'seminario-row-box';
     div.id = `sem-${rowId}`;
-    div.style = "margin-bottom:15px; padding:15px; border-style:dashed; position:relative; background: rgba(255,255,255,0.02);";
+    
+    // Estilo en línea para la caja del seminario individual
+    div.style = `
+        background: rgba(15, 23, 42, 0.5);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 12px;
+        position: relative;
+        animation: fadeIn 0.3s ease;
+    `;
 
     div.innerHTML = `
-        <button type="button" onclick="document.getElementById('sem-${rowId}').remove()" style="position:absolute; top:10px; right:10px; background:none; border:none; color:var(--accent); cursor:pointer;"><i class="fa-solid fa-trash-can"></i></button>
-        <div class="form-row">
-            <div class="form-group"><label>Sensei</label><input type="text" class="sem-sensei" list="senseis-list" value="${data.sensei || ''}"></div>
-            <div class="form-group"><label>Ciudad</label><input type="text" class="sem-ciudad" list="ciudades-seminario-list" value="${data.ciudad || ''}"></div>
+        <button type="button" onclick="document.getElementById('sem-${rowId}').remove()" 
+            style="position:absolute; top:10px; right:10px; background:none; border:none; color:var(--accent); cursor:pointer; font-size: 1rem; opacity: 0.6;">
+            <i class="fa-solid fa-circle-xmark"></i>
+        </button>
+        <div class="form-row" style="margin-bottom: 10px; gap: 10px;">
+            <div class="form-group" style="flex:2"><label style="font-size:0.65rem">SENSEI / MAESTRO</label><input type="text" class="sem-sensei" list="senseis-list" value="${data.sensei || ''}" placeholder="Ej: Christian Tissier"></div>
+            <div class="form-group" style="flex:1"><label style="font-size:0.65rem">CIUDAD</label><input type="text" class="sem-ciudad" list="ciudades-seminario-list" value="${data.ciudad || ''}" placeholder="Ej: París"></div>
         </div>
-        <div class="form-row">
-            <div class="form-group"><label>País</label><input type="text" class="sem-pais" list="paises-list" value="${data.pais || ''}"></div>
-            <div class="form-group"><label>Mes</label><input type="text" class="sem-mes" value="${data.mes || ''}"></div>
-            <div class="form-group"><label>Año</label><input type="number" class="sem-any" value="${data.any || new Date().getFullYear()}"></div>
+        <div class="form-row" style="margin-bottom: 0; gap: 10px;">
+            <div class="form-group"><label style="font-size:0.65rem">PAÍS</label><input type="text" class="sem-pais" list="paises-list" value="${data.pais || ''}" placeholder="Ej: Francia"></div>
+            <div class="form-group"><label style="font-size:0.65rem">MES</label><input type="text" class="sem-mes" value="${data.mes || ''}" placeholder="Ej: Mayo"></div>
+            <div class="form-group"><label style="font-size:0.65rem">AÑO</label><input type="number" class="sem-any" value="${data.any || new Date().getFullYear()}"></div>
         </div>
+        <input type="hidden" class="seminario-row"> <!-- Marcador para el selector en el guardado -->
     `;
     container.appendChild(div);
 }

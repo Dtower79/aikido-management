@@ -106,26 +106,37 @@
                             <span id="seguro-status-text" style="margin-left:10px; font-size:0.9rem; color:#ef4444;">NO PAGADO</span>
                         </div>
 
-                        <!-- BALANCE DE HORAS Y SEMINARIOS -->
-                        <div class="sidebar-sep" style="margin-top: 25px; margin-bottom: 15px; border-top: 1px solid var(--border); pt: 20px;">Historial Técnico y Seminarios</div>
+                        <!-- SECCIÓN TÉCNICA REFINADA -->
+<div class="sidebar-sep" style="margin: 30px 0 15px; border-top: 1px solid var(--border); padding-top: 20px;">
+    <i class="fa-solid fa-graduation-cap"></i> HISTORIAL TÉCNICO Y SEMINARIOS
+</div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Horas Totales Acumuladas</label>
-                                <input type="number" id="new-horas" step="0.1" value="0" style="font-weight: bold; color: var(--primary);">
-                            </div>
-                        </div>
+<div class="card" style="margin-bottom: 25px; background: rgba(30, 41, 59, 0.3); border: 1px solid var(--border); padding: 20px;">
+    <!-- Fila de Horas -->
+    <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+            <label style="color: var(--primary); font-weight: 800; font-size: 0.7rem; letter-spacing: 1px;">TOTAL HORAS ACUMULADAS</label>
+            <div style="position: relative; margin-top: 5px;">
+                <i class="fa-solid fa-clock" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--primary); opacity: 0.7;"></i>
+                <input type="number" id="new-horas" step="0.1" value="0" style="padding-left: 45px !important; font-weight: bold; border-color: rgba(59, 130, 246, 0.3); font-size: 1.1rem; color: var(--primary);">
+            </div>
+        </div>
+    </div>
 
-                        <div id="seminarios-section" style="margin-top: 20px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                                <label style="color:var(--text-muted); font-size:0.8rem; font-weight:800; letter-spacing: 1px;">SEMINARIOS INTERNACIONALES</label>
-                                <button type="button" class="action-btn" style="height:35px; padding:0 15px; font-size:0.75rem; background: var(--bg-header); border: 1px solid var(--border);" onclick="addSeminarioRow()">+ AÑADIR SEMINARIO</button>
-                            </div>
-                            
-                            <div id="seminarios-list">
-                                <!-- Aquí se inyectarán las filas dinámicamente desde app.js -->
-                            </div>
-                        </div>
+    <!-- Cabecera de Seminarios -->
+    <div id="seminarios-section" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <label style="color: var(--text-muted); font-size:0.75rem; font-weight:800; letter-spacing: 1px; text-transform: uppercase;">Asistencia a Seminarios</label>
+            <button type="button" class="action-btn" style="height:32px; padding:0 12px; font-size:0.65rem; background: transparent; border: 1px solid var(--accent); color: var(--accent); transition: 0.3s;" onmouseover="this.style.background='var(--accent)'; this.style.color='white'" onmouseout="this.style.background='transparent'; this.style.color='var(--accent)'" onclick="addSeminarioRow()">
+                <i class="fa-solid fa-plus"></i> AÑADIR REGISTRO
+            </button>
+        </div>
+        
+        <div id="seminarios-list">
+            <!-- Las filas se inyectan aquí -->
+        </div>
+    </div>
+</div>
 
                         <!-- Listas para Autocompletado Inteligente -->
                         <datalist id="senseis-list"></datalist>
