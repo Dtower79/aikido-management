@@ -217,8 +217,44 @@ tr.selected-row td {
 .action-btn-icon.delete:hover { color: var(--accent) !important; }
 
 /* --- CONSOLA --- */
-.console-wrapper { margin-top: 20px; background: #000; border-radius: 10px; border: 1px solid var(--border); height: 300px; display: flex; flex-direction: column; overflow: hidden; }
-.console-body { flex: 1; padding: 25px; font-family: 'Courier New', monospace; color: #33ff00; line-height: 1.6; overflow-y: auto; font-size: 0.95rem; }
+.console-wrapper { 
+    margin-top: 20px; 
+    background: #000; 
+    border-radius: 10px; 
+    border: 1px solid var(--border); 
+    height: 300px; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
+}
+.console-title { 
+    color: #33ff00 !important; /* Título verde */
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+.console-body { 
+    flex: 1; 
+    padding: 25px; 
+    font-family: 'Courier New', monospace; 
+    color: #33ff00 !important; /* Letras verdes neón */
+    line-height: 1.6; 
+    overflow-y: auto; 
+    font-size: 0.95rem; 
+}
+.console-body .action-btn.secondary {
+    color: #33ff00 !important;
+    border-color: #33ff00 !important;
+    background: transparent !important;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+/* Forzar que cualquier div o texto dentro de la consola sea verde */
+.console-body div, .console-body p, .console-body span {
+    color: #33ff00 !important;
+}
 .btn-pdf { 
     background: var(--accent) !important; /* Rojo Arashi */
     color: white !important; 
