@@ -167,36 +167,52 @@ async function loadAlumnos(activos) {
 
 // A. SELECCIÓN DE ALUMNO CON CENTRADO SIMÉTRICO
 function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
-    closeAlumnoActions(); // Limpiar cualquier selección anterior
-    
+    closeAlumnoActions();
     const row = document.getElementById(`row-${id}`);
     if (row) row.classList.add('selected-row');
 
-    // Generar los botones de acción con el diseño de iconos
-    const actionsHtml = esActivo ? `
-        <button class="action-btn-icon" title="Historial" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
-        <button class="action-btn-icon" title="Editar" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="action-btn-icon delete" title="Dar de baja" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
-    ` : `
-        <button class="action-btn-icon restore" title="Reactivar" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
-        <button class="action-btn-icon delete" title="Eliminar Permanente" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
-    `;
-
     if (window.innerWidth <= 900) {
-        // MÓVIL: Rellenamos y mostramos el Bottom Sheet
+        // MÓVIL: Diseño con etiquetas debajo de los iconos
+        const actionsHtml = esActivo ? `
+            <div class="action-item-wrap">
+                <button class="action-btn-icon" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                <span class="action-item-label">Historial</span>
+            </div>
+            <div class="action-item-wrap">
+                <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
+                <span class="action-item-label">Editar</span>
+            </div>
+            <div class="action-item-wrap">
+                <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+                <span class="action-item-label">Baja</span>
+            </div>
+        ` : `
+            <div class="action-item-wrap">
+                <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
+                <span class="action-item-label">Activar</span>
+            </div>
+            <div class="action-item-wrap">
+                <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
+                <span class="action-item-label">Eliminar</span>
+            </div>
+        `;
         document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
     } else {
-        // DESKTOP: Barra superior tradicional
+        // DESKTOP: Mantener barra superior
+        const actionsHtml = esActivo ? `
+            <button class="action-btn-icon" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+            <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
+            <button class="action-btn-icon delete" onclick="confirmarEstado('${id}', false, '${nombre}')"><i class="fa-solid fa-user-xmark"></i></button>
+        ` : `
+            <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
+            <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
+        `;
         const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
         const container = document.getElementById(targetId);
         if (container) {
-            container.innerHTML = `
-                <div style="grid-column: 1;"></div> 
-                <span class="student-tag">${nombre} ${apellidos}</span>
-                <div class="actions-buttons-wrap">${actionsHtml}</div>
-            `;
+            container.innerHTML = `<div style="grid-column: 1;"></div><span class="student-tag">${nombre} ${apellidos}</span><div class="actions-buttons-wrap">${actionsHtml}</div>`;
             container.classList.add('active');
         }
     }

@@ -222,91 +222,77 @@ tr.selected-row td {
 
 /* --- MOBILE QUERY (900px) --- */
 @media (max-width: 900px) {
+    /* 1. Estructura y Scroll */
     .dashboard-container { flex-direction: column; height: 100vh; overflow: hidden; }
-
-    /* Header Superior Fijo */
-    .sidebar { 
-        width: 100% !important; height: 70px !important; 
-        position: fixed; top: 0; left: 0; z-index: 9999;
-        background: var(--bg-header); border-bottom: 1px solid var(--border);
-    }
-    
-    .sidebar-header { 
-        height: 70px; padding: 0 20px; 
-        display: flex !important; align-items: center; justify-content: space-between; 
-    }
-    
-    .logo-img-sidebar { max-height: 40px; width: auto; }
-    
-    /* Mostrar hamburguesa SOLO en móvil */
-    .mobile-menu-toggle { 
-        display: block !important; 
-        background: none; border: none; color: white !important; 
-        font-size: 1.8rem; cursor: pointer; z-index: 10001; padding: 10px;
-    }
-
+    .sidebar { width: 100% !important; height: 70px !important; position: fixed; top: 0; left: 0; z-index: 9999; background: var(--bg-header); border-bottom: 1px solid var(--border); }
+    .sidebar-header { height: 70px; padding: 0 20px; display: flex !important; align-items: center; justify-content: space-between; }
     .desktop-only, .sidebar-sep, .sidebar-footer { display: none !important; }
 
-    /* Menú Desplegable */
-    .menu { 
-        display: none; position: absolute; top: 70px; left: 0; width: 100%;
-        background: #0b1120; border-bottom: 3px solid var(--accent);
-        flex-direction: column; padding: 10px 0; z-index: 10000;
-    }
+    .menu { display: none; position: absolute; top: 70px; left: 0; width: 100%; background: #0b1120; border-bottom: 3px solid var(--accent); flex-direction: column; padding: 10px 0; z-index: 10000; }
     .sidebar.open .menu { display: flex !important; }
 
-    /* Área de Contenido con Scroll Real */
-    .content { 
-        margin-top: 70px; height: calc(100vh - 70px);
-        overflow-y: auto !important; -webkit-overflow-scrolling: touch; display: block;
-    }
+    .content { margin-top: 70px; height: calc(100vh - 70px); overflow-y: auto !important; -webkit-overflow-scrolling: touch; display: block; }
+    .section { padding: 15px; padding-bottom: 150px !important; height: auto !important; }
+    .section.hidden { display: none !important; }
 
-    .section { 
-        padding: 20px; padding-bottom: 200px !important; 
-        min-height: 100%; height: auto !important; box-sizing: border-box;
+    /* 2. RECUPERAR DISEÑO DE DOJOS (TARJETAS) */
+    .dojo-grid { 
+        display: grid !important; 
+        grid-template-columns: 1fr !important; /* Una tarjeta por fila en móvil */
+        gap: 20px; 
     }
-
-    /* FORMULARIO MÓVIL */
-    .form-card { 
-        background: rgba(30, 41, 59, 0.7) !important; 
-        border-radius: 20px; border: 1px solid var(--border);
-        height: auto !important; padding: 20px; margin-bottom: 30px;
+    .dojo-card { 
+        background: var(--bg-card) !important; 
+        border-radius: 15px; 
+        border: 1px solid var(--border); 
+        overflow: hidden; 
+        display: flex; 
+        flex-direction: column;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     }
-    
-    .form-group label { 
-        color: var(--text) !important; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px;
+    .dojo-header h3 { font-size: 1rem; color: white; padding: 15px; background: rgba(255,255,255,0.03); margin: 0; }
+    .dojo-body { padding: 15px; font-size: 0.85rem; line-height: 1.4; }
+    .dojo-info-row { display: flex; gap: 10px; margin-bottom: 8px; }
+
+    /* 3. TOOLBAR Y BOTÓN INFORMES */
+    .toolbar { 
+        flex-direction: column; 
+        height: auto; 
+        gap: 12px; 
+        align-items: stretch; 
+        margin-bottom: 25px;
     }
-
-    .form-group input, .form-group select { 
-        background: #0f172a !important; height: 48px; border-radius: 10px; font-size: 1rem;
+    .btn-pdf { 
+        width: 100%; 
+        justify-content: center; 
+        height: 45px; 
+        font-size: 0.8rem;
     }
+    .search-box { flex: none; width: 100%; height: 45px; }
 
-    .form-actions { flex-direction: column; gap: 15px; margin-top: 30px; padding-bottom: 20px; }
-    .form-actions .action-btn { width: 100% !important; height: 55px; border-radius: 12px; }
-    .form-actions .secondary { background: rgba(255,255,255,0.05) !important; color: var(--text-muted) !important; }
-
-    /* Bienvenida centrada */
-    #sec-welcome.active {
-        display: flex !important; flex-direction: column;
-        align-items: center; justify-content: center; height: 80vh;
-    }
-
-    /* Bottom Sheet */
-    .bottom-sheet-overlay {
-        position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(4px); z-index: 11000; display: flex; align-items: flex-end;
-    }
-
+    /* 4. PANEL DE ACCIONES (BOTTOM SHEET) PROFESIONAL */
     .bottom-sheet-content {
-        width: 100%; background: #162032; border-top: 3px solid var(--accent);
-        border-radius: 25px 25px 0 0; padding: 25px; box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+        background: #0f172a;
+        padding: 20px 15px 40px;
+        border-top: 3px solid var(--accent);
     }
-
+    .action-item-wrap { /* Nuevo contenedor para Icono + Texto */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    .action-item-label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        font-weight: 800;
+        text-transform: uppercase;
+    }
     #sheet-actions-container .action-btn-icon {
-        width: 65px; height: 65px; border-radius: 50% !important;
-        background: rgba(255,255,255,0.05) !important; color: white !important;
-        display: flex; align-items: center; justify-content: center;
+        width: 60px;
+        height: 60px;
+        margin: 0;
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid var(--border) !important;
     }
-    
-    .console-body { color: #33ff00 !important; font-size: 0.85rem; }
 }
