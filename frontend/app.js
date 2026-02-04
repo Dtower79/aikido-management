@@ -90,6 +90,7 @@ function showSection(id) {
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
+    closeAlumnoActions(); 
 }
 
 // --- UTILS ---
@@ -434,10 +435,14 @@ if (formAlumno) {
 }
 
 async function editarAlumno(documentId) {
+    // Cerramos el panel de acciones inmediatamente para ver el formulario
+    closeAlumnoActions();
+    
     try {
         const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         const data = json.data; const p = data.attributes || data;
+        
         document.getElementById('edit-id').value = data.documentId || documentId;
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
@@ -451,12 +456,24 @@ async function editarAlumno(documentId) {
         document.getElementById('new-cp').value = p.cp || '';
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
-        const chk = document.getElementById('new-seguro'); const txt = document.getElementById('seguro-status-text'); chk.checked = p.seguro_pagado === true; if (chk.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; } else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
+        
+        const chk = document.getElementById('new-seguro'); 
+        const txt = document.getElementById('seguro-status-text'); 
+        chk.checked = p.seguro_pagado === true; 
+        if (chk.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; } 
+        else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
+        
         let dojoId = "";
         if (p.dojo) { if (p.dojo.documentId) { dojoId = p.dojo.documentId; } else if (p.dojo.data) { dojoId = p.dojo.data.documentId || p.dojo.data.id; } }
         const selectDojo = document.getElementById('new-dojo'); if (dojoId && selectDojo) { selectDojo.value = dojoId; }
-        document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; document.getElementById('btn-cancelar-edit').classList.remove('hidden'); showSection('nuevo-alumno');
-    } catch { showModal("Error", "Error al cargar datos."); }
+        
+        document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; 
+        document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
+        
+        showSection('nuevo-alumno');
+    } catch { 
+        showModal("Error", "Error al cargar datos."); 
+    }
 }
 
 function resetForm() { 
@@ -480,7 +497,21 @@ function resetForm() {
     if (btnCancel) btnCancel.classList.add('hidden'); 
 }
 
-function confirmarEstado(id, activo, nombre) { showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => { const fecha = activo ? null : new Date().toISOString().split('T')[0]; await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) }); showSection(activo ? 'alumnos' : 'bajas'); }); }
+function confirmarEstado(id, activo, nombre) { 
+    // Cerramos el panel para que no moleste al ver el Modal de confirmación
+    closeAlumnoActions();
+    
+    showModal(activo ? "Reactivar" : "Baja", `¿Confirmar para ${nombre}?`, async () => { 
+        const fecha = activo ? null : new Date().toISOString().split('T')[0]; 
+        await fetch(`${API_URL}/api/alumnos/${id}`, { 
+            method: 'PUT', 
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, 
+            body: JSON.stringify({ data: { activo, fecha_baja: fecha } }) 
+        }); 
+        // Tras la acción, vamos a la sección correspondiente
+        showSection(activo ? 'alumnos' : 'bajas'); 
+    }); 
+}
 function eliminarDefinitivo(id, nombre) { showModal("¡PELIGRO!", `¿Borrar físicamente a ${nombre}?`, () => { setTimeout(() => { showModal("ÚLTIMO AVISO", "Irreversible.", async () => { await fetch(`${API_URL}/api/alumnos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${jwtToken}` } }); loadAlumnos(false); }); }, 500); }); }
 
 // --- LOGICA CAMBIO DE CONTRASEÑA ---
@@ -518,6 +549,8 @@ function openReportModal() { document.getElementById('report-modal').classList.r
 // 1. INFORME HISTÓRICO INDIVIDUAL
 // 1. INFORME HISTÓRICO INDIVIDUAL (CORREGIDO: Timezone Fix literal)
 async function generateIndividualHistory(id, nombre, apellidos) {
+    // Cerramos el panel antes de procesar el PDF
+    closeAlumnoActions();
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     
