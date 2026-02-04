@@ -85,14 +85,16 @@ body {
 
 .sidebar { width: 250px; background: var(--bg-header); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; transition: all 0.3s ease; z-index: 100; }
     .sidebar-header { 
-        padding: 30px 15px; /* Aumentamos el padding para que el logo respire */
-        text-align: center; 
+        /* Ajustamos el padding: 30px arriba/abajo, 15px derecha, 25px izquierda */
+        padding: 30px 15px 30px 25px; 
+        text-align: left; /* Alineamos el texto a la izquierda */
         display: flex; 
         flex-direction: column;
         justify-content: center; 
-        align-items: center; 
+        /* Cambiamos 'center' por 'flex-start' para moverlo a la izquierda */
+        align-items: flex-start; 
         border-bottom: 1px solid var(--border);
-        min-height: 140px; /* Forzamos una altura mínima para que quepa el círculo entero */
+        min-height: 140px;
         box-sizing: border-box;
     }
 
