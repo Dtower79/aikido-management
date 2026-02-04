@@ -87,6 +87,11 @@
     "es_instructor": {
       "type": "boolean",
       "default": false
+    },
+    "seminarios": {
+      "type": "component",
+      "component": "alumnos.seminario",
+      "repeatable": true
     }
   }
 }

@@ -1,0 +1,25 @@
+{
+  "collectionName": "components_alumnos_seminarios",
+  "info": {
+    "displayName": "seminario"
+  },
+  "options": {},
+  "attributes": {
+    "sensei": {
+      "type": "string"
+    },
+    "ciudad": {
+      "type": "string"
+    },
+    "pais": {
+      "type": "string"
+    },
+    "mes": {
+      "type": "string"
+    },
+    "any": {
+      "type": "integer"
+    }
+  },
+  "config": {}
+}
