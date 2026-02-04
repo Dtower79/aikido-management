@@ -466,18 +466,25 @@ if (formAlumno) {
 }
 
 async function editarAlumno(documentId) {
-    // 1. Cerramos el panel de acciones inmediatamente
     closeAlumnoActions();
     
     try {
-        // 2. IMPORTANTE: Modificamos la URL para traer también los seminarios
-        const url = `${API_URL}/api/alumnos/${documentId}?populate[0]=dojo&populate[1]=seminarios_repetible`;
+        // Cambiamos la sintaxis del populate para que Strapi Cloud no de error 400
+        const url = `${API_URL}/api/alumnos/${documentId}?populate=*`;
         const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        const data = json.data; 
-        const p = data.attributes || data;
         
-        // 3. Rellenar campos básicos
+        // COMPROBACIÓN DE SEGURIDAD: Si no hay datos, lanzamos error controlado
+        if (!json || !json.data) {
+            console.error("Respuesta de Strapi sin datos:", json);
+            showModal("Error", "No se encontró el alumno en la base de datos.");
+            return;
+        }
+
+        const data = json.data; 
+        const p = data.attributes || data; // Compatible v4 y v5
+        
+        // Rellenar campos
         document.getElementById('edit-id').value = data.documentId || documentId;
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
@@ -492,7 +499,6 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // 4. Estado del Seguro
         const chk = document.getElementById('new-seguro'); 
         const txt = document.getElementById('seguro-status-text'); 
         chk.checked = p.seguro_pagado === true; 
@@ -502,41 +508,31 @@ async function editarAlumno(documentId) {
             txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; 
         }
         
-        // 5. Selección de Dojo
         let dojoId = "";
         if (p.dojo) { 
-            if (p.dojo.documentId) { dojoId = p.dojo.documentId; } 
-            else if (p.dojo.data) { dojoId = p.dojo.data.documentId || p.dojo.data.id; } 
+            // Manejo de relación v5
+            dojoId = p.dojo.documentId || (p.dojo.data ? p.dojo.data.documentId : "");
         }
         const selectDojo = document.getElementById('new-dojo'); 
         if (dojoId && selectDojo) { selectDojo.value = dojoId; }
         
-        // --- NUEVA LÓGICA DE HORAS Y SEMINARIOS ---
-
-        // 6. Cargar horas acumuladas
-        const inputHoras = document.getElementById('new-horas');
-        if (inputHoras) inputHoras.value = p.horas_acumuladas || 0;
-
-        // 7. Cargar seminarios dinámicamente
+        // Cargar Horas y Seminarios
+        document.getElementById('new-horas').value = p.horas_acumuladas || 0;
         const containerSem = document.getElementById('seminarios-list');
         if (containerSem) {
-            containerSem.innerHTML = ""; // Limpiamos la lista antes de cargar los del alumno
+            containerSem.innerHTML = "";
             const sems = p.seminarios_repetible || [];
-            sems.forEach(s => addSeminarioRow(s)); // Usamos la función que crea las filas
+            sems.forEach(s => addSeminarioRow(s));
         }
 
-        // 8. Actualizar sugerencias de autocompletado (opcional pero recomendado)
-        updateSeminariosDatalists();
-
-        // 9. Cambiar interfaz a modo edición y mostrar
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; 
         document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
         
         showSection('nuevo-alumno');
 
     } catch (error) { 
-        console.error(error);
-        showModal("Error", "Error al cargar los datos del alumno."); 
+        console.error("Error crítico en editarAlumno:", error);
+        showModal("Error", "Fallo de conexión al intentar editar."); 
     }
 }
 
@@ -1148,19 +1144,21 @@ function addSeminarioRow(data = {}) {
 // 2. Inteligencia: Extraer datos existentes para autocompletado
 async function updateSeminariosDatalists() {
     try {
-        const res = await fetch(`${API_URL}/api/alumnos?populate=seminarios_repetible&pagination[limit]=400`, { 
+        // Simplificamos la consulta para evitar el error 400
+        const res = await fetch(`${API_URL}/api/alumnos?populate[seminarios_repetible]=true&pagination[limit]=100`, { 
             headers: { 'Authorization': `Bearer ${jwtToken}` } 
         });
         const json = await res.json();
-        const senseis = new Set(), ciudades = new Set(), paises = new Set();
+        if (!json.data) return;
 
-        (json.data || []).forEach(alu => {
+        const senseis = new Set(), ciudades = new Set(), paises = new Set();
+        json.data.forEach(alu => {
             const p = alu.attributes || alu;
             const items = p.seminarios_repetible || [];
             items.forEach(s => {
-                if(s.sensei) senseis.add(s.sensei);
-                if(s.ciudad) ciudades.add(s.ciudad);
-                if(s.pais) paises.add(s.pais);
+                if(s.sensei) senseis.add(s.sensei.trim());
+                if(s.ciudad) ciudades.add(s.ciudad.trim());
+                if(s.pais) paises.add(s.pais.trim());
             });
         });
 
@@ -1171,5 +1169,5 @@ async function updateSeminariosDatalists() {
         fill('senseis-list', senseis);
         fill('ciudades-seminario-list', ciudades);
         fill('paises-list', paises);
-    } catch (e) { console.warn("Datalists no disponibles aún"); }
+    } catch (e) { console.warn("Datalists: Fallo silencioso."); }
 }

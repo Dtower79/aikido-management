@@ -540,7 +540,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         font-size: 1rem;
     }
 
-    /* --- AJUSTE TÉCNICO: Integración de la nueva sección en Móvil --- */
+    
 /* --- AJUSTE TÉCNICO PC --- */
 #sec-nuevo-alumno .sidebar-sep {
     grid-column: 1 / -1;
@@ -555,6 +555,11 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     display: flex;
     align-items: flex-end;
     gap: 30px;
+}
+
+#new-horas {
+    max-width: 120px !important;
+    text-align: center;
 }
 
 /* Estilo del botón añadir en PC */
