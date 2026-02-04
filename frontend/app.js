@@ -429,6 +429,15 @@ if (formAlumno) {
             grado: document.getElementById('new-grado').value, 
             seguro_pagado: document.getElementById('new-seguro').checked, 
             activo: true 
+            horas_acumuladas: parseFloat(document.getElementById('new-horas').value) || 0,
+            seminarios_repetible: Array.from(document.querySelectorAll('.seminario-row')).map(row => ({
+                sensei: row.querySelector('.sem-sensei').value,
+                ciudad: row.querySelector('.sem-ciudad').value,
+                pais: row.querySelector('.sem-pais').value,
+                mes: row.querySelector('.sem-mes').value,
+                any: parseInt(row.querySelector('.sem-any').value) // Nombre exacto de Strapi
+            })),
+            activo: true 
         };
         
         try {
@@ -455,14 +464,18 @@ if (formAlumno) {
 }
 
 async function editarAlumno(documentId) {
-    // Cerramos el panel de acciones inmediatamente para ver el formulario
+    // 1. Cerramos el panel de acciones inmediatamente
     closeAlumnoActions();
     
     try {
-        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=dojo`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        // 2. IMPORTANTE: Modificamos la URL para traer también los seminarios
+        const url = `${API_URL}/api/alumnos/${documentId}?populate[0]=dojo&populate[1]=seminarios_repetible`;
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
-        const data = json.data; const p = data.attributes || data;
+        const data = json.data; 
+        const p = data.attributes || data;
         
+        // 3. Rellenar campos básicos
         document.getElementById('edit-id').value = data.documentId || documentId;
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
@@ -477,22 +490,51 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
+        // 4. Estado del Seguro
         const chk = document.getElementById('new-seguro'); 
         const txt = document.getElementById('seguro-status-text'); 
         chk.checked = p.seguro_pagado === true; 
-        if (chk.checked) { txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; } 
-        else { txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; }
+        if (chk.checked) { 
+            txt.innerText = "PAGADO"; txt.style.color = "#22c55e"; 
+        } else { 
+            txt.innerText = "NO PAGADO"; txt.style.color = "#ef4444"; 
+        }
         
+        // 5. Selección de Dojo
         let dojoId = "";
-        if (p.dojo) { if (p.dojo.documentId) { dojoId = p.dojo.documentId; } else if (p.dojo.data) { dojoId = p.dojo.data.documentId || p.dojo.data.id; } }
-        const selectDojo = document.getElementById('new-dojo'); if (dojoId && selectDojo) { selectDojo.value = dojoId; }
+        if (p.dojo) { 
+            if (p.dojo.documentId) { dojoId = p.dojo.documentId; } 
+            else if (p.dojo.data) { dojoId = p.dojo.data.documentId || p.dojo.data.id; } 
+        }
+        const selectDojo = document.getElementById('new-dojo'); 
+        if (dojoId && selectDojo) { selectDojo.value = dojoId; }
         
+        // --- NUEVA LÓGICA DE HORAS Y SEMINARIOS ---
+
+        // 6. Cargar horas acumuladas
+        const inputHoras = document.getElementById('new-horas');
+        if (inputHoras) inputHoras.value = p.horas_acumuladas || 0;
+
+        // 7. Cargar seminarios dinámicamente
+        const containerSem = document.getElementById('seminarios-list');
+        if (containerSem) {
+            containerSem.innerHTML = ""; // Limpiamos la lista antes de cargar los del alumno
+            const sems = p.seminarios_repetible || [];
+            sems.forEach(s => addSeminarioRow(s)); // Usamos la función que crea las filas
+        }
+
+        // 8. Actualizar sugerencias de autocompletado (opcional pero recomendado)
+        updateSeminariosDatalists();
+
+        // 9. Cambiar interfaz a modo edición y mostrar
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; 
         document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
         
         showSection('nuevo-alumno');
-    } catch { 
-        showModal("Error", "Error al cargar datos."); 
+
+    } catch (error) { 
+        console.error(error);
+        showModal("Error", "Error al cargar los datos del alumno."); 
     }
 }
 
@@ -500,14 +542,14 @@ function resetForm() {
     const f = document.getElementById('form-nuevo-alumno'); 
     if (f) f.reset(); 
     
-    // Resetear visuales de seguro
+    // 1. Resetear visuales de seguro
     const statusTxt = document.getElementById('seguro-status-text');
     if (statusTxt) {
         statusTxt.innerText = "NO PAGADO"; 
         statusTxt.style.color = "#ef4444"; 
     }
     
-    // Resetear ID de edición y textos de botones
+    // 2. Resetear ID de edición y textos de botones
     const editId = document.getElementById('edit-id');
     const btnSubmit = document.getElementById('btn-submit-alumno');
     const btnCancel = document.getElementById('btn-cancelar-edit');
@@ -515,6 +557,19 @@ function resetForm() {
     if (editId) editId.value = ""; 
     if (btnSubmit) btnSubmit.innerText = "GUARDAR ALUMNO"; 
     if (btnCancel) btnCancel.classList.add('hidden'); 
+
+    // --- AQUÍ VAN LAS NUEVAS LÍNEAS ---
+    
+    // 3. Resetear el contador de horas manual
+    const horasInput = document.getElementById('new-horas');
+    if (horasInput) horasInput.value = 0;
+
+    // 4. Vaciar la lista de seminarios añadidos
+    const semList = document.getElementById('seminarios-list');
+    if (semList) semList.innerHTML = "";
+
+    // 5. Refrescar las sugerencias de autocompletado para el siguiente uso
+    updateSeminariosDatalists();
 }
 
 function confirmarEstado(id, activo, nombre) { 
@@ -1048,4 +1103,57 @@ function showModal(titulo, mensaje, callbackOk = null) {
 
 function closeModal() {
     document.getElementById('custom-modal').classList.add('hidden');
+}
+
+// 1. Función para añadir una fila de seminario
+function addSeminarioRow(data = {}) {
+    const container = document.getElementById('seminarios-list');
+    const rowId = Date.now();
+    const div = document.createElement('div');
+    div.className = 'form-card seminario-row';
+    div.id = `sem-${rowId}`;
+    div.style = "margin-bottom:15px; padding:15px; border-style:dashed; position:relative; background: rgba(255,255,255,0.02);";
+
+    div.innerHTML = `
+        <button type="button" onclick="document.getElementById('sem-${rowId}').remove()" style="position:absolute; top:10px; right:10px; background:none; border:none; color:var(--accent); cursor:pointer;"><i class="fa-solid fa-trash-can"></i></button>
+        <div class="form-row">
+            <div class="form-group"><label>Sensei</label><input type="text" class="sem-sensei" list="senseis-list" value="${data.sensei || ''}"></div>
+            <div class="form-group"><label>Ciudad</label><input type="text" class="sem-ciudad" list="ciudades-seminario-list" value="${data.ciudad || ''}"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>País</label><input type="text" class="sem-pais" list="paises-list" value="${data.pais || ''}"></div>
+            <div class="form-group"><label>Mes</label><input type="text" class="sem-mes" value="${data.mes || ''}"></div>
+            <div class="form-group"><label>Año</label><input type="number" class="sem-any" value="${data.any || new Date().getFullYear()}"></div>
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+// 2. Inteligencia: Extraer datos existentes para autocompletado
+async function updateSeminariosDatalists() {
+    try {
+        const res = await fetch(`${API_URL}/api/alumnos?populate=seminarios_repetible&pagination[limit]=400`, { 
+            headers: { 'Authorization': `Bearer ${jwtToken}` } 
+        });
+        const json = await res.json();
+        const senseis = new Set(), ciudades = new Set(), paises = new Set();
+
+        (json.data || []).forEach(alu => {
+            const p = alu.attributes || alu;
+            const items = p.seminarios_repetible || [];
+            items.forEach(s => {
+                if(s.sensei) senseis.add(s.sensei);
+                if(s.ciudad) ciudades.add(s.ciudad);
+                if(s.pais) paises.add(s.pais);
+            });
+        });
+
+        const fill = (id, set) => {
+            const dl = document.getElementById(id);
+            if(dl) dl.innerHTML = [...set].sort().map(v => `<option value="${v}">`).join('');
+        };
+        fill('senseis-list', senseis);
+        fill('ciudades-seminario-list', ciudades);
+        fill('paises-list', paises);
+    } catch (e) { console.warn("Datalists no disponibles aún"); }
 }

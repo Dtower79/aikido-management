@@ -105,6 +105,33 @@
                             <label class="switch"><input type="checkbox" id="new-seguro"><span class="slider round"></span></label>
                             <span id="seguro-status-text" style="margin-left:10px; font-size:0.9rem; color:#ef4444;">NO PAGADO</span>
                         </div>
+
+                        <!-- BALANCE DE HORAS Y SEMINARIOS -->
+                        <div class="sidebar-sep" style="margin-top: 25px; margin-bottom: 15px; border-top: 1px solid var(--border); pt: 20px;">Historial Técnico y Seminarios</div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Horas Totales Acumuladas</label>
+                                <input type="number" id="new-horas" step="0.1" value="0" style="font-weight: bold; color: var(--primary);">
+                            </div>
+                        </div>
+
+                        <div id="seminarios-section" style="margin-top: 20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <label style="color:var(--text-muted); font-size:0.8rem; font-weight:800; letter-spacing: 1px;">SEMINARIOS INTERNACIONALES</label>
+                                <button type="button" class="action-btn" style="height:35px; padding:0 15px; font-size:0.75rem; background: var(--bg-header); border: 1px solid var(--border);" onclick="addSeminarioRow()">+ AÑADIR SEMINARIO</button>
+                            </div>
+                            
+                            <div id="seminarios-list">
+                                <!-- Aquí se inyectarán las filas dinámicamente desde app.js -->
+                            </div>
+                        </div>
+
+                        <!-- Listas para Autocompletado Inteligente -->
+                        <datalist id="senseis-list"></datalist>
+                        <datalist id="ciudades-seminario-list"></datalist>
+                        <datalist id="paises-list"></datalist>    
+
                         <div class="form-actions">
                             <button type="button" id="btn-cancelar-edit" class="action-btn secondary" onclick="resetForm(); showSection('alumnos')">Cancelar</button>
                             <button type="submit" id="btn-submit-alumno" class="action-btn">GUARDAR ALUMNO</button>
