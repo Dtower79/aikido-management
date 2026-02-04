@@ -521,6 +521,11 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         justify-content: center;
         border: 1px solid var(--border) !important;
     }
+    .console-body { 
+        color: #33ff00 !important; /* Verde neón forzado */
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+    }
 
     #sheet-actions-container .action-btn-icon.delete {
         color: var(--accent) !important;
