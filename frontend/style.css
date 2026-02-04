@@ -139,6 +139,7 @@ body {
     max-width: 400px; 
     height: auto;
     filter: drop-shadow(0 0 25px rgba(239, 68, 68, 0.2)); 
+    transform: translateX(-15px); 
     display: block;
 }
 
@@ -392,6 +393,8 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
+
+
     /* 1. Estructura fija de la App */
     .dashboard-container { flex-direction: column; height: 100vh; overflow: hidden; }
 
@@ -420,6 +423,13 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
         max-height: 35px !important; 
         width: auto !important; 
         margin: 0 !important;
+    }
+        .logo-welcome { 
+        width: 70%; 
+        max-width: 300px; 
+        margin-bottom: 100px; 
+        /* AJUSTE ÓPTICO: Lo movemos 15 píxeles a la izquierda */
+        transform: translateX(-15px); 
     }
     
     .desktop-only, .sidebar-sep, .sidebar-footer { display: none !important; }
