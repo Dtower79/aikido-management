@@ -414,7 +414,21 @@ if (formAlumno) {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
         
-        // Construcción del objeto de datos para Strapi
+        // Mapeo seguro de seminarios para evitar errores 400
+        const seminariosData = Array.from(document.querySelectorAll('[id^="sem-"]')).map(row => {
+            const anyInput = row.querySelector('.sem-any');
+            const anyValue = parseInt(anyInput.value);
+            
+            return {
+                sensei: row.querySelector('.sem-sensei').value || "",
+                ciudad: row.querySelector('.sem-ciudad').value || "",
+                pais: row.querySelector('.sem-pais').value || "",
+                mes: row.querySelector('.sem-mes').value || "",
+                // Si el año no es válido, enviamos el año actual para que Strapi no de error 400
+                any: isNaN(anyValue) ? new Date().getFullYear() : anyValue
+            };
+        });
+
         const alumnoData = { 
             nombre: document.getElementById('new-nombre').value, 
             apellidos: document.getElementById('new-apellidos').value, 
@@ -430,15 +444,8 @@ if (formAlumno) {
             grupo: document.getElementById('new-grupo').value, 
             grado: document.getElementById('new-grado').value, 
             seguro_pagado: document.getElementById('new-seguro').checked,
-            // NUEVOS CAMPOS:
             horas_acumuladas: parseFloat(document.getElementById('new-horas').value) || 0,
-            seminarios_repetible: Array.from(document.querySelectorAll('[id^="sem-"]')).map(row => ({
-                sensei: row.querySelector('.sem-sensei').value,
-                ciudad: row.querySelector('.sem-ciudad').value,
-                pais: row.querySelector('.sem-pais').value,
-                mes: row.querySelector('.sem-mes').value,
-                any: parseInt(row.querySelector('.sem-any').value)
-            })),
+            seminarios: seminariosData,
             activo: true 
         };
         
@@ -452,15 +459,17 @@ if (formAlumno) {
             });
             
             if (res.ok) {
-                showModal("¡OSS!", id ? "Los datos del alumno se han actualizado correctamente." : "Alumno registrado con éxito.", () => { 
+                showModal("¡OSS!", id ? "Datos actualizados." : "Alumno registrado.", () => { 
                     resetForm(); 
                     showSection('alumnos'); 
                 });
             } else { 
-                showModal("Error", "No se han podido guardar los cambios. Revisa los datos."); 
+                const errorData = await res.json();
+                console.error("Error de Strapi:", errorData);
+                showModal("Error", "Revisa que el nombre del campo seminarios_repetible sea exacto en Strapi."); 
             }
         } catch (error) { 
-            showModal("Error", "Fallo de conexión con el Dojo."); 
+            showModal("Error", "Fallo de conexión."); 
         }
     });
 }
@@ -470,7 +479,7 @@ async function editarAlumno(documentId) {
     
     try {
         // Cambiamos la sintaxis del populate para que Strapi Cloud no de error 400
-        const url = `${API_URL}/api/alumnos/${documentId}?populate=*`;
+        const url = `${API_URL}/api/alumnos/${documentId}?populate[0]=dojo&populate[1]=seminarios`;
         const res = await fetch(url, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         
@@ -484,6 +493,14 @@ async function editarAlumno(documentId) {
         const data = json.data; 
         const p = data.attributes || data; // Compatible v4 y v5
         
+        // 2. La carga de filas (Cambiado a 'p.seminarios')
+        const containerSem = document.getElementById('seminarios-list');
+        if (containerSem) {
+            containerSem.innerHTML = "";
+            const sems = p.seminarios || []; // <--- CAMBIADO
+            sems.forEach(s => addSeminarioRow(s));
+        }
+
         // Rellenar campos
         document.getElementById('edit-id').value = data.documentId || documentId;
         document.getElementById('new-nombre').value = p.nombre || '';
@@ -1144,24 +1161,24 @@ function addSeminarioRow(data = {}) {
 // 2. Inteligencia: Extraer datos existentes para autocompletado
 async function updateSeminariosDatalists() {
     try {
-        // Simplificamos la consulta para evitar el error 400
-        const res = await fetch(`${API_URL}/api/alumnos?populate[seminarios_repetible]=true&pagination[limit]=100`, { 
+        // URL actualizada con 'seminarios'
+        const res = await fetch(`${API_URL}/api/alumnos?populate=seminarios&pagination[limit]=100`, { 
             headers: { 'Authorization': `Bearer ${jwtToken}` } 
         });
         const json = await res.json();
-        if (!json.data) return;
+        if (!json || !json.data) return;
 
         const senseis = new Set(), ciudades = new Set(), paises = new Set();
         json.data.forEach(alu => {
             const p = alu.attributes || alu;
-            const items = p.seminarios_repetible || [];
+            const items = p.seminarios || []; // <--- CAMBIADO
             items.forEach(s => {
                 if(s.sensei) senseis.add(s.sensei.trim());
                 if(s.ciudad) ciudades.add(s.ciudad.trim());
                 if(s.pais) paises.add(s.pais.trim());
             });
         });
-
+        
         const fill = (id, set) => {
             const dl = document.getElementById(id);
             if(dl) dl.innerHTML = [...set].sort().map(v => `<option value="${v}">`).join('');
@@ -1169,5 +1186,5 @@ async function updateSeminariosDatalists() {
         fill('senseis-list', senseis);
         fill('ciudades-seminario-list', ciudades);
         fill('paises-list', paises);
-    } catch (e) { console.warn("Datalists: Fallo silencioso."); }
+    } catch (e) { console.warn("Datalists: No se han podido cargar las sugerencias."); }
 }
