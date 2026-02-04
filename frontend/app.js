@@ -58,41 +58,38 @@ function showDashboard() {
 }
 
 function showSection(id) {
-    // 1. Ocultar TODAS las secciones y quitarles CUALQUIER clase de visibilidad
+    // 1. Ocultar todas las secciones
     document.querySelectorAll('.section').forEach(s => {
         s.classList.add('hidden');
         s.classList.remove('active', 'welcome-flex');
-        s.style.display = "none"; // Forzado por JS para evitar conflictos de CSS
+        s.style.display = "none"; 
     });
     
-    // 2. Mostrar SOLAMENTE la sección elegida
+    // 2. Mostrar la seleccionada
     const targetSection = document.getElementById(`sec-${id}`);
     if (targetSection) {
         targetSection.classList.remove('hidden');
+        // Usamos flex solo para el welcome (centrar logo), para el resto block
         targetSection.style.display = (id === 'welcome') ? "flex" : "block";
         if (id === 'welcome') targetSection.classList.add('welcome-flex', 'active');
     }
     
-    // 3. Quitar el "active" de los botones del menú
+    // 3. Botones activos del menú
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     const activeBtn = document.getElementById(`btn-nav-${id}`);
     if(activeBtn) activeBtn.classList.add('active');
 
-    // 4. Cerrar el menú hamburguesa
+    // 4. Cerrar menú en móvil y limpiar acciones
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) sidebar.classList.remove('open');
+    closeAlumnoActions();
 
-    // 5. Scroll al inicio de la sección
-    const contentArea = document.querySelector('.content');
-    if (contentArea) contentArea.scrollTo(0, 0);
-
-    // 6. Cargas de datos
+    // 5. DISPARADORES DE CARGA (Aquí está el arreglo de las letras)
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
-    closeAlumnoActions(); 
+    if (id === 'status') runDiagnostics(); // <--- ESTA LÍNEA activa las letras verdes
 }
-
 // --- UTILS ---
 const parseRelation = (obj) => { if(!obj || !obj.data) return obj; return obj.data.attributes || obj.data; };
 const getID = (obj) => obj?.documentId || obj?.id;
