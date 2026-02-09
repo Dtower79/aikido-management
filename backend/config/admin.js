@@ -6,7 +6,7 @@ module.exports = ({ env }) => ({
     salt: env('API_TOKEN_SALT'),
   },
   // --- ESTO ELIMINA EL ERROR 'TOURS' ---
-  url: '/admin', 
+  url: '/', 
   tours: false, // Desactivamos los tours de bienvenida manualmente
   // -------------------------------------
   transfer: {
