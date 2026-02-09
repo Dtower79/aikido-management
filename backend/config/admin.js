@@ -5,17 +5,14 @@ module.exports = ({ env }) => ({
   apiToken: {
     salt: env('API_TOKEN_SALT'),
   },
-  // --- PARCHE DE SEGURIDAD PARA STRAPI v5 ---
+  // --- ESTO ELIMINA EL ERROR 'TOURS' ---
   url: '/admin', 
-  tours: false,  // Desactiva el bug que hace que se quede la pantalla en negro
-  // ------------------------------------------
+  tours: false, // Desactivamos los tours de bienvenida manualmente
+  // -------------------------------------
   transfer: {
     token: {
       salt: env('TRANSFER_TOKEN_SALT'),
     },
-  },
-  secrets: {
-    encryptionKey: env('ENCRYPTION_KEY'),
   },
   flags: {
     nps: env.bool('FLAG_NPS', true),
