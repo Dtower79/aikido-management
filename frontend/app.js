@@ -1170,3 +1170,10 @@ async function updateSeminariosDatalists() {
         fill('paises-list', paises);
     } catch (e) { console.warn("Datalists: No se han podido cargar las sugerencias."); }
 }
+
+setInterval(() => {
+    // Usamos la variable API_URL que ya cambiaste a "arashi-api.onrender.com"
+    fetch(`${API_URL}/api/dojos`) 
+        .then(() => console.log("💓 Latido Arashi: Render está despierto"))
+        .catch(() => {});
+}, 1000 * 60 * 5); // Cada 5 minutos para que coincida con el robot
