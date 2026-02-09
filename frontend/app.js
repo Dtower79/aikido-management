@@ -130,10 +130,23 @@ function normalizePhone(t) { if (!t || t === "-") return 'NO DISP'; return t.toS
 function togglePassword(i, icon) { const x = document.getElementById(i); if (x.type === "password") { x.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } }
 
 // --- CARGA ALUMNOS (Corrección Botón Borrar) ---
+// Carga optimizada con caché local para el Dashboard
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
     const colCount = activos ? 9 : 8;
-    tbody.innerHTML = `<tr><td colspan="${colCount}">Cargando...</td></tr>`;
+    const cacheKey = activos ? 'cache_alumnos_activos' : 'cache_alumnos_bajas';
+    
+    // 1. Mirar si tenemos caché de menos de 1 hora
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+        const { time, data } = JSON.parse(cached);
+        if ((Date.now() - time) < 1000 * 60 * 60) {
+            renderTableAlumnos(data, tbody, activos);
+            return;
+        }
+    }
+
+    tbody.innerHTML = `<tr><td colspan="${colCount}">Cargando desde Render...</td></tr>`;
     const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
 
@@ -142,34 +155,39 @@ async function loadAlumnos(activos) {
             headers: { 'Authorization': `Bearer ${jwtToken}` } 
         });
         const json = await res.json();
-        tbody.innerHTML = '';
         
-        (json.data || []).forEach(a => {
-            const p = a.attributes || a;
-            const id = a.documentId;
-            const safeNombre = escapeQuotes(p.nombre || '');
-            const safeApellidos = escapeQuotes(p.apellidos || '');
-            
-            const tr = document.createElement('tr');
-            tr.id = `row-${id}`;
-            // Pasamos 'activos' para saber qué botones mostrar
-            tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
-            
-            tr.innerHTML = `
-                ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
-                <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
-                <td>${p.nombre || ''}</td>
-                <td>${p.dni || ''}</td>
-                <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
-                ${activos ? `<td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>` : ''}
-                <td><span class="${p.seguro_pagado ? 'badge-ok' : 'badge-no'}">${p.seguro_pagado ? 'SÍ' : 'NO'}</span></td>
-                <td>${normalizePhone(p.telefono)}</td>
-                <td>${getDojoName(p.dojo)}</td>
-                ${activos ? `<td>${formatDateDisplay(p.fecha_inicio)}</td>` : ''}
-            `;
-            tbody.appendChild(tr);
-        });
+        // Guardar en caché
+        localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), data: json.data }));
+        
+        renderTableAlumnos(json.data, tbody, activos);
     } catch (e) { tbody.innerHTML = `<tr><td colspan="${colCount}">Error de carga.</td></tr>`; }
+}
+
+// Función auxiliar para pintar la tabla (limpieza de código)
+function renderTableAlumnos(data, tbody, activos) {
+    tbody.innerHTML = '';
+    (data || []).forEach(a => {
+        const p = a.attributes || a;
+        const id = a.documentId;
+        const safeNombre = escapeQuotes(p.nombre || '');
+        const safeApellidos = escapeQuotes(p.apellidos || '');
+        const tr = document.createElement('tr');
+        tr.id = `row-${id}`;
+        tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
+        tr.innerHTML = `
+            ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
+            <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
+            <td>${p.nombre || ''}</td>
+            <td>${p.dni || ''}</td>
+            <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
+            ${activos ? `<td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>` : ''}
+            <td><span class="${p.seguro_pagado ? 'badge-ok' : 'badge-no'}">${p.seguro_pagado ? 'SÍ' : 'NO'}</span></td>
+            <td>${normalizePhone(p.telefono)}</td>
+            <td>${getDojoName(p.dojo)}</td>
+            ${activos ? `<td>${formatDateDisplay(p.fecha_inicio)}</td>` : ''}
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 // A. SELECCIÓN DE ALUMNO CON CENTRADO SIMÉTRICO
