@@ -1,4 +1,4 @@
-const API_URL = "https://elegant-acoustics-3b7e60f840.strapiapp.com";
+const API_URL = "https://arashi-api.onrender.com";
 let jwtToken = localStorage.getItem('aikido_jwt');
 let userData = JSON.parse(localStorage.getItem('aikido_user'));
 
