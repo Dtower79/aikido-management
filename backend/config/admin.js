@@ -10,14 +10,10 @@ module.exports = ({ env }) => ({
       salt: env('TRANSFER_TOKEN_SALT'),
     },
   },
-  // BLOQUEO DE COMPONENTES DINÁMICOS (Evita el error de 'filter')
+  // Desactivamos todo lo que genera el error de 'filter'
+  tours: false,
   flags: {
     nps: false,
     promoteEE: false,
-  },
-  tours: false,
-  tutorials: false,
-  notifications: {
-    releases: false,
   },
 });

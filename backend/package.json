@@ -14,10 +14,10 @@
     "upgrade": "npx @strapi/upgrade latest",
     "upgrade:dry": "npx @strapi/upgrade latest --dry"
   },
-    "dependencies": {
-    "@strapi/plugin-users-permissions": "5.25.0",
-    "@strapi/strapi": "5.25.0",
-    "@strapi/upload": "5.25.0",
+  "dependencies": {
+    "@strapi/plugin-users-permissions": "5.33.2",
+    "@strapi/strapi": "5.33.2",
+    "@strapi/upload": "5.33.2",
     "pg": "8.8.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
