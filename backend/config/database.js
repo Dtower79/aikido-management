@@ -1,13 +1,14 @@
-module.exports = ({ env }) => ({
-  connection: {
-    client: 'postgres',
+module.exports = ({ env }) => {
+  return {
     connection: {
-      connectionString: env('DATABASE_URL'),
-      // Parche de seguridad para Neon y Render
-      ssl: {
-        rejectUnauthorized: false, 
+      client: 'postgres',
+      connection: {
+        connectionString: env('DATABASE_URL'),
+        ssl: {
+          rejectUnauthorized: false,
+        },
       },
+      pool: { min: 2, max: 10 },
     },
-    pool: { min: 2, max: 10 },
-  },
-});
+  };
+};
