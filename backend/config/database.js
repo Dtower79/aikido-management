@@ -3,8 +3,9 @@ module.exports = ({ env }) => ({
     client: 'postgres',
     connection: {
       connectionString: env('DATABASE_URL'),
-      ssl: env.bool('DATABASE_SSL', true) && {
-        rejectUnauthorized: false, // Necesario para Neon en la mayoría de casos
+      // Parche de seguridad para Neon y Render
+      ssl: {
+        rejectUnauthorized: false, 
       },
     },
     pool: { min: 2, max: 10 },
