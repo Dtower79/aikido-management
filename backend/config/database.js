@@ -1,14 +1,13 @@
-module.exports = ({ env }) => {
-  return {
+// PATH: config/database.js
+module.exports = ({ env }) => ({
+  connection: {
+    client: 'postgres',
     connection: {
-      client: 'postgres',
-      connection: {
-        connectionString: env('DATABASE_URL'),
-        ssl: {
-          rejectUnauthorized: false,
-        },
+      connectionString: env('DATABASE_URL'),
+      ssl: {
+        rejectUnauthorized: false, // Requerido para Neon.tech
       },
-      pool: { min: 2, max: 10 },
     },
-  };
-};
+    pool: { min: 2, max: 10 },
+  },
+});

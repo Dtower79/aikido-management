@@ -1,3 +1,4 @@
+// PATH: config/admin.js
 module.exports = ({ env }) => ({
   auth: {
     secret: env('ADMIN_JWT_SECRET'),
@@ -10,6 +11,5 @@ module.exports = ({ env }) => ({
       salt: env('TRANSFER_TOKEN_SALT'),
     },
   },
-  // ELIMINAMOS la línea 'url' para que no choque con el servidor
-  tours: false, // Mantenemos esto en false para evitar el error de antes
+  tours: false, // DESACTIVADO: Soluciona el White Screen bug en migraciones
 });
