@@ -10,10 +10,6 @@ module.exports = ({ env }) => ({
       salt: env('TRANSFER_TOKEN_SALT'),
     },
   },
-  // Desactivamos todo lo que genera el error de 'filter'
+  // Desactivación explícita para el motor de Strapi
   tours: false,
-  flags: {
-    nps: false,
-    promoteEE: false,
-  },
 });
