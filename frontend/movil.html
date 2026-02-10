@@ -1082,19 +1082,32 @@
         const getID = (o) => o.documentId || o.id;
 
         /* --- SISTEMA DE CACHÉ Y DEBUG --- */
-        async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
-    console.log(`🔍 [SMART-FETCH] ${endpoint}`);
-    if (cacheKey) {
-        const cached = localStorage.getItem(`cache_${cacheKey}`);
-        if (cached) {
-            const { time, data } = JSON.parse(cached);
-            const horasPasadas = (Date.now() - time) / (1000 * 60 * 60);
-            if (horasPasadas < durationHours) {
-                console.log(`📦 [CACHE-HIT] ${cacheKey} (${horasPasadas.toFixed(1)}h / ${durationHours}h)`);
-                return data; 
-            }
+        // Implementar en tu app.js o movil.html
+async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
+    const cached = localStorage.getItem(`cache_${cacheKey}`);
+    if (cached) {
+        const { time, data } = JSON.parse(cached);
+        // Si la caché tiene menos de X horas, no molestamos al servidor
+        if ((Date.now() - time) < (1000 * 60 * 60 * durationHours)) {
+            return data;
         }
     }
+    
+    const res = await fetch(`${API_URL}${endpoint}`, { 
+        headers: { 'Authorization': `Bearer ${jwtToken}` } 
+    });
+    const json = await res.json();
+    
+    // Guardamos con timestamp
+    localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({
+        time: Date.now(),
+        data: json
+    }));
+    return json;
+}
+
+// Ejemplo de uso para los 110 alumnos (Caché de 1 hora)
+// loadAlumnos() -> fetchSmart('/api/alumnos?populate=*', 'alumnos_list', 1);
     
     try {
         const res = await fetch(`${API_URL}${endpoint}`, { 
@@ -1208,6 +1221,14 @@
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return;
+    
+    // Intentamos cargar el perfil desde la memoria del móvil (Caché 2 horas)
+    // Esto evita que Strapi trabaje cada vez que el alumno abre la App
+    const json = await fetchSmart(
+        `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`, 
+        'perfil_alumno', 
+        2 
+    );
     
     // 1. INTELIGENCIA: Recuperamos el ID permanente para ahorrar búsquedas
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
@@ -1682,8 +1703,9 @@ async function loadSenseiPanel() {
         });
 
         async function loadMonthlyClasses(el) {
-            showView('clases', el); const container = document.getElementById('calendar-content'); container.innerHTML = "<p style='text-align:center;padding:20px;'>Cargando...</p>";
-            const json = await fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 168);
+                showView('clases', el);
+    // Caché de 24 horas para el calendario
+    const json = await fetchSmart('/api/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 24);
             const grouped = {}; const hoyCorte = new Date(); hoyCorte.setHours(0,0,0,0);
             (json.data||[]).forEach(c => {
                 const d = parseData(c); if (new Date(d.Fecha_Hora) < hoyCorte) return; const f = formatTimeSafe(d.Fecha_Hora);
@@ -1820,6 +1842,7 @@ async function loadSenseiPanel() {
         }
 
         // Refrescamos UI desde memoria local (0 API Calls)
+        localStorage.removeItem('cache_perfil_alumno'); // Forzamos al portero a pedir datos nuevos
         updateDashboardUI(); 
         closeModal();
         showModal("¡OSS!", `Has sumado ${duracion}h. Total: ${totalNuevo.toFixed(1)}h`);

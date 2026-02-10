@@ -1,4 +1,31 @@
 const API_URL = "https://arashi-api.onrender.com";
+// Implementar en tu app.js o movil.html
+
+async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
+    const cached = localStorage.getItem(`cache_${cacheKey}`);
+    if (cached) {
+        const { time, data } = JSON.parse(cached);
+        // Si la caché tiene menos de X horas, no molestamos al servidor
+        if ((Date.now() - time) < (1000 * 60 * 60 * durationHours)) {
+            return data;
+        }
+    }
+    
+    const res = await fetch(`${API_URL}${endpoint}`, { 
+        headers: { 'Authorization': `Bearer ${jwtToken}` } 
+    });
+    const json = await res.json();
+    
+    // Guardamos con timestamp
+    localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({
+        time: Date.now(),
+        data: json
+    }));
+    return json;
+}
+
+// Ejemplo de uso para los 110 alumnos (Caché de 1 hora)
+// loadAlumnos() -> fetchSmart('/api/alumnos?populate=*', 'alumnos_list', 1);
 let jwtToken = localStorage.getItem('aikido_jwt');
 let userData = JSON.parse(localStorage.getItem('aikido_user'));
 
@@ -136,31 +163,54 @@ async function loadAlumnos(activos) {
     const colCount = activos ? 9 : 8;
     const cacheKey = activos ? 'cache_alumnos_activos' : 'cache_alumnos_bajas';
     
-    // 1. Mirar si tenemos caché de menos de 1 hora
+    // 1. INTELIGENCIA: Comprobamos si tenemos caché de menos de 1 hora (3600000 ms)
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
-        const { time, data } = JSON.parse(cached);
-        if ((Date.now() - time) < 1000 * 60 * 60) {
-            renderTableAlumnos(data, tbody, activos);
-            return;
+        try {
+            const { time, data } = JSON.parse(cached);
+            if ((Date.now() - time) < 1000 * 60 * 60) {
+                console.log(`📦 Arashi Cache: Cargando ${activos ? 'activos' : 'bajas'} desde memoria local.`);
+                renderTableAlumnos(data, tbody, activos);
+                return; // Salimos de la función, no hace falta ir al servidor
+            }
+        } catch (e) {
+            localStorage.removeItem(cacheKey); // Si el JSON está corrupto, lo limpiamos
         }
     }
 
-    tbody.innerHTML = `<tr><td colspan="${colCount}">Cargando desde Render...</td></tr>`;
-    const filter = activos ? 'filters[activo][$eq]=true' : 'filters[activo][$eq]=false';
+    // 2. Si no hay caché o ha expirado, pedimos datos a Render
+    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center; padding:20px;">
+        <i class="fa-solid fa-spinner fa-spin"></i> Sincronizando con el Dojo en Render...
+    </td></tr>`;
+
+    const filter = `filters[activo][$eq]=${activos}`;
     const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
 
     try {
         const res = await fetch(`${API_URL}/api/alumnos?populate=dojo&${filter}&${sort}&pagination[limit]=500`, { 
             headers: { 'Authorization': `Bearer ${jwtToken}` } 
         });
+
+        if (!res.ok) throw new Error("Error en la respuesta del servidor");
+
         const json = await res.json();
+        const dataAlumnos = json.data || [];
         
-        // Guardar en caché
-        localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), data: json.data }));
+        // 3. Guardar en caché con el timestamp actual
+        localStorage.setItem(cacheKey, JSON.stringify({ 
+            time: Date.now(), 
+            data: dataAlumnos 
+        }));
         
-        renderTableAlumnos(json.data, tbody, activos);
-    } catch (e) { tbody.innerHTML = `<tr><td colspan="${colCount}">Error de carga.</td></tr>`; }
+        // 4. Pintar la tabla
+        renderTableAlumnos(dataAlumnos, tbody, activos);
+
+    } catch (e) { 
+        console.error("Fallo al cargar alumnos:", e);
+        tbody.innerHTML = `<tr><td colspan="${colCount}" style="color:var(--accent); text-align:center; padding:20px;">
+            <i class="fa-solid fa-circle-exclamation"></i> Error de conexión con Render. Inténtalo de nuevo.
+        </td></tr>`; 
+    }
 }
 
 // Función auxiliar para pintar la tabla (limpieza de código)
