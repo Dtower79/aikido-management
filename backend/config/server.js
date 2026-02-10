@@ -3,7 +3,5 @@ module.exports = ({ env }) => ({
   port: env.int('PORT', 1337),
   url: env('STRAPI_URL', 'https://arashi-api.onrender.com'),
   proxy: true,
-  app: {
-    keys: env.array('APP_KEYS'),
-  },
+  app: { keys: env.array('APP_KEYS') },
 });
