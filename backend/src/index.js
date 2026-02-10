@@ -1,20 +1,27 @@
 'use strict';
 
 module.exports = {
-  /**
-   * An asynchronous register function that runs before
-   * your application is initialized.
-   *
-   * This gives you an opportunity to extend code.
-   */
-  register(/*{ strapi }*/) {},
+  register({ strapi }) {
+    // LOG DE DIAGNÓSTICO INICIAL
+    console.log('--- ARASHI SYSTEM RECOVERY ---');
+    console.log('URL configurada:', strapi.config.get('server.url'));
+    console.log('Entorno:', process.env.NODE_ENV);
+  },
 
-  /**
-   * An asynchronous bootstrap function that runs before
-   * your application gets started.
-   *
-   * This gives you an opportunity to set up your data model,
-   * run jobs, or perform some special logic.
-   */
-  bootstrap(/*{ strapi }*/) {},
+  bootstrap({ strapi }) {
+    // ESTRATEGIA DE FUERZA BRUTA PARA COOKIES EN RENDER
+    strapi.server.app.proxy = true;
+    
+    strapi.server.app.use(async (ctx, next) => {
+      // Forzamos a Koa a creer que la conexión es HTTPS
+      // Esto elimina el error 500 de "secure cookie"
+      ctx.request.proxy = true;
+      if (ctx.request.headers['x-forwarded-proto'] === 'https') {
+        ctx.request.secure = true;
+      }
+      await next();
+    });
+
+    console.log('✅ Middleware de confianza en Proxy inyectado correctamente.');
+  },
 };
