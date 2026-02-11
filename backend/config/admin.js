@@ -10,6 +10,5 @@ module.exports = ({ env }) => ({
       salt: env('TRANSFER_TOKEN_SALT'),
     },
   },
-  // Desactivación estándar
   tours: false,
 });
