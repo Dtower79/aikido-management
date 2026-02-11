@@ -10,10 +10,7 @@ module.exports = ({ env }) => ({
       salt: env('TRANSFER_TOKEN_SALT'),
     },
   },
-  // Desactivamos el tour con todas las variantes posibles de Strapi 5
-  guidedTour: {
-    enabled: false,
-  },
+  // Desactivamos el tour de la forma oficial de la v5.6
   tours: {
     enabled: false,
   },
