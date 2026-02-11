@@ -10,8 +10,6 @@ module.exports = ({ env }) => ({
       salt: env('TRANSFER_TOKEN_SALT'),
     },
   },
-  // Desactivación oficial del tour para la v5.3
-  tours: {
-    enabled: false,
-  },
+  // Desactivación estándar
+  tours: false,
 });
