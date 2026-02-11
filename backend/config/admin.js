@@ -10,13 +10,11 @@ module.exports = ({ env }) => ({
       salt: env('TRANSFER_TOKEN_SALT'),
     },
   },
-  // ESTA ES LA SINTAXIS CORRECTA PARA STRAPI v5
-  tours: {
+  // Desactivamos el tour con todas las variantes posibles de Strapi 5
+  guidedTour: {
     enabled: false,
   },
-  // Desactivamos también las banderas de encuestas que causan el error 'filter'
-  flags: {
-    nps: false,
-    promoteEE: false,
+  tours: {
+    enabled: false,
   },
 });
