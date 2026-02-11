@@ -2,6 +2,8 @@ module.exports = ({ env }) => ({
   host: env('HOST', '0.0.0.0'),
   port: env.int('PORT', 1337),
   url: env('STRAPI_URL', 'https://arashi-api.onrender.com'),
-  proxy: true,
-  app: { keys: env.array('APP_KEYS') },
+  proxy: true, // <--- ESTO EVITA EL BUCLE DE LOGIN
+  app: {
+    keys: env.array('APP_KEYS'),
+  },
 });
