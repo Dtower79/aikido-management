@@ -1,19 +1,32 @@
 module.exports = [
   'strapi::logger',
   'strapi::errors',
-  'strapi::security',
-  'strapi::cors',
-  'strapi::poweredBy',
-  'strapi::query',
-  'strapi::body',
   {
-    name: 'strapi::session',
+    name: 'strapi::security',
     config: {
-      cookie: {
-        secure: true, // Esto es seguro ponerlo aquí si usamos proxy:true
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          'connect-src': ["'self'", 'https://*.netlify.app'],
+          'img-src': ["'self'", 'data:', 'blob:'],
+          'media-src': ["'self'", 'blob:', 'data:'],
+          'script-src': ["'self'"],
+        },
       },
     },
   },
+  {
+    name: 'strapi::cors',
+    config: {
+      enabled: true,
+      headers: '*',
+      origin: ['*'],  // ← PERMITE frontend
+    },
+  },
+  'strapi::poweredBy',
+  'strapi::query',
+  'strapi::body',
+  'strapi::session',
   'strapi::favicon',
   'strapi::public',
 ];
