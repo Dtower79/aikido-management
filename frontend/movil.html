@@ -478,20 +478,12 @@
         }
 
         /* --- NAV BAR --- */
-        .nav-bar { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            height: 85px; 
-            background: rgba(8, 12, 21, 0.98); 
-            backdrop-filter: blur(25px); 
-            border-top: 1px solid var(--glass-border); 
-            display: flex; 
-            justify-content: space-evenly; 
-            align-items: center; 
-            padding-bottom: 15px; 
-            z-index: 4000; 
+        .nav-bar {
+            display: grid !important; /* Cambiamos a grid para asegurar celdas iguales */
+            grid-template-columns: repeat(5, 1fr); 
+            align-items: center;
+            justify-items: center;
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         .nav-item { 
@@ -687,11 +679,17 @@
 
         #qr-reader {
             width: 100% !important;
-            border: none !important;
-            border-radius: 20px;
+            max-width: 280px; /* Tamaño ideal móvil */
+            margin: 0 auto !important; /* Centrado horizontal */
+            border: 4px solid var(--accent) !important;
+            border-radius: 25px !important;
             overflow: hidden;
-            background: #000;
-            aspect-ratio: 1 / 1; /* Cuadrado perfecto */
+        }
+
+        #qr-reader__scan_region {
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         /* Eliminar etiquetas feas que mete la librería por defecto */
         #qr-reader__dashboard, #qr-reader__status_span {
@@ -1263,48 +1261,65 @@ async function initApp() {
         /* --- REFRESH DATA (Sincronización v5) --- */
 /* --- REFRESH DATA (Versión Blindada v5) --- */
 /* --- PARTE 2: SINCRONIZACIÓN DE FICHA Y VISUALIZACIÓN (refreshStudentData) --- */
+/* --- REFRESH DATA (Versión Blindada v5.2 - Arashi Group) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return;
     
-    // 1. INTELIGENCIA: Recuperamos el ID permanente para ahorrar recursos (Zero Waste)
+    // 1. INTELIGENCIA: Recuperamos el ID permanente (Zero Waste)
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
     if (savedDocId && savedDocId !== "null") {
-        // Cache de una semana (168h) si ya tenemos el ID vinculado
         dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
     } else {
-        // Búsqueda inicial: primero por ID de cuenta de usuario
         let endpoint = `/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
         dataAlu = await fetchSmart(endpoint, null, 0); 
 
-        // Si falla, buscamos por DNI (Username)
         if (!dataAlu?.data || (Array.isArray(dataAlu.data) && dataAlu.data.length === 0)) {
             endpoint = `/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
             dataAlu = await fetchSmart(endpoint, null, 0);
         }
 
-        // Si lo encontramos, guardamos el ID físicamente en este dispositivo
         if (dataAlu?.data?.length) {
             const foundId = dataAlu.data[0].documentId || dataAlu.data[0].id;
             localStorage.setItem('aikido_student_doc_id', foundId);
         }
     }
 
-    // Elementos de la Interfaz
     const circle = document.getElementById('student-progress-circle');
     const nextGrade = document.getElementById('next-grade-display');
     const zenCard = document.getElementById('zen-card');
+    const navSensei = document.getElementById('nav-sensei');
 
-    // --- REGLA MAESTRA: DETERMINAR ROL ---
+    // DETERMINACIÓN DE ROLES (Strapi v5 Compatibility)
+    alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
+    const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
+    
     const esSenseiRango = (user.is_sensei === true);
-    const tieneFichaAlu = (dataAlu && dataAlu.data && (Array.isArray(dataAlu.data) ? dataAlu.data.length > 0 : true));
+    const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
 
-    // 2. LÓGICA DE VISUALIZACIÓN (Pure Sensei Logic)
+    // --- A. LÓGICA DE NAVEGACIÓN (Botón Sensei vs Seminarios) ---
+    if (navSensei) {
+        if (esSenseiRango || esInstructorFicha) {
+            // Francesc y Tú veis el Panel Sensei
+            navSensei.style.display = 'flex';
+            navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+            navSensei.onclick = () => showView('sensei', navSensei);
+        } else {
+            // Los alumnos normales ven Seminarios
+            navSensei.style.display = 'flex';
+            navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+            navSensei.onclick = (e) => { 
+                e.preventDefault(); 
+                window.open('https://www.meetontatami.com/', '_blank'); 
+            };
+        }
+    }
+
+    // --- B. LÓGICA DE VISUALIZACIÓN DASHBOARD (Sensei vs Alumno) ---
     if (esSenseiRango) {
-        // --- CASO MAESTRO (Francesc) ---
-        // Prioridad absoluta: Mostrar Zen Card y ocultar progreso
+        // --- CASO MAESTRO (Francesc): Zen Master Card ---
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         
@@ -1317,28 +1332,17 @@ async function refreshStudentData() {
                 </div>`;
             circle.insertAdjacentHTML('afterend', zenHTML);
         }
+        
+        document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
+        document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S").toUpperCase();
+        if (p && p.dojo) dojoIdGlobal = getID(p.dojo.data || p.dojo);
 
-        // Si tiene ficha, usamos su nombre real para el saludo
-        if (tieneFichaAlu) {
-            alumnoGlobal = Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data;
-            const p = alumnoGlobal.attributes || alumnoGlobal;
-            document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "SENSEI").toUpperCase();
-            document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
-            if (p.dojo) dojoIdGlobal = getID(p.dojo.data || p.dojo);
-        } else {
-            document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
-            document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S").toUpperCase();
-        }
-
-    } else if (tieneFichaAlu) {
-        // --- CASO ALUMNO (Raúl / Carlos) ---
+    } else if (p) {
+        // --- CASO ALUMNO/INSTRUCTOR (Raúl y otros): Círculo de Progreso ---
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
         
-        alumnoGlobal = Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data; 
-        const p = alumnoGlobal.attributes || alumnoGlobal; 
-        
-        document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "ALUMNO").toUpperCase();
+        document.getElementById('user-display-name').innerText = (p.nombre || user.nombre).toUpperCase();
         document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
         
         if (p.dojo) dojoIdGlobal = getID(p.dojo.data || p.dojo);
@@ -1346,18 +1350,21 @@ async function refreshStudentData() {
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        // --- LÓGICA DAN-STEP ---
+        // --- 🥋 LÓGICA DAN-STEP (Cálculo Automático) ---
         let meta = p.grado_objetivo;
         if (!meta) {
-            const gradoActualNorm = normalize(p.grado);
-            const idx = GRADOS_ORDER.findIndex(x => normalize(x) === gradoActualNorm);
-            if (idx !== -1 && idx < GRADOS_ORDER.length - 1) {
-                meta = GRADOS_ORDER[idx + 1];
-            } else if (gradoActualNorm.includes("DAN")) {
-                const nivel = parseInt(gradoActualNorm);
-                meta = isNaN(nivel) ? "1º DAN" : (nivel + 1) + "º DAN";
+            const gradoActual = (p.grado || "S/G").toUpperCase();
+            const num = parseInt(gradoActual.replace(/[^0-9]/g, ''));
+            
+            if (gradoActual.includes("DAN")) {
+                // Dan suben: 4º -> 5º
+                meta = isNaN(num) ? "1º DAN" : `${num + 1}º DAN`;
+            } else if (gradoActual.includes("KYU")) {
+                // Kyu bajan: 5º -> 4º ... 1º -> 1º DAN
+                if (!isNaN(num) && num > 1) meta = `${num - 1}º KYU`;
+                else meta = "1º DAN";
             } else {
-                meta = "1º DAN";
+                meta = "5º KYU";
             }
         }
 
@@ -1375,32 +1382,6 @@ async function refreshStudentData() {
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
-        }
-    } else {
-        // --- CASO FALLBACK (Usuario sin ficha) ---
-        // Se muestra la Zen Card por defecto si no hay datos de alumno
-        if (circle) circle.classList.add('hidden');
-        if (!zenCard && circle) {
-            circle.insertAdjacentHTML('afterend', `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title">OSS!</h2></div>`);
-        }
-    }
-
-    // 3. NAV BAR LOGIC (Actualización dinámica)
-    const navRightBtn = document.getElementById('nav-sensei');
-    if (navRightBtn) {
-        const esInstructor = alumnoGlobal && (alumnoGlobal.attributes?.es_instructor || alumnoGlobal.es_instructor) === true;
-        
-        if (esSenseiRango || esInstructor) {
-            navRightBtn.style.display = 'flex';
-            navRightBtn.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-            navRightBtn.onclick = () => showView('sensei', navRightBtn);
-        } else {
-            navRightBtn.style.display = 'flex';
-            navRightBtn.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-            navRightBtn.onclick = (e) => { 
-                e.preventDefault(); 
-                window.open('https://www.meetontatami.com/', '_blank'); 
-            };
         }
     }
 }
@@ -1899,97 +1880,34 @@ async function processSingleClass() {
 /* --- GESTIÓN DE CALENDARIO MULTI-DOJO (REESTRUCTURADO) --- */
 async function loadMonthlyClasses(el) {
     showView('clases', el);
-    const container = document.getElementById('calendar-content');
-    
-    // 1. PREPARACIÓN DEL FILTRO (Solo se dibuja si no existe)
-    if (!document.getElementById('cal-dojo-filter')) {
-        // Obtenemos lista de Dojos (Zero Waste: caché 24h)
-        const dojoRes = await fetchSmart('/dojos', 'lista_dojos_cal', 24);
-        let options = `<option value="all">-- TODOS LOS DOJOS --</option>`;
-        if(dojoRes && dojoRes.data) {
-            dojoRes.data.forEach(d => {
-                const info = d.attributes || d;
-                // Marcamos por defecto el dojo del alumno
-                const isHome = (getID(d) == dojoIdGlobal);
-                options += `<option value="${getID(d)}" ${isHome ? 'selected' : ''}>${info.nombre.toUpperCase()}</option>`;
-            });
-        }
-        
-        container.innerHTML = `
-            <div style="padding: 0 20px 20px; margin-top:10px;">
-                <p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">FILTRAR POR TATAMI:</p>
-                <select id="cal-dojo-filter" class="sensei-select" onchange="loadMonthlyClasses()">
-                    ${options}
-                </select>
-            </div>
-            <div id="calendar-list-results"></div>
-        `;
-    }
+    const mainContainer = document.getElementById('calendar-content');
+    if (!mainContainer) return;
 
-    const filterDojo = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
-    const listResults = document.getElementById('calendar-list-results');
-    listResults.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Keikos...</p>";
-
-    // 2. OBTENCIÓN DE DATOS (Populate Dojo es vital)
-    // Usamos caché de 1h para el calendario para permitir ver cambios recientes
-    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'calendario_clases_completo', 1);
-    
-    if (!json || !json.data) {
-        listResults.innerHTML = "<p style='text-align:center; padding:20px;'>No se han podido cargar las clases.</p>";
-        return;
-    }
-
+    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=100', 'calendario_clases', 1);
     const grouped = {}; 
-    const hoyCorte = new Date(); 
-    hoyCorte.setHours(0,0,0,0);
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
 
-    // 3. PROCESAMIENTO Y FILTRADO
-    json.data.forEach(c => {
-        const d = parseData(c); 
-        const dojoInfo = parseRelation(d.dojo);
-        const dojoId = getID(dojoInfo);
-        const fechaClase = new Date(d.Fecha_Hora);
-        
-        // Reglas: Solo futuro y que coincida con el filtro (si no es 'all')
-        if (fechaClase < hoyCorte) return; 
-        if (filterDojo !== 'all' && dojoId != filterDojo) return;
-
+    (json.data || []).forEach(c => {
+        const d = parseData(c);
+        if (new Date(d.Fecha_Hora) < hoy) return;
         const f = formatTimeSafe(d.Fecha_Hora);
         if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
-        
-        const item = { 
-            ...f, 
-            dur: d.Duracion, 
-            dojoNombre: (dojoInfo?.nombre || "Arashi").replace("Aikido Arashi ", "") 
-        }; 
-
-        if (f.hour < 14) grouped[f.month].morning.push(item); 
-        else grouped[f.month].afternoon.push(item);
+        const item = { ...f, dur: d.Duracion };
+        if (f.hour < 14) grouped[f.month].morning.push(item); else grouped[f.month].afternoon.push(item);
     });
 
-    // 4. GENERACIÓN DE INTERFAZ
     let html = ""; 
     for (const m in grouped) {
         html += `<div class="month-header">${m}</div>`;
-        
-        ['morning', 'afternoon'].forEach(period => {
-            const list = grouped[m][period];
-            if(list.length) {
-                html += `<div class="section-label">${period === 'morning' ? 'MAÑANA' : 'TARDE'}</div><div class="grid-container">`;
-                list.forEach(x => {
-                    html += `
-                        <div class="class-card">
-                            <span style="font-size:9px; color:var(--accent); font-weight:800; display:block; margin-bottom:4px;">${x.dojoNombre.toUpperCase()}</span>
-                            <h4>${x.date}</h4>
-                            <p>${x.time} • ${x.dur}H</p>
-                        </div>`;
-                });
+        ['morning', 'afternoon'].forEach(p => {
+            if (grouped[m][p].length) {
+                html += `<div class="section-label">${p === 'morning' ? 'MAÑANA' : 'TARDE'}</div><div class="grid-container">`;
+                grouped[m][p].forEach(x => html += `<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`);
                 html += "</div>";
             }
         });
     }
-
-    listResults.innerHTML = html || `<p style='text-align:center; padding:40px; opacity:0.5;'>No hay keikos programados en este Dojo.</p>`;
+    mainContainer.innerHTML = html || "<p style='text-align:center; padding:40px; opacity:0.5;'>No hay keikos programados.</p>";
 } // <--- AQUÍ TERMINA CORRECTAMENTE loadMonthlyClasses
 
 /* --- ASISTENCIA (FUNCIÓN INDEPENDIENTE) --- */
