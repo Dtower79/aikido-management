@@ -478,31 +478,42 @@
         }
 
         /* --- NAV BAR --- */
-        .nav-bar {
-            display: grid !important; /* Cambiamos a grid para asegurar celdas iguales */
-            grid-template-columns: repeat(5, 1fr); 
-            align-items: center;
-            justify-items: center;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .nav-item { 
-            color: var(--text-muted); 
-            font-size: 18px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            text-decoration: none; 
-        }
-
+.nav-bar { 
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    right: 0; 
+    height: 85px; 
+    background: rgba(8, 12, 21, 0.98); 
+    backdrop-filter: blur(25px); 
+    border-top: 1px solid var(--glass-border); 
+    
+    /* CAMBIO CLAVE: Grid de 5 columnas iguales */
+    display: grid !important; 
+    grid-template-columns: repeat(5, 1fr) !important; 
+    align-items: center; 
+    justify-items: center; 
+    
+    padding-bottom: env(safe-area-inset-bottom); 
+    z-index: 4000; 
+}
+.nav-item { 
+    color: var(--text-muted); 
+    text-decoration: none; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    width: 100%; /* Ocupa su celda completa */
+}
         .nav-item.active { color: var(--accent); }
 
-        .nav-item span { 
-            font-size: 11px; 
-            font-weight: 700; 
-            margin-top: 6px; 
-            text-transform: uppercase; 
-        }
+.nav-item span { 
+    font-size: 9px !important; /* Un punto menos para que quepa "SEMINARIOS" sin romper */
+    font-weight: 800; 
+    margin-top: 6px; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px;
+}
 
         .qr-inner { 
             width: 62px; 
@@ -677,15 +688,14 @@
             margin: 0 auto;
         }
 
-        #qr-reader {
-            width: 100% !important;
-            max-width: 280px; /* Tamaño ideal móvil */
-            margin: 0 auto !important; /* Centrado horizontal */
-            border: 4px solid var(--accent) !important;
-            border-radius: 25px !important;
-            overflow: hidden;
-        }
-
+#qr-reader {
+    width: 100% !important;
+    max-width: 280px;
+    margin: 0 auto !important;
+    border: 4px solid var(--accent) !important;
+    border-radius: 25px !important;
+    overflow: hidden;
+}
         #qr-reader__scan_region {
             display: flex;
             justify-content: center;
@@ -1266,7 +1276,6 @@ async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return;
     
-    // 1. INTELIGENCIA: Recuperamos el ID permanente (Zero Waste)
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
@@ -1275,12 +1284,10 @@ async function refreshStudentData() {
     } else {
         let endpoint = `/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
         dataAlu = await fetchSmart(endpoint, null, 0); 
-
-        if (!dataAlu?.data || (Array.isArray(dataAlu.data) && dataAlu.data.length === 0)) {
+        if (!dataAlu?.data?.length) {
             endpoint = `/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
             dataAlu = await fetchSmart(endpoint, null, 0);
         }
-
         if (dataAlu?.data?.length) {
             const foundId = dataAlu.data[0].documentId || dataAlu.data[0].id;
             localStorage.setItem('aikido_student_doc_id', foundId);
@@ -1292,97 +1299,60 @@ async function refreshStudentData() {
     const zenCard = document.getElementById('zen-card');
     const navSensei = document.getElementById('nav-sensei');
 
-    // DETERMINACIÓN DE ROLES (Strapi v5 Compatibility)
+    // DETERMINACIÓN DE IDENTIDAD
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     
     const esSenseiRango = (user.is_sensei === true);
+    // IMPORTANTE: Chequeamos es_instructor en la ficha de alumno (Raúl)
     const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
 
-    // --- A. LÓGICA DE NAVEGACIÓN (Botón Sensei vs Seminarios) ---
+    // --- A. LÓGICA DE NAVEGACIÓN (SENSEI VS SEMINARIOS) ---
     if (navSensei) {
         if (esSenseiRango || esInstructorFicha) {
-            // Francesc y Tú veis el Panel Sensei
-            navSensei.style.display = 'flex';
+            console.log("🥋 [AUTH] Acceso Sensei/Instructor detectado.");
             navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
             navSensei.onclick = () => showView('sensei', navSensei);
         } else {
-            // Los alumnos normales ven Seminarios
-            navSensei.style.display = 'flex';
             navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-            navSensei.onclick = (e) => { 
-                e.preventDefault(); 
-                window.open('https://www.meetontatami.com/', '_blank'); 
-            };
+            navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
         }
     }
 
-    // --- B. LÓGICA DE VISUALIZACIÓN DASHBOARD (Sensei vs Alumno) ---
+    // --- B. LÓGICA VISUAL DASHBOARD ---
     if (esSenseiRango) {
-        // --- CASO MAESTRO (Francesc): Zen Master Card ---
+        // CASO FRANCESC (Zen Card)
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
-        
         if (!zenCard && circle) {
-            const zenHTML = `
-                <div id="zen-card" class="zen-master-card">
-                    <img src="img/logo-arashi.png" class="zen-logo">
-                    <h2 class="zen-title">SENSEI</h2>
-                    <p class="zen-subtitle">ARASHI DOJO BADALONA</p>
-                </div>`;
+            const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title">SENSEI</h2><p class="zen-subtitle">ARASHI DOJO</p></div>`;
             circle.insertAdjacentHTML('afterend', zenHTML);
         }
-        
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
-        document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S").toUpperCase();
-        if (p && p.dojo) dojoIdGlobal = getID(p.dojo.data || p.dojo);
-
     } else if (p) {
-        // --- CASO ALUMNO/INSTRUCTOR (Raúl y otros): Círculo de Progreso ---
+        // CASO RAÚL/ALUMNOS (Círculo)
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
-        
         document.getElementById('user-display-name').innerText = (p.nombre || user.nombre).toUpperCase();
         document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
-        
-        if (p.dojo) dojoIdGlobal = getID(p.dojo.data || p.dojo);
         
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        // --- 🥋 LÓGICA DAN-STEP (Cálculo Automático) ---
+        // Meta Automática Dan-Step
         let meta = p.grado_objetivo;
         if (!meta) {
-            const gradoActual = (p.grado || "S/G").toUpperCase();
-            const num = parseInt(gradoActual.replace(/[^0-9]/g, ''));
-            
-            if (gradoActual.includes("DAN")) {
-                // Dan suben: 4º -> 5º
-                meta = isNaN(num) ? "1º DAN" : `${num + 1}º DAN`;
-            } else if (gradoActual.includes("KYU")) {
-                // Kyu bajan: 5º -> 4º ... 1º -> 1º DAN
-                if (!isNaN(num) && num > 1) meta = `${num - 1}º KYU`;
-                else meta = "1º DAN";
-            } else {
-                meta = "5º KYU";
-            }
+            const gActual = (p.grado || "S/G").toUpperCase();
+            const n = parseInt(gActual.replace(/[^0-9]/g, ''));
+            meta = gActual.includes("DAN") ? `${n+1}º DAN` : (n > 1 ? `${n-1}º KYU` : "1º DAN");
         }
-
         const normMeta = normalize(meta);
-        const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;         
+        const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;
         let target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
-
         const bar = document.getElementById('progress-bar');
-        if (bar) {
-            const pct = Math.min((horas / target) * 100, 100);
-            bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
-        }
-
+        if (bar) bar.style.strokeDashoffset = 339.29 - (Math.min(horas/target, 1) * 339.29);
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-        if (nextGrade) {
-            nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
-            nextGrade.classList.remove('hidden');
-        }
+        if (nextGrade) { nextGrade.innerText = `CAMINO AL ${meta}`; nextGrade.classList.remove('hidden'); }
     }
 }
 
