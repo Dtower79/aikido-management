@@ -10,6 +10,7 @@ module.exports = ({ env }) => ({
       salt: env('TRANSFER_TOKEN_SALT'),
     },
   },
-  tours: false, // Evita el bug de Strapi v5
-  url: '/',     // <--- REGLA INVIOLABLE: Evita el 404 en Render
+  tours: false,
+  // NO uses url: '/'. En Render, usa la ruta estándar:
+  url: '/admin', 
 });
