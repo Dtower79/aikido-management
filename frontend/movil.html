@@ -1578,74 +1578,45 @@ async function loadSenseiPanel() {
             }, 200);
         }
 
-        async function checkTodayClass() {
-    // Quitamos el return preventivo para que los Senseis vean la clase
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
-    
-    const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { 
+async function checkTodayClass() {
+    const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=15`, { 
         headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
     });
     const json = await res.json();
     const ahora = new Date();
     const btn = document.getElementById('confirm-btn');
 
-    let claseElegida = null;
-    let estadoAlumno = null;
+    // Buscamos primero en SU dojo
+    let claseElegida = (json.data || []).find(c => {
+        const d = parseData(c);
+        const dojoId = getID(parseRelation(d.dojo));
+        const fin = new Date(new Date(d.Fecha_Hora).getTime() + (d.Duracion * 3600000));
+        return ahora < fin && dojoId == dojoIdGlobal;
+    });
 
-    for (const c of (json.data || [])) {
-        const dataC = parseData(c);
-        const inicio = new Date(dataC.Fecha_Hora);
-        const duracionHoras = parseFloat(dataC.Duracion || 1.5);
-        const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
-
-        if (ahora > fin) continue;
-
-        // Solo consultamos asistencia si hay ID de alumno
-        if (aluId) {
-            const cid = getID(c);
-            const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-            });
-            const chkJ = await chk.json();
-            const asistencia = chkJ.data?.[0];
-            const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
-
-            if (estado === 'Asistio') continue;
-            estadoAlumno = estado;
-        }
-
-        claseElegida = c;
-        break; 
+    // Si no hay en su dojo, buscamos la siguiente global
+    if (!claseElegida) {
+        claseElegida = (json.data || []).find(c => {
+            const d = parseData(c);
+            const fin = new Date(new Date(d.Fecha_Hora).getTime() + (d.Duracion * 3600000));
+            return ahora < fin;
+        });
     }
 
     if (claseElegida) {
+        const d = parseData(claseElegida);
+        const dojoInfo = parseRelation(d.dojo);
         claseHoyId = getID(claseElegida);
-        const f = formatTimeSafe(parseData(claseElegida).Fecha_Hora);
+        const f = formatTimeSafe(d.Fecha_Hora);
+        
         document.getElementById('next-class-time').innerText = f.time;
-        document.getElementById('next-class-date').innerText = f.date;
-
-        // --- LÓGICA DE BOTÓN DINÁMICA ---
-        if (!alumnoGlobal) {
-            // Es un Sensei sin ficha de alumno: Ve la clase pero no el botón
-            btn.classList.add('hidden');
-        } else {
-            btn.classList.remove('hidden');
-            if (estadoAlumno === 'Confirmado') {
-                btn.innerText = "CONFIRMADO";
-                btn.disabled = true;
-                btn.style.background = "#1e293b";
-                btn.style.color = "var(--text-muted)";
-            } else {
-                btn.innerText = "ASISTIR AL KEIKO";
-                btn.disabled = false;
-                btn.style.background = "white";
-                btn.style.color = "black";
-            }
-        }
+        document.getElementById('next-class-date').innerHTML = `${f.date} <br> <span style="font-size:12px; color:var(--accent)">DOJO: ${dojoInfo.nombre.toUpperCase()}</span>`;
+        
+        btn.classList.remove('hidden');
+        btn.innerText = "ASISTIR AL KEIKO";
     } else {
         document.getElementById('next-class-time').innerText = "--:--";
-        document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
+        document.getElementById('next-class-date').innerText = "Sin clases hoy";
         btn.classList.add('hidden');
     }
 }
@@ -1722,30 +1693,118 @@ async function loadSenseiPanel() {
         }
 
         async function processGeneration() {
-            const token = localStorage.getItem('aikido_jwt'), year = parseInt(document.getElementById('gen-year-select').value), month = selectedMonthGen;
-            const hM = document.getElementById('gen-morning').value, hT = document.getElementById('gen-afternoon').value;
-            let creadas = 0, ultimo = new Date(year, month + 1, 0).getDate();
-            const btn = document.querySelector('#custom-modal .action-btn.primary'); btn.innerText = "GENERANDO..."; btn.disabled = true;
-            for(let d = 1; d <= ultimo; d++) {
-                const dateObj = new Date(year, month, d), day = dateObj.getDay();
-                const send = async (h) => {
-                    const iso = `${year}-${(month+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}T${h}:00.000Z`;
-                    await fetch(`${API_URL}/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: 1.5, dojo: dojoIdGlobal } }) }); creadas++;
-                };
-                if(day === 2) { await send(hM); await send(hT); } else if(day === 4) { await send(hT); }
-            }
-            localStorage.removeItem('cache_calendario_clases'); showModal("ÉXITO", `Se han creado ${creadas} clases.`); 
+    // 1. Capturamos los datos del formulario y el Dojo del selector del panel
+    const token = localStorage.getItem('aikido_jwt');
+    const year = parseInt(document.getElementById('gen-year-select').value);
+    const month = selectedMonthGen;
+    const hM = document.getElementById('gen-morning').value;
+    const hT = document.getElementById('gen-afternoon').value;
+    
+    // REGLA MAESTRA: El Dojo sale del filtro seleccionado por el Sensei
+    const dojoId = document.getElementById('sensei-dojo-filter').value;
+
+    // Validación de seguridad: No permitir "Todos" para generar
+    if (!dojoId || dojoId === 'all') {
+        showModal("Aviso", "⚠️ DEBES SELECCIONAR UN DOJO ESPECÍFICO EN EL FILTRO ANTES DE GENERAR EL MES.");
+        return;
+    }
+
+    let creadas = 0;
+    let ultimo = new Date(year, month + 1, 0).getDate();
+    const btn = document.querySelector('#custom-modal .action-btn.primary'); 
+    
+    btn.innerText = "GENERANDO..."; 
+    btn.disabled = true;
+
+    // 2. Bucle de creación (Martes y Jueves)
+    for (let d = 1; d <= ultimo; d++) {
+        const dateObj = new Date(year, month, d);
+        const day = dateObj.getDay(); 
+
+        const send = async (h) => {
+            const iso = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${h}:00.000Z`;
+            
+            await fetch(`${API_URL}/clases`, { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${token}` 
+                }, 
+                body: JSON.stringify({ 
+                    data: { 
+                        Fecha_Hora: iso, 
+                        Duracion: 1.5, 
+                        dojo: dojoId // <--- VINCULACIÓN DINÁMICA AL DOJO ELEGIDO
+                    } 
+                }) 
+            }); 
+            creadas++;
+        };
+
+        if (day === 2) { 
+            await send(hM); 
+            await send(hT); 
+        } else if (day === 4) { 
+            await send(hT); 
         }
+    }
+
+    // 3. Limpieza de caché y feedback
+    localStorage.removeItem('cache_calendario_clases'); 
+    showModal("ÉXITO", `Se han creado ${creadas} clases en el Dojo seleccionado.`); 
+    loadManageClasses(); // Refrescamos la lista para ver los cambios
+}
 
         function uiCreateSingleClass() { 
             showModal("NUEVA CLASE SUELTA", `<div style="text-align:left; margin-top:10px;"><span class="modal-label">FECHA:</span><input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}"><span class="modal-label">HORA:</span><input type="time" id="single-time" class="modal-field" value="10:00"><span class="modal-label">DURACIÓN:</span><select id="single-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select><button class="action-btn primary" onclick="processSingleClass()" style="margin-top:10px;">CREAR KEIKO</button></div>`, true); 
         }
 
-        async function processSingleClass() { 
-            const token = localStorage.getItem('aikido_jwt'), d = document.getElementById('single-date').value, t = document.getElementById('single-time').value, dur = document.getElementById('single-dur').value; 
-            await fetch(`${API_URL}/clases`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ data: { Fecha_Hora: `${d}T${t}:00.000Z`, Duracion: parseFloat(dur), dojo: dojoIdGlobal } }) }); 
-            localStorage.removeItem('cache_calendario_clases'); closeModal(); checkTodayClass(); 
-        }
+/* --- CREACIÓN DE CLASE SUELTA (REESTRUCTURADA) --- */
+async function processSingleClass() { 
+    const token = localStorage.getItem('aikido_jwt');
+    const d = document.getElementById('single-date').value;
+    const t = document.getElementById('single-time').value;
+    const dur = document.getElementById('single-dur').value;
+    
+    // CAPTURAMOS EL DOJO SELECCIONADO EN EL PANEL SENSEI
+    const dojoId = document.getElementById('sensei-dojo-filter').value;
+
+    // Validación obligatoria: No permitir crear clases sin Dojo o en "Todos"
+    if (!dojoId || dojoId === 'all') {
+        showModal("Aviso", "⚠️ DEBES SELECCIONAR UN DOJO EN EL FILTRO ANTES DE CREAR LA CLASE.");
+        return;
+    }
+
+    try {
+        await fetch(`${API_URL}/clases`, { 
+            method: 'POST', 
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+            }, 
+            body: JSON.stringify({ 
+                data: { 
+                    Fecha_Hora: `${d}T${t}:00.000Z`, 
+                    Duracion: parseFloat(dur), 
+                    dojo: dojoId // <--- ASIGNACIÓN OBLIGATORIA AL DOJO ELEGIDO
+                } 
+            }) 
+        }); 
+
+        // Limpieza de Caché y actualización de Interfaz
+        localStorage.removeItem('cache_calendario_clases'); 
+        closeModal(); 
+        
+        // Refrescamos las vistas necesarias
+        if (typeof loadManageClasses === 'function') loadManageClasses(); 
+        checkTodayClass(); 
+
+        console.log(`✅ Keiko creado con éxito en el Dojo ID: ${dojoId}`);
+    } catch (e) {
+        console.error("❌ Error al crear clase suelta:", e);
+        showModal("Error", "Fallo de conexión al crear el Keiko.");
+    }
+}
 
         /* --- AUTH Y ACTIVACIÓN --- */
         document.getElementById('activate-form').addEventListener('submit', async (e) => {
@@ -1772,60 +1831,100 @@ async function loadSenseiPanel() {
         });
 
         /* --- GESTIÓN DE CALENDARIO (REESTRUCTURADO) --- */
+/* --- GESTIÓN DE CALENDARIO MULTI-DOJO (REESTRUCTURADO) --- */
 async function loadMonthlyClasses(el) {
     showView('clases', el);
+    const container = document.getElementById('calendar-content');
     
-    // 1. Obtención de datos con Zero Waste API (Caché 24h)
-    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 24);
+    // 1. PREPARACIÓN DEL FILTRO (Solo se dibuja si no existe)
+    if (!document.getElementById('cal-dojo-filter')) {
+        // Obtenemos lista de Dojos (Zero Waste: caché 24h)
+        const dojoRes = await fetchSmart('/dojos', 'lista_dojos_cal', 24);
+        let options = `<option value="all">-- TODOS LOS DOJOS --</option>`;
+        if(dojoRes && dojoRes.data) {
+            dojoRes.data.forEach(d => {
+                const info = d.attributes || d;
+                // Marcamos por defecto el dojo del alumno
+                const isHome = (getID(d) == dojoIdGlobal);
+                options += `<option value="${getID(d)}" ${isHome ? 'selected' : ''}>${info.nombre.toUpperCase()}</option>`;
+            });
+        }
+        
+        container.innerHTML = `
+            <div style="padding: 0 20px 20px; margin-top:10px;">
+                <p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">FILTRAR POR TATAMI:</p>
+                <select id="cal-dojo-filter" class="sensei-select" onchange="loadMonthlyClasses()">
+                    ${options}
+                </select>
+            </div>
+            <div id="calendar-list-results"></div>
+        `;
+    }
+
+    const filterDojo = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
+    const listResults = document.getElementById('calendar-list-results');
+    listResults.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Keikos...</p>";
+
+    // 2. OBTENCIÓN DE DATOS (Populate Dojo es vital)
+    // Usamos caché de 1h para el calendario para permitir ver cambios recientes
+    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'calendario_clases_completo', 1);
     
-    if (!json || !json.data) return;
+    if (!json || !json.data) {
+        listResults.innerHTML = "<p style='text-align:center; padding:20px;'>No se han podido cargar las clases.</p>";
+        return;
+    }
 
     const grouped = {}; 
     const hoyCorte = new Date(); 
     hoyCorte.setHours(0,0,0,0);
 
-    // 2. Procesamiento de clases futuras
+    // 3. PROCESAMIENTO Y FILTRADO
     json.data.forEach(c => {
         const d = parseData(c); 
+        const dojoInfo = parseRelation(d.dojo);
+        const dojoId = getID(dojoInfo);
         const fechaClase = new Date(d.Fecha_Hora);
         
+        // Reglas: Solo futuro y que coincida con el filtro (si no es 'all')
         if (fechaClase < hoyCorte) return; 
-        
+        if (filterDojo !== 'all' && dojoId != filterDojo) return;
+
         const f = formatTimeSafe(d.Fecha_Hora);
         if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
         
-        const item = { ...f, dur: d.Duracion }; 
+        const item = { 
+            ...f, 
+            dur: d.Duracion, 
+            dojoNombre: (dojoInfo?.nombre || "Arashi").replace("Aikido Arashi ", "") 
+        }; 
+
         if (f.hour < 14) grouped[f.month].morning.push(item); 
         else grouped[f.month].afternoon.push(item);
     });
 
-    // 3. Generación de HTML
+    // 4. GENERACIÓN DE INTERFAZ
     let html = ""; 
     for (const m in grouped) {
         html += `<div class="month-header">${m}</div>`;
         
-        if(grouped[m].morning.length) { 
-            html += `<div class="section-label">Mañana</div><div class="grid-container">`; 
-            grouped[m].morning.forEach(x => {
-                html += `<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`;
-            }); 
-            html += "</div>"; 
-        }
-        
-        if(grouped[m].afternoon.length) { 
-            html += `<div class="section-label">Tarde</div><div class="grid-container">`; 
-            grouped[m].afternoon.forEach(x => {
-                html += `<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`;
-            }); 
-            html += "</div>"; 
-        }
+        ['morning', 'afternoon'].forEach(period => {
+            const list = grouped[m][period];
+            if(list.length) {
+                html += `<div class="section-label">${period === 'morning' ? 'MAÑANA' : 'TARDE'}</div><div class="grid-container">`;
+                list.forEach(x => {
+                    html += `
+                        <div class="class-card">
+                            <span style="font-size:9px; color:var(--accent); font-weight:800; display:block; margin-bottom:4px;">${x.dojoNombre.toUpperCase()}</span>
+                            <h4>${x.date}</h4>
+                            <p>${x.time} • ${x.dur}H</p>
+                        </div>`;
+                });
+                html += "</div>";
+            }
+        });
     }
 
-    // 4. Inyección en el DOM (Fix: container is not defined)
-    const calContainer = document.getElementById('calendar-content');
-    if (calContainer) {
-        calContainer.innerHTML = html || "<p style='text-align:center; padding:20px; opacity:0.5;'>No hay clases programadas.</p>";
-    }
+    listResults.innerHTML = html || `<p style='text-align:center; padding:40px; opacity:0.5;'>No hay keikos programados en este Dojo.</p>`;
 } // <--- AQUÍ TERMINA CORRECTAMENTE loadMonthlyClasses
 
 /* --- ASISTENCIA (FUNCIÓN INDEPENDIENTE) --- */
