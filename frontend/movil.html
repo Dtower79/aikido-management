@@ -6,6 +6,11 @@
     <meta name="theme-color" content="#ef4444">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Meta tags para iOS (Apple es especial y necesita estos extras) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Arashi">
+    <link rel="apple-touch-icon" href="img/logo-arashi-movil.png">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="img/logo-arashi-movil.png">
     <title>Arashi App</title>
@@ -1869,13 +1874,38 @@ function updateDashboardUI() {
         function logout() { localStorage.clear(); location.reload(); }
 
         /* --- PWA LOGIC --- */
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const b = document.getElementById('android-btn-area'); if (b) b.style.display = 'block'; });
-        async function handleAndroidInstall() {
-            if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; deferredPrompt = null; }
-            else showModal("Info", "Ya instalada o en escritorio.");
-        }
+        /* --- PWA LOGIC (Arquitectura Arashi) --- */
+
+// 1. Registro del Service Worker cuando la página carga
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('🥋 SW: Sistema de defensa activo'))
+            .catch(err => console.log('❌ SW: Fallo de despliegue', err));
+    });
+}
+
+// 2. Lógica de Instalación (MANTENER para tu Muro de Instalación)
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => { 
+    // Evita que Chrome muestre su propio aviso para usar el tuyo personalizado
+    e.preventDefault(); 
+    deferredPrompt = e; 
+    // Muestra tu botón de instalar
+    const b = document.getElementById('android-btn-area'); 
+    if (b) b.style.display = 'block'; 
+});
+
+async function handleAndroidInstall() {
+    if (deferredPrompt) { 
+        deferredPrompt.prompt(); 
+        const { outcome } = await deferredPrompt.userChoice; 
+        console.log(`User response: ${outcome}`);
+        deferredPrompt = null; 
+    } else { 
+        showModal("Info", "La App ya está instalada o el acceso directo ya ha sido creado."); 
+    }
+}
 
         // Abrir/Cerrar Menú Inferior
 function toggleProfileSheet() {
