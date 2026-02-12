@@ -1719,7 +1719,7 @@ async function loadSenseiPanel() {
                 if(grouped[m].morning.length) { html += `<div class="section-label">Mañana</div><div class="grid-container">`; grouped[m].morning.forEach(x => html+=`<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`); html+="</div>"; }
                 if(grouped[m].afternoon.length) { html += `<div class="section-label">Tarde</div><div class="grid-container">`; grouped[m].afternoon.forEach(x => html+=`<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`); html+="</div>"; }
             }
-            const container = document.getElementById('calendar-content');
+            document.getElementById('calendar-content').innerHTML = html;
 
         async function confirmAttendance() {
             if (!claseHoyId || !alumnoGlobal) return;
