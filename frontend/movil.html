@@ -1188,31 +1188,32 @@ async function initApp() {
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     
-    // 1. Reset visual de vistas
+    const loginV = document.getElementById('login-view');
+    const dashV = document.getElementById('dashboard-view');
+    const mainNav = document.getElementById('main-nav');
+
+    // 1. Reset total de visibilidad
     document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
             .forEach(v => v.classList.add('hidden'));
 
-    // 2. Verificación de Sesión
     if (!token || !user) {
-        console.log("🔑 [AUTH] Sesión no encontrada. Redirigiendo a Login.");
-        const lv = document.getElementById('login-view');
-        if(lv) lv.classList.remove('hidden');
-        document.getElementById('main-nav').classList.add('hidden');
+        console.log("🔑 [AUTH] Mostrando Login");
+        if(loginV) loginV.classList.remove('hidden');
+        if(mainNav) mainNav.classList.add('hidden');
         document.documentElement.classList.add('app-loaded'); 
         return;
     }
 
-    // 3. Preparación de Dashboard
-    console.log("🏠 [UI] Cargando Dashboard para:", user.username);
-    const dv = document.getElementById('dashboard-view');
-    if(dv) dv.classList.remove('hidden');
-    document.getElementById('main-nav').classList.remove('hidden');
+    // 2. Si hay token, ocultamos login y mostramos dashboard y nav
+    console.log("🏠 [AUTH] Usuario autenticado. Cargando Dojo.");
+    if(loginV) loginV.classList.add('hidden'); // ASEGURAMOS QUE SE OCULTE
+    if(dashV) dashV.classList.remove('hidden');
+    if(mainNav) mainNav.classList.remove('hidden');
     
     showView('dashboard');
     
-    // 4. Carga de Requisitos (Zero Waste API: 24h caché)
+    // 3. Carga de datos esenciales
     const reqRes = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
-
     if (reqRes && reqRes.data) {
         requisitosGradoGlobal = reqRes.data.map(r => {
             const item = r.attributes || r;
@@ -1222,56 +1223,16 @@ async function initApp() {
                 HORAS: parseFloat(item.Horas_Necesarias || item.horas_necesarias || 0)
             };
         });
-        console.log("✅ [DATA] Requisitos de grado sincronizados.");
     }
 
-    // 5. Sincronización de ficha de Alumno
     await refreshStudentData(); 
-
-    // 6. Lógica de Permisos de Gestión (Panel Sensei)
-    // Prioridad 1: Campo is_sensei en la tabla de Usuarios de Strapi
-    const esSenseiRango = (user.is_sensei === true);
+    await checkTodayClass(); // <--- Esto es lo que vamos a arreglar ahora
     
-    // Prioridad 2: Campo es_instructor en la ficha de Alumno de Neon
-    let esInstructorFuncion = false;
-    if (alumnoGlobal) {
-        const p = alumnoGlobal.attributes || alumnoGlobal;
-        esInstructorFuncion = (p.es_instructor === true);
-    }
-    
-    const navSensei = document.getElementById('nav-sensei');
-    if (esSenseiRango || esInstructorFuncion) {
-        console.log("🥋 [AUTH] Nivel de acceso: GESTOR (Sensei/Instructor).");
-        if (navSensei) {
-            navSensei.style.display = 'flex';
-            // Si es sensei puro, nos aseguramos de que el icono sea el de escudo
-            navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-        }
-        await loadDojosFilter(); 
-    } else {
-        // Alumno estándar: El botón Sensei se oculta o se convierte en Seminarios
-        if (navSensei) {
-            navSensei.style.display = 'flex'; // Lo mantenemos pero con otra función
-            navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-            navSensei.onclick = (e) => { 
-                e.preventDefault(); 
-                window.open('https://www.meetontatami.com/', '_blank'); 
-            };
-        }
-    }
-
-    // 7. Verificación de Keiko del día
-    await checkTodayClass();
-    
-    // 8. Fin de carga (Ocultar splash/muro)
     document.documentElement.classList.add('app-loaded');
-    console.log("✨ [INIT] Sistema listo.");
 }
 
-        /* --- REFRESH DATA (Sincronización v5) --- */
-/* --- REFRESH DATA (Versión Blindada v5) --- */
-/* --- PARTE 2: SINCRONIZACIÓN DE FICHA Y VISUALIZACIÓN (refreshStudentData) --- */
-/* --- REFRESH DATA (Versión Blindada v5.2 - Arashi Group) --- */
+       
+       
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return;
@@ -1531,104 +1492,85 @@ async function loadSenseiPanel() {
 
 /* --- INTELIGENCIA DE PRÓXIMO KEIKO (Dashboard) --- */
 async function checkTodayClass() {
-    console.log("🔍 [LOGIC] Buscando próximo Keiko...");
-    
-    // 1. Pedimos las clases próximas (Populate Dojo es obligatorio aquí)
-    const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=10`, { 
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-    });
-    const json = await res.json();
-    const ahora = new Date();
+    console.log("🔍 [DASHBOARD] Buscando próximo Keiko...");
     const btn = document.getElementById('confirm-btn');
-
-    let claseElegida = null;
-    let estadoAlumno = null;
     const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
 
-    if (!json.data || json.data.length === 0) {
-        setEmptyNextClass();
-        return;
-    }
+    try {
+        // Pedimos más clases para asegurar (limit 30) y con dojo poblado
+        const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=30`, { 
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+        });
+        const json = await res.json();
+        const ahora = new Date();
 
-    // 2. FILTRADO INTELIGENTE (Prioridad: Mi Dojo -> Otros Dojos)
-    const proximas = json.data.filter(c => {
-        const d = parseData(c);
-        const inicio = new Date(d.Fecha_Hora);
-        const fin = new Date(inicio.getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
-        return ahora < fin; // Solo clases que no hayan terminado
-    });
-
-    // Intento 1: Buscar la siguiente en MI DOJO
-    claseElegida = proximas.find(c => {
-        const d = parseData(c);
-        const dojoId = getID(parseRelation(d.dojo));
-        return dojoId == dojoIdGlobal;
-    });
-
-    // Intento 2: Si no hay en el mío, coger la primera disponible de la red Arashi
-    if (!claseElegida && proximas.length > 0) {
-        claseElegida = proximas[0];
-        console.log("🌐 [LOGIC] No hay clases hoy en tu dojo. Sugiriendo keiko externo.");
-    }
-
-    // 3. ACTUALIZACIÓN DE INTERFAZ
-    if (claseElegida) {
-        const d = parseData(claseElegida);
-        const dojoInfo = parseRelation(d.dojo);
-        const cid = getID(claseElegida);
-        claseHoyId = cid;
-        
-        const f = formatTimeSafe(d.Fecha_Hora);
-        const nombreDojo = (dojoInfo?.nombre || "Arashi").toUpperCase();
-
-        // Pintamos Hora y Fecha + Dojo
-        document.getElementById('next-class-time').innerText = f.time;
-        
-        // Usamos una etiqueta visual para el Dojo
-        document.getElementById('next-class-date').innerHTML = `
-            ${f.date} <br>
-            <span style="font-size:11px; color:var(--accent); font-weight:800; letter-spacing:1px; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 10px; display: inline-block; margin-top: 8px;">
-                <i class="fa-solid fa-location-dot"></i> ${nombreDojo}
-            </span>
-        `;
-
-        // 4. LÓGICA DE BOTÓN (Solo para alumnos y si es hoy)
-        const esHoy = (new Date(d.Fecha_Hora).toDateString() === ahora.toDateString());
-        
-        if (!alumnoGlobal) {
-            btn.classList.add('hidden'); // Los Senseis sin ficha no ven botón de asistir
-        } else {
-            btn.classList.remove('hidden');
-            
-            // Consultamos si ya está confirmado (Sync Check)
-            const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-            });
-            const chkJ = await chk.json();
-            const asistencia = chkJ.data?.[0];
-            const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
-
-            if (estado === 'Confirmado' || estado === 'Asistio') {
-                btn.innerText = "YA CONFIRMADO";
-                btn.disabled = true;
-                btn.style.background = "#1e293b";
-                btn.style.color = "var(--text-muted)";
-                btn.style.boxShadow = "none";
-            } else if (!esHoy) {
-                btn.innerText = "PRÓXIMO KEIKO";
-                btn.disabled = true;
-                btn.style.background = "rgba(255,255,255,0.05)";
-                btn.style.color = "var(--text-muted)";
-            } else {
-                btn.innerText = "ASISTIR AL KEIKO";
-                btn.disabled = false;
-                btn.style.background = "white";
-                btn.style.color = "black";
-            }
+        if (!json.data || json.data.length === 0) {
+            setEmptyNextClass();
+            return;
         }
-    } else {
+
+        // 1. Filtramos clases que no hayan terminado todavía
+        const proximas = json.data.filter(c => {
+            const d = parseData(c);
+            const fin = new Date(new Date(d.Fecha_Hora).getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
+            return ahora < fin;
+        });
+
+        // 2. Buscamos la primera clase que coincida con el Dojo del alumno (o la primera si no hay match)
+        let claseElegida = proximas.find(c => {
+            const d = parseData(c);
+            const dId = getID(parseRelation(d.dojo));
+            return dId == dojoIdGlobal;
+        }) || proximas[0];
+
+        if (claseElegida) {
+            const d = parseData(claseElegida);
+            const dojoInfo = parseRelation(d.dojo);
+            const cid = getID(claseElegida);
+            claseHoyId = cid;
+            
+            const f = formatTimeSafe(d.Fecha_Hora);
+            document.getElementById('next-class-time').innerText = f.time;
+            document.getElementById('next-class-date').innerHTML = `
+                ${f.date} <br>
+                <span style="font-size:11px; color:var(--accent); font-weight:800;">
+                    <i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}
+                </span>
+            `;
+
+            // 3. Verificamos si ya está confirmado (Sync Check)
+            btn.classList.remove('hidden');
+            if (aluId) {
+                const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+                });
+                const chkJ = await chk.json();
+                const asistencia = chkJ.data?.[0];
+                const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
+
+                if (estado === 'Confirmado' || estado === 'Asistio') {
+                    btn.innerText = "CONFIRMADO";
+                    btn.disabled = true;
+                    btn.style.background = "#1e293b";
+                } else {
+                    btn.innerText = "ASISTIR AL KEIKO";
+                    btn.disabled = false;
+                    btn.style.background = "white";
+                }
+            }
+        } else {
+            setEmptyNextClass();
+        }
+    } catch (e) {
+        console.error("❌ Fallo en Dashboard:", e);
         setEmptyNextClass();
     }
+}
+
+function setEmptyNextClass() {
+    document.getElementById('next-class-time').innerText = "--:--";
+    document.getElementById('next-class-date').innerText = "Sin clases programadas";
+    document.getElementById('confirm-btn').classList.add('hidden');
 }
 
 function setEmptyNextClass() {
