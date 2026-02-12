@@ -1222,37 +1222,33 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 }
 
         /* --- REFRESH DATA (Sincronización v5) --- */
+/* --- REFRESH DATA (Versión Blindada v5) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return;
     
-    // Intentamos cargar el perfil desde la memoria del móvil (Caché 2 horas)
-    // Esto evita que Strapi trabaje cada vez que el alumno abre la App
-    const json = await fetchSmart(
-        `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`, 
-        'perfil_alumno', 
-        2 
-    );
-    
-    // 1. INTELIGENCIA: Recuperamos el ID permanente para ahorrar búsquedas
+    // 1. INTELIGENCIA: Recuperamos el ID permanente para ahorrar recursos
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
-    let json = null;
+    let dataAlu = null; 
 
     if (savedDocId && savedDocId !== "null") {
-        // Cache de 168 horas (1 semana)
-        json = await fetchSmart(`/api/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
+        // Cache de una semana si ya tenemos el ID vinculado
+        dataAlu = await fetchSmart(`/api/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
     } else {
-        // Búsqueda inicial (Solo se hace una vez en la vida de la instalación)
+        // Búsqueda inicial: primero por ID de cuenta
         let endpoint = `/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-        json = await fetchSmart(endpoint, null, 0); 
-        if (!json?.data?.length) {
+        dataAlu = await fetchSmart(endpoint, null, 0); 
+
+        // Si falla, buscamos por DNI (Username)
+        if (!dataAlu?.data || (Array.isArray(dataAlu.data) && dataAlu.data.length === 0)) {
             endpoint = `/api/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-            json = await fetchSmart(endpoint, null, 0);
+            dataAlu = await fetchSmart(endpoint, null, 0);
         }
-        if (json?.data?.length) {
-            localStorage.setItem('aikido_student_doc_id', getID(json.data[0]));
-        } else {
-            localStorage.setItem('aikido_student_doc_id', "null");
+
+        // Si lo encontramos, guardamos el ID para siempre en este móvil
+        if (dataAlu?.data?.length) {
+            const foundId = dataAlu.data[0].documentId || dataAlu.data[0].id;
+            localStorage.setItem('aikido_student_doc_id', foundId);
         }
     }
 
@@ -1260,21 +1256,22 @@ async function refreshStudentData() {
     const nextGrade = document.getElementById('next-grade-display');
     const zenCard = document.getElementById('zen-card');
 
-    if (!json || !json.data || (Array.isArray(json.data) && json.data.length === 0)) {
-        // --- CASO STAFF (Francesc) ---
+    // 2. LÓGICA DE VISUALIZACIÓN (Sensei vs Alumno)
+    if (!dataAlu || !dataAlu.data || (Array.isArray(dataAlu.data) && dataAlu.data.length === 0)) {
+        // --- CASO STAFF / SENSEI ---
         const initials = ((user.nombre?.[0] || "") + (user.apellidos?.[0] || "")).toUpperCase();
         document.getElementById('user-initials').innerText = initials || "S";
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         if (!zenCard && circle) {
-            const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo_sin_fondo.png" class="zen-logo"><h2 class="zen-title">SENSEI</h2><p class="zen-subtitle">ARASHI DOJO BADALONA</p></div>`;
+            const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title">SENSEI</h2><p class="zen-subtitle">ARASHI DOJO</p></div>`;
             circle.insertAdjacentHTML('afterend', zenHTML);
         }
     } else {
-        // --- CASO ALUMNO (Raúl / Carlos / etc) ---
-        alumnoGlobal = Array.isArray(json.data) ? json.data[0] : json.data; 
-        const p = alumnoGlobal.attributes || alumnoGlobal; // AHORA SÍ DEFINIMOS "p"
+        // --- CASO ALUMNO ---
+        alumnoGlobal = Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data; 
+        const p = alumnoGlobal.attributes || alumnoGlobal; 
         if (zenCard) zenCard.remove();
         
         document.getElementById('user-display-name').innerText = (p.nombre || user.nombre || "Alumno").toUpperCase();
@@ -1286,12 +1283,11 @@ async function refreshStudentData() {
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
         if (circle) circle.classList.remove('hidden');
 
-        // --- LÓGICA DE META (CORREGIDA PARA CARLOS 4º DAN) ---
+        // --- LÓGICA DAN-STEP ---
         let meta = p.grado_objetivo;
         if (!meta) {
             const gradoActualNorm = normalize(p.grado);
             const idx = GRADOS_ORDER.findIndex(x => normalize(x) === gradoActualNorm);
-
             if (idx !== -1 && idx < GRADOS_ORDER.length - 1) {
                 meta = GRADOS_ORDER[idx + 1];
             } else if (gradoActualNorm.includes("DAN")) {
@@ -1303,14 +1299,9 @@ async function refreshStudentData() {
         }
 
         const normMeta = normalize(meta);
-        const req = (Array.isArray(requisitosGradoGlobal)) 
-            ? requisitosGradoGlobal.find(r => r.NORM === normMeta)
-            : null;         
-
-        // Si lo encuentra, extrae las horas del campo plano o del objeto attributes
+        const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;         
         let target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
 
-        // Pintamos los datos en la pantalla
         const bar = document.getElementById('progress-bar');
         if (bar) {
             const pct = Math.min((horas / target) * 100, 100);
@@ -1318,14 +1309,13 @@ async function refreshStudentData() {
         }
 
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
         }
     }
 
-    // Nav Bar Logic
+    // 3. NAV BAR LOGIC
     const navRightBtn = document.getElementById('nav-sensei');
     if (navRightBtn) {
         if (user.is_sensei === true) {
