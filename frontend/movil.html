@@ -1040,6 +1040,14 @@
     <script>
         const API_URL = "https://arashi-api.onrender.com/api";
 
+        // LOG DE AUDITORÍA ARASHI
+        console.log("🥋 [AUDITORÍA] API_URL actual:", API_URL);
+
+        // Comprobación de seguridad
+        if (API_URL.endsWith('/api/')) {
+            console.warn("⚠️ ALERTA: La URL termina en /api/. Asegúrate de que tus fetch NO empiecen por /api");
+        }
+
 
         
         /* --- DETECTOR DE SISTEMA PARA INSTALACIÓN --- */
@@ -1711,8 +1719,7 @@ async function loadSenseiPanel() {
                 if(grouped[m].morning.length) { html += `<div class="section-label">Mañana</div><div class="grid-container">`; grouped[m].morning.forEach(x => html+=`<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`); html+="</div>"; }
                 if(grouped[m].afternoon.length) { html += `<div class="section-label">Tarde</div><div class="grid-container">`; grouped[m].afternoon.forEach(x => html+=`<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`); html+="</div>"; }
             }
-            container.innerHTML = html;
-        }
+            const container = document.getElementById('calendar-content');
 
         async function confirmAttendance() {
             if (!claseHoyId || !alumnoGlobal) return;
@@ -1876,7 +1883,24 @@ function updateDashboardUI() {
             if (v === 'sensei') loadSenseiPanel();
         }
         
-        function logout() { localStorage.clear(); location.reload(); }
+        function logout() {
+            console.log("🥋 Cerrando el Dojo...");
+            // 1. Limpiamos datos
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // 2. IMPORTANTE: Matamos el Service Worker para que no nos "persiga"
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+
+            // 3. Salida forzada a la raíz
+            window.location.replace('movil.html'); 
+        }
 
         /* --- PWA LOGIC --- */
         /* --- PWA LOGIC (Arquitectura Arashi) --- */
@@ -2010,10 +2034,10 @@ document.getElementById('forgot-form').addEventListener('submit', async (e) => {
         window.onload = () => { initApp(); };
 
 setInterval(() => {
-    // Usamos la variable API_URL que ya cambiaste a "arashi-api.onrender.com"
-    fetch(`${API_URL}/dojos`) 
-        .then(() => console.log("💓 Latido Arashi: Render está despierto"))
-        .catch(() => {});
+    // Solo latir si hay un token, para no generar errores innecesarios
+    if (localStorage.getItem('aikido_jwt')) {
+        fetch(`${API_URL}/dojos`).catch(() => {});
+    }
 }, 1000 * 60 * 5); // Cada 5 minutos para que coincida con el robot
     </script>
 </body>
