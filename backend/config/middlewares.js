@@ -1,29 +1,18 @@
+// path: config/middlewares.js
 module.exports = [
-  'strapi::logger',
   'strapi::errors',
-  {
-    name: 'strapi::security',
-    config: {
-      contentSecurityPolicy: {
-        useDefaults: true,
-        directives: {
-          'connect-src': ["'self'", 'https://*.netlify.app'],
-          'img-src': ["'self'", 'data:', 'blob:'],
-          'media-src': ["'self'", 'blob:', 'data:'],
-          'script-src': ["'self'"],
-        },
-      },
-    },
-  },
   {
     name: 'strapi::cors',
     config: {
-      enabled: true,
-      headers: '*',
-      origin: ['*'],  // ← PERMITE frontend
+      origin: ['https://arashi-group.netlify.app', 'https://arashi-api.onrender.com'],
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
+      headers: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
+      keepHeaderOnError: true,
     },
   },
+  'strapi::security',
   'strapi::poweredBy',
+  'strapi::logger',
   'strapi::query',
   'strapi::body',
   'strapi::session',

@@ -1084,44 +1084,42 @@
 
         /* --- SISTEMA DE CACHÉ Y DEBUG --- */
         // Implementar en tu app.js o movil.html
-async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
-    const cached = localStorage.getItem(`cache_${cacheKey}`);
-    if (cached) {
-        const { time, data } = JSON.parse(cached);
-        // Si la caché tiene menos de X horas, no molestamos al servidor
-        if ((Date.now() - time) < (1000 * 60 * 60 * durationHours)) {
-            return data;
+/* --- SISTEMA DE CACHÉ ZERO WASTE API --- */
+async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
+    const url = `${API_URL}${endpoint}`;
+    const token = localStorage.getItem('aikido_jwt');
+
+    // 1. Intentar recuperar de Caché Local
+    if (cacheKey) {
+        const cached = localStorage.getItem(`cache_${cacheKey}`);
+        if (cached) {
+            const { time, data } = JSON.parse(cached);
+            // Si tiene menos de X horas, devolvemos sin consultar al servidor
+            if ((Date.now() - time) < (1000 * 60 * 60 * durationHours)) {
+                console.log(`📦 Cache Hit: ${cacheKey}`);
+                return data;
+            }
         }
     }
-    
-    const res = await fetch(`${API_URL}${endpoint}`, { 
-        headers: { 'Authorization': `Bearer ${jwtToken}` } 
-    });
-    const json = await res.json();
-    
-    // Guardamos con timestamp
-    localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({
-        time: Date.now(),
-        data: json
-    }));
-    return json;
-}
 
-// Ejemplo de uso para los 110 alumnos (Caché de 1 hora)
-// loadAlumnos() -> fetchSmart('/api/alumnos?populate=*', 'alumnos_list', 1);
-    
+    // 2. Si no hay caché o expiró, consultar servidor
     try {
-        const res = await fetch(`${API_URL}${endpoint}`, { 
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+        console.log(`🌐 API Call: ${endpoint}`);
+        const res = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         const json = await res.json();
+        
         if (cacheKey && json) {
-            localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({ time: Date.now(), data: json }));
+            localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({ 
+                time: Date.now(), 
+                data: json 
+            }));
         }
         return json;
-    } catch (e) { 
-        console.error("❌ Fallo API:", e); 
-        // Si falla la red, devolvemos lo que tengamos en cache aunque sea viejo
+    } catch (e) {
+        console.error("❌ Error de red:", e);
+        // Fallback: si falla el servidor, usar caché aunque sea vieja
         const backup = localStorage.getItem(`cache_${cacheKey}`);
         return backup ? JSON.parse(backup).data : null;
     }
