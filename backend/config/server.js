@@ -1,8 +1,7 @@
 export default ({ env }) => ({
   host: env('HOST', '0.0.0.0'),
-  // Quita el 1337 por defecto. Render asignará el puerto automáticamente.
-  port: env.int('PORT'), 
-  url: env('STRAPI_URL'), 
+  port: env.int('PORT', 1337),
+  url: env('STRAPI_URL'), // Solo este manda
   app: {
     keys: env.array('APP_KEYS'),
   },

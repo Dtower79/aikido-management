@@ -11,6 +11,5 @@ module.exports = ({ env }) => ({
     },
   },
   tours: false,
-  // NO uses url: '/'. En Render, usa la ruta estándar:
-  url: '/admin', 
+  // PROHIBIDO: No pongas la propiedad 'url' aquí.
 });
