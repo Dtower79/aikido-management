@@ -1038,7 +1038,7 @@
     </div>
 
     <script>
-        const API_URL = "https://arashi-api.onrender.com/api";
+        const API_URL = "https://arashi-api.onrender.com";
 
 
         
@@ -1721,11 +1721,26 @@ async function loadSenseiPanel() {
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); const identifier = document.getElementById('dni-login').value.trim(), password = document.getElementById('password').value.trim();
-            const res = await fetch(`${API_URL}/api/auth/local`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
-            if (res.ok) { const d = await res.json(); localStorage.setItem('aikido_jwt', d.jwt); localStorage.setItem('aikido_user', JSON.stringify(d.user)); initApp(); }
-            else showModal("Error", "Credenciales incorrectas.");
-        });
+    e.preventDefault(); 
+    const identifier = document.getElementById('dni-login').value.trim();
+    const password = document.getElementById('password').value.trim();
+    
+    // LLAMADA CORREGIDA (Una sola vez /api/)
+    const res = await fetch(`${API_URL}/api/auth/local`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ identifier, password }) 
+    });
+
+    if (res.ok) { 
+        const d = await res.json(); 
+        localStorage.setItem('aikido_jwt', d.jwt); 
+        localStorage.setItem('aikido_user', JSON.stringify(d.user)); 
+        initApp(); 
+    } else { 
+        showModal("Error", "Credenciales incorrectas o servidor despertando."); 
+    }
+});
 
         async function startQRScanner() {
             if (!alumnoGlobal) return showModal("Aviso", "Perfil no cargado.");
