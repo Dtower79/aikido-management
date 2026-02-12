@@ -1704,35 +1704,99 @@ async function loadSenseiPanel() {
             } catch (err) { showModal("Error", "Fallo servidor."); } finally { btn.innerText = "ACTIVAR"; btn.disabled = false; }
         });
 
-        async function loadMonthlyClasses(el) {
-                showView('clases', el);
-    // Caché de 24 horas para el calendario
+        /* --- GESTIÓN DE CALENDARIO (REESTRUCTURADO) --- */
+async function loadMonthlyClasses(el) {
+    showView('clases', el);
+    
+    // 1. Obtención de datos con Zero Waste API (Caché 24h)
     const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&pagination[limit]=100', 'calendario_clases', 24);
-            const grouped = {}; const hoyCorte = new Date(); hoyCorte.setHours(0,0,0,0);
-            (json.data||[]).forEach(c => {
-                const d = parseData(c); if (new Date(d.Fecha_Hora) < hoyCorte) return; const f = formatTimeSafe(d.Fecha_Hora);
-                if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
-                const item = { ...f, dur: d.Duracion }; if (f.hour < 14) grouped[f.month].morning.push(item); else grouped[f.month].afternoon.push(item);
-            });
-            let html = ""; for (const m in grouped) {
-                html += `<div class="month-header">${m}</div>`;
-                if(grouped[m].morning.length) { html += `<div class="section-label">Mañana</div><div class="grid-container">`; grouped[m].morning.forEach(x => html+=`<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`); html+="</div>"; }
-                if(grouped[m].afternoon.length) { html += `<div class="section-label">Tarde</div><div class="grid-container">`; grouped[m].afternoon.forEach(x => html+=`<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`); html+="</div>"; }
-            }
-            document.getElementById('calendar-content').innerHTML = html;
+    
+    if (!json || !json.data) return;
 
-        async function confirmAttendance() {
-            if (!claseHoyId || !alumnoGlobal) return;
-            await fetch(`${API_URL}/asistencias`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` }, body: JSON.stringify({ data: { alumno: getID(alumnoGlobal), clase: claseHoyId, Estado: 'Confirmado' } }) });
-            localStorage.removeItem('cache_perfil_alumno'); checkTodayClass();
+    const grouped = {}; 
+    const hoyCorte = new Date(); 
+    hoyCorte.setHours(0,0,0,0);
+
+    // 2. Procesamiento de clases futuras
+    json.data.forEach(c => {
+        const d = parseData(c); 
+        const fechaClase = new Date(d.Fecha_Hora);
+        
+        if (fechaClase < hoyCorte) return; 
+        
+        const f = formatTimeSafe(d.Fecha_Hora);
+        if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
+        
+        const item = { ...f, dur: d.Duracion }; 
+        if (f.hour < 14) grouped[f.month].morning.push(item); 
+        else grouped[f.month].afternoon.push(item);
+    });
+
+    // 3. Generación de HTML
+    let html = ""; 
+    for (const m in grouped) {
+        html += `<div class="month-header">${m}</div>`;
+        
+        if(grouped[m].morning.length) { 
+            html += `<div class="section-label">Mañana</div><div class="grid-container">`; 
+            grouped[m].morning.forEach(x => {
+                html += `<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`;
+            }); 
+            html += "</div>"; 
         }
+        
+        if(grouped[m].afternoon.length) { 
+            html += `<div class="section-label">Tarde</div><div class="grid-container">`; 
+            grouped[m].afternoon.forEach(x => {
+                html += `<div class="class-card"><h4>${x.date}</h4><p>${x.time} • ${x.dur}h</p></div>`;
+            }); 
+            html += "</div>"; 
+        }
+    }
 
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
+    // 4. Inyección en el DOM (Fix: container is not defined)
+    const calContainer = document.getElementById('calendar-content');
+    if (calContainer) {
+        calContainer.innerHTML = html || "<p style='text-align:center; padding:20px; opacity:0.5;'>No hay clases programadas.</p>";
+    }
+} // <--- AQUÍ TERMINA CORRECTAMENTE loadMonthlyClasses
+
+/* --- ASISTENCIA (FUNCIÓN INDEPENDIENTE) --- */
+async function confirmAttendance() {
+    if (!claseHoyId || !alumnoGlobal) return;
+    
+    try {
+        const res = await fetch(`${API_URL}/asistencias`, { 
+            method: 'POST', 
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` 
+            }, 
+            body: JSON.stringify({ 
+                data: { 
+                    alumno: getID(alumnoGlobal), 
+                    clase: claseHoyId, 
+                    Estado: 'Confirmado' 
+                } 
+            }) 
+        });
+
+        if (res.ok) {
+            localStorage.removeItem('cache_perfil_alumno'); 
+            checkTodayClass();
+            showModal("¡OSS!", "Asistencia confirmada. Avisa al Sensei al llegar.");
+        }
+    } catch (e) {
+        console.error("Error en confirmación:", e);
+    }
+}
+
+/* --- ESCUCHADOR DE LOGIN (FUERA DE LAS FUNCIONES) --- */
+document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault(); 
     const identifier = document.getElementById('dni-login').value.trim();
     const password = document.getElementById('password').value.trim();
     
-    // LLAMADA CORREGIDA (Una sola vez /)
     const res = await fetch(`${API_URL}/auth/local`, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
@@ -1745,10 +1809,9 @@ async function loadSenseiPanel() {
         localStorage.setItem('aikido_user', JSON.stringify(d.user)); 
         initApp(); 
     } else { 
-        showModal("Error", "Credenciales incorrectas o servidor despertando."); 
+        showModal("Error", "DNI o contraseña incorrectos."); 
     }
 });
-
         async function startQRScanner() {
             if (!alumnoGlobal) return showModal("Aviso", "Perfil no cargado.");
 
