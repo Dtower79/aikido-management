@@ -1851,7 +1851,7 @@ async function confirmAttendance() {
         if (res.ok) {
             localStorage.removeItem('cache_perfil_alumno'); 
             checkTodayClass();
-            showModal("¡OSS!", "Asistencia confirmada. Avisa al Sensei al llegar.");
+            showModal("¡OSS!", "Asistencia confirmada. Lee el QR al final del keiko.");
         }
     } catch (e) {
         console.error("Error en confirmación:", e);
