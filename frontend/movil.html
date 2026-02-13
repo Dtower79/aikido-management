@@ -1756,20 +1756,38 @@ async function loadManageClasses() {
 }
 
 /* --- MODAL DE EDICIÓN --- */
+/* --- MODAL DE EDICIÓN (CON BOTÓN DE CIERRE) --- */
 function openEditClass(id, raw, dur) { 
     const [d, t] = raw.split('T'); 
     showModal("EDITAR KEIKO", `
         <div style="text-align:left; margin-top:10px;">
-            <span class="modal-label">FECHA:</span><input type="date" id="e-d" value="${d}" class="modal-field">
-            <span class="modal-label">HORA:</span><input type="time" id="e-h" value="${t.substring(0,5)}" class="modal-field">
-            <span class="modal-label">DURACIÓN:</span><select id="e-dur" class="modal-field">
+            <span class="modal-label">FECHA:</span>
+            <input type="date" id="e-d" value="${d}" class="modal-field">
+            
+            <span class="modal-label">HORA:</span>
+            <input type="time" id="e-h" value="${t.substring(0,5)}" class="modal-field">
+            
+            <span class="modal-label">DURACIÓN:</span>
+            <select id="e-dur" class="modal-field">
                 <option value="1" ${dur==1?'selected':''}>1.0h</option>
                 <option value="1.5" ${dur==1.5?'selected':''}>1.5h</option>
                 <option value="2" ${dur==2?'selected':''}>2.0h</option>
             </select>
-            <button class="action-btn primary" onclick="saveClass('${id}')">GUARDAR CAMBIOS</button>
-            <button class="action-btn" style="background:#ef4444; color:white; margin-top:10px;" onclick="deleteClass('${id}')">ELIMINAR KEIKO</button>
-        </div>`, true); 
+
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
+                <button class="action-btn primary" onclick="saveClass('${id}')">
+                    <i class="fa-solid fa-floppy-disk"></i> GUARDAR CAMBIOS
+                </button>
+                
+                <button class="action-btn" style="background:#ef4444; color:white;" onclick="deleteClass('${id}')">
+                    <i class="fa-solid fa-trash-can"></i> ELIMINAR KEIKO
+                </button>
+
+                <button class="action-btn" style="background:#334155; color:white;" onclick="closeModal()">
+                    VOLVER SIN CAMBIOS
+                </button>
+            </div>
+        </div>`, false); // Ponemos false para que no salga el botón "CERRAR" genérico de abajo y usemos el nuestro integrado
 }
 
 /* --- ACCIÓN: GUARDAR CAMBIOS --- */
@@ -1786,42 +1804,53 @@ async function saveClass(id) {
     }); 
 
     // REGLA MAESTRA: Sincronización instantánea
-    localStorage.removeItem('cache_calendario_clases_completo'); 
+    localStorage.removeItem('cache_calendario_clases'); 
     closeModal(); 
     loadManageClasses(); 
     checkTodayClass(); // Actualizamos dashboard por si era la clase de hoy
 }
 
 /* --- ACCIÓN: ELIMINAR KEIKO --- */
+/* --- ACCIÓN: ELIMINAR KEIKO (UNIFICADA Y COMPLETA) --- */
 async function deleteClass(id) { 
+    // 1. ESCUDO DE SEGURIDAD (De la primera versión)
     if (!confirm("¿Seguro que quieres borrar este entrenamiento? Esta acción no se puede deshacer.")) return;
 
     const token = localStorage.getItem('aikido_jwt');
-    await fetch(`${API_URL}/clases/${id}`, { 
-        method: 'DELETE', 
-        headers: { 'Authorization': `Bearer ${token}` } 
-    }); 
 
-    // REGLA MAESTRA: Sincronización instantánea
-    localStorage.removeItem('cache_calendario_clases_completo'); 
-    closeModal(); 
-    loadManageClasses(); 
-    checkTodayClass();
+    try {
+        const res = await fetch(`${API_URL}/clases/${id}`, { 
+            method: 'DELETE', 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        }); 
+
+        if (!res.ok) throw new Error("Error en Neon/Render");
+
+        // 2. REGLA ZERO WASTE: Sincronización instantánea (En ambas versiones)
+        localStorage.removeItem('cache_calendario_clases'); 
+        
+        // 3. CIERRE DE INTERFAZ
+        closeModal(); 
+        
+        // 4. REFRESCO DE VISTAS (Mantenemos checkTodayClass de la primera versión)
+        loadManageClasses(); // Refresca la lista del editor
+        checkTodayClass();   // Refresca el dashboard (Imprescindible)
+
+        // 5. FEEDBACK PREMIUM
+        showModal("¡OSS!", "Entrenamiento eliminado y sistema sincronizado.");
+
+    } catch (e) {
+        console.error("❌ Error al borrar:", e);
+        showModal("Error", "No se pudo eliminar la clase de la base de datos.");
+    }
 }
-        async function deleteClass(id) { 
-            await fetch(`${API_URL}/clases/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } }); 
-            localStorage.removeItem('cache_calendario_clases'); closeModal(); loadManageClasses(); 
-        }
 
-        /* --- GENERACIÓN AUTOMÁTICA --- */
-        function setGenMonth(m, btn) { selectedMonthGen = m; document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
-        function uiGenerateMonth() {
-            const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-            let gridHtml = `<div class="month-picker-grid">`;
-            months.forEach((m, idx) => { gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; });
-            gridHtml += `</div>`;
-            showModal("GENERAR MES", `<div style="text-align:left; margin-top:10px;"><span class="modal-label">AÑO:</span><select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select><span class="modal-label">MES:</span>${gridHtml}<span class="modal-label">HORA MAÑANA (Mar):</span><input type="time" id="gen-morning" value="10:00" class="modal-field"><span class="modal-label">HORA TARDE (Mar/Jue):</span><input type="time" id="gen-afternoon" value="19:00" class="modal-field"><button class="action-btn primary" onclick="processGeneration()" style="margin-top:10px;">GENERAR CALENDARIO</button></div>`, true);
-        }
+/* --- SIGUIENTE BLOQUE: GENERACIÓN AUTOMÁTICA (Mantenlo como está) --- */
+function setGenMonth(m, btn) { 
+    selectedMonthGen = m; 
+    document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active')); 
+    btn.classList.add('active'); 
+}
 
 /* --- GENERACIÓN MASIVA MENSUAL (CON BLOQUEO DE DOJO) --- */
 async function processGeneration() {
@@ -1933,7 +1962,7 @@ async function processSingleClass() {
         if (!res.ok) throw new Error("Error en servidor Render");
 
         // ACTUALIZACIÓN EN TIEMPO REAL (Zero Waste Cache Invalidation)
-        localStorage.removeItem('cache_calendario_clases_completo'); // Borramos la sábana global
+        localStorage.removeItem('cache_calendario_clases'); // Borramos la sábana global
         
         closeModal(); 
         
@@ -1953,22 +1982,19 @@ async function loadMonthlyClasses(el) {
     if (el) showView('clases', el);
     const container = document.getElementById('calendar-content');
     
-    // 1. DIBUJAR SELECTOR DE DOJO (Si no está ya puesto)
     if (!document.getElementById('cal-dojo-filter')) {
         const dojoRes = await fetchSmart('/dojos', 'lista_dojos_cal', 24);
         let options = `<option value="all">-- VER TODOS LOS DOJOS --</option>`;
         if(dojoRes && dojoRes.data) {
             dojoRes.data.forEach(d => {
                 const info = d.attributes || d;
-                const isHome = (getID(d) == dojoIdGlobal);
-                options += `<option value="${getID(d)}" ${isHome ? 'selected' : ''}>${info.nombre.toUpperCase()}</option>`;
+                options += `<option value="${getID(d)}" ${getID(d) == dojoIdGlobal ? 'selected' : ''}>${info.nombre.toUpperCase()}</option>`;
             });
         }
-        
         container.innerHTML = `
             <div style="padding: 0 20px 20px; margin-top:10px;">
                 <p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">TATAMI ACTUAL:</p>
-                <select id="cal-dojo-filter" class="sensei-select" onchange="loadMonthlyClasses(); checkTodayClass();">
+                <select id="cal-dojo-filter" class="sensei-select" onchange="loadMonthlyClasses();">
                     ${options}
                 </select>
             </div>
@@ -1978,26 +2004,24 @@ async function loadMonthlyClasses(el) {
 
     const filterDojo = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
     const listResults = document.getElementById('calendar-list-results');
-    listResults.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Keikos...</p>";
-
-    // 2. OBTENCIÓN DE DATOS (Caché de 1h para agilidad)
+    
+    // USAMOS LA LLAVE UNIFICADA: 'calendario_clases'
     const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'calendario_clases', 1);
     
-    if (!json || !json.data) {
-        listResults.innerHTML = "<p style='text-align:center; padding:20px;'>No hay conexión con el Dojo.</p>";
-        return;
-    }
+    if (!json || !json.data) return;
 
     const grouped = {}; 
-    const hoyCorte = new Date(); hoyCorte.setHours(0,0,0,0);
+    const hoyCorte = new Date(); 
+    hoyCorte.setHours(0,0,0,0);
 
-    // 3. FILTRADO POR DOJO SELECCIONADO
     json.data.forEach(c => {
         const d = parseData(c); 
         const dojoInfo = parseRelation(d.dojo);
         const dId = getID(dojoInfo);
+        const fechaClase = new Date(d.Fecha_Hora);
         
-        if (new Date(d.Fecha_Hora) < hoyCorte) return; 
+        // Filtro de fecha y Dojo
+        if (fechaClase < hoyCorte) return; 
         if (filterDojo !== 'all' && dId != filterDojo) return;
 
         const f = formatTimeSafe(d.Fecha_Hora);
@@ -2006,7 +2030,6 @@ async function loadMonthlyClasses(el) {
         if (f.hour < 14) grouped[f.month].morning.push(item); else grouped[f.month].afternoon.push(item);
     });
 
-    // 4. RENDERIZADO
     let html = ""; 
     for (const m in grouped) {
         html += `<div class="month-header">${m}</div>`;
