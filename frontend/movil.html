@@ -478,6 +478,7 @@
         }
 
         /* --- NAV BAR --- */
+/* --- NAVEGACIÓN (CORREGIDA) --- */
         .nav-bar { 
             position: fixed; 
             bottom: 0; 
@@ -488,16 +489,19 @@
             backdrop-filter: blur(25px); 
             border-top: 1px solid var(--glass-border); 
             
-            /* CAMBIO QUIRÚRGICO: De Flex a Grid */
-            display: grid !important; 
-            /* Forzamos 5 columnas de exactamente el mismo ancho (20% cada una) */
-            grid-template-columns: repeat(5, 1fr) !important; 
+            /* CAMBIO: Quitamos !important aquí para que .hidden funcione */
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
             align-items: center; 
-            justify-items: center; /* Centra el contenido horizontalmente dentro de cada celda */
+            justify-items: center; 
             
-            /* Usamos el área segura de iPhone + 5px de margen estético */
             padding-bottom: calc(env(safe-area-inset-bottom) + 5px); 
             z-index: 4000; 
+        }
+
+        /* Regla de refuerzo para asegurar que desaparezca */
+        .nav-bar.hidden {
+            display: none !important;
         }
 
         .nav-item { 
@@ -1184,35 +1188,47 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         /* --- CORE INIT --- */
         /* --- PARTE 1: NÚCLEO DE INICIALIZACIÓN (initApp) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN: ACCESO BLINDADO --- */
 async function initApp() {
     console.log("🚀 [INIT] Arrancando Sistema Arashi...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     const mainNav = document.getElementById('main-nav');
     
-    // 1. Reset total: ocultamos todo, incluida la nav bar de inicio
+    // 1. Reset total de visibilidad
     document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
             .forEach(v => v.classList.add('hidden'));
-    if (mainNav) mainNav.classList.add('hidden');
 
-    // 2. Verificación de Sesión
+    // 2. CASO: USUARIO NO LOGUEADO (Registro/Login)
     if (!token || !user) {
         console.log("🔑 [AUTH] Mostrando Login.");
         const lv = document.getElementById('login-view');
         if(lv) lv.classList.remove('hidden');
+        
+        // REFUERZO MAESTRO: Ocultamos la nav bar totalmente
+        if (mainNav) {
+            mainNav.classList.add('hidden');
+            mainNav.style.display = 'none'; 
+        }
+        
         document.documentElement.classList.add('app-loaded'); 
         return;
     }
 
-    // 3. Usuario validado: mostramos dashboard y nav bar
+    // 3. CASO: USUARIO LOGUEADO (Entrada al Dojo)
+    // Restauramos la barra de navegación con el diseño Grid centrado
+    if (mainNav) {
+        mainNav.classList.remove('hidden');
+        mainNav.style.display = 'grid'; 
+    }
+
     console.log("🏠 [UI] Cargando Dojo para:", user.username);
     const dv = document.getElementById('dashboard-view');
     if(dv) dv.classList.remove('hidden');
-    if(mainNav) mainNav.classList.remove('hidden');
     
     showView('dashboard');
     
-    // 4. Carga de Requisitos (24h caché)
+    // 4. Carga de Requisitos (Zero Waste API: 24h caché)
     const reqRes = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
     if (reqRes && reqRes.data) {
         requisitosGradoGlobal = reqRes.data.map(r => {
@@ -1225,9 +1241,10 @@ async function initApp() {
         });
     }
 
+    // 5. Carga de datos de alumno e identidad (Sensei vs Alumno)
     await refreshStudentData(); 
 
-    // 5. Lógica de Permisos (Panel Sensei)
+    // 6. Lógica de Permisos para el Botón 4 de la Nav Bar
     const esSenseiRango = (user.is_sensei === true);
     let esInstructorFicha = false;
     if (alumnoGlobal) {
@@ -1248,7 +1265,9 @@ async function initApp() {
         navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
     }
 
+    // 7. Sincronización del próximo Keiko
     await checkTodayClass();
+    
     document.documentElement.classList.add('app-loaded');
 }
 
