@@ -1389,24 +1389,28 @@ async function refreshStudentData() {
 }
 
         /* --- SENSEI PANEL (Agrupación y 7 días) --- */
+/* --- PANEL SENSEI: SIEMPRE EN VIVO (SIN CACHÉ) --- */
 async function loadSenseiPanel() {
     const listDiv = document.getElementById('student-list');
     const filterEl = document.getElementById('sensei-dojo-filter');
     const dojoFilter = filterEl ? filterEl.value : 'all';
     
-    listDiv.innerHTML = `<div style="margin: 0 20px 20px;"><button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')"><i class="fa-solid fa-earth-europe"></i> VER SEMINARIOS EXTERNOS</button></div><p style='text-align:center; opacity:0.5; padding:20px;'>Conectando con el Tatami...</p>`;
+    listDiv.innerHTML = `<p style='text-align:center; opacity:0.5; padding:20px;'>Actualizando Tatami...</p>`;
     
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - 7);
 
     try {
+        // CAMBIO QUIRÚRGICO: fetchSmart con duración 0 para forzar datos frescos
         const endpoint = `/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100`;
-        const json = await fetchSmart(endpoint, 'asistencias_sensei', 2); 
+        const json = await fetchSmart(endpoint, 'asistencias_sensei', 0); 
+
         if (!json || !json.data) throw new Error("No hay datos");
 
         const groups = {};
         json.data.forEach(item => {
             const a = item.attributes || item; 
+            // Solo mostramos los que han pulsado "Asistir" (Confirmado)
             if ((a.Estado || a.estado || "").toLowerCase() !== 'confirmado') return;
 
             const alu = parseRelation(a.alumno);
@@ -1418,18 +1422,22 @@ async function loadSenseiPanel() {
             if (classDate < limitDate) return;
             if (dojoFilter !== 'all' && (getID(dojo) !== dojoFilter)) return;
 
-            const cid = getID(cla);
+            const cid = getID(cla); // Aquí usamos el documentId para el QR
             if (!groups[cid]) groups[cid] = { info: cla, students: [] };
-            groups[cid].students.push({ asistId: getID(item), alumnoId: getID(alu), nombre: alu.nombre, apellidos: alu.apellidos, grado: alu.grado });
+            groups[cid].students.push({ 
+                asistId: getID(item), 
+                alumnoId: getID(alu), 
+                nombre: alu.nombre, 
+                apellidos: alu.apellidos, 
+                grado: alu.grado 
+            });
         });
 
         const keys = Object.keys(groups);
-        // Mantener el botón superior de seminarios
-        const topHtml = listDiv.firstElementChild.outerHTML;
-        listDiv.innerHTML = topHtml;
+        listDiv.innerHTML = ""; 
 
         if (keys.length === 0) {
-            listDiv.innerHTML += "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes de validar.</p>";
+            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes de validar.</p>";
             return;
         }
 
@@ -1440,33 +1448,40 @@ async function loadSenseiPanel() {
             const f = formatTimeSafe(g.info.Fecha_Hora);
             let sRows = "";
             g.students.forEach(s => {
-                sRows += `<div class="student-item" id="it-${s.asistId}"><div class="student-info"><h4>${s.nombre} ${s.apellidos || ""}</h4><p>${s.grado || 'S/G'}</p></div><div class="sensei-actions"><button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button><button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button></div></div>`;
+                sRows += `
+                <div class="student-item" id="it-${s.asistId}">
+                    <div class="student-info">
+                        <h4>${s.nombre} ${s.apellidos || ""}</h4>
+                        <p>${s.grado || 'S/G'}</p>
+                    </div>
+                    <div class="sensei-actions">
+                        <button class="mini-btn no" onclick="validateAttendance('${s.asistId}', false, '${s.alumnoId}', ${g.info.Duracion})"><i class="fa-solid fa-xmark"></i></button>
+                        <button class="mini-btn ok" onclick="validateAttendance('${s.asistId}', true, '${s.alumnoId}', ${g.info.Duracion})">OK</button>
+                    </div>
+                </div>`;
             });
 
-            // --- DENTRO DEL BUCLE DE loadSenseiPanel ---
-        listDiv.innerHTML += `
-        <div class="class-group-card">
-            <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                <div style="text-align:left;">
-                    <h3>${f.date} - ${f.time}</h3>
-                    <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
+            listDiv.innerHTML += `
+            <div class="class-group-card">
+                <div class="class-group-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                    <div style="text-align:left;">
+                        <h3>${f.date} - ${f.time}</h3>
+                        <p style="font-size:10px; color:var(--accent); margin:2px 0 0;">${g.students.length} ALUMNOS PENDIENTES</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                 </div>
-                <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
-            </div>
-            <div class="class-group-body">
-                <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
-                    <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
-                </button>
-                <!-- HEMOS QUITADO EL PADDING LATERAL AQUÍ PARA QUE EL NOMBRE OCUPE TODO EL ANCHO -->
-                <div style="border-top:1px solid var(--glass-border); padding: 0 15px;">
-                    ${sRows}
+                <div class="class-group-body">
+                    <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
+                        <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
+                    </button>
+                    <div style="border-top:1px solid var(--glass-border); padding: 0 15px;">
+                        ${sRows}
+                    </div>
                 </div>
-            </div>
-        </div>`;
+            </div>`;
         });
     } catch (e) {
-        const topHtml = listDiv.firstElementChild.outerHTML;
-        listDiv.innerHTML = topHtml + `<p style='text-align:center; padding:20px;'>Error al cargar el Tatami.</p>`;
+        listDiv.innerHTML = `<p style='text-align:center; padding:20px;'>Error al cargar el Tatami.</p>`;
     }
 }
 
@@ -1840,12 +1855,14 @@ async function confirmAttendance() {
         });
 
         if (res.ok) {
-            localStorage.removeItem('cache_perfil_alumno'); 
-            checkTodayClass();
-            showModal("¡OSS!", "Asistencia confirmada. Lee el QR al final del keiko.");
+            // REGLA MAESTRA: Borramos la caché para que el Sensei vea al alumno YA
+            localStorage.removeItem('cache_asistencias_sensei'); 
+            
+            await checkTodayClass(); // Actualiza el dashboard del alumno
+            showModal("¡OSS!", "Asistencia confirmada. Aparecerás en el panel del Sensei ahora mismo.");
         }
     } catch (e) {
-        console.error("Error en confirmación:", e);
+        console.error("Error:", e);
     }
 }
 
@@ -1942,71 +1959,55 @@ async function startQRScanner() {
 /* --- PROCESADOR QR CON DEBUG PARA MÓVIL --- */
 async function procesarAsistenciaQR(classId) {
     const token = localStorage.getItem('aikido_jwt');
-    const aluDocId = localStorage.getItem('aikido_student_doc_id'); // Usamos el ID blindado
+    const aluDocId = localStorage.getItem('aikido_student_doc_id'); 
     
-    if(!aluDocId || aluDocId === "null") {
-        return showModal("Error", "Tu ficha de alumno no está vinculada. Avisa al administrador.");
-    }
+    if(!aluDocId || aluDocId === "null") return showModal("Error", "Ficha no vinculada.");
 
     try {
-        console.log("📡 [QR] Validando Clase:", classId, "para Alumno:", aluDocId);
-
-        // 1. Obtener datos de la clase para saber su duración
+        // 1. Validar Clase (Usamos documentId puro)
         const resClase = await fetch(`${API_URL}/clases/${classId}`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
-        
-        if (!resClase.ok) {
-            const errData = await resClase.json();
-            throw new Error(`Error Clase (${resClase.status}): ${errData.error?.message || 'No encontrada'}`);
-        }
-        
         const classJ = await resClase.json();
+        
+        if (!resClase.ok) throw new Error("Código QR no válido o clase inexistente.");
+        
         const dataC = classJ.data.attributes || classJ.data;
         const duracion = parseFloat(dataC.Duracion || 1.5);
 
-        // 2. Registrar Asistencia en Strapi v5
+        // 2. Registrar Asistencia (Estado: Asistio)
         const resAsist = await fetch(`${API_URL}/asistencias`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ 
-                data: { 
-                    alumno: aluDocId, 
-                    clase: classId, 
-                    Estado: 'Asistio' 
-                } 
+                data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } 
             })
         });
 
-        if (!resAsist.ok) {
-            const errAsist = await resAsist.json();
-            throw new Error(`Error Registro (${resAsist.status}): ${errAsist.error?.message || 'Rechazado'}`);
-        }
+        if (!resAsist.ok) throw new Error("Ya has registrado tu asistencia para este Keiko.");
 
-        // 3. Sumar Horas en el Perfil del Alumno
+        // 3. Actualizar Horas (Matemática Local + Neon Sync)
         const p = alumnoGlobal.attributes || alumnoGlobal;
         const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
 
-        const resAlu = await fetch(`${API_URL}/alumnos/${aluDocId}`, {
+        await fetch(`${API_URL}/alumnos/${aluDocId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
         });
 
-        if (!resAlu.ok) throw new Error("Error al sumar horas en Neon.");
-
-        // 4. Limpieza y Refresco
+        // 4. LIMPIEZA TOTAL DE CACHÉ
         localStorage.removeItem('cache_perfil_alumno');
+        localStorage.removeItem('cache_asistencias_sensei');
+
         await refreshStudentData(); 
         await checkTodayClass();
         
         closeModal();
-        showModal("¡OSS!", `Asistencia confirmada: +${duracion}h. Total: ${totalNuevo.toFixed(1)}h`);
+        showModal("¡OSS!", `Suma de horas completada: +${duracion}h.`);
 
     } catch (e) {
-        console.error("❌ Fallo Crítico QR:", e);
-        // MOSTRAMOS EL ERROR REAL EN EL MODAL PARA EL SENSEI
-        showModal("Error de Validación", `Detalle técnico: ${e.message}`);
+        showModal("Validación Fallida", e.message);
     }
 }
 
