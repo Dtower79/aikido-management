@@ -861,6 +861,58 @@
     background: rgba(255, 255, 255, 0.1) !important;
     transform: scale(0.98);
 }
+
+/* --- TARJETAS DE ELECCIÓN (PUERTA DEL DOJO) --- */
+.choice-card {
+    display: flex;
+    align-items: center;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--accent);
+    padding: 18px;
+    border-radius: 20px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+.choice-card:active { transform: scale(0.97); background: rgba(239, 68, 68, 0.2); }
+
+.choice-card.secondary {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+}
+
+.choice-icon {
+    width: 45px;
+    height: 45px;
+    background: var(--accent);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    color: white;
+    font-size: 20px;
+    box-shadow: var(--neon);
+}
+
+.choice-card.secondary .choice-icon {
+    background: #334155;
+    box-shadow: none;
+}
+
+.choice-text strong {
+    display: block;
+    font-size: 14px;
+    color: white;
+    letter-spacing: 1px;
+}
+
+.choice-text span {
+    font-size: 11px;
+    color: var(--text-muted);
+}
     </style>
 </head>
 <body>
@@ -947,10 +999,14 @@
                     </div>
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
+                <!-- PIE DE LOGIN ACTUALIZADO -->
                 <div class="auth-footer">
-    ¿Usuario Nuevo? <a onclick="document.getElementById('activate-modal').classList.remove('hidden')">Activa tu cuenta</a><br><br>
-    <a onclick="openForgotModal()" style="color: var(--text-muted); font-size: 12px; font-weight: 400; text-decoration: none;">¿Olvidaste tu contraseña?</a>
-</div>
+                    <button type="button" class="action-btn btn-secondary" onclick="openRegisterSelector()" style="height: 45px; font-size: 12px; margin-top: 10px;">
+                        ¿ERES NUEVO EN ARASHI? EMPIEZA AQUÍ
+                    </button>
+                    <br><br>
+                    <a onclick="openForgotModal()" style="color: var(--text-muted); font-size: 11px; font-weight: 400; text-decoration: none; opacity: 0.7;">¿Olvidaste tu contraseña?</a>
+                </div>
             </div>
         </div>
 
@@ -1068,6 +1124,36 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+
+    <!-- SELECTOR DE REGISTRO: NUEVO VS EXISTENTE -->
+    <div id="register-selector-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 350px;">
+            <h2 style="margin-top: 0; font-size: 20px;">BIENVENIDO AL DOJO</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 25px;">Selecciona tu situación actual para continuar:</p>
+
+            <!-- OPCIÓN A: NUEVO AIKIDOKA -->
+            <div class="choice-card" onclick="openEnrollmentForm()">
+                <div class="choice-icon"><i class="fa-solid fa-user-plus"></i></div>
+                <div class="choice-text">
+                    <strong>QUIERO INSCRIBIRME</strong>
+                    <span>Soy nuevo y quiero empezar a entrenar</span>
+                </div>
+            </div>
+
+            <!-- OPCIÓN B: ALUMNO EXISTENTE -->
+            <div class="choice-card secondary" onclick="openActivationModal()">
+                <div class="choice-icon"><i class="fa-solid fa-key"></i></div>
+                <div class="choice-text">
+                    <strong>YA SOY ALUMNO</strong>
+                    <span>Tengo ficha pero no tengo acceso a la App</span>
+                </div>
+            </div>
+
+            <button class="action-btn" style="background:transparent; color:var(--text-muted); margin-top:15px; font-size: 12px;" onclick="closeRegisterSelector()">
+                VOLVER AL LOGIN
+            </button>
         </div>
     </div>
 
@@ -2544,6 +2630,29 @@ setInterval(() => {
         fetch(`${API_URL}/dojos`).catch(() => {});
     }
 }, 1000 * 60 * 5); // Cada 5 minutos para que coincida con el robot
+
+/* --- CONTROLADOR DE LA PUERTA DEL DOJO --- */
+function openRegisterSelector() {
+    document.getElementById('register-selector-modal').classList.remove('hidden');
+}
+
+function closeRegisterSelector() {
+    document.getElementById('register-selector-modal').classList.add('hidden');
+}
+
+// Opción Alumno Existente: Cierra este y abre el que ya tenías de activación
+function openActivationModal() {
+    closeRegisterSelector();
+    document.getElementById('activate-modal').classList.remove('hidden');
+}
+
+// Opción Nuevo Aikidoka: Próxima fase
+function openEnrollmentForm() {
+    closeRegisterSelector();
+    showModal("INFO", "En el siguiente paso abriremos el formulario de inscripción completa.");
+    // Aquí es donde inyectaremos el formulario de tu primera captura
+}
+
     </script>
 </body>
 </html>
