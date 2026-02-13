@@ -1875,6 +1875,7 @@ function setGenMonth(m, btn) {
 }
 
 /* --- UI: GENERADOR MENSUAL FLEXIBLE --- */
+/* --- UI: GENERADOR MENSUAL CON DURACIÓN FLEXIBLE --- */
 function uiGenerateMonth() {
     const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     let monthGrid = `<div class="month-picker-grid">`;
@@ -1888,119 +1889,131 @@ function uiGenerateMonth() {
         { n: "Jueves", v: 4 }, { n: "Viernes", v: 5 }, { n: "Sábado", v: 6 }, { n: "Domingo", v: 0 }
     ];
 
-    let daysHtml = `<div style="margin-top:15px; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 15px;">`;
+    let daysHtml = `<div style="margin-top:15px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 12px; border: 1px solid var(--glass-border);">`;
+    
     days.forEach(d => {
         daysHtml += `
-            <div style="display: grid; grid-template-columns: 80px 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
-                <label style="font-size: 10px; font-weight: 800; color: var(--text-muted);">${d.n.toUpperCase()}</label>
-                <input type="time" class="modal-field gen-time-input" data-day="${d.v}" style="margin-bottom:0; padding: 8px 10px; font-size: 11px;" placeholder="H1">
-                <input type="time" class="modal-field gen-time-input" data-day="${d.v}" style="margin-bottom:0; padding: 8px 10px; font-size: 11px;" placeholder="H2">
+            <div style="display: flex; flex-direction: column; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                <label style="font-size: 10px; font-weight: 800; color: var(--accent); margin-bottom: 8px; letter-spacing: 1px;">${d.n.toUpperCase()}</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <!-- SLOT 1 -->
+                    <div style="display: flex; gap: 5px;">
+                        <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="1" style="margin-bottom:0; padding: 8px 5px; font-size: 11px; flex: 2;">
+                        <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="1" style="margin-bottom:0; padding: 8px 2px; font-size: 10px; flex: 1; min-width: 45px;">
+                            <option value="1.5">1.5h</option>
+                            <option value="1">1h</option>
+                            <option value="2">2h</option>
+                        </select>
+                    </div>
+                    <!-- SLOT 2 -->
+                    <div style="display: flex; gap: 5px;">
+                        <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="2" style="margin-bottom:0; padding: 8px 5px; font-size: 11px; flex: 2;">
+                        <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="2" style="margin-bottom:0; padding: 8px 2px; font-size: 10px; flex: 1; min-width: 45px;">
+                            <option value="1.5">1.5h</option>
+                            <option value="1">1h</option>
+                            <option value="2">2h</option>
+                        </select>
+                    </div>
+                </div>
             </div>`;
     });
     daysHtml += `</div>`;
 
-    showModal("PROGRAMAR PATRÓN MENSUAL", `
-        <div style="text-align:left;">
+    showModal("PATRÓN MENSUAL ARASHI", `
+        <div style="text-align:left; max-height: 70vh; overflow-y: auto; padding-right: 5px;">
             <span class="modal-label">AÑO:</span>
             <select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
 
-            <span class="modal-label">MES A GENERAR:</span>
+            <span class="modal-label">MES:</span>
             ${monthGrid}
 
-            <span class="modal-label">CONFIGURAR SEMANA TIPO (Días y Horas):</span>
-            <p style="font-size: 9px; color: var(--accent); margin: -5px 0 10px 10px;">RELLENA SOLO LOS DÍAS/HORAS QUE TENGAN CLASE</p>
+            <span class="modal-label">CONFIGURAR SEMANA (Hora y Duración):</span>
+            <p style="font-size: 9px; color: var(--text-muted); margin: -5px 0 10px 10px;">RELLENA HORA Y ELIGE 1h o 1.5h</p>
             ${daysHtml}
 
-            <button class="action-btn primary" onclick="processGeneration()" style="margin-top:20px;">
-                <i class="fa-solid fa-calendar-plus"></i> GENERAR CALENDARIO
+            <button class="action-btn primary" onclick="processGeneration()" style="margin-top:20px; width:100%;">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> GENERAR CALENDARIO
             </button>
-            <button class="action-btn" style="background:#334155; color:white; margin-top:10px;" onclick="closeModal()">CANCELAR</button>
+            <button class="action-btn" style="background:#334155; color:white; margin-top:10px; width:100%;" onclick="closeModal()">CANCELAR</button>
         </div>`, false);
 }
 
-/* --- LÓGICA: PROCESAR PATRÓN SEMANAL --- */
-/* --- LÓGICA: PROCESAR PATRÓN SEMANAL FLEXIBLE (UNIFICADA) --- */
+
+/* --- LÓGICA: PROCESAR PATRÓN CON DURACIÓN DINÁMICA --- */
 async function processGeneration() {
     const token = localStorage.getItem('aikido_jwt');
     const year = parseInt(document.getElementById('gen-year-select').value);
     const month = selectedMonthGen;
-    
-    // 1. BLOQUEO DE SEGURIDAD: El Dojo debe ser específico
-    const selector = document.getElementById('sensei-dojo-filter');
-    const dojoId = selector ? selector.value : "";
+    const dojoId = document.getElementById('sensei-dojo-filter').value;
 
-    if (!dojoId || dojoId === 'all' || dojoId.length < 5) {
-        showModal("⚠️ ERROR DE INTEGRIDAD", "No puedes generar un mes sin ubicación. Selecciona un DOJO específico arriba antes de lanzar el proceso.");
+    if (!dojoId || dojoId === 'all') {
+        showModal("⚠️ AVISO", "Selecciona un DOJO específico arriba antes de generar.");
         return;
     }
 
-    // 2. CAPTURAR EL PATRÓN (Días marcados y sus horas en el modal)
-    const timeInputs = document.querySelectorAll('.gen-time-input');
-    const pattern = {}; // Estructura: { "1": ["10:00", "19:00"], "2": ["19:00"] }
+    // 1. CAPTURAR EL PATRÓN COMPLETO (Hora y Duración)
+    const pattern = {}; // { dayIndex: [ {t: "10:00", d: 1.5}, ... ] }
     
-    timeInputs.forEach(input => {
-        if (input.value) {
-            const day = input.dataset.day;
-            if (!pattern[day]) pattern[day] = [];
-            pattern[day].push(input.value);
+    // Recorremos los 7 días de la semana
+    for (let day = 0; day <= 6; day++) {
+        // Miramos los 2 slots posibles por día
+        for (let slot = 1; slot <= 2; slot++) {
+            const timeInput = document.querySelector(`.gen-time-input[data-day="${day}"][data-slot="${slot}"]`);
+            const durInput = document.querySelector(`.gen-dur-input[data-day="${day}"][data-slot="${slot}"]`);
+            
+            if (timeInput && timeInput.value) {
+                if (!pattern[day]) pattern[day] = [];
+                pattern[day].push({
+                    hora: timeInput.value,
+                    duracion: parseFloat(durInput.value)
+                });
+            }
         }
-    });
+    }
 
     if (Object.keys(pattern).length === 0) {
-        alert("⚠️ Debes indicar al menos una hora en algún día de la semana para replicar.");
+        alert("Indica al menos una hora de clase.");
         return;
     }
 
     let creadas = 0;
     let ultimoDia = new Date(year, month + 1, 0).getDate();
     const btn = document.querySelector('#custom-modal .action-btn.primary');
-    
-    btn.innerText = "PROCESANDO TATAMI...";
+    btn.innerText = "SEMBrANDO KEIKOS...";
     btn.disabled = true;
 
-    // 3. RECORRER EL MES DÍA A DÍA Y CREAR SEGÚN PATRÓN
+    // 2. GENERACIÓN DÍA A DÍA
     for (let d = 1; d <= ultimoDia; d++) {
         const dateObj = new Date(year, month, d);
-        const dayOfWeek = dateObj.getDay().toString(); // 0 (Dom) a 6 (Sáb)
+        const dayOfWeek = dateObj.getDay().toString();
 
-        // Si este día de la semana tiene clases definidas en el patrón
         if (pattern[dayOfWeek]) {
-            for (const hora of pattern[dayOfWeek]) {
-                const iso = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${hora}:00.000Z`;
+            for (const entreno of pattern[dayOfWeek]) {
+                const iso = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${entreno.hora}:00.000Z`;
                 
                 try {
                     await fetch(`${API_URL}/clases`, { 
                         method: 'POST', 
-                        headers: { 
-                            'Content-Type': 'application/json', 
-                            'Authorization': `Bearer ${token}` 
-                        }, 
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
                         body: JSON.stringify({ 
                             data: { 
                                 Fecha_Hora: iso, 
-                                Duracion: 1.5, 
+                                Duracion: entreno.duracion, // <--- DURACIÓN ESPECÍFICA
                                 dojo: dojoId 
                             } 
                         }) 
                     }); 
                     creadas++;
-                } catch (err) {
-                    console.error("Error en creación individual:", err);
-                }
+                } catch (err) { console.error("Error:", err); }
             }
         }
     }
 
-    // 4. SINCRONIZACIÓN TOTAL (Zero Waste Cache)
-    // Borramos la caché unificada para que el calendario se actualice al momento
+    // 3. LIMPIEZA DE CACHÉ UNIFICADA
     localStorage.removeItem('cache_clases_archivo'); 
+    showModal("¡OSS!", `Calendario generado: ${creadas} clases creadas con éxito.`); 
     
-    // 5. FEEDBACK Y REFRESCO DE VISTA
-    showModal("¡OSS!", `Calendario generado con éxito. Se han creado ${creadas} clases vinculadas al Dojo.`); 
-    
-    if (typeof loadManageClasses === 'function') {
-        loadManageClasses(); // Refrescamos el editor para ver las clases nuevas
-    }
+    if (typeof loadManageClasses === 'function') loadManageClasses();
 }
 
 /* --- BLOQUE AUXILIAR: SELECCIÓN DE MES --- */
