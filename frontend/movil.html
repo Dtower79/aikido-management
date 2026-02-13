@@ -487,10 +487,16 @@
             background: rgba(8, 12, 21, 0.98); 
             backdrop-filter: blur(25px); 
             border-top: 1px solid var(--glass-border); 
-            display: flex; 
-            justify-content: space-evenly; 
+            
+            /* CAMBIO QUIRÚRGICO: De Flex a Grid */
+            display: grid !important; 
+            /* Forzamos 5 columnas de exactamente el mismo ancho (20% cada una) */
+            grid-template-columns: repeat(5, 1fr) !important; 
             align-items: center; 
-            padding-bottom: 15px; 
+            justify-items: center; /* Centra el contenido horizontalmente dentro de cada celda */
+            
+            /* Usamos el área segura de iPhone + 5px de margen estético */
+            padding-bottom: calc(env(safe-area-inset-bottom) + 5px); 
             z-index: 4000; 
         }
 
@@ -506,12 +512,15 @@
         .nav-item.active { color: var(--accent); }
 
         .nav-item span { 
-            font-size: 11px; 
-            font-weight: 700; 
+            font-size: 7.5px !important; /* Reducción táctica */
+            font-weight: 800; 
             margin-top: 6px; 
             text-transform: uppercase; 
+            letter-spacing: 0.3px;
+            white-space: nowrap; /* Prohibido saltar de línea */
+            text-align: center;
+            display: block;
         }
-
         .qr-inner { 
             width: 62px; 
             height: 62px; 
