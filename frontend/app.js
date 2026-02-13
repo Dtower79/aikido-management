@@ -2,20 +2,28 @@ const API_URL = "https://arashi-api.onrender.com";
 // Implementar en tu app.js o movil.html
 
 /* --- CONTROLADOR DE CATEGORÍA --- */
+/* --- CONTROLADOR DE GÉNERO (VERSIÓN CORREGIDA) --- */
 function setGender(val) {
+    console.log("🥋 Intento de cambio a:", val);
+    
     const input = document.getElementById('new-genero');
-    if (input) input.value = val;
+    const btnHombre = document.getElementById('btn-gender-home');
+    const btnMujer = document.getElementById('btn-gender-dona');
+
+    if (!input || !btnHombre || !btnMujer) return;
+
+    // 1. Guardamos el valor exacto
+    input.value = val;
     
-    const btnHome = document.getElementById('btn-gender-home');
-    const btnDona = document.getElementById('btn-gender-dona');
-    
-    // Cambiar 'HOME' por 'HOMBRE'
+    // 2. Quitamos la clase active de ambos primero para limpiar
+    btnHombre.classList.remove('active');
+    btnMujer.classList.remove('active');
+
+    // 3. Aplicamos la lógica de encendido
     if (val === 'HOMBRE') {
-        btnHome.classList.add('active');
-        btnDona.classList.remove('active');
+        btnHombre.classList.add('active');
     } else {
-        btnDona.classList.add('active');
-        btnHome.classList.remove('active');
+        btnMujer.classList.add('active');
     }
 }
 
@@ -580,7 +588,8 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
         // Carga de Género / Categoría
-        setGender(p.genero || 'HOMBRE'); // <--- CAMBIO QUIRÚRGICO
+        // Forzamos que si no hay nada o es viejo, ponga HOMBRE por defecto
+        setGender(p.genero === 'MUJER' ? 'MUJER' : 'HOMBRE'); // <--- CAMBIO QUIRÚRGICO
 
         // Carga de Seguro
         const chk = document.getElementById('new-seguro'); 

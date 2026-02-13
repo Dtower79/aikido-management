@@ -127,15 +127,12 @@
                             <div class="toggle-box">
                                 <label class="toggle-label">Género:</label>
                                 <div class="gender-pill-container">
-                                    <button type="button" id="btn-gender-home" class="gender-btn active" onclick="setGender('HOME')">HOMBRE</button>
-                                    <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('DONA')">MUJER</button>
+                                    <!-- Verifica que el onclick envíe 'HOMBRE' y 'MUJER' con mayúsculas y comillas simples -->
+                                    <button type="button" id="btn-gender-home" class="gender-btn" onclick="setGender('HOMBRE')">HOMBRE</button>
+                                    <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('MUJER')">MUJER</button>
                                 </div>
-                                <!-- Input oculto para que el form lo envíe -->
-                                <input type="hidden" id="new-genero" value="HOME">
+                                <input type="hidden" id="new-genero" value="HOMBRE">
                             </div>
-
-                        </div>
-
                         <!-- SECCIÓN TÉCNICA INTEGRADA -->
                         <div class="sidebar-sep tecnico-header">
                             <i class="fa-solid fa-graduation-cap"></i> HISTORIAL TÉCNICO Y SEMINARIOS
