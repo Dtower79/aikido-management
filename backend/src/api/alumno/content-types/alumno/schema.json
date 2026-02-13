@@ -4,7 +4,8 @@
   "info": {
     "singularName": "alumno",
     "pluralName": "alumnos",
-    "displayName": "Alumno"
+    "displayName": "Alumno",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -92,6 +93,14 @@
       "type": "component",
       "component": "alumnos.seminario",
       "repeatable": true
+    },
+    "genero": {
+      "type": "enumeration",
+      "enum": [
+        "HOME",
+        "DONA"
+      ],
+      "default": "HOME"
     }
   }
 }

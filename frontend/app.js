@@ -1,6 +1,17 @@
 const API_URL = "https://arashi-api.onrender.com";
 // Implementar en tu app.js o movil.html
 
+function setGender(val) {
+    // 1. Actualizar el valor en el input oculto
+    document.getElementById('new-genero').value = val;
+    
+    // 2. Cambiar la estética de los botones
+    document.getElementById('btn-gender-home').classList.toggle('active', val === 'HOME');
+    document.getElementById('btn-gender-dona').classList.toggle('active', val === 'DONA');
+    
+    console.log("📍 Género seleccionado:", val);
+}
+
 async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
     const cached = localStorage.getItem(`cache_${cacheKey}`);
     if (cached) {
@@ -476,13 +487,13 @@ document.addEventListener('click', (e) => {
 });
 
 
+/* --- FUNCIÓN: GUARDAR O ACTUALIZAR ALUMNO (CON CAMPO GÉNERO) --- */
 const formAlumno = document.getElementById('form-nuevo-alumno');
 if (formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
         
-        // Mapeo de seminarios (Aseguramos que 'any' sea un número)
         const seminariosData = Array.from(document.querySelectorAll('[id^="sem-"]')).map(row => {
             const anyValue = parseInt(row.querySelector('.sem-any').value);
             return {
@@ -509,8 +520,9 @@ if (formAlumno) {
             grupo: document.getElementById('new-grupo').value, 
             grado: document.getElementById('new-grado').value, 
             seguro_pagado: document.getElementById('new-seguro').checked,
+            genero: document.getElementById('new-genero').value, // <--- CAMBIO QUIRÚRGICO
             horas_acumuladas: parseFloat(document.getElementById('new-horas').value) || 0,
-            seminarios: seminariosData, // Nombre exacto de tu Strapi
+            seminarios: seminariosData,
             activo: true 
         };
         
@@ -529,14 +541,15 @@ if (formAlumno) {
                     showSection('alumnos'); 
                 });
             } else { 
-                showModal("Error", "No se pudo guardar. Revisa la consola."); 
+                showModal("Error", "No se pudo guardar en Neon. Revisa los campos."); 
             }
         } catch (error) { 
-            showModal("Error", "Fallo de conexión."); 
+            showModal("Error", "Fallo de conexión con Render."); 
         }
     });
 }
 
+/* --- FUNCIÓN: EDITAR ALUMNO (CARGA DE DATOS) --- */
 async function editarAlumno(documentId) {
     closeAlumnoActions();
     try {
@@ -559,21 +572,23 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // Seguro
+        // Carga de Género / Categoría
+        setGender(p.genero || 'HOME'); // <--- CAMBIO QUIRÚRGICO
+
+        // Carga de Seguro
         const chk = document.getElementById('new-seguro'); 
         const txt = document.getElementById('seguro-status-text'); 
         chk.checked = p.seguro_pagado === true; 
         txt.innerText = chk.checked ? "PAGADO" : "NO PAGADO";
         txt.style.color = chk.checked ? "#22c55e" : "#ef4444";
         
-        // Dojo
+        // Carga de Dojo
         let dojoId = p.dojo?.documentId || p.dojo?.data?.documentId || "";
         document.getElementById('new-dojo').value = dojoId;
 
-        // --- CARGA TÉCNICA ---
         document.getElementById('new-horas').value = p.horas_acumuladas || 0;
         const containerSem = document.getElementById('seminarios-list');
-        containerSem.innerHTML = ""; // Limpiar antes
+        containerSem.innerHTML = ""; 
         (p.seminarios || []).forEach(s => addSeminarioRow(s));
 
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; 
@@ -582,40 +597,30 @@ async function editarAlumno(documentId) {
         updateSeminariosDatalists();
         showSection('nuevo-alumno');
 
-    } catch (e) { showModal("Error", "No se pudieron cargar los datos."); }
+    } catch (e) { showModal("Error", "No se pudieron obtener los datos de Neon."); }
 }
 
+/* --- FUNCIÓN: RESET FORMULARIO --- */
 function resetForm() { 
     const f = document.getElementById('form-nuevo-alumno'); 
     if (f) f.reset(); 
     
-    // 1. Resetear visuales de seguro
+    // Reset visual de seguro
     const statusTxt = document.getElementById('seguro-status-text');
     if (statusTxt) {
         statusTxt.innerText = "NO PAGADO"; 
         statusTxt.style.color = "#ef4444"; 
     }
     
-    // 2. Resetear ID de edición y textos de botones
-    const editId = document.getElementById('edit-id');
-    const btnSubmit = document.getElementById('btn-submit-alumno');
-    const btnCancel = document.getElementById('btn-cancelar-edit');
+    // Reset visual de género (Vuelve a HOME)
+    setGender('HOME'); // <--- CAMBIO QUIRÚRGICO
     
-    if (editId) editId.value = ""; 
-    if (btnSubmit) btnSubmit.innerText = "GUARDAR ALUMNO"; 
-    if (btnCancel) btnCancel.classList.add('hidden'); 
+    document.getElementById('edit-id').value = ""; 
+    document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO"; 
+    document.getElementById('btn-cancelar-edit').classList.add('hidden'); 
+    document.getElementById('new-horas').value = 0;
+    document.getElementById('seminarios-list').innerHTML = "";
 
-    // --- AQUÍ VAN LAS NUEVAS LÍNEAS ---
-    
-    // 3. Resetear el contador de horas manual
-    const horasInput = document.getElementById('new-horas');
-    if (horasInput) horasInput.value = 0;
-
-    // 4. Vaciar la lista de seminarios añadidos
-    const semList = document.getElementById('seminarios-list');
-    if (semList) semList.innerHTML = "";
-
-    // 5. Refrescar las sugerencias de autocompletado para el siguiente uso
     updateSeminariosDatalists();
 }
 

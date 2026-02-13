@@ -761,3 +761,32 @@ button[onclick="addSeminarioRow()"]:hover {
         height: 55px !important;
     }
 }
+
+/* --- SELECTOR DE GÉNERO PREMIUM --- */
+.gender-selector {
+    display: flex;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 12px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: fit-content;
+}
+
+.gender-btn {
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 800;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 1px;
+}
+
+.gender-btn.active {
+    background: var(--accent, #ef4444);
+    color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
