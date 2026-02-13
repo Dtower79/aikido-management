@@ -1,30 +1,15 @@
 const API_URL = "https://arashi-api.onrender.com";
 // Implementar en tu app.js o movil.html
 
-/* --- CONTROLADOR DE CATEGORÍA --- */
-/* --- CONTROLADOR DE GÉNERO (VERSIÓN CORREGIDA) --- */
 function setGender(val) {
-    console.log("🥋 Intento de cambio a:", val);
+    // 1. Actualizar el valor en el input oculto
+    document.getElementById('new-genero').value = val;
     
-    const input = document.getElementById('new-genero');
-    const btnHombre = document.getElementById('btn-gender-home');
-    const btnMujer = document.getElementById('btn-gender-dona');
-
-    if (!input || !btnHombre || !btnMujer) return;
-
-    // 1. Guardamos el valor exacto
-    input.value = val;
+    // 2. Cambiar la estética de los botones
+    document.getElementById('btn-gender-home').classList.toggle('active', val === 'HOME');
+    document.getElementById('btn-gender-dona').classList.toggle('active', val === 'DONA');
     
-    // 2. Quitamos la clase active de ambos primero para limpiar
-    btnHombre.classList.remove('active');
-    btnMujer.classList.remove('active');
-
-    // 3. Aplicamos la lógica de encendido
-    if (val === 'HOMBRE') {
-        btnHombre.classList.add('active');
-    } else {
-        btnMujer.classList.add('active');
-    }
+    console.log("📍 Género seleccionado:", val);
 }
 
 async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
@@ -107,11 +92,7 @@ function logout() { localStorage.clear(); location.reload(); }
 function showDashboard() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
-    loadDojosSelect(); 
-    loadCiudades(); 
-    loadReportDojos(); 
-    updateSeminariosDatalists(); // <--- AÑADE ESTA LÍNEA AQUÍ
-    showSection('welcome');
+    loadDojosSelect(); loadCiudades(); loadReportDojos(); showSection('welcome');
 }
 
 function showSection(id) {
@@ -243,37 +224,21 @@ async function loadAlumnos(activos) {
     }
 }
 
-/* --- RENDERIZADO DE TABLA (CON SOPORTE GÉNERO Y ICONOGRAFÍA) --- */
+// Función auxiliar para pintar la tabla (limpieza de código)
 function renderTableAlumnos(data, tbody, activos) {
     tbody.innerHTML = '';
-    
-    if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${activos ? 9 : 8}" style="text-align:center; padding:20px; opacity:0.5;">No hay registros en esta sección.</td></tr>`;
-        return;
-    }
-
-    data.forEach(a => {
-        // Compatibilidad Strapi v5: extraemos de attributes o raíz
+    (data || []).forEach(a => {
         const p = a.attributes || a;
-        const id = a.documentId || a.id;
-        
-        // Sanitización para evitar errores en el onclick
+        const id = a.documentId;
         const safeNombre = escapeQuotes(p.nombre || '');
         const safeApellidos = escapeQuotes(p.apellidos || '');
-        
         const tr = document.createElement('tr');
         tr.id = `row-${id}`;
         tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
-        
-        // Lógica de icono de Género
-        const genIcon = p.genero === 'MUJER' 
-            ? ' <i class="fa-solid fa-venus" style="color:#f472b6; font-size:11px; margin-left:5px;"></i>' 
-            : ' <i class="fa-solid fa-mars" style="color:#60a5fa; font-size:11px; margin-left:5px;"></i>';
-
         tr.innerHTML = `
             ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
             <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
-            <td>${p.nombre || ''}${genIcon}</td>
+            <td>${p.nombre || ''}</td>
             <td>${p.dni || ''}</td>
             <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
             ${activos ? `<td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>` : ''}
@@ -585,25 +550,15 @@ if (formAlumno) {
 }
 
 /* --- FUNCIÓN: EDITAR ALUMNO (CARGA DE DATOS) --- */
-/* --- FUNCIÓN: EDITAR ALUMNO (CARGA DE DATOS COMPLETA) --- */
 async function editarAlumno(documentId) {
-    // 1. Limpieza de interfaz antes de cargar
     closeAlumnoActions();
-    
     try {
-        console.log("📡 [NEON] Cargando ficha de alumno:", documentId);
-        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=*`, { 
-            headers: { 'Authorization': `Bearer ${jwtToken}` } 
-        });
-        
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=*`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const json = await res.json();
         const data = json.data; 
         const p = data.attributes || data;
         
-        // 2. Almacenamos el ID para la posterior actualización (PUT)
         document.getElementById('edit-id').value = data.documentId || documentId;
-        
-        // 3. Mapeo de campos básicos
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
         document.getElementById('new-dni').value = p.dni || '';
@@ -617,39 +572,32 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // 4. Lógica de Categoría / Género (El nuevo campo)
-        setGender(p.genero === 'MUJER' ? 'MUJER' : 'HOMBRE');
+        // Carga de Género / Categoría
+        setGender(p.genero || 'HOME'); // <--- CAMBIO QUIRÚRGICO
 
-        // 5. Lógica de Seguro Anual
+        // Carga de Seguro
         const chk = document.getElementById('new-seguro'); 
         const txt = document.getElementById('seguro-status-text'); 
         chk.checked = p.seguro_pagado === true; 
         txt.innerText = chk.checked ? "PAGADO" : "NO PAGADO";
         txt.style.color = chk.checked ? "#22c55e" : "#ef4444";
         
-        // 6. Lógica de Dojo (Relación)
+        // Carga de Dojo
         let dojoId = p.dojo?.documentId || p.dojo?.data?.documentId || "";
         document.getElementById('new-dojo').value = dojoId;
 
-        // 7. Carga de Historial Técnico
         document.getElementById('new-horas').value = p.horas_acumuladas || 0;
         const containerSem = document.getElementById('seminarios-list');
-        containerSem.innerHTML = ""; // Limpieza
+        containerSem.innerHTML = ""; 
         (p.seminarios || []).forEach(s => addSeminarioRow(s));
 
-        // 8. Cambio de UI a modo Edición
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; 
-        const btnCancel = document.getElementById('btn-cancelar-edit');
-        if (btnCancel) btnCancel.classList.remove('hidden'); 
+        document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
         
-        // 9. Actualizamos sugerencias de autocompletado y mostramos sección
         updateSeminariosDatalists();
         showSection('nuevo-alumno');
 
-    } catch (e) { 
-        console.error("❌ Fallo en carga de datos:", e);
-        showModal("Error", "No se han podido obtener los datos de la base de datos de Neon."); 
-    }
+    } catch (e) { showModal("Error", "No se pudieron obtener los datos de Neon."); }
 }
 
 /* --- FUNCIÓN: RESET FORMULARIO --- */
@@ -665,7 +613,7 @@ function resetForm() {
     }
     
     // Reset visual de género (Vuelve a HOME)
-    setGender('HOMBRE'); // <--- CAMBIO QUIRÚRGICO
+    setGender('HOME'); // <--- CAMBIO QUIRÚRGICO
     
     document.getElementById('edit-id').value = ""; 
     document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO"; 
