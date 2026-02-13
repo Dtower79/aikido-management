@@ -1189,13 +1189,14 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
         /* --- CORE INIT --- */
         /* --- PARTE 1: NÚCLEO DE INICIALIZACIÓN (initApp) --- */
 /* --- NÚCLEO DE INICIALIZACIÓN: ACCESO BLINDADO --- */
+/* --- NÚCLEO DE INICIALIZACIÓN: ACCESO Y PRESELECCIÓN DE DOJO --- */
 async function initApp() {
     console.log("🚀 [INIT] Arrancando Sistema Arashi...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     const mainNav = document.getElementById('main-nav');
     
-    // 1. Reset total de visibilidad
+    // 1. RESET TOTAL DE VISIBILIDAD
     document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
             .forEach(v => v.classList.add('hidden'));
 
@@ -1228,7 +1229,7 @@ async function initApp() {
     
     showView('dashboard');
     
-    // 4. Carga de Requisitos (Zero Waste API: 24h caché)
+    // 4. CARGA DE REQUISITOS (Zero Waste API: 24h caché)
     const reqRes = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
     if (reqRes && reqRes.data) {
         requisitosGradoGlobal = reqRes.data.map(r => {
@@ -1241,38 +1242,46 @@ async function initApp() {
         });
     }
 
-    // 5. Carga de datos de alumno e identidad (Sensei vs Alumno)
+    // 5. SINCRONIZACIÓN DE FICHA E IDENTIDAD
+    // IMPORTANTE: Esta función establece 'dojoIdGlobal' basándose en la ficha de Neon
     await refreshStudentData(); 
 
-    // 6. Lógica de Permisos para el Botón 4 de la Nav Bar
+    // 6. LÓGICA DE PERMISOS Y CARGA DE FILTROS SENSEI
     const esSenseiRango = (user.is_sensei === true);
-    let esInstructorFicha = false;
-    if (alumnoGlobal) {
-        const p = alumnoGlobal.attributes || alumnoGlobal;
-        esInstructorFicha = (p.es_instructor === true);
-    }
+    const pAlu = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
+    const esInstructorFicha = (pAlu && (pAlu.es_instructor === true || pAlu.es_instructor === "true"));
     
     const navSensei = document.getElementById('nav-sensei');
+
     if (esSenseiRango || esInstructorFicha) {
+        console.log("🥋 [AUTH] Nivel de acceso: GESTOR (Sensei/Instructor).");
         if (navSensei) {
             navSensei.style.display = 'flex';
             navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
         }
+        
+        // CARGA DE FILTROS: Aquí es donde se preselecciona el Dojo del usuario
+        // Esta función ahora depende del 'dojoIdGlobal' obtenido en el paso 5.
         await loadDojosFilter(); 
+
     } else if (navSensei) {
+        // Alumno estándar: Botón de Seminarios Externos
         navSensei.style.display = 'flex';
         navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-        navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
+        navSensei.onclick = (e) => { 
+            e.preventDefault(); 
+            window.open('https://www.meetontatami.com/', '_blank'); 
+        };
     }
 
-    // 7. Sincronización del próximo Keiko
+    // 7. SINCRONIZACIÓN DEL PRÓXIMO KEIKO (Sensible al Dojo del Alumno)
     await checkTodayClass();
     
     document.documentElement.classList.add('app-loaded');
+    console.log("✨ [INIT] Sistema Arashi totalmente sincronizado.");
 }
 
-        /* --- REFRESH DATA (Sincronización v5) --- */
-/* --- REFRESH DATA (Versión Blindada v5) --- */
+  
 /* --- PARTE 2: SINCRONIZACIÓN DE FICHA Y VISUALIZACIÓN (refreshStudentData) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
@@ -1418,27 +1427,36 @@ async function refreshStudentData() {
 
         /* --- SENSEI PANEL (Agrupación y 7 días) --- */
 /* --- PANEL SENSEI: SIEMPRE EN VIVO (SIN CACHÉ) --- */
+/* --- PANEL SENSEI: LISTADO DE VALIDACIONES PENDIENTES --- */
 async function loadSenseiPanel() {
     const listDiv = document.getElementById('student-list');
     const filterEl = document.getElementById('sensei-dojo-filter');
-    const dojoFilter = filterEl ? filterEl.value : 'all';
     
-    listDiv.innerHTML = `<p style='text-align:center; opacity:0.5; padding:20px;'>Actualizando Tatami...</p>`;
+    // Capturamos el valor (que ahora vendrá preseleccionado por loadDojosFilter)
+    const dojoFilter = filterEl ? filterEl.value : (dojoIdGlobal || 'all');
+    
+    listDiv.innerHTML = `
+        <div style="margin: 0 20px 20px;">
+            <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')">
+                <i class="fa-solid fa-earth-europe"></i> VER SEMINARIOS EXTERNOS
+            </button>
+        </div>
+        <p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Tatami...</p>
+    `;
     
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - 7);
 
     try {
-        // CAMBIO QUIRÚRGICO: fetchSmart con duración 0 para forzar datos frescos
+        // Forzamos datos frescos (Zero Waste: 0 horas) para gestión de alumnos
         const endpoint = `/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100`;
         const json = await fetchSmart(endpoint, 'asistencias_sensei', 0); 
-
+        
         if (!json || !json.data) throw new Error("No hay datos");
 
         const groups = {};
         json.data.forEach(item => {
             const a = item.attributes || item; 
-            // Solo mostramos los que han pulsado "Asistir" (Confirmado)
             if ((a.Estado || a.estado || "").toLowerCase() !== 'confirmado') return;
 
             const alu = parseRelation(a.alumno);
@@ -1447,10 +1465,12 @@ async function loadSenseiPanel() {
 
             const dojo = parseRelation(cla.dojo);
             const classDate = new Date(cla.Fecha_Hora);
+            
+            // FILTRO DE SEGURIDAD
             if (classDate < limitDate) return;
-            if (dojoFilter !== 'all' && (getID(dojo) !== dojoFilter)) return;
+            if (dojoFilter !== 'all' && getID(dojo) != dojoFilter) return;
 
-            const cid = getID(cla); // Aquí usamos el documentId para el QR
+            const cid = getID(cla);
             if (!groups[cid]) groups[cid] = { info: cla, students: [] };
             groups[cid].students.push({ 
                 asistId: getID(item), 
@@ -1462,10 +1482,12 @@ async function loadSenseiPanel() {
         });
 
         const keys = Object.keys(groups);
-        listDiv.innerHTML = ""; 
+        // Mantenemos el botón de seminarios arriba
+        const topHtml = listDiv.firstElementChild.outerHTML;
+        listDiv.innerHTML = topHtml;
 
         if (keys.length === 0) {
-            listDiv.innerHTML = "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes de validar.</p>";
+            listDiv.innerHTML += "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes en esta sede.</p>";
             return;
         }
 
@@ -2223,20 +2245,41 @@ async function startQRScanner() {
         }
     }, 350);
 } // <--- FIN DE LA FUNCIÓN
-        async function loadDojosFilter() {
-            const select = document.getElementById('sensei-dojo-filter');
-            if(!select) return;
-            const res = await fetchSmart('/dojos', 'lista_dojos_sensei', 24);
-            if(res && res.data) {
-                res.data.forEach(d => {
-                    const info = d.attributes || d;
-                    const opt = document.createElement('option');
-                    opt.value = d.documentId || d.id;
-                    opt.innerText = info.nombre.replace("Aikido Arashi ", "").toUpperCase();
-                    select.appendChild(opt);
-                });
+
+
+/* --- CARGA DE FILTROS CON PRESELECCIÓN POR FICHA --- */
+async function loadDojosFilter() {
+    const select = document.getElementById('sensei-dojo-filter');
+    if (!select) return;
+
+    // Zero Waste: Caché de 24h para la lista de sedes
+    const res = await fetchSmart('/dojos', 'lista_dojos_sensei', 24);
+    
+    if (res && res.data) {
+        // Limpiamos opciones previas pero mantenemos la de "Todos"
+        select.innerHTML = '<option value="all">-- TODOS LOS DOJOS --</option>';
+        
+        res.data.forEach(d => {
+            const info = d.attributes || d;
+            const opt = document.createElement('option');
+            const dId = getID(d);
+            
+            opt.value = dId;
+            opt.innerText = info.nombre.replace("Aikido Arashi ", "").toUpperCase();
+            
+            // LÓGICA MAESTRA: Si el ID coincide con el dojo del Sensei, lo preseleccionamos
+            if (dojoIdGlobal && dId == dojoIdGlobal) {
+                opt.selected = true;
+                console.log("📍 [SENSEI] Preseleccionado Dojo:", info.nombre);
             }
-        }
+            
+            select.appendChild(opt);
+        });
+
+        // Una vez cargados los filtros y preseleccionado el dojo, refrescamos el panel
+        loadSenseiPanel();
+    }
+}
 
 /* --- PROCESADOR QR CON DEBUG PARA MÓVIL --- */
 async function procesarAsistenciaQR(classId) {
