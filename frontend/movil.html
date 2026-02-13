@@ -1803,8 +1803,8 @@ async function saveClass(id) {
         body: JSON.stringify({ data: { Fecha_Hora: `${dVal}T${tVal}:00.000Z`, Duracion: parseFloat(dur) } }) 
     }); 
 
-    // REGLA MAESTRA: Sincronización instantánea
-    localStorage.removeItem('cache_calendario_clases'); 
+    // REGLA MAESTRA: Sincronización instantánea de la sábana de clases
+    localStorage.removeItem('cache_clases_archivo'); 
     closeModal(); 
     loadManageClasses(); 
     checkTodayClass(); // Actualizamos dashboard por si era la clase de hoy
@@ -1827,7 +1827,7 @@ async function deleteClass(id) {
         if (!res.ok) throw new Error("Error en Neon/Render");
 
         // 2. REGLA ZERO WASTE: Sincronización instantánea (En ambas versiones)
-        localStorage.removeItem('cache_calendario_clases'); 
+        llocalStorage.removeItem('cache_clases_archivo');
         
         // 3. CIERRE DE INTERFAZ
         closeModal(); 
@@ -1852,161 +1852,140 @@ function setGenMonth(m, btn) {
     btn.classList.add('active'); 
 }
 
-/* --- 2. UI: ABRIR MODAL DE GENERACIÓN --- */
+/* --- UI: GENERADOR MENSUAL FLEXIBLE --- */
 function uiGenerateMonth() {
     const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-    let gridHtml = `<div class="month-picker-grid">`;
+    let monthGrid = `<div class="month-picker-grid">`;
     months.forEach((m, idx) => { 
-        gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; 
+        monthGrid += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; 
     });
-    gridHtml += `</div>`;
+    monthGrid += `</div>`;
 
-    showModal("GENERAR MES COMPLETO", `
-        <div style="text-align:left; margin-top:10px;">
+    const days = [
+        { n: "Lunes", v: 1 }, { n: "Martes", v: 2 }, { n: "Miércoles", v: 3 },
+        { n: "Jueves", v: 4 }, { n: "Viernes", v: 5 }, { n: "Sábado", v: 6 }, { n: "Domingo", v: 0 }
+    ];
+
+    let daysHtml = `<div style="margin-top:15px; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 15px;">`;
+    days.forEach(d => {
+        daysHtml += `
+            <div style="display: grid; grid-template-columns: 80px 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                <label style="font-size: 10px; font-weight: 800; color: var(--text-muted);">${d.n.toUpperCase()}</label>
+                <input type="time" class="modal-field gen-time-input" data-day="${d.v}" style="margin-bottom:0; padding: 8px 10px; font-size: 11px;" placeholder="H1">
+                <input type="time" class="modal-field gen-time-input" data-day="${d.v}" style="margin-bottom:0; padding: 8px 10px; font-size: 11px;" placeholder="H2">
+            </div>`;
+    });
+    daysHtml += `</div>`;
+
+    showModal("PROGRAMAR PATRÓN MENSUAL", `
+        <div style="text-align:left;">
             <span class="modal-label">AÑO:</span>
-            <select id="gen-year-select" class="modal-field">
-                <option value="2025">2025</option>
-                <option value="2026" selected>2026</option>
-            </select>
+            <select id="gen-year-select" class="modal-field"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
 
-            <span class="modal-label">SELECCIONA MES:</span>
-            ${gridHtml}
+            <span class="modal-label">MES A GENERAR:</span>
+            ${monthGrid}
 
-            <span class="modal-label">HORA MAÑANA (Mar):</span>
-            <input type="time" id="gen-morning" value="10:00" class="modal-field">
+            <span class="modal-label">CONFIGURAR SEMANA TIPO (Días y Horas):</span>
+            <p style="font-size: 9px; color: var(--accent); margin: -5px 0 10px 10px;">RELLENA SOLO LOS DÍAS/HORAS QUE TENGAN CLASE</p>
+            ${daysHtml}
 
-            <span class="modal-label">HORA TARDE (Mar/Jue):</span>
-            <input type="time" id="gen-afternoon" value="19:00" class="modal-field">
-
-            <button class="action-btn primary" onclick="processGeneration()" style="margin-top:10px;">
-                <i class="fa-solid fa-calendar-check"></i> GENERAR CALENDARIO
+            <button class="action-btn primary" onclick="processGeneration()" style="margin-top:20px;">
+                <i class="fa-solid fa-calendar-plus"></i> GENERAR CALENDARIO
             </button>
-        </div>`, true);
+            <button class="action-btn" style="background:#334155; color:white; margin-top:10px;" onclick="closeModal()">CANCELAR</button>
+        </div>`, false);
 }
 
-/* --- 3. LÓGICA: PROCESAR GENERACIÓN EN NEON --- */
+/* --- LÓGICA: PROCESAR PATRÓN SEMANAL --- */
+/* --- LÓGICA: PROCESAR PATRÓN SEMANAL FLEXIBLE (UNIFICADA) --- */
 async function processGeneration() {
     const token = localStorage.getItem('aikido_jwt');
     const year = parseInt(document.getElementById('gen-year-select').value);
     const month = selectedMonthGen;
-    const hM = document.getElementById('gen-morning').value;
-    const hT = document.getElementById('gen-afternoon').value;
     
-    // BLOQUEO DE SEGURIDAD: El dojo debe ser específico
-    const dojoId = document.getElementById('sensei-dojo-filter').value;
+    // 1. BLOQUEO DE SEGURIDAD: El Dojo debe ser específico
+    const selector = document.getElementById('sensei-dojo-filter');
+    const dojoId = selector ? selector.value : "";
 
-    if (!dojoId || dojoId === 'all') {
-        showModal("⚠️ AVISO", "Por favor, selecciona un DOJO específico en el panel superior antes de generar el mes.");
+    if (!dojoId || dojoId === 'all' || dojoId.length < 5) {
+        showModal("⚠️ ERROR DE INTEGRIDAD", "No puedes generar un mes sin ubicación. Selecciona un DOJO específico arriba antes de lanzar el proceso.");
+        return;
+    }
+
+    // 2. CAPTURAR EL PATRÓN (Días marcados y sus horas en el modal)
+    const timeInputs = document.querySelectorAll('.gen-time-input');
+    const pattern = {}; // Estructura: { "1": ["10:00", "19:00"], "2": ["19:00"] }
+    
+    timeInputs.forEach(input => {
+        if (input.value) {
+            const day = input.dataset.day;
+            if (!pattern[day]) pattern[day] = [];
+            pattern[day].push(input.value);
+        }
+    });
+
+    if (Object.keys(pattern).length === 0) {
+        alert("⚠️ Debes indicar al menos una hora en algún día de la semana para replicar.");
         return;
     }
 
     let creadas = 0;
     let ultimoDia = new Date(year, month + 1, 0).getDate();
-    const btn = document.querySelector('#custom-modal .action-btn.primary'); 
+    const btn = document.querySelector('#custom-modal .action-btn.primary');
     
-    btn.innerText = "GENERANDO..."; 
+    btn.innerText = "PROCESANDO TATAMI...";
     btn.disabled = true;
 
+    // 3. RECORRER EL MES DÍA A DÍA Y CREAR SEGÚN PATRÓN
     for (let d = 1; d <= ultimoDia; d++) {
         const dateObj = new Date(year, month, d);
-        const day = dateObj.getDay(); // 2 = Martes, 4 = Jueves
+        const dayOfWeek = dateObj.getDay().toString(); // 0 (Dom) a 6 (Sáb)
 
-        const send = async (h) => {
-            const iso = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${h}:00.000Z`;
-            await fetch(`${API_URL}/clases`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: 1.5, dojo: dojoId } }) 
-            }); 
-            creadas++;
-        };
-
-        if (day === 2) { await send(hM); await send(hT); } 
-        else if (day === 4) { await send(hT); }
+        // Si este día de la semana tiene clases definidas en el patrón
+        if (pattern[dayOfWeek]) {
+            for (const hora of pattern[dayOfWeek]) {
+                const iso = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${hora}:00.000Z`;
+                
+                try {
+                    await fetch(`${API_URL}/clases`, { 
+                        method: 'POST', 
+                        headers: { 
+                            'Content-Type': 'application/json', 
+                            'Authorization': `Bearer ${token}` 
+                        }, 
+                        body: JSON.stringify({ 
+                            data: { 
+                                Fecha_Hora: iso, 
+                                Duracion: 1.5, 
+                                dojo: dojoId 
+                            } 
+                        }) 
+                    }); 
+                    creadas++;
+                } catch (err) {
+                    console.error("Error en creación individual:", err);
+                }
+            }
+        }
     }
 
-    // SINCRONIZACIÓN ZERO WASTE
-    localStorage.removeItem('cache_calendario_clases'); 
-    showModal("¡OSS!", `Se han creado ${creadas} clases vinculadas al Dojo.`); 
+    // 4. SINCRONIZACIÓN TOTAL (Zero Waste Cache)
+    // Borramos la caché unificada para que el calendario se actualice al momento
+    localStorage.removeItem('cache_clases_archivo'); 
     
-    if (typeof loadManageClasses === 'function') loadManageClasses();
+    // 5. FEEDBACK Y REFRESCO DE VISTA
+    showModal("¡OSS!", `Calendario generado con éxito. Se han creado ${creadas} clases vinculadas al Dojo.`); 
+    
+    if (typeof loadManageClasses === 'function') {
+        loadManageClasses(); // Refrescamos el editor para ver las clases nuevas
+    }
 }
 
-/* --- SIGUIENTE BLOQUE: GENERACIÓN AUTOMÁTICA (Mantenlo como está) --- */
+/* --- BLOQUE AUXILIAR: SELECCIÓN DE MES --- */
 function setGenMonth(m, btn) { 
     selectedMonthGen = m; 
     document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active')); 
     btn.classList.add('active'); 
-}
-
-/* --- GENERACIÓN MASIVA MENSUAL (CON BLOQUEO DE DOJO) --- */
-async function processGeneration() {
-    const token = localStorage.getItem('aikido_jwt');
-    const year = parseInt(document.getElementById('gen-year-select').value);
-    const month = selectedMonthGen;
-    const hM = document.getElementById('gen-morning').value;
-    const hT = document.getElementById('gen-afternoon').value;
-    
-    // 1. BLOQUEO DE SEGURIDAD: Capturamos el Dojo del selector del Panel Sensei
-    const selector = document.getElementById('sensei-dojo-filter');
-    const dojoId = selector ? selector.value : "";
-
-    if (!dojoId || dojoId === 'all' || dojoId.length < 5) {
-        showModal("⚠️ ERROR DE INTEGRIDAD", "No puedes generar un mes completo en '-- TODOS LOS DOJOS --'. Debes seleccionar una sede específica arriba para ubicar los entrenamientos.");
-        return; // Detiene la ejecución antes de gastar recursos
-    }
-
-    let creadas = 0;
-    let ultimoDia = new Date(year, month + 1, 0).getDate();
-    const btn = document.querySelector('#custom-modal .action-btn.primary'); 
-    
-    btn.innerText = "GENERANDO..."; 
-    btn.disabled = true;
-
-    // 2. BUCLE DE CREACIÓN (Martes y Jueves)
-    for (let d = 1; d <= ultimoDia; d++) {
-        const dateObj = new Date(year, month, d);
-        const day = dateObj.getDay(); // 2 = Martes, 4 = Jueves
-
-        const send = async (h) => {
-            const iso = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${h}:00.000Z`;
-            
-            try {
-                await fetch(`${API_URL}/clases`, { 
-                    method: 'POST', 
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'Authorization': `Bearer ${token}` 
-                    }, 
-                    body: JSON.stringify({ 
-                        data: { 
-                            Fecha_Hora: iso, 
-                            Duracion: 1.5, 
-                            dojo: dojoId // Vinculación obligatoria
-                        } 
-                    }) 
-                }); 
-                creadas++;
-            } catch (err) {
-                console.error("Error creando clase individual:", err);
-            }
-        };
-
-        if (day === 2) { // Martes: Mañana y Tarde
-            await send(hM); 
-            await send(hT); 
-        } else if (day === 4) { // Jueves: Solo Tarde
-            await send(hT); 
-        }
-    }
-
-    // 3. ACTUALIZACIÓN INSTANTÁNEA (Zero Waste Cache Clear)
-    localStorage.removeItem('cache_calendario_clases_completo'); 
-    
-    showModal("ÉXITO", `Se han creado ${creadas} clases en el Dojo seleccionado.`); 
-    
-    // Refrescamos la lista del editor para que el Sensei vea el mes creado al momento
-    if (typeof loadManageClasses === 'function') loadManageClasses();
 }
 
         function uiCreateSingleClass() { 
@@ -2049,7 +2028,7 @@ async function processSingleClass() {
         if (!res.ok) throw new Error("Error en servidor Render");
 
         // ACTUALIZACIÓN EN TIEMPO REAL (Zero Waste Cache Invalidation)
-        localStorage.removeItem('cache_calendario_clases'); // Borramos la sábana global
+        localStorage.removeItem('cache_clases_archivo');
         
         closeModal(); 
         
@@ -2065,6 +2044,7 @@ async function processSingleClass() {
 }
         /* --- GESTIÓN DE CALENDARIO (REESTRUCTURADO) --- */
 /* --- GESTIÓN DE CALENDARIO MULTI-DOJO (REESTRUCTURADO) --- */
+/* --- CALENDARIO MULTIDDOJO (FIX DE SINCRONIZACIÓN) --- */
 async function loadMonthlyClasses(el) {
     if (el) showView('clases', el);
     const container = document.getElementById('calendar-content');
@@ -2092,24 +2072,24 @@ async function loadMonthlyClasses(el) {
     const filterDojo = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
     const listResults = document.getElementById('calendar-list-results');
     
-    // USAMOS LA LLAVE UNIFICADA: 'calendario_clases'
-    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'calendario_clases', 1);
+    // USAMOS LA LLAVE MAESTRA UNIFICADA: 'clases_archivo'
+    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'clases_archivo', 1);
     
     if (!json || !json.data) return;
 
     const grouped = {}; 
-    const hoyCorte = new Date(); 
-    hoyCorte.setHours(0,0,0,0);
+    const hoyCorte = new Date(); hoyCorte.setHours(0,0,0,0);
 
     json.data.forEach(c => {
         const d = parseData(c); 
         const dojoInfo = parseRelation(d.dojo);
-        const dId = getID(dojoInfo);
-        const fechaClase = new Date(d.Fecha_Hora);
         
-        // Filtro de fecha y Dojo
-        if (fechaClase < hoyCorte) return; 
-        if (filterDojo !== 'all' && dId != filterDojo) return;
+        // NORMALIZACIÓN DE ID: Aseguramos que comparamos Strings
+        const dId = String(getID(dojoInfo));
+        const currentFilter = String(filterDojo);
+        
+        if (new Date(d.Fecha_Hora) < hoyCorte) return; 
+        if (currentFilter !== 'all' && dId !== currentFilter) return;
 
         const f = formatTimeSafe(d.Fecha_Hora);
         if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
