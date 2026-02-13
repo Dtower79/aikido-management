@@ -1845,6 +1845,93 @@ async function deleteClass(id) {
     }
 }
 
+/* --- 1. SELECCIÓN VISUAL DE MES (HELPER) --- */
+function setGenMonth(m, btn) { 
+    selectedMonthGen = m; 
+    document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active')); 
+    btn.classList.add('active'); 
+}
+
+/* --- 2. UI: ABRIR MODAL DE GENERACIÓN --- */
+function uiGenerateMonth() {
+    const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    let gridHtml = `<div class="month-picker-grid">`;
+    months.forEach((m, idx) => { 
+        gridHtml += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; 
+    });
+    gridHtml += `</div>`;
+
+    showModal("GENERAR MES COMPLETO", `
+        <div style="text-align:left; margin-top:10px;">
+            <span class="modal-label">AÑO:</span>
+            <select id="gen-year-select" class="modal-field">
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026</option>
+            </select>
+
+            <span class="modal-label">SELECCIONA MES:</span>
+            ${gridHtml}
+
+            <span class="modal-label">HORA MAÑANA (Mar):</span>
+            <input type="time" id="gen-morning" value="10:00" class="modal-field">
+
+            <span class="modal-label">HORA TARDE (Mar/Jue):</span>
+            <input type="time" id="gen-afternoon" value="19:00" class="modal-field">
+
+            <button class="action-btn primary" onclick="processGeneration()" style="margin-top:10px;">
+                <i class="fa-solid fa-calendar-check"></i> GENERAR CALENDARIO
+            </button>
+        </div>`, true);
+}
+
+/* --- 3. LÓGICA: PROCESAR GENERACIÓN EN NEON --- */
+async function processGeneration() {
+    const token = localStorage.getItem('aikido_jwt');
+    const year = parseInt(document.getElementById('gen-year-select').value);
+    const month = selectedMonthGen;
+    const hM = document.getElementById('gen-morning').value;
+    const hT = document.getElementById('gen-afternoon').value;
+    
+    // BLOQUEO DE SEGURIDAD: El dojo debe ser específico
+    const dojoId = document.getElementById('sensei-dojo-filter').value;
+
+    if (!dojoId || dojoId === 'all') {
+        showModal("⚠️ AVISO", "Por favor, selecciona un DOJO específico en el panel superior antes de generar el mes.");
+        return;
+    }
+
+    let creadas = 0;
+    let ultimoDia = new Date(year, month + 1, 0).getDate();
+    const btn = document.querySelector('#custom-modal .action-btn.primary'); 
+    
+    btn.innerText = "GENERANDO..."; 
+    btn.disabled = true;
+
+    for (let d = 1; d <= ultimoDia; d++) {
+        const dateObj = new Date(year, month, d);
+        const day = dateObj.getDay(); // 2 = Martes, 4 = Jueves
+
+        const send = async (h) => {
+            const iso = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${h}:00.000Z`;
+            await fetch(`${API_URL}/clases`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: 1.5, dojo: dojoId } }) 
+            }); 
+            creadas++;
+        };
+
+        if (day === 2) { await send(hM); await send(hT); } 
+        else if (day === 4) { await send(hT); }
+    }
+
+    // SINCRONIZACIÓN ZERO WASTE
+    localStorage.removeItem('cache_calendario_clases'); 
+    showModal("¡OSS!", `Se han creado ${creadas} clases vinculadas al Dojo.`); 
+    
+    if (typeof loadManageClasses === 'function') loadManageClasses();
+}
+
 /* --- SIGUIENTE BLOQUE: GENERACIÓN AUTOMÁTICA (Mantenlo como está) --- */
 function setGenMonth(m, btn) { 
     selectedMonthGen = m; 
