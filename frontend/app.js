@@ -107,7 +107,11 @@ function logout() { localStorage.clear(); location.reload(); }
 function showDashboard() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
-    loadDojosSelect(); loadCiudades(); loadReportDojos(); showSection('welcome');
+    loadDojosSelect(); 
+    loadCiudades(); 
+    loadReportDojos(); 
+    updateSeminariosDatalists(); // <--- AÑADE ESTA LÍNEA AQUÍ
+    showSection('welcome');
 }
 
 function showSection(id) {
@@ -239,21 +243,37 @@ async function loadAlumnos(activos) {
     }
 }
 
-// Función auxiliar para pintar la tabla (limpieza de código)
+/* --- RENDERIZADO DE TABLA (CON SOPORTE GÉNERO Y ICONOGRAFÍA) --- */
 function renderTableAlumnos(data, tbody, activos) {
     tbody.innerHTML = '';
-    (data || []).forEach(a => {
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${activos ? 9 : 8}" style="text-align:center; padding:20px; opacity:0.5;">No hay registros en esta sección.</td></tr>`;
+        return;
+    }
+
+    data.forEach(a => {
+        // Compatibilidad Strapi v5: extraemos de attributes o raíz
         const p = a.attributes || a;
-        const id = a.documentId;
+        const id = a.documentId || a.id;
+        
+        // Sanitización para evitar errores en el onclick
         const safeNombre = escapeQuotes(p.nombre || '');
         const safeApellidos = escapeQuotes(p.apellidos || '');
+        
         const tr = document.createElement('tr');
         tr.id = `row-${id}`;
         tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
+        
+        // Lógica de icono de Género
+        const genIcon = p.genero === 'MUJER' 
+            ? ' <i class="fa-solid fa-venus" style="color:#f472b6; font-size:11px; margin-left:5px;"></i>' 
+            : ' <i class="fa-solid fa-mars" style="color:#60a5fa; font-size:11px; margin-left:5px;"></i>';
+
         tr.innerHTML = `
             ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
             <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
-            <td>${p.nombre || ''}</td>
+            <td>${p.nombre || ''}${genIcon}</td>
             <td>${p.dni || ''}</td>
             <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
             ${activos ? `<td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>` : ''}
@@ -565,15 +585,25 @@ if (formAlumno) {
 }
 
 /* --- FUNCIÓN: EDITAR ALUMNO (CARGA DE DATOS) --- */
+/* --- FUNCIÓN: EDITAR ALUMNO (CARGA DE DATOS COMPLETA) --- */
 async function editarAlumno(documentId) {
+    // 1. Limpieza de interfaz antes de cargar
     closeAlumnoActions();
+    
     try {
-        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=*`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        console.log("📡 [NEON] Cargando ficha de alumno:", documentId);
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=*`, { 
+            headers: { 'Authorization': `Bearer ${jwtToken}` } 
+        });
+        
         const json = await res.json();
         const data = json.data; 
         const p = data.attributes || data;
         
+        // 2. Almacenamos el ID para la posterior actualización (PUT)
         document.getElementById('edit-id').value = data.documentId || documentId;
+        
+        // 3. Mapeo de campos básicos
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
         document.getElementById('new-dni').value = p.dni || '';
@@ -587,33 +617,39 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // Carga de Género / Categoría
-        // Forzamos que si no hay nada o es viejo, ponga HOMBRE por defecto
-        setGender(p.genero === 'MUJER' ? 'MUJER' : 'HOMBRE'); // <--- CAMBIO QUIRÚRGICO
+        // 4. Lógica de Categoría / Género (El nuevo campo)
+        setGender(p.genero === 'MUJER' ? 'MUJER' : 'HOMBRE');
 
-        // Carga de Seguro
+        // 5. Lógica de Seguro Anual
         const chk = document.getElementById('new-seguro'); 
         const txt = document.getElementById('seguro-status-text'); 
         chk.checked = p.seguro_pagado === true; 
         txt.innerText = chk.checked ? "PAGADO" : "NO PAGADO";
         txt.style.color = chk.checked ? "#22c55e" : "#ef4444";
         
-        // Carga de Dojo
+        // 6. Lógica de Dojo (Relación)
         let dojoId = p.dojo?.documentId || p.dojo?.data?.documentId || "";
         document.getElementById('new-dojo').value = dojoId;
 
+        // 7. Carga de Historial Técnico
         document.getElementById('new-horas').value = p.horas_acumuladas || 0;
         const containerSem = document.getElementById('seminarios-list');
-        containerSem.innerHTML = ""; 
+        containerSem.innerHTML = ""; // Limpieza
         (p.seminarios || []).forEach(s => addSeminarioRow(s));
 
+        // 8. Cambio de UI a modo Edición
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; 
-        document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
+        const btnCancel = document.getElementById('btn-cancelar-edit');
+        if (btnCancel) btnCancel.classList.remove('hidden'); 
         
+        // 9. Actualizamos sugerencias de autocompletado y mostramos sección
         updateSeminariosDatalists();
         showSection('nuevo-alumno');
 
-    } catch (e) { showModal("Error", "No se pudieron obtener los datos de Neon."); }
+    } catch (e) { 
+        console.error("❌ Fallo en carga de datos:", e);
+        showModal("Error", "No se han podido obtener los datos de la base de datos de Neon."); 
+    }
 }
 
 /* --- FUNCIÓN: RESET FORMULARIO --- */
