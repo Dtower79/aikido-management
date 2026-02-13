@@ -1,15 +1,25 @@
 const API_URL = "https://arashi-api.onrender.com";
 // Implementar en tu app.js o movil.html
 
+/* --- CONTROLADOR DE CATEGORÍA --- */
 function setGender(val) {
-    // 1. Actualizar el valor en el input oculto
-    document.getElementById('new-genero').value = val;
+    console.log("🥋 Cambiando categoría a:", val);
     
-    // 2. Cambiar la estética de los botones
-    document.getElementById('btn-gender-home').classList.toggle('active', val === 'HOME');
-    document.getElementById('btn-gender-dona').classList.toggle('active', val === 'DONA');
+    // 1. Guardar valor
+    const input = document.getElementById('new-genero');
+    if (input) input.value = val;
     
-    console.log("📍 Género seleccionado:", val);
+    // 2. Actualizar visuales
+    const btnHome = document.getElementById('btn-gender-home');
+    const btnDona = document.getElementById('btn-gender-dona');
+    
+    if (val === 'HOME') {
+        btnHome.classList.add('active');
+        btnDona.classList.remove('active');
+    } else {
+        btnDona.classList.add('active');
+        btnHome.classList.remove('active');
+    }
 }
 
 async function fetchSmart(endpoint, cacheKey, durationHours = 24) {

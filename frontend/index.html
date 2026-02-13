@@ -110,24 +110,30 @@
                             <div class="form-group"><label>Grado Actual</label><select id="new-grado"><option value="">Selecciona grado...</option><option value="5º Kyu">5º Kyu</option><option value="4º Kyu">4º Kyu</option><option value="3º Kyu">3º Kyu</option><option value="2º Kyu">2º Kyu</option><option value="1º Kyu">1º Kyu</option><option value="1º Dan">1º Dan</option><option value="2º Dan">2º Dan</option><option value="3º Dan">3º Dan</option><option value="4º Dan">4º Dan</option><option value="5º Dan">5º Dan</option><option value="6º Dan">6º Dan</option><option value="7º Dan">7º Dan</option><option value="8º Dan">8º Dan</option></select></div>
                         </div>
 
-                        <!-- BLOQUE SEGURO + CATEGORÍA (GÉNERO) -->
-                        <div class="form-row" style="display: flex; align-items: center; gap: 40px; margin-bottom: 25px;">
-                            <!-- Seguro -->
-                            <div class="seguro-box" style="display: flex; align-items: center;">
-                                <label style="margin-right:15px; color:white; font-weight:bold;">Seguro Anual (<span id="current-year-lbl"></span>):</label>
-                                <label class="switch"><input type="checkbox" id="new-seguro"><span class="slider round"></span></label>
-                                <span id="seguro-status-text" style="margin-left:10px; font-size:0.9rem; color:#ef4444;">NO PAGADO</span>
+                        <!-- FILA DE GESTIÓN ADMINISTRATIVA -->
+                        <div class="admin-toggle-row">
+                            
+                            <!-- Caja Seguro -->
+                            <div class="toggle-box">
+                                <label class="toggle-label">Seguro Anual (<span id="current-year-lbl"></span>):</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="new-seguro">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span id="seguro-status-text" style="margin-left:12px; font-size:0.75rem; font-weight:800; color:#ef4444;">NO PAGADO</span>
                             </div>
 
-                            <!-- Categoría / Género -->
-                            <div class="gender-box" style="display: flex; align-items: center;">
-                                <label style="margin-right:15px; color:white; font-weight:bold;">Categoría:</label>
-                                <div class="gender-selector" style="display: flex; background: rgba(15, 23, 42, 0.6); border-radius: 12px; padding: 4px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                                    <button type="button" id="btn-gender-home" class="gender-btn active" onclick="setGender('HOME')" style="padding: 8px 20px; border: none; background: #ef4444; color: white; font-size: 0.75rem; font-weight: 800; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; letter-spacing: 1px;">HOME</button>
-                                    <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('DONA')" style="padding: 8px 20px; border: none; background: transparent; color: #94a3b8; font-size: 0.75rem; font-weight: 800; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; letter-spacing: 1px;">DONA</button>
-                                    <input type="hidden" id="new-genero" value="HOME">
+                            <!-- Caja Categoría (Género) -->
+                            <div class="toggle-box">
+                                <label class="toggle-label">Categoría:</label>
+                                <div class="gender-pill-container">
+                                    <button type="button" id="btn-gender-home" class="gender-btn active" onclick="setGender('HOME')">HOME</button>
+                                    <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('DONA')">DONA</button>
                                 </div>
+                                <!-- Input oculto para que el form lo envíe -->
+                                <input type="hidden" id="new-genero" value="HOME">
                             </div>
+
                         </div>
                         
                         <!-- SECCIÓN TÉCNICA INTEGRADA -->
