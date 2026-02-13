@@ -3,17 +3,14 @@ const API_URL = "https://arashi-api.onrender.com";
 
 /* --- CONTROLADOR DE CATEGORÍA --- */
 function setGender(val) {
-    console.log("🥋 Cambiando categoría a:", val);
-    
-    // 1. Guardar valor
     const input = document.getElementById('new-genero');
     if (input) input.value = val;
     
-    // 2. Actualizar visuales
     const btnHome = document.getElementById('btn-gender-home');
     const btnDona = document.getElementById('btn-gender-dona');
     
-    if (val === 'HOME') {
+    // Cambiar 'HOME' por 'HOMBRE'
+    if (val === 'HOMBRE') {
         btnHome.classList.add('active');
         btnDona.classList.remove('active');
     } else {
@@ -583,7 +580,7 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
         // Carga de Género / Categoría
-        setGender(p.genero || 'HOME'); // <--- CAMBIO QUIRÚRGICO
+        setGender(p.genero || 'HOMBRE'); // <--- CAMBIO QUIRÚRGICO
 
         // Carga de Seguro
         const chk = document.getElementById('new-seguro'); 
@@ -623,7 +620,7 @@ function resetForm() {
     }
     
     // Reset visual de género (Vuelve a HOME)
-    setGender('HOME'); // <--- CAMBIO QUIRÚRGICO
+    setGender('HOMBRE'); // <--- CAMBIO QUIRÚRGICO
     
     document.getElementById('edit-id').value = ""; 
     document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO"; 

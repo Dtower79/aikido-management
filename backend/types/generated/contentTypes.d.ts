@@ -405,8 +405,8 @@ export interface ApiAlumnoAlumno extends Struct.CollectionTypeSchema {
     fecha_baja: Schema.Attribute.Date;
     fecha_inicio: Schema.Attribute.Date;
     fecha_nacimiento: Schema.Attribute.Date;
-    genero: Schema.Attribute.Enumeration<['HOME', 'DONA']> &
-      Schema.Attribute.DefaultTo<'HOME'>;
+    genero: Schema.Attribute.Enumeration<['HOMBRE', 'MUJER']> &
+      Schema.Attribute.DefaultTo<'HOMBRE'>;
     grado: Schema.Attribute.String;
     grado_objetivo: Schema.Attribute.String;
     grupo: Schema.Attribute.String;

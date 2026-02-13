@@ -97,10 +97,10 @@
     "genero": {
       "type": "enumeration",
       "enum": [
-        "HOME",
-        "DONA"
+        "HOMBRE",
+        "MUJER"
       ],
-      "default": "HOME"
+      "default": "HOMBRE"
     }
   }
 }
