@@ -1939,51 +1939,74 @@ async function startQRScanner() {
             }
         }
 
+/* --- PROCESADOR QR CON DEBUG PARA MÓVIL --- */
 async function procesarAsistenciaQR(classId) {
     const token = localStorage.getItem('aikido_jwt');
-    const aluDocId = getID(alumnoGlobal);
-    if(!aluDocId) return;
+    const aluDocId = localStorage.getItem('aikido_student_doc_id'); // Usamos el ID blindado
+    
+    if(!aluDocId || aluDocId === "null") {
+        return showModal("Error", "Tu ficha de alumno no está vinculada. Avisa al administrador.");
+    }
 
     try {
-        // 1. Obtener datos de clase (Acción directa)
+        console.log("📡 [QR] Validando Clase:", classId, "para Alumno:", aluDocId);
+
+        // 1. Obtener datos de la clase para saber su duración
         const resClase = await fetch(`${API_URL}/clases/${classId}`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
+        
+        if (!resClase.ok) {
+            const errData = await resClase.json();
+            throw new Error(`Error Clase (${resClase.status}): ${errData.error?.message || 'No encontrada'}`);
+        }
+        
         const classJ = await resClase.json();
         const dataC = classJ.data.attributes || classJ.data;
         const duracion = parseFloat(dataC.Duracion || 1.5);
 
-        // 2. Registrar Asistencia
-        await fetch(`${API_URL}/asistencias`, {
+        // 2. Registrar Asistencia en Strapi v5
+        const resAsist = await fetch(`${API_URL}/asistencias`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
+            body: JSON.stringify({ 
+                data: { 
+                    alumno: aluDocId, 
+                    clase: classId, 
+                    Estado: 'Asistio' 
+                } 
+            })
         });
 
-        // 3. Sumar Horas en Strapi
+        if (!resAsist.ok) {
+            const errAsist = await resAsist.json();
+            throw new Error(`Error Registro (${resAsist.status}): ${errAsist.error?.message || 'Rechazado'}`);
+        }
+
+        // 3. Sumar Horas en el Perfil del Alumno
         const p = alumnoGlobal.attributes || alumnoGlobal;
         const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
 
-        await fetch(`${API_URL}/alumnos/${aluDocId}`, {
+        const resAlu = await fetch(`${API_URL}/alumnos/${aluDocId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
         });
 
-        // 4. INVALIDACIÓN DE CACHÉ (Para actualización instantánea)
-        localStorage.removeItem('cache_perfil_alumno');
-        localStorage.removeItem('cache_asistencias_sensei');
+        if (!resAlu.ok) throw new Error("Error al sumar horas en Neon.");
 
-        // Refrescamos UI
+        // 4. Limpieza y Refresco
+        localStorage.removeItem('cache_perfil_alumno');
         await refreshStudentData(); 
         await checkTodayClass();
         
         closeModal();
-        showModal("¡OSS!", `Asistencia registrada: +${duracion}h. Total: ${totalNuevo.toFixed(1)}h`);
+        showModal("¡OSS!", `Asistencia confirmada: +${duracion}h. Total: ${totalNuevo.toFixed(1)}h`);
 
     } catch (e) {
-        console.error("❌ Fallo en QR:", e);
-        showModal("Error", "El código QR no es válido para este Dojo.");
+        console.error("❌ Fallo Crítico QR:", e);
+        // MOSTRAMOS EL ERROR REAL EN EL MODAL PARA EL SENSEI
+        showModal("Error de Validación", `Detalle técnico: ${e.message}`);
     }
 }
 
