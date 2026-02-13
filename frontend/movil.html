@@ -1179,32 +1179,32 @@ async function initApp() {
     console.log("🚀 [INIT] Arrancando Sistema Arashi...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const mainNav = document.getElementById('main-nav');
     
-    // 1. Reset visual de vistas
+    // 1. Reset total: ocultamos todo, incluida la nav bar de inicio
     document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
             .forEach(v => v.classList.add('hidden'));
+    if (mainNav) mainNav.classList.add('hidden');
 
     // 2. Verificación de Sesión
     if (!token || !user) {
-        console.log("🔑 [AUTH] Sesión no encontrada. Redirigiendo a Login.");
+        console.log("🔑 [AUTH] Mostrando Login.");
         const lv = document.getElementById('login-view');
         if(lv) lv.classList.remove('hidden');
-        document.getElementById('main-nav').classList.add('hidden');
         document.documentElement.classList.add('app-loaded'); 
         return;
     }
 
-    // 3. Preparación de Dashboard
-    console.log("🏠 [UI] Cargando Dashboard para:", user.username);
+    // 3. Usuario validado: mostramos dashboard y nav bar
+    console.log("🏠 [UI] Cargando Dojo para:", user.username);
     const dv = document.getElementById('dashboard-view');
     if(dv) dv.classList.remove('hidden');
-    document.getElementById('main-nav').classList.remove('hidden');
+    if(mainNav) mainNav.classList.remove('hidden');
     
     showView('dashboard');
     
-    // 4. Carga de Requisitos (Zero Waste API: 24h caché)
+    // 4. Carga de Requisitos (24h caché)
     const reqRes = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
-
     if (reqRes && reqRes.data) {
         requisitosGradoGlobal = reqRes.data.map(r => {
             const item = r.attributes || r;
@@ -1214,50 +1214,33 @@ async function initApp() {
                 HORAS: parseFloat(item.Horas_Necesarias || item.horas_necesarias || 0)
             };
         });
-        console.log("✅ [DATA] Requisitos de grado sincronizados.");
     }
 
-    // 5. Sincronización de ficha de Alumno
     await refreshStudentData(); 
 
-    // 6. Lógica de Permisos de Gestión (Panel Sensei)
-    // Prioridad 1: Campo is_sensei en la tabla de Usuarios de Strapi
+    // 5. Lógica de Permisos (Panel Sensei)
     const esSenseiRango = (user.is_sensei === true);
-    
-    // Prioridad 2: Campo es_instructor en la ficha de Alumno de Neon
-    let esInstructorFuncion = false;
+    let esInstructorFicha = false;
     if (alumnoGlobal) {
         const p = alumnoGlobal.attributes || alumnoGlobal;
-        esInstructorFuncion = (p.es_instructor === true);
+        esInstructorFicha = (p.es_instructor === true);
     }
     
     const navSensei = document.getElementById('nav-sensei');
-    if (esSenseiRango || esInstructorFuncion) {
-        console.log("🥋 [AUTH] Nivel de acceso: GESTOR (Sensei/Instructor).");
+    if (esSenseiRango || esInstructorFicha) {
         if (navSensei) {
             navSensei.style.display = 'flex';
-            // Si es sensei puro, nos aseguramos de que el icono sea el de escudo
             navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
         }
         await loadDojosFilter(); 
-    } else {
-        // Alumno estándar: El botón Sensei se oculta o se convierte en Seminarios
-        if (navSensei) {
-            navSensei.style.display = 'flex'; // Lo mantenemos pero con otra función
-            navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-            navSensei.onclick = (e) => { 
-                e.preventDefault(); 
-                window.open('https://www.meetontatami.com/', '_blank'); 
-            };
-        }
+    } else if (navSensei) {
+        navSensei.style.display = 'flex';
+        navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+        navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
     }
 
-    // 7. Verificación de Keiko del día
     await checkTodayClass();
-    
-    // 8. Fin de carga (Ocultar splash/muro)
     document.documentElement.classList.add('app-loaded');
-    console.log("✨ [INIT] Sistema listo.");
 }
 
         /* --- REFRESH DATA (Sincronización v5) --- */
@@ -1578,30 +1561,37 @@ async function loadSenseiPanel() {
             }, 200);
         }
 
-        async function checkTodayClass() {
-    // Quitamos el return preventivo para que los Senseis vean la clase
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
+async function checkTodayClass() {
+    console.log("🔍 [LOGIC] Buscando próximo Keiko disponible...");
     const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
+    const btn = document.getElementById('confirm-btn');
     
-    const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&pagination[limit]=20`, { 
+    // Pedimos las próximas 20 clases con el Dojo poblado
+    const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=20`, { 
         headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
     });
     const json = await res.json();
     const ahora = new Date();
-    const btn = document.getElementById('confirm-btn');
 
     let claseElegida = null;
     let estadoAlumno = null;
 
-    for (const c of (json.data || [])) {
+    if (!json.data || json.data.length === 0) {
+        document.getElementById('next-class-time').innerText = "--:--";
+        document.getElementById('next-class-date').innerText = "Calendario vacío";
+        if(btn) btn.classList.add('hidden');
+        return;
+    }
+
+    // BUSCAMOS EL PRÓXIMO KEIKO QUE NO HAYA TERMINADO
+    for (const c of json.data) {
         const dataC = parseData(c);
         const inicio = new Date(dataC.Fecha_Hora);
-        const duracionHoras = parseFloat(dataC.Duracion || 1.5);
-        const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
+        const fin = new Date(inicio.getTime() + (parseFloat(dataC.Duracion || 1.5) * 60 * 60 * 1000));
 
-        if (ahora > fin) continue;
+        if (ahora > fin) continue; // Si ya ha terminado, saltamos a la siguiente
 
-        // Solo consultamos asistencia si hay ID de alumno
+        // Si el alumno existe, miramos si ya ha confirmado esta clase concreta
         if (aluId) {
             const cid = getID(c);
             const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
@@ -1611,7 +1601,7 @@ async function loadSenseiPanel() {
             const asistencia = chkJ.data?.[0];
             const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
 
-            if (estado === 'Asistio') continue;
+            if (estado === 'Asistio') continue; // Si ya se validó por QR, buscamos la siguiente
             estadoAlumno = estado;
         }
 
@@ -1620,15 +1610,16 @@ async function loadSenseiPanel() {
     }
 
     if (claseElegida) {
+        const d = parseData(claseElegida);
+        const dojoInfo = parseRelation(d.dojo);
         claseHoyId = getID(claseElegida);
-        const f = formatTimeSafe(parseData(claseElegida).Fecha_Hora);
+        const f = formatTimeSafe(d.Fecha_Hora);
+        
         document.getElementById('next-class-time').innerText = f.time;
-        document.getElementById('next-class-date').innerText = f.date;
+        document.getElementById('next-class-date').innerHTML = `${f.date} <br><span style="font-size:11px; color:var(--accent); font-weight:800;">${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span>`;
 
-        // --- LÓGICA DE BOTÓN DINÁMICA ---
         if (!alumnoGlobal) {
-            // Es un Sensei sin ficha de alumno: Ve la clase pero no el botón
-            btn.classList.add('hidden');
+            btn.classList.add('hidden'); // Sensei maestro no ve botón
         } else {
             btn.classList.remove('hidden');
             if (estadoAlumno === 'Confirmado') {
@@ -1645,7 +1636,7 @@ async function loadSenseiPanel() {
         }
     } else {
         document.getElementById('next-class-time').innerText = "--:--";
-        document.getElementById('next-class-date').innerText = "No hay más keikos hoy";
+        document.getElementById('next-class-date').innerText = "No hay clases programadas";
         btn.classList.add('hidden');
     }
 }
@@ -1879,60 +1870,60 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         showModal("Error", "DNI o contraseña incorrectos."); 
     }
 });
-        async function startQRScanner() {
-            if (!alumnoGlobal) return showModal("Aviso", "Perfil no cargado.");
+/* --- BLOQUE ÚNICO: ESCÁNER QR ARASHI (CORREGIDO Y CENTRADO) --- */
+async function startQRScanner() {
+    if (!alumnoGlobal) return showModal("Aviso", "Perfil no cargado correctamente.");
 
-            showModal("ESCANEAR ASISTENCIA", `
-                <div style="margin-top:10px;">
-                    <div id="qr-reader" style="width:100%; border-radius:20px; overflow:hidden; background:#000;"></div>
-                    <p id="scan-status" style="font-size:12px; color:var(--text-muted); margin-top:15px;">
-                        Enfoca el código del Sensei...
-                    </p>
-                </div>
-            `, true);
+    // 1. UI: Forzamos el centrado total del lector dentro del modal
+    showModal("ESCANEAR ASISTENCIA", `
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; margin-top:10px;">
+            <div id="qr-reader" style="width:280px; height:280px; border-radius:25px; overflow:hidden; background:#000; border:4px solid var(--accent);"></div>
+            <p id="scan-status" style="font-size:12px; color:var(--text-muted); margin-top:20px; text-align:center; font-weight:700;">
+                <i class="fa-solid fa-expand" style="color:var(--accent)"></i> ENFOCA EL CÓDIGO DEL SENSEI
+            </p>
+        </div>
+    `, true);
 
-            // --- SUSTITUYE ESTA PARTE DENTRO DE startQRScanner ---
-        setTimeout(async () => {
-                try {
-                    const qrReaderEl = document.getElementById('qr-reader');
-                    html5QrCode = new Html5Qrcode("qr-reader");
+    // 2. Ejecución del motor del escáner
+    setTimeout(async () => {
+        try {
+            const qrReaderEl = document.getElementById('qr-reader');
+            if (!qrReaderEl) return;
+
+            // Instancia global
+            html5QrCode = new Html5Qrcode("qr-reader");
+            
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const config = { fps: 15, qrbox: { width: 220, height: 220 } };
+
+            // ARRANQUE DE CÁMARA
+            const constraints = isMobile ? { facingMode: "environment" } : { facingMode: "user" };
+
+            await html5QrCode.start(
+                constraints, 
+                config, 
+                async (decodedText) => {
+                    // --- ÉXITO AL LEER ---
+                    console.log("🎯 QR Capturado:", decodedText);
+                    document.getElementById('scan-status').innerHTML = "<span style='color:var(--success)'>¡CÓDIGO LEÍDO! PROCESANDO...</span>";
                     
-                    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-                    
-                    // Configuración de escaneo (común para ambos)
-                    const config = { fps: 15, qrbox: { width: 220, height: 220 } };
-
-                    try {
-                        // INTENTO 1: Con restricciones (trasera en móvil)
-                        const constraints = isMobile ? { facingMode: "environment" } : { facingMode: "user" };
-                        await html5QrCode.start(constraints, config, onScanSuccess);
-                    } catch (err) {
-                        console.warn("⚠️ Intento 1 fallido, probando cámara por defecto...", err);
-                        // INTENTO 2: Sin ninguna restricción (lo que el navegador decida)
-                        // Esto soluciona el OverconstrainedError en PC
-                        await html5QrCode.start({ deviceId: { undefined } }, config, onScanSuccess);
+                    // APAGADO SEGURO: Solo si está escaneando
+                    if (html5QrCode && html5QrCode.getState() === 2) { // 2 = SCANNING
+                        await html5QrCode.stop().catch(e => console.warn(e));
                     }
-
-                } catch (err) {
-                    console.error("❌ Error final Cámara:", err);
-                    showModal("Error", "No se pudo activar la cámara. Asegúrate de dar permisos en el navegador.");
+                    
+                    // PROCESAR ASISTENCIA
+                    procesarAsistenciaQR(decodedText);
                 }
-            }, 300);
+            );
 
-            // Función auxiliar para no repetir código
-            async function onScanSuccess(decodedText) {
-                console.log("🎯 QR Capturado:", decodedText);
-                document.getElementById('scan-status').innerText = "¡CÓDIGO LEÍDO! PROCESANDO...";
-                
-                // Apagado seguro: solo si está corriendo
-                if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) {
-                    await html5QrCode.stop().catch(() => {});
-                }
-                
-                procesarAsistenciaQR(decodedText);
-            }
+        } catch (err) {
+            console.error("❌ Error Cámara:", err);
+            const status = document.getElementById('scan-status');
+            if(status) status.innerHTML = "<span style='color:var(--accent)'>ERROR: ACTIVA LOS PERMISOS DE CÁMARA</span>";
         }
-
+    }, 350);
+} // <--- FIN DE LA FUNCIÓN
         async function loadDojosFilter() {
             const select = document.getElementById('sensei-dojo-filter');
             if(!select) return;
@@ -1948,24 +1939,28 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             }
         }
 
-        async function procesarAsistenciaQR(classId) {
+async function procesarAsistenciaQR(classId) {
     const token = localStorage.getItem('aikido_jwt');
     const aluDocId = getID(alumnoGlobal);
     if(!aluDocId) return;
 
     try {
-        // 1. Obtener datos de clase (desde cache de 168h si es posible)
-        const resClase = await fetchSmart(`/clases/${classId}`, null, 0); // Pedimos directo porque es acción real
-        const duracion = parseFloat(resClase.data.attributes?.Duracion || resClase.data.Duracion || 1.5);
+        // 1. Obtener datos de clase (Acción directa)
+        const resClase = await fetch(`${API_URL}/clases/${classId}`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        });
+        const classJ = await resClase.json();
+        const dataC = classJ.data.attributes || classJ.data;
+        const duracion = parseFloat(dataC.Duracion || 1.5);
 
-        // 2. Registrar Asistencia (1 API Call)
+        // 2. Registrar Asistencia
         await fetch(`${API_URL}/asistencias`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
         });
 
-        // 3. Sumar Horas en Strapi (1 API Call)
+        // 3. Sumar Horas en Strapi
         const p = alumnoGlobal.attributes || alumnoGlobal;
         const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
 
@@ -1975,26 +1970,20 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
         });
 
-        // 4. --- MATEMÁTICA LOCAL (EL TRUCO) ---
-        // Actualizamos el objeto global y la cache sin hacer GET
-        if(alumnoGlobal.attributes) alumnoGlobal.attributes.horas_acumuladas = totalNuevo;
-        else alumnoGlobal.horas_acumuladas = totalNuevo;
-        
-        const cacheData = JSON.parse(localStorage.getItem('cache_perfil_alumno'));
-        if(cacheData) {
-            if(cacheData.data.attributes) cacheData.data.attributes.horas_acumuladas = totalNuevo;
-            else cacheData.data.horas_acumuladas = totalNuevo;
-            localStorage.setItem('cache_perfil_alumno', JSON.stringify({ time: Date.now(), data: cacheData.data }));
-        }
+        // 4. INVALIDACIÓN DE CACHÉ (Para actualización instantánea)
+        localStorage.removeItem('cache_perfil_alumno');
+        localStorage.removeItem('cache_asistencias_sensei');
 
-        // Refrescamos UI desde memoria local (0 API Calls)
-        localStorage.removeItem('cache_perfil_alumno'); // Forzamos al portero a pedir datos nuevos
-        updateDashboardUI(); 
+        // Refrescamos UI
+        await refreshStudentData(); 
+        await checkTodayClass();
+        
         closeModal();
-        showModal("¡OSS!", `Has sumado ${duracion}h. Total: ${totalNuevo.toFixed(1)}h`);
+        showModal("¡OSS!", `Asistencia registrada: +${duracion}h. Total: ${totalNuevo.toFixed(1)}h`);
 
     } catch (e) {
-        showModal("Error", "No se pudo validar el QR.");
+        console.error("❌ Fallo en QR:", e);
+        showModal("Error", "El código QR no es válido para este Dojo.");
     }
 }
 
