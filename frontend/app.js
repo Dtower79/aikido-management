@@ -1,15 +1,31 @@
 const API_URL = "https://arashi-api.onrender.com";
 // Implementar en tu app.js o movil.html
 
+/* --- CONTROLADOR DE GÉNERO (HOMBRE / MUJER) --- */
 function setGender(val) {
-    // 1. Actualizar el valor en el input oculto
-    document.getElementById('new-genero').value = val;
+    console.log("🥋 Cambio de categoría detectado:", val);
     
-    // 2. Cambiar la estética de los botones
-    document.getElementById('btn-gender-home').classList.toggle('active', val === 'HOME');
-    document.getElementById('btn-gender-dona').classList.toggle('active', val === 'DONA');
+    const input = document.getElementById('new-genero');
+    const btnHombre = document.getElementById('btn-gender-home');
+    const btnMujer = document.getElementById('btn-gender-dona');
+
+    if (!input || !btnHombre || !btnMujer) return;
+
+    // Guardamos el valor para Strapi
+    input.value = val;
     
-    console.log("📍 Género seleccionado:", val);
+    // Sincronización visual de botones
+    if (val === 'HOMBRE') {
+        btnHombre.classList.add('active');
+        btnHombre.style.background = "#ef4444"; btnHombre.style.color = "white";
+        btnMujer.classList.remove('active');
+        btnMujer.style.background = "transparent"; btnMujer.style.color = "#94a3b8";
+    } else {
+        btnMujer.classList.add('active');
+        btnMujer.style.background = "#ef4444"; btnMujer.style.color = "white";
+        btnHombre.classList.remove('active');
+        btnHombre.style.background = "transparent"; btnHombre.style.color = "#94a3b8";
+    }
 }
 
 async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
@@ -225,20 +241,32 @@ async function loadAlumnos(activos) {
 }
 
 // Función auxiliar para pintar la tabla (limpieza de código)
+/* --- RENDERIZADO DE TABLA (CON ICONOGRAFÍA DE GÉNERO) --- */
 function renderTableAlumnos(data, tbody, activos) {
     tbody.innerHTML = '';
-    (data || []).forEach(a => {
+    if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${activos ? 9 : 8}" style="text-align:center; padding:20px; opacity:0.5;">No hay registros en esta sección.</td></tr>`;
+        return;
+    }
+
+    data.forEach(a => {
         const p = a.attributes || a;
-        const id = a.documentId;
+        const id = a.documentId || a.id;
         const safeNombre = escapeQuotes(p.nombre || '');
         const safeApellidos = escapeQuotes(p.apellidos || '');
+        
+        // Icono dinámico según género
+        const genIcon = p.genero === 'MUJER' 
+            ? ' <i class="fa-solid fa-venus" style="color:#f472b6; font-size:11px; margin-left:5px;"></i>' 
+            : ' <i class="fa-solid fa-mars" style="color:#60a5fa; font-size:11px; margin-left:5px;"></i>';
+
         const tr = document.createElement('tr');
         tr.id = `row-${id}`;
         tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
         tr.innerHTML = `
             ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
             <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
-            <td>${p.nombre || ''}</td>
+            <td>${p.nombre || ''}${genIcon}</td>
             <td>${p.dni || ''}</td>
             <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
             ${activos ? `<td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>` : ''}
@@ -488,6 +516,7 @@ document.addEventListener('click', (e) => {
 
 
 /* --- FUNCIÓN: GUARDAR O ACTUALIZAR ALUMNO (CON CAMPO GÉNERO) --- */
+/* --- EVENTO SUBMIT: GUARDAR EN NEON --- */
 const formAlumno = document.getElementById('form-nuevo-alumno');
 if (formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
@@ -520,7 +549,7 @@ if (formAlumno) {
             grupo: document.getElementById('new-grupo').value, 
             grado: document.getElementById('new-grado').value, 
             seguro_pagado: document.getElementById('new-seguro').checked,
-            genero: document.getElementById('new-genero').value, // <--- CAMBIO QUIRÚRGICO
+            genero: document.getElementById('new-genero').value, // <--- INTEGRADO AQUÍ
             horas_acumuladas: parseFloat(document.getElementById('new-horas').value) || 0,
             seminarios: seminariosData,
             activo: true 
@@ -541,7 +570,7 @@ if (formAlumno) {
                     showSection('alumnos'); 
                 });
             } else { 
-                showModal("Error", "No se pudo guardar en Neon. Revisa los campos."); 
+                showModal("Error", "Fallo al guardar. Revisa los permisos de Strapi."); 
             }
         } catch (error) { 
             showModal("Error", "Fallo de conexión con Render."); 
@@ -550,15 +579,20 @@ if (formAlumno) {
 }
 
 /* --- FUNCIÓN: EDITAR ALUMNO (CARGA DE DATOS) --- */
+/* --- CARGA DE FICHA PARA EDICIÓN (VINCULACIÓN GÉNERO) --- */
 async function editarAlumno(documentId) {
     closeAlumnoActions();
     try {
-        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=*`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const res = await fetch(`${API_URL}/api/alumnos/${documentId}?populate=*`, { 
+            headers: { 'Authorization': `Bearer ${jwtToken}` } 
+        });
         const json = await res.json();
         const data = json.data; 
         const p = data.attributes || data;
         
+        // Asignamos el DocumentID para el futuro PUT
         document.getElementById('edit-id').value = data.documentId || documentId;
+        
         document.getElementById('new-nombre').value = p.nombre || '';
         document.getElementById('new-apellidos').value = p.apellidos || '';
         document.getElementById('new-dni').value = p.dni || '';
@@ -572,52 +606,61 @@ async function editarAlumno(documentId) {
         document.getElementById('new-grado').value = p.grado || '';
         document.getElementById('new-grupo').value = p.grupo || 'Full Time';
         
-        // Carga de Género / Categoría
-        setGender(p.genero || 'HOME'); // <--- CAMBIO QUIRÚRGICO
+        // Sincronizar el selector de Género
+        setGender(p.genero === 'MUJER' ? 'MUJER' : 'HOMBRE');
 
-        // Carga de Seguro
+        // Sincronizar Seguro
         const chk = document.getElementById('new-seguro'); 
         const txt = document.getElementById('seguro-status-text'); 
         chk.checked = p.seguro_pagado === true; 
         txt.innerText = chk.checked ? "PAGADO" : "NO PAGADO";
         txt.style.color = chk.checked ? "#22c55e" : "#ef4444";
         
-        // Carga de Dojo
+        // Sincronizar Dojo
         let dojoId = p.dojo?.documentId || p.dojo?.data?.documentId || "";
         document.getElementById('new-dojo').value = dojoId;
 
+        // Carga Técnica
         document.getElementById('new-horas').value = p.horas_acumuladas || 0;
         const containerSem = document.getElementById('seminarios-list');
         containerSem.innerHTML = ""; 
         (p.seminarios || []).forEach(s => addSeminarioRow(s));
 
         document.getElementById('btn-submit-alumno').innerText = "ACTUALIZAR ALUMNO"; 
-        document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
+        const btnCancel = document.getElementById('btn-cancelar-edit');
+        if (btnCancel) btnCancel.classList.remove('hidden'); 
         
         updateSeminariosDatalists();
         showSection('nuevo-alumno');
 
-    } catch (e) { showModal("Error", "No se pudieron obtener los datos de Neon."); }
+    } catch (e) { 
+        console.error("Error al cargar alumno:", e);
+        showModal("Error", "No se pudo conectar con Neon para obtener la ficha."); 
+    }
 }
 
 /* --- FUNCIÓN: RESET FORMULARIO --- */
+/* --- RESET TOTAL DEL FORMULARIO --- */
 function resetForm() { 
     const f = document.getElementById('form-nuevo-alumno'); 
     if (f) f.reset(); 
     
-    // Reset visual de seguro
+    // Reset Seguro
     const statusTxt = document.getElementById('seguro-status-text');
     if (statusTxt) {
         statusTxt.innerText = "NO PAGADO"; 
         statusTxt.style.color = "#ef4444"; 
     }
     
-    // Reset visual de género (Vuelve a HOME)
-    setGender('HOME'); // <--- CAMBIO QUIRÚRGICO
+    // Reset Género al valor por defecto
+    setGender('HOMBRE');
     
+    // Reset IDs y Botones
     document.getElementById('edit-id').value = ""; 
     document.getElementById('btn-submit-alumno').innerText = "GUARDAR ALUMNO"; 
-    document.getElementById('btn-cancelar-edit').classList.add('hidden'); 
+    const btnCancel = document.getElementById('btn-cancelar-edit');
+    if (btnCancel) btnCancel.classList.add('hidden'); 
+    
     document.getElementById('new-horas').value = 0;
     document.getElementById('seminarios-list').innerHTML = "";
 
