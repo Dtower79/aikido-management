@@ -16,7 +16,7 @@
       "purpose": "any"
     },
     {
-      "src": "img/logo-arashi-movil.png",
+      "src": "img/logo_sin_fondo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
