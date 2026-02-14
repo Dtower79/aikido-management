@@ -10,16 +10,16 @@
   "scope": "./",
   "icons": [
     {
-      "src": "img/logo-arashi-movil.png",
+      "src": "img/logo-arashi2.jpeg",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "img/logo_sin_fondo.png",
+      "src": "img/logo-arashi-movil.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     }
   ],
   "screenshots": [
