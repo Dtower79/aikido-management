@@ -2787,22 +2787,37 @@ function openEnrollmentForm() {
 
 // 1. Abrir el formulario y cargar Dojos
 // 2. CARGA DE DOJOS Y APERTURA DE FORMULARIO
+
 async function openEnrollmentForm() {
     closeRegisterSelector();
     document.getElementById('enrollment-modal').classList.remove('hidden');
     
     const select = document.getElementById('ins-dojo');
-    // Cargamos los dojos reales de vuestra base de datos
-    const res = await fetchSmart('/dojos', 'lista_dojos_ins', 24);
-    if (res && res.data) {
-        select.innerHTML = '<option value="">Selecciona Dojo...</option>';
-        res.data.forEach(d => {
-            const info = d.attributes || d;
-            const opt = document.createElement('option');
-            opt.value = d.documentId || d.id;
-            opt.innerText = info.nombre.toUpperCase().replace("AIKIDO ARASHI ", "");
-            select.appendChild(opt);
-        });
+    select.innerHTML = '<option value="">Cargando sedes...</option>';
+
+    try {
+        // LLAMADA ABIERTA (Sin token, para que los nuevos puedan ver los dojos)
+        // Usamos la URL limpia para evitar el error de /api/api
+        const res = await fetch(`${API_URL}/dojos`);
+        const json = await res.json();
+
+        if (json && json.data) {
+            select.innerHTML = '<option value="">Selecciona Dojo...</option>';
+            json.data.forEach(d => {
+                const info = d.attributes || d;
+                const opt = document.createElement('option');
+                // Guardamos el documentId para que Strapi v5 lo reconozca
+                opt.value = d.documentId || d.id;
+                // Limpiamos el nombre para que quede estético
+                opt.innerText = info.nombre.toUpperCase().replace("AIKIDO ARASHI ", "");
+                select.appendChild(opt);
+            });
+        } else {
+            select.innerHTML = '<option value="">Error: No hay Dojos activos</option>';
+        }
+    } catch (e) {
+        console.error("❌ Fallo al cargar dojos para inscripción:", e);
+        select.innerHTML = '<option value="">Error de conexión con el Dojo</option>';
     }
 }
 
