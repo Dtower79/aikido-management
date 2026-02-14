@@ -950,6 +950,17 @@
     color: white;
     box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
 }
+/* --- ZONA DE SEGURIDAD PARA SCROLL (FIX NAV BAR) --- */
+#calendar-list-results, #student-list {
+    /* Altura de la nav bar (85px) + Saliente del QR (20px) + Margen de cortesía (35px) */
+    padding-bottom: 140px !important; 
+}
+
+/* Aseguramos que el contenedor principal permita el scroll total */
+#app-content {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
     </style>
 </head>
 <body>
@@ -2316,9 +2327,7 @@ async function processSingleClass() {
         showModal("Error", "No se pudo conectar con Neon para registrar la clase.");
     }
 }
-        /* --- GESTIÓN DE CALENDARIO (REESTRUCTURADO) --- */
-/* --- GESTIÓN DE CALENDARIO MULTI-DOJO (REESTRUCTURADO) --- */
-/* --- CALENDARIO MULTIDDOJO (FIX DE SINCRONIZACIÓN) --- */
+/* --- GESTIÓN DE CALENDARIO (CON FIX DE SCROLL) --- */
 async function loadMonthlyClasses(el) {
     if (el) showView('clases', el);
     const container = document.getElementById('calendar-content');
@@ -2339,15 +2348,18 @@ async function loadMonthlyClasses(el) {
                     ${options}
                 </select>
             </div>
-            <div id="calendar-list-results"></div>
+            <div id="calendar-list-results" style="padding-bottom: 140px;"></div>
         `;
     }
 
     const filterDojo = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
     const listResults = document.getElementById('calendar-list-results');
     
-    // USAMOS LA LLAVE MAESTRA UNIFICADA: 'clases_archivo'
-    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'clases_archivo', 1);
+    // Reset de scroll al cambiar filtro
+    window.scrollTo(0,0);
+    listResults.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Keikos...</p>";
+
+    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'cache_clases_archivo', 1);
     
     if (!json || !json.data) return;
 
@@ -2357,8 +2369,6 @@ async function loadMonthlyClasses(el) {
     json.data.forEach(c => {
         const d = parseData(c); 
         const dojoInfo = parseRelation(d.dojo);
-        
-        // NORMALIZACIÓN DE ID: Aseguramos que comparamos Strings
         const dId = String(getID(dojoInfo));
         const currentFilter = String(filterDojo);
         
@@ -2388,8 +2398,7 @@ async function loadMonthlyClasses(el) {
         });
     }
     listResults.innerHTML = html || "<p style='text-align:center; padding:40px; opacity:0.5;'>No hay keikos programados en este Dojo.</p>";
-} // <--- AQUÍ TERMINA CORRECTAMENTE loadMonthlyClasses
-
+}
 /* --- ASISTENCIA (FUNCIÓN INDEPENDIENTE) --- */
 async function confirmAttendance() {
     if (!claseHoyId || !alumnoGlobal) return;
