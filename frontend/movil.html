@@ -2832,11 +2832,10 @@ function setEnrollmentGender(val) {
 
 // 3. Procesar el alta completa (Ficha + Usuario)
 /* --- PROCESO DE ALTA COMPLETA (FICHA NEON + USUARIO STRAPI) --- */
-/* --- PROCESO DE ALTA COMPLETA (FICHA NEON + USUARIO STRAPI) --- */
+/* --- PROCESO DE ALTA COMPLETA (FIX: DIRECCIÓN, POBLACIÓN, CP) --- */
 async function handleEnrollmentSubmit(event) {
     event.preventDefault();
     
-    // 1. Validaciones Previas
     const p1 = document.getElementById('ins-pass').value;
     const p2 = document.getElementById('ins-pass-confirm').value;
     const nombre = document.getElementById('ins-nombre').value.trim();
@@ -2853,15 +2852,11 @@ async function handleEnrollmentSubmit(event) {
     btn.disabled = true;
 
     try {
-        // PASO A: Registro Básico (Solo lo que Strapi v5 permite)
-        const regRes = await fetch(`${API_URL}/auth/local/register`, {
+        // PASO A: Registro en Strapi
+        const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: dni,
-                email: email,
-                password: p1
-            })
+            body: JSON.stringify({ username: dni, email: email, password: p1 })
         });
         
         const regData = await regRes.json();
@@ -2870,53 +2865,50 @@ async function handleEnrollmentSubmit(event) {
         const userJwt = regData.jwt;
         const userId = regData.user.id;
 
-        // PASO B: Actualizar el Usuario con Nombre y Apellidos 
-        // (Esto es necesario para que initApp() funcione bien después)
-        await fetch(`${API_URL}/users/me`, {
+        // PASO B: Actualizar Nombre y Apellidos en User
+        await fetch(`${API_URL}/api/users/me`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userJwt}` 
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userJwt}` },
             body: JSON.stringify({ nombre, apellidos })
         });
 
-        // PASO C: Crear Ficha de Alumno en Neon
+        // PASO C: Crear Ficha en Neon (DIRECCIÓN INCLUIDA)
         const alumnoData = {
             nombre: nombre,
             apellidos: apellidos,
             dni: dni,
             email: email,
             fecha_nacimiento: document.getElementById('ins-nacimiento').value,
-            fecha_inicio: new Date().toISOString().split('T')[0], // Alta automática
+            fecha_inicio: new Date().toISOString().split('T')[0],
             telefono: document.getElementById('ins-telefono').value,
             genero: document.getElementById('ins-genero').value,
             dojo: document.getElementById('ins-dojo').value,
             grupo: document.getElementById('ins-grupo').value,
+            // --- CAMPOS RECUPERADOS ---
+            direccion: document.getElementById('ins-direccion').value,
+            poblacion: document.getElementById('ins-poblacion').value,
+            cp: document.getElementById('ins-cp').value,
+            // --------------------------
             grado: "S/G",
             activo: true,
-            cuenta_usuario: userId // Vinculamos ID de usuario
+            cuenta_usuario: userId
         };
 
-        const aluRes = await fetch(`${API_URL}/alumnos`, {
+        const aluRes = await fetch(`${API_URL}/api/alumnos`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userJwt}` 
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userJwt}` },
             body: JSON.stringify({ data: alumnoData })
         });
 
         if (aluRes.ok) {
             document.getElementById('enrollment-modal').classList.add('hidden');
-            showModal("¡BIENVENIDO!", `Hola ${nombre}, tu ficha ha sido creada. Ya puedes entrar al Dojo con tu DNI.`);
+            showModal("¡BIENVENIDO!", `Hola ${nombre}, tu ficha ha sido creada. Ya puedes entrar con tu DNI.`);
             event.target.reset();
         } else {
-            throw new Error("Usuario creado pero error al generar ficha técnica.");
+            throw new Error("Error al generar ficha técnica en Neon.");
         }
 
     } catch (err) {
-        console.error("❌ Error en Inscripción:", err);
         showModal("Error de Registro", err.message);
     } finally {
         btn.innerHTML = originalText; btn.disabled = false;
