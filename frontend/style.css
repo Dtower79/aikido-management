@@ -817,75 +817,70 @@ button[onclick="addSeminarioRow()"]:hover {
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
-/* --- BARRA DE CONTROL ADMINISTRATIVO (DISEÑO UNIFICADO) --- */
+/* --- BARRA DE CONTROL ADMINISTRATIVO ARASHI --- */
 .admin-control-bar {
     display: flex;
     align-items: center;
-    background: rgba(15, 23, 42, 0.4); /* Fondo cristal oscuro */
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Borde sutil */
+    background: rgba(15, 23, 42, 0.6) !important; /* Fondo único para toda la barra */
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 16px;
-    padding: 10px 25px;
+    padding: 12px 25px;
     margin: 25px 0;
-    width: fit-content; /* Se ajusta al contenido */
-    gap: 20px;
+    width: fit-content;
+    gap: 30px;
 }
 
 .control-item {
     display: flex;
     align-items: center;
     gap: 15px;
+    background: transparent !important; /* Quitamos fondos individuales */
+    border: none !important; /* Quitamos bordes individuales */
+    padding: 0 !important;
 }
 
 .control-item label {
-    color: #94a3b8; /* Texto muted */
+    color: #94a3b8;
     font-weight: 800;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-}
-
-.control-action {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-#seguro-status-text {
-    font-size: 0.75rem;
-    font-weight: 800;
-    min-width: 80px;
-    color: #ef4444; /* Rojo por defecto */
+    margin: 0;
 }
 
 .control-separator {
     width: 1px;
-    height: 30px;
-    background: rgba(255, 255, 255, 0.1); /* Línea divisoria */
+    height: 25px;
+    background: rgba(255, 255, 255, 0.15);
 }
 
-/* Rediseño de los botones de Género para la barra */
+/* Pill de Género dentro de la barra */
 .gender-pill-container {
     display: flex;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.4);
     padding: 3px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
 }
 
 .gender-btn {
-    padding: 8px 20px;
+    padding: 6px 15px;
     border: none;
     background: transparent;
-    color: #64748b;
-    font-size: 0.75rem;
+    color: #475569;
+    font-size: 0.7rem;
     font-weight: 800;
-    border-radius: 10px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: 0.3s;
 }
 
 .gender-btn.active {
-    background: #ef4444; /* Rojo Arashi */
+    background: #ef4444;
     color: white;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+#seguro-status-text {
+    font-size: 0.7rem;
+    font-weight: 800;
+    margin-left: 8px;
 }

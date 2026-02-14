@@ -111,25 +111,34 @@
                         </div>
 
                         <!-- BLOQUE SEGURO + GÉNERO (CORREGIDO HOMBRE/MUJER) -->
-<div class="form-row" style="display: flex; align-items: center; gap: 40px; margin-bottom: 25px;">
+<!-- BARRA DE CONTROL ADMINISTRATIVO UNIFICADA -->
+<!-- BLOQUE ADMINISTRATIVO INTEGRADO -->
+<div class="admin-control-bar">
+    
     <!-- Seguro -->
-    <div class="seguro-box" style="display: flex; align-items: center;">
-        <label style="margin-right:15px; color:white; font-weight:bold;">Seguro Anual (<span id="current-year-lbl"></span>):</label>
-        <label class="switch"><input type="checkbox" id="new-seguro"><span class="slider round"></span></label>
-        <span id="seguro-status-text" style="margin-left:10px; font-size:0.9rem; color:#ef4444;">NO PAGADO</span>
+    <div class="control-item">
+        <label>Seguro (2026):</label>
+        <label class="switch">
+            <input type="checkbox" id="new-seguro">
+            <span class="slider round"></span>
+        </label>
+        <span id="seguro-status-text">NO PAGADO</span>
     </div>
 
+    <!-- Línea divisoria -->
+    <div class="control-separator"></div>
+
     <!-- Género -->
-    <div class="gender-box" style="display: flex; align-items: center;">
-        <label style="margin-right:15px; color:white; font-weight:bold;">Género:</label>
-        <div class="gender-selector" style="display: flex; background: rgba(15, 23, 42, 0.6); border-radius: 12px; padding: 4px; border: 1px solid rgba(255, 255, 255, 0.1);">
-            <button type="button" id="btn-gender-home" class="gender-btn active" onclick="setGender('HOMBRE')" style="padding: 8px 20px; border: none; background: #ef4444; color: white; font-size: 0.75rem; font-weight: 800; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; letter-spacing: 1px;">HOMBRE</button>
-            <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('MUJER')" style="padding: 8px 20px; border: none; background: transparent; color: #94a3b8; font-size: 0.75rem; font-weight: 800; border-radius: 10px; cursor: pointer; transition: all 0.3s ease; letter-spacing: 1px;">MUJER</button>
-            <input type="hidden" id="new-genero" value="HOMBRE">
+    <div class="control-item">
+        <label>Género:</label>
+        <div class="gender-pill-container">
+            <button type="button" id="btn-gender-home" class="gender-btn active" onclick="setGender('HOMBRE')">HOMBRE</button>
+            <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('MUJER')">MUJER</button>
         </div>
+        <input type="hidden" id="new-genero" value="HOMBRE">
     </div>
-</div>
-                        
+
+</div>                        
                         <!-- SECCIÓN TÉCNICA INTEGRADA -->
                         <div class="sidebar-sep tecnico-header">
                             <i class="fa-solid fa-graduation-cap"></i> HISTORIAL TÉCNICO Y SEMINARIOS
