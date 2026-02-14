@@ -817,26 +817,28 @@ button[onclick="addSeminarioRow()"]:hover {
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
-/* --- BARRA DE CONTROL ADMINISTRATIVO ARASHI --- */
+//* --- BARRA ADMINISTRATIVA RESPONSIVA ARASHI --- */
 .admin-control-bar {
     display: flex;
     align-items: center;
-    background: rgba(15, 23, 42, 0.6) !important; /* Fondo único para toda la barra */
+    justify-content: space-between;
+    background: rgba(15, 23, 42, 0.6) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 16px;
-    padding: 12px 25px;
-    margin: 25px 0;
-    width: fit-content;
-    gap: 30px;
+    padding: 15px 20px;
+    margin: 20px 0;
+    width: 100%; /* Ocupa el 100% del contenedor */
+    box-sizing: border-box; /* Evita que el padding sume al ancho */
+    gap: 15px;
+    flex-wrap: wrap; /* Permite saltar de línea si no cabe */
 }
 
 .control-item {
     display: flex;
     align-items: center;
-    gap: 15px;
-    background: transparent !important; /* Quitamos fondos individuales */
-    border: none !important; /* Quitamos bordes individuales */
-    padding: 0 !important;
+    gap: 12px;
+    flex: 1; /* Ayuda a repartir el espacio */
+    min-width: fit-content;
 }
 
 .control-item label {
@@ -845,7 +847,6 @@ button[onclick="addSeminarioRow()"]:hover {
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin: 0;
 }
 
 .control-separator {
@@ -854,7 +855,6 @@ button[onclick="addSeminarioRow()"]:hover {
     background: rgba(255, 255, 255, 0.15);
 }
 
-/* Pill de Género dentro de la barra */
 .gender-pill-container {
     display: flex;
     background: rgba(0, 0, 0, 0.4);
@@ -863,11 +863,11 @@ button[onclick="addSeminarioRow()"]:hover {
 }
 
 .gender-btn {
-    padding: 6px 15px;
+    padding: 6px 14px;
     border: none;
     background: transparent;
     color: #475569;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 800;
     border-radius: 8px;
     cursor: pointer;
@@ -879,8 +879,19 @@ button[onclick="addSeminarioRow()"]:hover {
     color: white;
 }
 
-#seguro-status-text {
-    font-size: 0.7rem;
-    font-weight: 800;
-    margin-left: 8px;
+/* --- AJUSTE ESPECÍFICO PARA MÓVILES --- */
+@media (max-width: 600px) {
+    .admin-control-bar {
+        flex-direction: column; /* Apila uno sobre otro */
+        align-items: stretch; /* Estira al ancho total */
+        gap: 20px;
+    }
+    
+    .control-separator {
+        display: none; /* Ocultamos la línea vertical en móvil */
+    }
+
+    .control-item {
+        justify-content: space-between; /* Etiqueta a la izquierda, botón a la derecha */
+    }
 }
