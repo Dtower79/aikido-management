@@ -2831,8 +2831,7 @@ function setEnrollmentGender(val) {
 }
 
 // 3. Procesar el alta completa (Ficha + Usuario)
-/* --- PROCESO DE ALTA COMPLETA (FICHA NEON + USUARIO STRAPI) --- */
-/* --- PROCESO DE ALTA COMPLETA (FIX: DIRECCIÓN, POBLACIÓN, CP) --- */
+/* --- PROCESO DE ALTA COMPLETA (FIX: INTEGRIDAD DE DIRECCIÓN) --- */
 async function handleEnrollmentSubmit(event) {
     event.preventDefault();
     
@@ -2847,12 +2846,11 @@ async function handleEnrollmentSubmit(event) {
     if (p1.length < 6) return showModal("Error", "Mínimo 6 caracteres.");
 
     const btn = document.getElementById('btn-ins-submit');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CREANDO CUENTA...'; 
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESANDO...'; 
     btn.disabled = true;
 
     try {
-        // PASO A: Registro en Strapi
+        // PASO 1: Registrar el Usuario
         const regRes = await fetch(`${API_URL}/api/auth/local/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2865,14 +2863,14 @@ async function handleEnrollmentSubmit(event) {
         const userJwt = regData.jwt;
         const userId = regData.user.id;
 
-        // PASO B: Actualizar Nombre y Apellidos en User
+        // PASO 2: Actualizar Perfil (Nombre/Apellidos)
         await fetch(`${API_URL}/api/users/me`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userJwt}` },
             body: JSON.stringify({ nombre, apellidos })
         });
 
-        // PASO C: Crear Ficha en Neon (DIRECCIÓN INCLUIDA)
+        // PASO 3: Crear Ficha en Neon (CON TODOS LOS CAMPOS)
         const alumnoData = {
             nombre: nombre,
             apellidos: apellidos,
@@ -2884,11 +2882,11 @@ async function handleEnrollmentSubmit(event) {
             genero: document.getElementById('ins-genero').value,
             dojo: document.getElementById('ins-dojo').value,
             grupo: document.getElementById('ins-grupo').value,
-            // --- CAMPOS RECUPERADOS ---
+            // --- FIX CAMPOS FALTANTES ---
             direccion: document.getElementById('ins-direccion').value,
             poblacion: document.getElementById('ins-poblacion').value,
             cp: document.getElementById('ins-cp').value,
-            // --------------------------
+            // ----------------------------
             grado: "S/G",
             activo: true,
             cuenta_usuario: userId
@@ -2902,16 +2900,16 @@ async function handleEnrollmentSubmit(event) {
 
         if (aluRes.ok) {
             document.getElementById('enrollment-modal').classList.add('hidden');
-            showModal("¡BIENVENIDO!", `Hola ${nombre}, tu ficha ha sido creada. Ya puedes entrar con tu DNI.`);
+            showModal("¡BIENVENIDO!", `Hola ${nombre}, tu ficha ha sido creada. Ya puedes entrar al Dojo.`);
             event.target.reset();
         } else {
-            throw new Error("Error al generar ficha técnica en Neon.");
+            throw new Error("Error al generar la ficha técnica en Neon.");
         }
 
     } catch (err) {
         showModal("Error de Registro", err.message);
     } finally {
-        btn.innerHTML = originalText; btn.disabled = false;
+        btn.innerHTML = "FINALIZAR INSCRIPCIÓN"; btn.disabled = false;
     }
 }
 
