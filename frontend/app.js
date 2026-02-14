@@ -515,8 +515,7 @@ document.addEventListener('click', (e) => {
 });
 
 
-/* --- FUNCIÓN: GUARDAR O ACTUALIZAR ALUMNO (CON CAMPO GÉNERO) --- */
-/* --- EVENTO SUBMIT: GUARDAR EN NEON --- */
+/* --- EVENTO SUBMIT: GUARDAR EN NEON + LIMPIEZA DE CACHÉ --- */
 const formAlumno = document.getElementById('form-nuevo-alumno');
 if (formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
@@ -549,7 +548,7 @@ if (formAlumno) {
             grupo: document.getElementById('new-grupo').value, 
             grado: document.getElementById('new-grado').value, 
             seguro_pagado: document.getElementById('new-seguro').checked,
-            genero: document.getElementById('new-genero').value, // <--- INTEGRADO AQUÍ
+            genero: document.getElementById('new-genero').value, 
             horas_acumuladas: parseFloat(document.getElementById('new-horas').value) || 0,
             seminarios: seminariosData,
             activo: true 
@@ -565,9 +564,16 @@ if (formAlumno) {
             });
             
             if (res.ok) {
+                // --- 🥋 EL CAMBIO QUIRÚRGICO AQUÍ ---
+                // Al guardar, borramos la caché local de activos y bajas
+                // Esto obliga a loadAlumnos() a pedir los datos nuevos a Neon
+                localStorage.removeItem('cache_alumnos_activos');
+                localStorage.removeItem('cache_alumnos_bajas');
+                console.log("♻️ Memoria local purificada. Sincronizando datos frescos...");
+
                 showModal("¡OSS!", id ? "Datos actualizados." : "Alumno registrado.", () => { 
                     resetForm(); 
-                    showSection('alumnos'); 
+                    showSection('alumnos'); // Al entrar aquí, loadAlumnos() hará fetch real
                 });
             } else { 
                 showModal("Error", "Fallo al guardar. Revisa los permisos de Strapi."); 
