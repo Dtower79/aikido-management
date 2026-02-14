@@ -931,6 +931,25 @@
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }
+
+/* --- DISEÑO PILL GÉNERO INSCRIPCIÓN --- */
+.gender-pill-container .gender-btn {
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.gender-pill-container .gender-btn.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+}
     </style>
 </head>
 <body>
@@ -1176,83 +1195,86 @@
     </div>
 
     <!-- FORMULARIO DE INSCRIPCIÓN: NUEVO AIKIDOKA -->
-    <div id="enrollment-modal" class="modal-overlay hidden">
-        <div class="modal-content" style="max-width: 400px; padding: 30px 20px;">
-            <h2 style="margin-top: 0; font-size: 22px; color: white;">INSCRIPCIÓN DOJO</h2>
-            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Rellena tus datos para entrar en el Arashi Group.</p>
 
-            <form id="enrollment-form" class="no-scrollbar" style="text-align: left; max-height: 65vh; overflow-y: auto; padding-right: 5px;">
-                <span class="modal-label">NOMBRE:</span>
-                <input type="text" id="ins-nombre" class="modal-field" placeholder="Tu nombre" required>
-                
-                <span class="modal-label">APELLIDOS:</span>
-                <input type="text" id="ins-apellidos" class="modal-field" placeholder="Tus apellidos" required>
+<div id="enrollment-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 400px; padding: 30px 20px;">
+        <h2 style="margin-top: 0; font-size: 22px; color: white; letter-spacing: 1px;">INSCRIPCIÓN DOJO</h2>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 25px; text-transform: uppercase;">Completa tu ficha para entrar en el Arashi Group</p>
 
-                <span class="modal-label">DNI / NIE:</span>
-                <input type="text" id="ins-dni" class="modal-field" placeholder="12345678X" maxlength="9" required oninput="this.value = this.value.toUpperCase().replace(/[^0-9A-Z]/g, '')">
+        <form id="enrollment-form" class="no-scrollbar" style="text-align: left; max-height: 65vh; overflow-y: auto; padding-right: 5px;">
+            
+            <span class="modal-label">NOMBRE Y APELLIDOS:</span>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" id="ins-nombre" class="modal-field" placeholder="Nombre" required>
+                <input type="text" id="ins-apellidos" class="modal-field" placeholder="Apellidos" required>
+            </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>
-                        <span class="modal-label">F. NACIMIENTO:</span>
-                        <input type="date" id="ins-nacimiento" class="modal-field" required>
-                    </div>
-                    <div>
-                        <span class="modal-label">GÉNERO:</span>
-                        <div class="gender-pill-container" style="display: flex; background: rgba(0, 0, 0, 0.3); padding: 3px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05); height: 45px; align-items: center;">
-                            <button type="button" id="ins-btn-hombre" class="gender-btn active" onclick="setEnrollmentGender('HOMBRE')" style="flex:1;">HOMBRE</button>
-                            <button type="button" id="ins-btn-mujer" class="gender-btn" onclick="setEnrollmentGender('MUJER')" style="flex:1;">MUJER</button>
-                        </div>
-                        <input type="hidden" id="ins-genero" value="HOMBRE">
-                    </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: end;">
+                <div>
+                    <span class="modal-label">DNI / NIE:</span>
+                    <input type="text" id="ins-dni" class="modal-field" placeholder="12345678X" maxlength="9" required 
+                           oninput="this.value = this.value.toUpperCase().replace(/[^0-9A-Z]/g, '')">
                 </div>
-
-                <span class="modal-label">EMAIL:</span>
-                <input type="email" id="ins-email" class="modal-field" placeholder="tu@email.com" required>
-
-                <span class="modal-label">TELÉFONO:</span>
-                <input type="tel" id="ins-telefono" class="modal-field" placeholder="600 000 000" required>
-
-                <span class="modal-label">DIRECCIÓN COMPLETA:</span>
-                <input type="text" id="ins-direccion" class="modal-field" placeholder="Calle, número, piso...">
-
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
-                    <div>
-                        <span class="modal-label">POBLACIÓN:</span>
-                        <input type="text" id="ins-poblacion" class="modal-field" placeholder="Ciudad">
+                <div>
+                    <span class="modal-label">GÉNERO:</span>
+                    <div class="gender-pill-container" style="display: flex; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 12px; border: 1px solid var(--glass-border); height: 46px; box-sizing: border-box;">
+                        <button type="button" id="ins-btn-HOMBRE" class="gender-btn active" onclick="setEnrollmentGender('HOMBRE')" style="flex:1;">HOMBRE</button>
+                        <button type="button" id="ins-btn-MUJER" class="gender-btn" onclick="setEnrollmentGender('MUJER')" style="flex:1;">MUJER</button>
                     </div>
-                    <div>
-                        <span class="modal-label">C.P:</span>
-                        <input type="text" id="ins-cp" class="modal-field" placeholder="08000" maxlength="5">
-                    </div>
+                    <input type="hidden" id="ins-genero" value="HOMBRE">
                 </div>
+            </div>
 
-                <span class="modal-label">DOJO DE INSCRIPCIÓN:</span>
-                <select id="ins-dojo" class="modal-field" required>
-                    <option value="">Selecciona Dojo...</option>
-                </select>
-
-                <span class="modal-label">GRUPO / HORARIO:</span>
-                <select id="ins-grupo" class="modal-field">
-                    <option value="Full Time">Full Time</option>
-                    <option value="Mañanas">Mañanas</option>
-                    <option value="Kids">Kids</option>
-                </select>
-
-                <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 15px; border: 1px solid var(--accent); margin: 20px 0;">
-                    <span class="modal-label" style="color: white; margin-left: 0;">CREA TU CONTRASEÑA DE ACCESO:</span>
-                    <input type="password" id="ins-pass" class="modal-field" placeholder="Mínimo 6 caracteres" required style="margin-top: 10px;">
-                    <input type="password" id="ins-pass-confirm" class="modal-field" placeholder="Repite la contraseña" required>
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px;">
+                <div>
+                    <span class="modal-label">TELÉFONO:</span>
+                    <input type="tel" id="ins-telefono" class="modal-field" placeholder="600 000 000" maxlength="11" required 
+                           oninput="formatPhoneInput(this)">
                 </div>
+                <div>
+                    <span class="modal-label">F. NACIMIENTO:</span>
+                    <input type="date" id="ins-nacimiento" class="modal-field" required>
+                </div>
+            </div>
 
-                <button type="submit" id="btn-ins-submit" class="action-btn primary" style="height: 55px; margin-top: 10px;">
-                    FINALIZAR INSCRIPCIÓN
-                </button>
-                <button type="button" class="action-btn btn-secondary" style="margin-top: 10px; height: 50px;" onclick="document.getElementById('enrollment-modal').classList.add('hidden')">
-                    CANCELAR
-                </button>
-            </form>
-        </div>
+            <span class="modal-label">CORREO ELECTRÓNICO:</span>
+            <input type="email" id="ins-email" class="modal-field" placeholder="tu@email.com" required>
+
+            <span class="modal-label">DIRECCIÓN:</span>
+            <input type="text" id="ins-direccion" class="modal-field" placeholder="Calle, número, piso...">
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                <input type="text" id="ins-poblacion" class="modal-field" placeholder="Población">
+                <input type="text" id="ins-cp" class="modal-field" placeholder="C.P." maxlength="5">
+            </div>
+
+            <span class="modal-label">CENTRO DE ENTRENAMIENTO (DOJO):</span>
+            <select id="ins-dojo" class="modal-field" required>
+                <option value="">Selecciona Dojo...</option>
+            </select>
+
+            <span class="modal-label">GRUPO:</span>
+            <select id="ins-grupo" class="modal-field">
+                <option value="Full Time">Full Time</option>
+                <option value="Mañanas">Mañanas</option>
+                <option value="Kids">Kids</option>
+            </select>
+
+            <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 18px; border: 1px solid var(--accent); margin: 20px 0;">
+                <span class="modal-label" style="color: white; margin-left: 0; font-size: 9px;">SEGURIDAD: CREA TU CONTRASEÑA DE ACCESO</span>
+                <input type="password" id="ins-pass" class="modal-field" placeholder="Mínimo 6 caracteres" required style="margin-top: 10px; background: rgba(0,0,0,0.3) !important;">
+                <input type="password" id="ins-pass-confirm" class="modal-field" placeholder="Repite contraseña" required style="background: rgba(0,0,0,0.3) !important; margin-bottom: 0;">
+            </div>
+
+            <button type="submit" id="btn-ins-submit" class="action-btn primary" style="height: 60px; font-size: 16px;">
+                <i class="fa-solid fa-user-check"></i> FINALIZAR INSCRIPCIÓN
+            </button>
+            <button type="button" class="action-btn btn-secondary" style="margin-top: 12px; height: 50px; background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted);" onclick="document.getElementById('enrollment-modal').classList.add('hidden')">
+                CANCELAR
+            </button>
+        </form>
     </div>
+</div>
 
     <script>
         const API_URL = "https://arashi-api.onrender.com/api";
@@ -1263,6 +1285,15 @@
         // Comprobación de seguridad
         if (API_URL.endsWith('/api/')) {
             console.warn("⚠️ ALERTA: La URL termina en /api/. Asegúrate de que tus fetch NO empiecen por /api");
+        }
+
+        // 1. FORMATEADOR DE TELÉFONO (Estilo 000 000 000)
+        function formatPhoneInput(input) {
+            let num = input.value.replace(/\D/g, ''); // Solo números
+            if (num.length > 9) num = num.substring(0, 9);
+            // Formateamos con espacios
+            const formatted = num.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3').trim();
+            input.value = formatted;
         }
 
 
@@ -2755,31 +2786,32 @@ function openEnrollmentForm() {
 /* --- UBICACIÓN: Al final del <script> en movil.html --- */
 
 // 1. Abrir el formulario y cargar Dojos
+// 2. CARGA DE DOJOS Y APERTURA DE FORMULARIO
 async function openEnrollmentForm() {
     closeRegisterSelector();
     document.getElementById('enrollment-modal').classList.remove('hidden');
     
     const select = document.getElementById('ins-dojo');
-    if (select.options.length <= 1) {
-        // Usamos fetchSmart para ser eficientes (Caché 24h)
-        const res = await fetchSmart('/dojos', 'lista_dojos_ins', 24);
-        if (res && res.data) {
-            res.data.forEach(d => {
-                const info = d.attributes || d;
-                const opt = document.createElement('option');
-                opt.value = d.documentId || d.id;
-                opt.innerText = info.nombre.toUpperCase();
-                select.appendChild(opt);
-            });
-        }
+    // Cargamos los dojos reales de vuestra base de datos
+    const res = await fetchSmart('/dojos', 'lista_dojos_ins', 24);
+    if (res && res.data) {
+        select.innerHTML = '<option value="">Selecciona Dojo...</option>';
+        res.data.forEach(d => {
+            const info = d.attributes || d;
+            const opt = document.createElement('option');
+            opt.value = d.documentId || d.id;
+            opt.innerText = info.nombre.toUpperCase().replace("AIKIDO ARASHI ", "");
+            select.appendChild(opt);
+        });
     }
 }
 
 // 2. Manejar el cambio de género en el formulario
 function setEnrollmentGender(val) {
     document.getElementById('ins-genero').value = val;
-    document.getElementById('ins-btn-hombre').classList.toggle('active', val === 'HOMBRE');
-    document.getElementById('ins-btn-mujer').classList.toggle('active', val === 'MUJER');
+    // Limpieza y activación de botones
+    document.querySelectorAll('#enrollment-modal .gender-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`ins-btn-${val}`).classList.add('active');
 }
 
 // 3. Procesar el alta completa (Ficha + Usuario)
@@ -2789,17 +2821,18 @@ async function handleEnrollmentSubmit(event) {
     const p1 = document.getElementById('ins-pass').value;
     const p2 = document.getElementById('ins-pass-confirm').value;
     if (p1 !== p2) return showModal("Error", "Las contraseñas no coinciden.");
-    if (p1.length < 6) return showModal("Error", "Mínimo 6 caracteres.");
+    if (p1.length < 6) return showModal("Error", "La contraseña es demasiado corta.");
 
     const btn = document.getElementById('btn-ins-submit');
-    btn.innerText = "PROCESANDO..."; btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESANDO...'; 
+    btn.disabled = true;
 
     const dni = document.getElementById('ins-dni').value.toUpperCase();
     const email = document.getElementById('ins-email').value.toLowerCase();
 
     try {
-        // PASO A: Crear Usuario (Auth)
-        // Usamos la URL sin /api repetido
+        // PASO A: Crear Usuario en Strapi
         const regRes = await fetch(`${API_URL}/auth/local/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2815,14 +2848,14 @@ async function handleEnrollmentSubmit(event) {
         const regData = await regRes.json();
         if (!regRes.ok) throw new Error(regData.error?.message || "DNI o Email ya registrados.");
 
-        // PASO B: Crear Ficha de Alumno vinculada
+        // PASO B: Crear Ficha de Alumno (Fecha Alta automática)
         const alumnoData = {
             nombre: document.getElementById('ins-nombre').value,
             apellidos: document.getElementById('ins-apellidos').value,
             dni: dni,
             email: email,
             fecha_nacimiento: document.getElementById('ins-nacimiento').value,
-            fecha_inicio: new Date().toISOString().split('T')[0],
+            fecha_inicio: new Date().toISOString().split('T')[0], // FECHA ALTA AUTOMÁTICA
             telefono: document.getElementById('ins-telefono').value,
             direccion: document.getElementById('ins-direccion').value,
             poblacion: document.getElementById('ins-poblacion').value,
@@ -2846,19 +2879,20 @@ async function handleEnrollmentSubmit(event) {
 
         if (aluRes.ok) {
             document.getElementById('enrollment-modal').classList.add('hidden');
-            showModal("¡BIENVENIDO!", "Inscripción completada. Ya puedes entrar con tu DNI y contraseña.");
+            showModal("¡BIENVENIDO!", "Tu ficha ha sido creada. Ya puedes entrar al Dojo con tu DNI y contraseña.");
+            event.target.reset();
         } else {
-            throw new Error("Error al crear la ficha técnica. Avisa al Sensei.");
+            throw new Error("Error al generar la ficha técnica. Contacta con el Sensei.");
         }
 
     } catch (err) {
-        showModal("Error", err.message);
+        showModal("Error de Registro", err.message);
     } finally {
-        btn.innerText = "FINALIZAR INSCRIPCIÓN"; btn.disabled = false;
+        btn.innerHTML = originalText; btn.disabled = false;
     }
 }
 
-// Vinculamos el evento al formulario
+// Vinculamos el evento
 document.getElementById('enrollment-form').addEventListener('submit', handleEnrollmentSubmit);
 
     </script>
