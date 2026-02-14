@@ -1278,6 +1278,7 @@
 
     <script>
         const API_URL = "https://arashi-api.onrender.com/api";
+        console.log("🥋 Versión de la App: 14 de Febrero - 18:30h");
 
         // LOG DE AUDITORÍA ARASHI
         console.log("🥋 [AUDITORÍA] API_URL actual:", API_URL);
@@ -2830,30 +2831,27 @@ function setEnrollmentGender(val) {
 }
 
 // 3. Procesar el alta completa (Ficha + Usuario)
+/* --- PROCESO DE ALTA COMPLETA (FICHA NEON + USUARIO STRAPI) --- */
 async function handleEnrollmentSubmit(event) {
     event.preventDefault();
     
     const p1 = document.getElementById('ins-pass').value;
     const p2 = document.getElementById('ins-pass-confirm').value;
     if (p1 !== p2) return showModal("Error", "Las contraseñas no coinciden.");
-    if (p1.length < 6) return showModal("Error", "La contraseña es demasiado corta.");
+    if (p1.length < 6) return showModal("Error", "Mínimo 6 caracteres.");
 
     const btn = document.getElementById('btn-ins-submit');
-    const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESANDO...'; 
     btn.disabled = true;
 
-    const dni = document.getElementById('ins-dni').value.toUpperCase();
-    const email = document.getElementById('ins-email').value.toLowerCase();
-
     try {
-        // PASO A: Crear Usuario en Strapi
+        // PASO 1: Registrar el Usuario (Público)
         const regRes = await fetch(`${API_URL}/auth/local/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                username: dni,
-                email: email,
+                username: document.getElementById('ins-dni').value.toUpperCase(),
+                email: document.getElementById('ins-email').value.toLowerCase(),
                 password: p1,
                 nombre: document.getElementById('ins-nombre').value,
                 apellidos: document.getElementById('ins-apellidos').value
@@ -2863,18 +2861,15 @@ async function handleEnrollmentSubmit(event) {
         const regData = await regRes.json();
         if (!regRes.ok) throw new Error(regData.error?.message || "DNI o Email ya registrados.");
 
-        // PASO B: Crear Ficha de Alumno (Fecha Alta automática)
+        // PASO 2: Crear Ficha de Alumno (Usando el Token recién recibido)
         const alumnoData = {
             nombre: document.getElementById('ins-nombre').value,
             apellidos: document.getElementById('ins-apellidos').value,
-            dni: dni,
-            email: email,
+            dni: document.getElementById('ins-dni').value.toUpperCase(),
+            email: document.getElementById('ins-email').value.toLowerCase(),
             fecha_nacimiento: document.getElementById('ins-nacimiento').value,
-            fecha_inicio: new Date().toISOString().split('T')[0], // FECHA ALTA AUTOMÁTICA
+            fecha_inicio: new Date().toISOString().split('T')[0],
             telefono: document.getElementById('ins-telefono').value,
-            direccion: document.getElementById('ins-direccion').value,
-            poblacion: document.getElementById('ins-poblacion').value,
-            cp: document.getElementById('ins-cp').value,
             genero: document.getElementById('ins-genero').value,
             dojo: document.getElementById('ins-dojo').value,
             grupo: document.getElementById('ins-grupo').value,
@@ -2894,16 +2889,16 @@ async function handleEnrollmentSubmit(event) {
 
         if (aluRes.ok) {
             document.getElementById('enrollment-modal').classList.add('hidden');
-            showModal("¡BIENVENIDO!", "Tu ficha ha sido creada. Ya puedes entrar al Dojo con tu DNI y contraseña.");
-            event.target.reset();
+            showModal("¡BIENVENIDO!", "Inscripción correcta. Ya puedes entrar con tu DNI.");
         } else {
-            throw new Error("Error al generar la ficha técnica. Contacta con el Sensei.");
+            const errAlu = await aluRes.json();
+            throw new Error("Usuario creado pero error en ficha: " + errAlu.error.message);
         }
 
     } catch (err) {
-        showModal("Error de Registro", err.message);
+        showModal("Error", err.message);
     } finally {
-        btn.innerHTML = originalText; btn.disabled = false;
+        btn.innerHTML = "FINALIZAR INSCRIPCIÓN"; btn.disabled = false;
     }
 }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arashi-v5.1-stable';
+const CACHE_NAME = 'arashi-v5.3-update';
 
 // Activos críticos para que la UI cargue en el tatami sin internet
 const ASSETS_TO_CACHE = [
