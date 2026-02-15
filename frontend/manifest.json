@@ -22,5 +22,13 @@
       "purpose": "maskable"
     }
   ],
-  
+  "screenshots": [
+    {
+      "src": "img/logo-arashi.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Arashi Dojo Dashboard"
+    }
+  ]
 }
