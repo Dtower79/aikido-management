@@ -1898,80 +1898,111 @@ async function loadSenseiPanel() {
             }, 200);
         }
 
-/* --- PRÓXIMO KEIKO DINÁMICO (RESPETA FILTRO DE DOJO) --- */
+/* --- PRÓXIMO KEIKO (LÓGICA ETERNA Y DINÁMICA) --- */
 async function checkTodayClass() {
-    const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
+    console.log("🔍 [DASHBOARD] Calculando siguiente objetivo...");
     const btn = document.getElementById('confirm-btn');
-    
-    // Obtenemos el dojo que el alumno tiene "en el visor" (Calendario)
-    // Si no hay filtro activo, usamos su dojo global. Si no, 'all'.
-    const dojoEnVisor = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
+    const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
 
-    const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=20`, { 
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-    });
-    const json = await res.json();
-    const ahora = new Date();
+    // 1. DETERMINAR QUÉ DOJO FILTRAR
+    // Si existe el filtro del calendario lo usamos, si no, usamos el dojo del alumno (su casa)
+    const filterEl = document.getElementById('cal-dojo-filter');
+    const dojoEnVisor = filterEl ? filterEl.value : (dojoIdGlobal || 'all');
 
-    let claseElegida = null;
-    let estadoAlumno = null;
+    try {
+        // Pedimos las próximas clases con el Dojo poblado
+        const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=20`, { 
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+        });
+        const json = await res.json();
+        const ahora = new Date();
 
-    if (!json.data) return;
+        let claseElegida = null;
+        let estadoAlumno = null;
 
-    for (const c of json.data) {
-        const dataC = parseData(c);
-        const dojoId = getID(parseRelation(dataC.dojo));
-        const fin = new Date(new Date(dataC.Fecha_Hora).getTime() + (parseFloat(dataC.Duracion || 1.5) * 3600000));
-
-        if (ahora > fin) continue; 
-        
-        // FILTRO: Solo mostramos la clase si coincide con el dojo seleccionado (o si es 'all')
-        if (dojoEnVisor !== 'all' && dojoId != dojoEnVisor) continue;
-
-        if (aluId) {
-            const cid = getID(c);
-            const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-            });
-            const chkJ = await chk.json();
-            const asistencia = chkJ.data?.[0];
-            const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
-            if (estado === 'Asistio') continue;
-            estadoAlumno = estado;
+        if (!json.data || json.data.length === 0) {
+            setEmptyDashboard();
+            return;
         }
 
-        claseElegida = c;
-        break; 
-    }
+        // 2. BUSCAR EL PRIMER KEIKO VÁLIDO
+        for (const c of json.data) {
+            const d = parseData(c);
+            const dojoInfo = parseRelation(d.dojo);
+            const dId = String(getID(dojoInfo));
+            
+            // Calculamos cuándo termina la clase (Inicio + Duración)
+            const inicio = new Date(d.Fecha_Hora);
+            const fin = new Date(inicio.getTime() + (parseFloat(d.Duracion || 1.5) * 60 * 60 * 1000));
 
-    if (claseElegida) {
-        const d = parseData(claseElegida);
-        const dojoInfo = parseRelation(d.dojo);
-        claseHoyId = getID(claseElegida);
-        const f = formatTimeSafe(d.Fecha_Hora);
-        
-        document.getElementById('next-class-time').innerText = f.time;
-        document.getElementById('next-class-date').innerHTML = `${f.date} <br><span style="font-size:11px; color:var(--accent); font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span>`;
+            // REGLA 1: Si la clase ya ha terminado, saltar a la siguiente (Lógica Eterna)
+            if (ahora > fin) continue; 
 
-        if (!alumnoGlobal) {
-            btn.classList.add('hidden');
-        } else {
-            btn.classList.remove('hidden');
-            if (estadoAlumno === 'Confirmado') {
-                btn.innerText = "YA CONFIRMADO";
-                btn.disabled = true;
-                btn.style.background = "#1e293b";
-            } else {
-                btn.innerText = "ASISTIR AL KEIKO";
-                btn.disabled = false;
-                btn.style.background = "white";
+            // REGLA 2: Filtro de Dojo (Si no es 'all', comparamos strings para evitar fallos de ID)
+            if (dojoEnVisor !== 'all' && dId !== String(dojoEnVisor)) continue;
+
+            // REGLA 3: Si el alumno ya tiene esta clase como 'Asistio' (validada por QR), buscar la siguiente
+            if (aluId) {
+                const cid = getID(c);
+                const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+                });
+                const chkJ = await chk.json();
+                const asistencia = chkJ.data?.[0];
+                const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
+
+                if (estado === 'Asistio') continue; 
+                estadoAlumno = estado;
             }
+
+            claseElegida = c;
+            break; // Hemos encontrado la clase más próxima que cumple todo
         }
-    } else {
-        document.getElementById('next-class-time').innerText = "--:--";
-        document.getElementById('next-class-date').innerText = "Sin keikos en este Dojo";
-        btn.classList.add('hidden');
+
+        // 3. PINTAR RESULTADO
+        if (claseElegida) {
+            const d = parseData(claseElegida);
+            const dojoInfo = parseRelation(d.dojo);
+            claseHoyId = getID(claseElegida);
+            const f = formatTimeSafe(d.Fecha_Hora);
+            
+            document.getElementById('next-class-time').innerText = f.time;
+            document.getElementById('next-class-date').innerHTML = `
+                ${f.date} <br>
+                <span style="font-size:11px; color:var(--accent); font-weight:800; text-transform:uppercase;">
+                    <i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").replace("Aikido Arashi ", "")}
+                </span>
+            `;
+
+            if (!alumnoGlobal) {
+                btn.classList.add('hidden');
+            } else {
+                btn.classList.remove('hidden');
+                if (estadoAlumno === 'Confirmado') {
+                    btn.innerText = "CONFIRMADO";
+                    btn.disabled = true;
+                    btn.style.background = "#1e293b";
+                    btn.style.color = "var(--text-muted)";
+                } else {
+                    btn.innerText = "ASISTIR AL KEIKO";
+                    btn.disabled = false;
+                    btn.style.background = "white";
+                    btn.style.color = "black";
+                }
+            }
+        } else {
+            setEmptyDashboard();
+        }
+    } catch (e) {
+        console.error("❌ Fallo en Dashboard:", e);
+        setEmptyDashboard();
     }
+}
+
+function setEmptyDashboard() {
+    document.getElementById('next-class-time').innerText = "--:--";
+    document.getElementById('next-class-date').innerText = "Sin keikos próximos";
+    document.getElementById('confirm-btn').classList.add('hidden');
 }
 
         /* --- GESTIÓN CALENDARIO --- */
