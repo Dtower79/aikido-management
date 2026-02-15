@@ -1723,57 +1723,68 @@ async function loadSenseiPanel() {
     }
 }
 
-        /* --- VALIDACIÓN Y ASISTENCIA --- */
-        async function validateAttendance(asistId, asiste, aluId, dur) {
-            const token = localStorage.getItem('aikido_jwt');
-            console.log(`📡 [SENSEI] Validando Asistencia: ${asistId} | Alumno: ${aluId}`);
+/* --- VALIDACIÓN SENSEI (BOTONES OK / X) - VERSIÓN 6.0 --- */
+async function validateAttendance(asistId, asiste, aluId, dur) {
+    const token = localStorage.getItem('aikido_jwt');
+    console.log(`📡 [SENSEI] Validando: ${asistId} | Alumno: ${aluId} | Asiste: ${asiste}`);
 
-            try {
-                // 1. Cambiamos el estado de la asistencia
-                const resAsist = await fetch(`${API_URL}/asistencias/${asistId}`, { 
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                    body: JSON.stringify({ data: { Estado: asiste ? 'Asistio' : 'No Asistio' } }) 
-                });
+    try {
+        // 1. ACTUALIZAR ESTADO DE ASISTENCIA
+        // En Strapi v5, el campo debe coincidir EXACTO (Estado con E mayúscula)
+        const resAsist = await fetch(`${API_URL}/asistencias/${asistId}`, { 
+            method: 'PUT', 
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+            }, 
+            body: JSON.stringify({ 
+                data: { 
+                    Estado: asiste ? 'Asistio' : 'No Asistio' 
+                } 
+            }) 
+        });
 
-                if (!resAsist.ok) throw new Error("Error al actualizar estado de asistencia");
-
-                // 2. Si el alumno ha venido, sumamos horas
-                if(asiste) {
-                    // Pedimos la ficha del alumno para ver sus horas actuales
-                    const alRes = await fetch(`${API_URL}/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                    const alJson = await alRes.json();
-                    
-                    // EXTRACCIÓN BLINDADA (Compatible con Strapi v4 y v5)
-                    const dataRoot = alJson.data;
-                    const attributes = dataRoot.attributes || dataRoot; // Si no hay attributes, los datos están en la raíz (v5)
-                    
-                    const horasPrevias = parseFloat(attributes.horas_acumuladas) || 0;
-                    const horasASumar = parseFloat(dur) || 0;
-                    const totalNuevo = horasPrevias + horasASumar;
-
-                    console.log(`📈 [SENSEI] Horas previas: ${horasPrevias} | Sumando: ${horasASumar} | Total: ${totalNuevo}`);
-
-                    // Actualizamos el perfil del alumno con el nuevo total
-                    await fetch(`${API_URL}/alumnos/${aluId}`, { 
-                        method: 'PUT', 
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                        body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } }) 
-                    });
-                }
-
-                // 3. Refrescar la interfaz
-                await loadSenseiPanel(); // Recarga la lista del sensei
-                localStorage.removeItem('cache_perfil_alumno'); // Limpia caché para que el alumno vea el cambio
-                refreshStudentData(); // Refresca tu propio círculo si tú eres el alumno
-
-                console.log("✅ [SENSEI] Proceso completado.");
-
-            } catch (e) {
-                console.error("❌ [SENSEI] Error crítico:", e);
-                showModal("Error", "Fallo al contabilizar horas. Revisa la consola.");
-            }
+        if (!resAsist.ok) {
+            const errData = await resAsist.json();
+            console.error("❌ Detalle error Strapi:", errData);
+            throw new Error("Error al actualizar estado de asistencia");
         }
+
+        // 2. SI ASISTE, SUMAR HORAS AL ALUMNO
+        if(asiste) {
+            const alRes = await fetch(`${API_URL}/alumnos/${aluId}`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+            const alJson = await alRes.json();
+            const p = alJson.data.attributes || alJson.data;
+            
+            const horasPrevias = parseFloat(p.horas_acumuladas || 0);
+            const horasASumar = parseFloat(dur || 1.5);
+            const totalNuevo = horasPrevias + horasASumar;
+
+            await fetch(`${API_URL}/alumnos/${aluId}`, { 
+                method: 'PUT', 
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${token}` 
+                }, 
+                body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } }) 
+            });
+            console.log(`📈 Horas actualizadas: ${totalNuevo}`);
+        }
+
+        // 3. LIMPIEZA DE CACHÉ Y REFRESCO
+        localStorage.removeItem('cache_perfil_alumno');
+        localStorage.removeItem('cache_asistencias_sensei');
+        
+        await loadSenseiPanel(); // Refresca la lista del Sensei
+        await refreshStudentData(); // Refresca tu propia ficha si eres tú el alumno
+
+    } catch (e) {
+        console.error("❌ Fallo crítico:", e);
+        showModal("Error", "No se pudo procesar la validación. Revisa los permisos de 'Update' en Strapi.");
+    }
+}
 
         /* --- GENERADOR DE QR PARA EL TATAMI --- */
         function generateClassQR(classId) {
@@ -2560,38 +2571,42 @@ async function loadDojosFilter() {
     }
 }
 
-/* --- PROCESADOR QR CON DEBUG PARA MÓVIL --- */
+/* --- PROCESADOR QR (VERSIÓN 6.0 - INTEGRIDAD TOTAL) --- */
 async function procesarAsistenciaQR(classId) {
     const token = localStorage.getItem('aikido_jwt');
-    const aluDocId = localStorage.getItem('aikido_student_doc_id'); 
+    const aluDocId = localStorage.getItem('aikido_student_doc_id');
     
     if(!aluDocId || aluDocId === "null") return showModal("Error", "Ficha no vinculada.");
 
     try {
-        // 1. Validar Clase (Usamos documentId puro)
+        // 1. OBTENER DURACIÓN DEL KEIKO
         const resClase = await fetch(`${API_URL}/clases/${classId}`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
         const classJ = await resClase.json();
-        
-        if (!resClase.ok) throw new Error("Código QR no válido o clase inexistente.");
-        
         const dataC = classJ.data.attributes || classJ.data;
         const duracion = parseFloat(dataC.Duracion || 1.5);
 
-        // 2. Registrar Asistencia (Estado: Asistio)
+        // 2. CREAR REGISTRO DE ASISTENCIA (POST)
+        // Esto es lo que te faltaba: registrar que el alumno estuvo allí
         const resAsist = await fetch(`${API_URL}/asistencias`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ 
-                data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } 
+                data: { 
+                    alumno: aluDocId, 
+                    clase: classId, 
+                    Estado: 'Asistio' 
+                } 
             })
         });
 
-        if (!resAsist.ok) throw new Error("Ya has registrado tu asistencia para este Keiko.");
+        if (!resAsist.ok) throw new Error("Ya has registrado tu asistencia o el servidor la ha rechazado.");
 
-        // 3. Actualizar Horas (Matemática Local + Neon Sync)
-        const p = alumnoGlobal.attributes || alumnoGlobal;
+        // 3. ACTUALIZAR HORAS EN LA FICHA
+        const alRes = await fetch(`${API_URL}/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const alJson = await alRes.json();
+        const p = alJson.data.attributes || alJson.data;
         const totalNuevo = (parseFloat(p.horas_acumuladas) || 0) + duracion;
 
         await fetch(`${API_URL}/alumnos/${aluDocId}`, {
@@ -2600,7 +2615,7 @@ async function procesarAsistenciaQR(classId) {
             body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } })
         });
 
-        // 4. LIMPIEZA TOTAL DE CACHÉ
+        // 4. LIMPIEZA Y ÉXITO
         localStorage.removeItem('cache_perfil_alumno');
         localStorage.removeItem('cache_asistencias_sensei');
 
@@ -2608,7 +2623,7 @@ async function procesarAsistenciaQR(classId) {
         await checkTodayClass();
         
         closeModal();
-        showModal("¡OSS!", `Suma de horas completada: +${duracion}h.`);
+        showModal("¡OSS!", `Asistencia grabada en Neon: +${duracion}h.`);
 
     } catch (e) {
         showModal("Validación Fallida", e.message);
