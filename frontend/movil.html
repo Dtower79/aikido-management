@@ -1898,21 +1898,23 @@ async function loadSenseiPanel() {
             }, 200);
         }
 
-/* --- PRÓXIMO KEIKO (LOGICA ETERNA + FIX DE ID V5) --- */
+/* --- PRÓXIMO KEIKO (VERSION 5.6 - BLINDAJE DE ID Y TIEMPO) --- */
 async function checkTodayClass() {
-    console.log("🔍 [DASHBOARD] Buscando el próximo objetivo en el Tatami...");
+    console.log("🔍 [DASHBOARD] Iniciando escaneo de Tatami...");
     const btn = document.getElementById('confirm-btn');
     const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
 
-    // 1. DETERMINAR DOJO (Prioridad: Filtro Calendario > Casa del Alumno)
+    // 1. DETERMINAR EL DOJO OBJETIVO
+    // Si no estamos en la pestaña clases, el selector no existe, usamos el global del alumno
     const filterEl = document.getElementById('cal-dojo-filter');
     let dojoEnVisor = filterEl ? filterEl.value : (dojoIdGlobal || 'all');
     
-    // Normalizamos a String para evitar errores de comparación
-    if (dojoEnVisor && dojoEnVisor !== 'all') dojoEnVisor = String(dojoEnVisor);
+    // Normalización extrema a String
+    const idBusqueda = (dojoEnVisor && dojoEnVisor !== 'all') ? String(dojoEnVisor) : 'all';
+    console.log("📍 [DASHBOARD] Filtrando por Dojo ID:", idBusqueda);
 
     try {
-        // Aumentamos a 50 clases para que los keikos de 2026 no queden fuera por culpa de los viejos
+        // Pedimos 50 clases para asegurar que cubrimos todo el mes de febrero
         const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=50`, { 
             headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
         });
@@ -1920,32 +1922,37 @@ async function checkTodayClass() {
         const ahora = new Date();
 
         if (!json.data || json.data.length === 0) {
-            setEmptyDashboard("No hay clases programadas");
+            console.warn("⚠️ [DASHBOARD] La API no devolvió clases.");
+            setEmptyDashboard("Calendario vacío en Strapi");
             return;
         }
 
         let claseElegida = null;
         let estadoAlumno = null;
 
-        // 2. BUCLE DE BÚSQUEDA DEL PRÓXIMO KEIKO VÁLIDO
+        // 2. BUCLE DE ANÁLISIS DE CLASES
         for (const c of json.data) {
             const d = parseData(c);
-            const dojoInfo = parseRelation(d.dojo);
-            const dId = dojoInfo ? String(getID(dojoInfo)) : null;
+            const dojoRel = parseRelation(d.dojo);
             
-            // Cálculo de fin de clase
+            // Extracción segura del ID del Dojo de la clase
+            const dIdClase = dojoRel ? String(getID(dojoRel)) : null;
+            
+            // Cálculo de tiempos
             const inicio = new Date(d.Fecha_Hora);
-            const duracionHoras = parseFloat(d.Duracion || 1.5);
-            const fin = new Date(inicio.getTime() + (duracionHoras * 60 * 60 * 1000));
+            const duracion = parseFloat(d.Duracion || 1.5);
+            const fin = new Date(inicio.getTime() + (duracion * 60 * 60 * 1000));
 
-            // REGLA 1: ¿La clase ya ha terminado? (Lógica Eterna)
-            if (ahora > fin) continue; 
+            // LOG DE DEPURACIÓN (Solo verás esto en F12)
+            // console.log(`Análisis: ${d.Fecha_Hora} | DojoClase: ${dIdClase} | Busco: ${idBusqueda}`);
 
-            // REGLA 2: ¿Es de mi Dojo o del Dojo que estoy mirando?
-            // Si dojoEnVisor es 'all', mostramos la primera que venga (Red Arashi)
-            if (dojoEnVisor !== 'all' && dId !== dojoEnVisor) continue;
+            // REGLA 1: Descartar si la clase ya terminó hace más de 10 min
+            if (ahora > new Date(fin.getTime() + 600000)) continue; 
 
-            // REGLA 3: ¿El alumno ya ha validado esta clase por QR?
+            // REGLA 2: Descartar si el Dojo no coincide (y no estamos en modo 'all')
+            if (idBusqueda !== 'all' && dIdClase !== idBusqueda) continue;
+
+            // REGLA 3: Si el alumno ya la tiene confirmada como 'Asistio', saltar a la siguiente
             if (aluId) {
                 const cid = getID(c);
                 const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
@@ -1955,15 +1962,19 @@ async function checkTodayClass() {
                 const asistencia = chkJ.data?.[0];
                 const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
 
-                if (estado === 'Asistio') continue; // Si ya sumó horas, buscamos la siguiente
+                if (estado === 'Asistio') {
+                    console.log("✅ [DASHBOARD] Clase ya validada por QR, buscando la siguiente...");
+                    continue; 
+                }
                 estadoAlumno = estado;
             }
 
             claseElegida = c;
+            console.log("🎯 [DASHBOARD] Keiko encontrado:", d.Fecha_Hora);
             break; 
         }
 
-        // 3. ACTUALIZACIÓN DE INTERFAZ
+        // 3. RENDERIZADO FINAL
         if (claseElegida) {
             const d = parseData(claseElegida);
             const dojoInfo = parseRelation(d.dojo);
@@ -1979,11 +1990,11 @@ async function checkTodayClass() {
             `;
 
             if (!alumnoGlobal) {
-                btn.classList.add('hidden'); // Sensei maestro no ve el botón de asistir
+                if(btn) btn.classList.add('hidden');
             } else {
                 btn.classList.remove('hidden');
                 if (estadoAlumno === 'Confirmado') {
-                    btn.innerText = "YA CONFIRMADO";
+                    btn.innerText = "CONFIRMADO";
                     btn.disabled = true;
                     btn.style.background = "#1e293b";
                     btn.style.color = "var(--text-muted)";
@@ -1995,18 +2006,20 @@ async function checkTodayClass() {
                 }
             }
         } else {
-            setEmptyDashboard(dojoEnVisor === 'all' ? "Sin keikos programados" : "Sin keikos en este Dojo");
+            setEmptyDashboard(idBusqueda === 'all' ? "Sin keikos programados" : "Sin keikos en esta sede");
         }
     } catch (e) {
-        console.error("❌ Error en Dashboard:", e);
-        setEmptyDashboard("Error de conexión");
+        console.error("❌ [DASHBOARD] Error crítico:", e);
+        setEmptyDashboard("Fallo de conexión");
     }
 }
 
 function setEmptyDashboard(msg) {
-    document.getElementById('next-class-time').innerText = "--:--";
-    document.getElementById('next-class-date').innerText = msg;
+    const timeEl = document.getElementById('next-class-time');
+    const dateEl = document.getElementById('next-class-date');
     const btn = document.getElementById('confirm-btn');
+    if(timeEl) timeEl.innerText = "--:--";
+    if(dateEl) dateEl.innerText = msg;
     if(btn) btn.classList.add('hidden');
 }
 
