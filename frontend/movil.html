@@ -1462,46 +1462,40 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
         /* --- PARTE 1: NÚCLEO DE INICIALIZACIÓN (initApp) --- */
 /* --- NÚCLEO DE INICIALIZACIÓN: ACCESO BLINDADO --- */
 /* --- NÚCLEO DE INICIALIZACIÓN: ACCESO Y PRESELECCIÓN DE DOJO --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (FIX CARGA INICIAL KEIKO) --- */
 async function initApp() {
     console.log("🚀 [INIT] Arrancando Sistema Arashi...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     const mainNav = document.getElementById('main-nav');
     
-    // 1. RESET TOTAL DE VISIBILIDAD
+    // 1. Reset total de visibilidad
     document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
             .forEach(v => v.classList.add('hidden'));
 
-    // 2. CASO: USUARIO NO LOGUEADO (Registro/Login)
     if (!token || !user) {
         console.log("🔑 [AUTH] Mostrando Login.");
         const lv = document.getElementById('login-view');
         if(lv) lv.classList.remove('hidden');
-        
-        // REFUERZO MAESTRO: Ocultamos la nav bar totalmente
         if (mainNav) {
             mainNav.classList.add('hidden');
             mainNav.style.display = 'none'; 
         }
-        
         document.documentElement.classList.add('app-loaded'); 
         return;
     }
 
-    // 3. CASO: USUARIO LOGUEADO (Entrada al Dojo)
-    // Restauramos la barra de navegación con el diseño Grid centrado
+    // 2. Usuario logueado: Preparamos la interfaz
     if (mainNav) {
         mainNav.classList.remove('hidden');
         mainNav.style.display = 'grid'; 
     }
 
-    console.log("🏠 [UI] Cargando Dojo para:", user.username);
     const dv = document.getElementById('dashboard-view');
     if(dv) dv.classList.remove('hidden');
-    
     showView('dashboard');
     
-    // 4. CARGA DE REQUISITOS (Zero Waste API: 24h caché)
+    // 3. Carga de Requisitos (24h caché)
     const reqRes = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
     if (reqRes && reqRes.data) {
         requisitosGradoGlobal = reqRes.data.map(r => {
@@ -1514,43 +1508,37 @@ async function initApp() {
         });
     }
 
-    // 5. SINCRONIZACIÓN DE FICHA E IDENTIDAD
-    // IMPORTANTE: Esta función establece 'dojoIdGlobal' basándose en la ficha de Neon
+    // --- 🥋 ORDEN MAESTRO DE CARGA ---
+    
+    // PASO A: Primero obtenemos la ficha del alumno y SU DOJO
+    // Usamos 'await' para que no pase al siguiente paso hasta tener el dojoIdGlobal
     await refreshStudentData(); 
+    console.log("📍 [INIT] Ficha sincronizada. Dojo detectado:", dojoIdGlobal);
 
-    // 6. LÓGICA DE PERMISOS Y CARGA DE FILTROS SENSEI
+    // PASO B: Ahora que ya sabemos el Dojo, buscamos la clase
+    // Esto evita que salga "Sin keikos" al entrar por primera vez
+    await checkTodayClass();
+
+    // PASO C: Configuramos el acceso de gestión si procede
     const esSenseiRango = (user.is_sensei === true);
     const pAlu = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     const esInstructorFicha = (pAlu && (pAlu.es_instructor === true || pAlu.es_instructor === "true"));
     
     const navSensei = document.getElementById('nav-sensei');
-
     if (esSenseiRango || esInstructorFicha) {
-        console.log("🥋 [AUTH] Nivel de acceso: GESTOR (Sensei/Instructor).");
         if (navSensei) {
             navSensei.style.display = 'flex';
             navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
         }
-        
-        // CARGA DE FILTROS: Aquí es donde se preselecciona el Dojo del usuario
-        // Esta función ahora depende del 'dojoIdGlobal' obtenido en el paso 5.
         await loadDojosFilter(); 
-
     } else if (navSensei) {
-        // Alumno estándar: Botón de Seminarios Externos
         navSensei.style.display = 'flex';
         navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-        navSensei.onclick = (e) => { 
-            e.preventDefault(); 
-            window.open('https://www.meetontatami.com/', '_blank'); 
-        };
+        navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
     }
 
-    // 7. SINCRONIZACIÓN DEL PRÓXIMO KEIKO (Sensible al Dojo del Alumno)
-    await checkTodayClass();
-    
     document.documentElement.classList.add('app-loaded');
-    console.log("✨ [INIT] Sistema Arashi totalmente sincronizado.");
+    console.log("✨ [INIT] Sistema listo y Keiko sincronizado.");
 }
 
   
