@@ -2147,49 +2147,64 @@ function setGenMonth(m, btn) {
 }
 
 /* --- UI: GENERADOR MENSUAL (VISTA ENSANCHADA + CABECERAS) --- */
+/* --- UI: GENERADOR MENSUAL (AÑOS DINÁMICOS + VISTA ENSANCHADA) --- */
+/* --- UI: GENERADOR MENSUAL (REDISEÑO SIMÉTRICO PREMIUM) --- */
 function uiGenerateMonth() {
     const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-    let monthGrid = `<div class="month-picker-grid">`;
+    
+    // 1. MESES MÁS GRANDES
+    let monthGrid = `<div class="month-picker-grid" style="grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 25px;">`;
     months.forEach((m, idx) => { 
-        monthGrid += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" onclick="setGenMonth(${idx}, this)">${m}</button>`; 
+        // Aumentamos padding y font-size para mayor legibilidad
+        monthGrid += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" 
+            style="padding: 15px 5px; font-size: 13px; font-weight: 800;" 
+            onclick="setGenMonth(${idx}, this)">${m}</button>`; 
     });
     monthGrid += `</div>`;
+
+    const currentYear = new Date().getFullYear();
+    const nextYear = currentYear + 1;
 
     const days = [
         { n: "Lun", v: 1 }, { n: "Mar", v: 2 }, { n: "Mié", v: 3 },
         { n: "Jue", v: 4 }, { n: "Vie", v: 5 }, { n: "Sáb", v: 6 }, { n: "Dom", v: 0 }
     ];
 
-    // CABECERA DE COLUMNAS
+    // 2. CABECERAS IDÉNTICAS Y ALINEADAS
     let headerHtml = `
-        <div style="display: grid; grid-template-columns: 60px 1fr 1fr; gap: 10px; margin-bottom: 10px; padding: 0 10px;">
+        <div style="display: grid; grid-template-columns: 60px 1fr 1fr; gap: 12px; margin-bottom: 10px; padding: 0 10px;">
             <div></div>
-            <div style="font-size: 9px; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 1px;">TURNO MAÑANA</div>
-            <div style="font-size: 9px; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 1px;">TURNO TARDE</div>
+            <div style="font-size: 10px; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 1px; text-transform: uppercase;">Mañana</div>
+            <div style="font-size: 10px; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 1px; text-transform: uppercase;">Tarde</div>
         </div>
     `;
 
-    let daysHtml = `<div style="background: rgba(0,0,0,0.3); border-radius: 20px; padding: 10px; border: 1px solid var(--glass-border);">`;
+    // 3. CUERPO SIMÉTRICO (SLOT 1 Y SLOT 2 IGUALES)
+    let daysHtml = `<div style="background: rgba(0,0,0,0.3); border-radius: 25px; padding: 15px; border: 1px solid var(--glass-border);">`;
     
     days.forEach(d => {
         daysHtml += `
-            <div style="display: grid; grid-template-columns: 60px 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
-                <label style="font-size: 11px; font-weight: 800; color: white;">${d.n.toUpperCase()}</label>
+            <div style="display: grid; grid-template-columns: 60px 1fr 1fr; gap: 12px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                <label style="font-size: 12px; font-weight: 800; color: white; letter-spacing: 1px;">${d.n.toUpperCase()}</label>
                 
-                <!-- MAÑANA (SLOT 1) -->
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="1" style="margin-bottom:0; padding: 8px 4px; font-size: 11px; text-align: center; border-radius: 8px;">
-                    <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="1" style="margin-bottom:0; padding: 4px; font-size: 10px; border-radius: 8px; height: 30px;">
+                <!-- COLUMNA MAÑANA -->
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="1" 
+                           style="margin-bottom:0; padding: 10px 5px; font-size: 12px; text-align: center; border-radius: 12px; background: rgba(15, 23, 42, 0.8) !important;">
+                    <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="1" 
+                            style="margin-bottom:0; padding: 5px; font-size: 11px; border-radius: 10px; height: 35px; background-position: right 5px center;">
                         <option value="1.5">1.5h</option>
                         <option value="1">1h</option>
                         <option value="2">2h</option>
                     </select>
                 </div>
 
-                <!-- TARDE (SLOT 2) -->
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="2" style="margin-bottom:0; padding: 8px 4px; font-size: 11px; text-align: center; border-radius: 8px;">
-                    <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="2" style="margin-bottom:0; padding: 4px; font-size: 10px; border-radius: 8px; height: 30px;">
+                <!-- COLUMNA TARDE (DISEÑO IDÉNTICO) -->
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="2" 
+                           style="margin-bottom:0; padding: 10px 5px; font-size: 12px; text-align: center; border-radius: 12px; background: rgba(15, 23, 42, 0.8) !important;">
+                    <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="2" 
+                            style="margin-bottom:0; padding: 5px; font-size: 11px; border-radius: 10px; height: 35px; background-position: right 5px center;">
                         <option value="1.5">1.5h</option>
                         <option value="1">1h</option>
                         <option value="2">2h</option>
@@ -2199,28 +2214,29 @@ function uiGenerateMonth() {
     });
     daysHtml += `</div>`;
 
-    // Aumentamos el max-width del modal interno vía style
     showModal("PATRÓN MENSUAL", `
-        <div class="no-scrollbar" style="text-align:left; max-height: 80vh; overflow-y: auto; width: 100%; max-width: 500px; margin: 0 auto;">
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px; align-items: center; margin-bottom: 15px;">
-                <div>
-                    <span class="modal-label">AÑO:</span>
-                    <select id="gen-year-select" class="modal-field" style="margin-bottom:0;"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
-                </div>
-                <div>
-                    <span class="modal-label">MES:</span>
-                    ${monthGrid}
-                </div>
-            </div>
+        <div class="no-scrollbar" style="text-align:left; max-height: 85vh; overflow-y: auto; width: 100%;">
+            
+            <!-- AÑO ARRIBA -->
+            <span class="modal-label">AÑO:</span>
+            <select id="gen-year-select" class="modal-field" style="width: 100%; border-radius: 15px; margin-bottom: 20px;">
+                <option value="${currentYear}" selected>${currentYear}</option>
+                <option value="${nextYear}">${nextYear}</option>
+            </select>
 
-            <span class="modal-label">HORARIOS POR SEMANA:</span>
+            <!-- MESES GRANDES -->
+            <span class="modal-label">MES:</span>
+            ${monthGrid}
+
+            <!-- HORARIOS -->
+            <span class="modal-label">HORARIOS SEMANALES:</span>
             ${headerHtml}
             ${daysHtml}
 
-            <button class="action-btn primary" onclick="processGeneration()" style="margin-top:20px; width:100%; height: 55px; border-radius: 15px;">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> GENERAR CALENDARIO
+            <button class="action-btn primary" onclick="processGeneration()" style="margin-top:25px; width:100%; height: 60px; border-radius: 20px;">
+                <i class="fa-solid fa-calendar-check"></i> GENERAR CALENDARIO
             </button>
-            <button class="action-btn btn-secondary" onclick="closeModal()" style="margin-top:10px; width:100%; height: 50px; border-radius: 15px; font-size: 13px;">
+            <button class="action-btn btn-secondary" onclick="closeModal()" style="margin-top:12px; width:100%; height: 50px; border-radius: 15px;">
                 CANCELAR
             </button>
         </div>`, false);
