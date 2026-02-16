@@ -70,6 +70,14 @@
             width: 100%;
             min-height: 100vh;
             flex-direction: column;
+            opacity: 0; /* Totalmente invisible por defecto */
+            transition: opacity 0.5s ease-in-out; /* Fundido suave de medio segundo */
+            display: none; /* No ocupa espacio inicial */
+        }
+        /* Solo cuando esta clase esté presente, el contenido aparece */
+        .app-ready #app-content {
+            display: flex !important;
+            opacity: 1 !important;
         }
 
         #install-wall {
@@ -84,6 +92,7 @@
             align-items: center;
             justify-content: center;
             text-align: center;
+            opacity: 1;
         }
 
         #install-wall .logo-img {
@@ -1461,53 +1470,69 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         /* --- CORE INIT --- */
 
-/* --- NÚCLEO DE INICIALIZACIÓN (FIX: CARGA SECUENCIAL) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 9.0 - ZERO FLICKER) --- */
 async function initApp() {
     console.log("🚀 [INIT] Arrancando Sistema Arashi...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     const mainNav = document.getElementById('main-nav');
+    const html = document.documentElement;
     
-    // 1. Reset visual
+    // 1. OCULTACIÓN PREVENTIVA
+    // Nos aseguramos de que nada sea visible hasta el final
     document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
             .forEach(v => v.classList.add('hidden'));
 
+    // 2. CASO: REGISTRO / LOGIN (Sin token)
     if (!token || !user) {
-        if(mainNav) { mainNav.classList.add('hidden'); mainNav.style.display = 'none'; }
+        console.log("🔑 [AUTH] Mostrando Login.");
+        if (mainNav) mainNav.classList.add('hidden');
         document.getElementById('login-view')?.classList.remove('hidden');
-        document.documentElement.classList.add('app-loaded'); 
+        
+        // El login se muestra rápido porque no necesita peticiones pesadas
+        html.classList.add('app-ready'); 
         return;
     }
 
-    // 2. Preparar Interfaz
-    if (mainNav) { mainNav.classList.remove('hidden'); mainNav.style.display = 'grid'; }
-    document.getElementById('dashboard-view')?.classList.remove('hidden');
-    showView('dashboard');
-    
-    // 3. Carga de Requisitos
-    await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
+    // 3. CASO: ENTRADA AL DOJO (Con token)
+    try {
+        // A. Sincronizamos Requisitos (24h caché)
+        await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
 
-    // --- 🥋 ORDEN MAESTRO DE CARGA (OBLIGATORIO) ---
-    
-    // PASO A: Obtenemos los datos del alumno y esperamos a que dojoIdGlobal se guarde
-    const aluData = await refreshStudentData(); 
-    console.log("📍 [INIT] Ficha confirmada. Dojo ID:", dojoIdGlobal);
+        // B. Sincronizamos Ficha del Alumno (Crítico para saber el Dojo)
+        await refreshStudentData(); 
 
-    // PASO B: Con el Dojo ya confirmado, buscamos el Keiko (Pasamos el ID directamente)
-    await checkTodayClass(dojoIdGlobal);
+        // C. Sincronizamos el Keiko (Ahora que ya sabemos el Dojo)
+        await checkTodayClass();
 
-    // PASO C: Carga de herramientas de gestión
-    const esSenseiRango = (user.is_sensei === true);
-    const pAlu = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-    const esInstructor = (pAlu && (pAlu.es_instructor === true || pAlu.es_instructor === "true"));
-    
-    if (esSenseiRango || esInstructor) {
-        document.getElementById('nav-sensei').style.display = 'flex';
-        await loadDojosFilter(); 
+        // D. Configuramos interfaz y permisos
+        if (mainNav) {
+            mainNav.classList.remove('hidden');
+            mainNav.style.display = 'grid'; 
+        }
+
+        const esSenseiRango = (user.is_sensei === true);
+        const pAlu = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
+        const esInstructor = (pAlu && (pAlu.es_instructor === true || pAlu.es_instructor === "true"));
+        
+        if (esSenseiRango || esInstructor) {
+            document.getElementById('nav-sensei').style.display = 'flex';
+            await loadDojosFilter(); 
+        }
+
+        // --- 🥋 EL MOMENTO DE LA VERDAD ---
+        // Solo ahora, cuando todo está cargado y en su sitio, levantamos el velo
+        setTimeout(() => {
+            html.classList.add('app-ready');
+            console.log("✨ [INIT] Despliegue profesional completado.");
+        }, 100);
+
+    } catch (error) {
+        console.error("Fallo en la carga inicial:", error);
+        // Si hay error, mostramos el login por seguridad
+        localStorage.clear();
+        location.reload();
     }
-
-    document.documentElement.classList.add('app-loaded');
-    console.log("✨ [INIT] Dojo Sincronizado.");
 }
   
 /* --- REFRESH DATA (VERSIÓN 5.8 - SINCRONIZACIÓN MAESTRA) --- */
