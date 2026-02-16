@@ -2078,12 +2078,36 @@ async function saveClass(id) {
     checkTodayClass(); // Actualizamos dashboard por si era la clase de hoy
 }
 
-/* --- ACCIÓN: ELIMINAR KEIKO (FIX TYPO + SINCRONIZACIÓN) --- */
-async function deleteClass(id) { 
-    // 1. ESCUDO DE CONFIRMACIÓN (Nativo por seguridad de ejecución)
-    if (!confirm("⚠️ ¿Seguro que quieres borrar este entrenamiento? Esta acción no se puede deshacer.")) return;
+/* --- SOLICITAR CONFIRMACIÓN DE BORRADO (MODAL PREMIUM) --- */
+async function deleteClass(id) {
+    const htmlConfirmacion = `
+        <div style="text-align: center;">
+            <p style="margin-bottom: 25px; color: #cbd5e1; font-size: 14px; line-height: 1.5;">
+                ¿Estás seguro de que deseas eliminar este entrenamiento? <br>
+                <span style="color: var(--accent); font-weight: 800;">Esta acción no se puede deshacer.</span>
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="action-btn primary" onclick="executeDelete('${id}')">
+                    <i class="fa-solid fa-trash-can"></i> SÍ, ELIMINAR KEIKO
+                </button>
+                <button class="action-btn" style="background: #334155; color: white;" onclick="closeModal()">
+                    CANCELAR
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Abrimos el modal con los botones inyectados y ocultamos el botón "CERRAR" de serie
+    showModal("¿BORRAR ENTRENAMIENTO?", htmlConfirmacion, false);
+}
 
+/* --- EJECUCIÓN REAL DEL BORRADO EN NEON --- */
+async function executeDelete(id) {
     const token = localStorage.getItem('aikido_jwt');
+    
+    // Cambiamos el texto del botón para dar feedback
+    const btn = document.querySelector('#custom-modal .action-btn.primary');
+    if (btn) { btn.innerText = "BORRANDO..."; btn.disabled = true; }
 
     try {
         const res = await fetch(`${API_URL}/clases/${id}`, { 
@@ -2091,24 +2115,23 @@ async function deleteClass(id) {
             headers: { 'Authorization': `Bearer ${token}` } 
         }); 
 
-        if (!res.ok) throw new Error("Error al comunicar con Render/Neon");
+        if (!res.ok) throw new Error("Fallo en el servidor");
 
-        // 2. REGLA ZERO WASTE: Limpieza de caché (CORREGIDO: localStorage sin doble L)
+        // Limpieza de caché y sincronización
         localStorage.removeItem('cache_clases_archivo'); 
         
-        // 3. CIERRE Y REFRESCO DE VISTAS
-        closeModal(); 
+        closeModal(); // Cerramos el modal de pregunta
         
-        // Recargamos el editor y el dashboard para que el cambio sea instantáneo
+        // Refrescamos las vistas
         await loadManageClasses(); 
         await checkTodayClass(); 
 
-        // 4. FEEDBACK PREMIUM (Ahora sí, el Modal de éxito)
-        showModal("¡OSS!", "Keiko eliminado correctamente. El calendario ya está actualizado.");
+        // Notificación final de éxito
+        showModal("¡OSS!", "Keiko eliminado correctamente.");
 
     } catch (e) {
-        console.error("❌ Error al borrar:", e);
-        showModal("Error", "No se ha podido eliminar la clase de la base de datos.");
+        console.error("❌ Error:", e);
+        showModal("Error", "No se pudo eliminar la clase. Inténtalo de nuevo.");
     }
 }
 
