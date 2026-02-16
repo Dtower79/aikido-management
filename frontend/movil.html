@@ -526,8 +526,8 @@
             border-top: 1px solid var(--glass-border); 
             
             /* CAMBIO: Quitamos !important aquí para que .hidden funcione */
-            display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
+            display: grid !important; 
+            grid-template-columns: repeat(5, 1fr) !important; 
             align-items: center; 
             justify-items: center; 
             
@@ -716,7 +716,12 @@
 
         #app-content {
             opacity: 0;
-            transition: opacity 0.6s ease-in-out;
+            transition: opacity 0.8s ease-in-out;
+            pointer-events: none; /* Evita clics accidentales mientras carga */
+        }
+        body.app-ready #app-content {
+            opacity: 1;
+            pointer-events: auto;
         }
         .app-loaded #app-content {
             opacity: 1;
@@ -1505,81 +1510,60 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         /* --- CORE INIT --- */
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 9.1 - ANTI-BLOQUEO) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 10.0 - ZERO FLICKER) --- */
 async function initApp() {
-    console.log("🚀 [INIT] Arrancando Sistema Arashi...");
+    console.log("🚀 [INIT] Iniciando sincronización total...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     const mainNav = document.getElementById('main-nav');
-    const body = document.body;
-
-    // 1. LIMPIEZA INICIAL
+    
+    // 1. Aseguramos estado invisible inicial
+    document.body.classList.remove('app-ready');
     document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
             .forEach(v => v.classList.add('hidden'));
 
-    // 2. CASO: LOGIN (Sin sesión)
+    // 2. CASO: LOGIN
     if (!token || !user) {
         if (mainNav) mainNav.classList.add('hidden');
         document.getElementById('login-view')?.classList.remove('hidden');
-        body.classList.add('app-ready'); // Liberar pantalla para login
+        document.body.classList.add('app-ready'); // El login se muestra directo
         document.documentElement.classList.add('app-loaded');
         return;
     }
 
-    // 3. CASO: DENTRO DEL DOJO (Con sesión)
-    // Liberación de Emergencia: Si en 3 segundos no ha cargado, forzamos la vista
-    const emergencyRelease = setTimeout(() => {
-        if (!body.classList.contains('app-ready')) {
-            console.warn("⚠️ [INIT] Carga lenta. Activando liberación de emergencia.");
-            body.classList.add('app-ready');
-            document.documentElement.classList.add('app-loaded');
-        }
-    }, 3000);
-
+    // 3. CASO: DOJO ACTIVO (Sincronización en la sombra)
     try {
-        // Mostramos Dashboard y Nav de inmediato (estarán vacíos un milisegundo)
+        // Ejecutamos carga de requisitos y ficha en paralelo para ganar velocidad
+        await Promise.all([
+            fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24),
+            refreshStudentData() // Esta función ahora configura la Nav Bar también
+        ]);
+
+        // Una vez sabemos quién es y su dojo, buscamos el Keiko
+        await checkTodayClass();
+
+        // 4. PREPARACIÓN DE VISTA
+        showView('dashboard');
         if (mainNav) {
             mainNav.classList.remove('hidden');
             mainNav.style.display = 'grid';
         }
-        document.getElementById('dashboard-view')?.classList.remove('hidden');
-        showView('dashboard');
 
-        // Peticiones asíncronas en paralelo para ganar velocidad
-        await Promise.all([
-            fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24),
-            refreshStudentData()
-        ]);
-
-        // Una vez tenemos los datos del alumno, buscamos su clase
-        await checkTodayClass();
-
-        // Configuración de permisos de Sensei
-        const esSenseiRango = (user.is_sensei === true);
-        const pAlu = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-        const esInstructor = (pAlu && (pAlu.es_instructor === true || pAlu.es_instructor === "true"));
-        
-        if (esSenseiRango || esInstructor) {
-            const navS = document.getElementById('nav-sensei');
-            if (navS) navS.style.display = 'flex';
-            await loadDojosFilter(); 
-        }
-
-        // --- 🥋 ÉXITO: LEVANTAMOS EL VELO ---
-        clearTimeout(emergencyRelease);
-        body.classList.add('app-ready');
-        document.documentElement.classList.add('app-loaded');
-        console.log("✨ [INIT] Dojo cargado correctamente.");
+        // --- 🥋 EL LEVANTAMIENTO DEL TELÓN ---
+        // Esperamos un milisegundo extra para que el DOM se asiente
+        setTimeout(() => {
+            document.body.classList.add('app-ready');
+            document.documentElement.classList.add('app-loaded');
+            console.log("✨ [INIT] Dojo listo. Mostrando interfaz sincronizada.");
+        }, 150);
 
     } catch (error) {
-        console.error("🔥 [INIT] Fallo crítico:", error);
-        clearTimeout(emergencyRelease);
-        body.classList.add('app-ready'); // Mostramos aunque haya error
-        document.documentElement.classList.add('app-loaded');
+        console.error("🔥 [INIT] Error en el despliegue:", error);
+        document.body.classList.add('app-ready'); // Liberamos aunque haya error
     }
 }
   
-/* --- REFRESH DATA (VERSION 9.2 - ACCESO AL PANEL DE GESTIÓN) --- */
+/* --- REFRESH DATA (VERSION 10.0 - PREPARACIÓN DE ESCENARIO) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1587,7 +1571,6 @@ async function refreshStudentData() {
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // 1. OBTENCIÓN DE DATOS (Caché inteligente)
     if (savedDocId && savedDocId !== "null") {
         dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
     } else {
@@ -1606,75 +1589,58 @@ async function refreshStudentData() {
     const circle = document.getElementById('student-progress-circle');
     const nextGrade = document.getElementById('next-grade-display');
     const zenCard = document.getElementById('zen-card');
+    const navSensei = document.getElementById('nav-sensei');
+    const initialsCircle = document.getElementById('user-initials');
 
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     
-    // Sincronización del ID de Dojo para filtros
     if (p && p.dojo) {
         dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
     }
 
-    // --- 🥋 LÓGICA DE IDENTIDAD VISUAL ---
-
-    // Definimos nombres e iniciales (Lógica compartida)
+    // 1. CONFIGURACIÓN DE CABECERA (NOMBRE E INICIALES)
     const displayName = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
     const initials = ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
-    
     document.getElementById('user-display-name').innerText = displayName;
-    const initialsCircle = document.getElementById('user-initials');
     if (initialsCircle) initialsCircle.innerText = initials;
 
-    // DETERMINACIÓN DE RANGO PARA EL ENLACE
+    // 2. DETERMINACIÓN DE RANGO
     const esSenseiRango = (user.is_sensei === true);
     const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
 
-    // --- 🚀 VÍNCULO AL PANEL DE GESTIÓN (SOLO GESTORES) ---
-    if (initialsCircle) {
+    // --- 🥋 CONFIGURACIÓN DE NAV BAR (ANTES DE MOSTRAR) ---
+    if (navSensei) {
         if (esSenseiRango || esInstructorFicha) {
-            initialsCircle.style.cursor = 'pointer';
-            initialsCircle.title = "Acceder a Gestión Arashi";
-            initialsCircle.onclick = () => {
-                window.location.href = 'https://arashi-group.netlify.app/';
-            };
+            navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+            navSensei.onclick = () => showView('sensei', navSensei);
+            // Link al panel administrativo en las iniciales
+            if (initialsCircle) {
+                initialsCircle.style.cursor = 'pointer';
+                initialsCircle.onclick = () => window.location.href = 'https://arashi-group.netlify.app/';
+            }
         } else {
-            initialsCircle.style.cursor = 'default';
-            initialsCircle.onclick = null;
+            navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+            navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
+            if (initialsCircle) {
+                initialsCircle.style.cursor = 'default';
+                initialsCircle.onclick = null;
+            }
         }
     }
 
+    // 3. CONFIGURACIÓN VISUAL DASHBOARD
     if (esSenseiRango) {
-        // --- MODO MAESTRO (Francesc / Instructores con rango) ---
-        
-        // Activamos clase en body para ocultar botón de asistencia vía CSS
         document.body.classList.add('is-sensei-mode'); 
-
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
-        
-        // Limpiamos tarjeta previa si existe para evitar duplicados al refrescar
         if (zenCard) zenCard.remove();
 
-        // 📍 EXTRACCIÓN DINÁMICA DEL NOMBRE DEL DOJO
-        let nombreDojoReal = "ARASHI GROUP"; // Fallback de seguridad
-        if (p && p.dojo) {
-            const dData = parseRelation(p.dojo);
-            nombreDojoReal = dData.nombre ? dData.nombre.toUpperCase() : "ARASHI DOJO";
-        }
-
-        const zenHTML = `
-            <div id="zen-card" class="zen-master-card">
-                <img src="img/logo_sin_fondo.png" class="zen-logo">
-                <h2 class="zen-title">SENSEI</h2>
-                <!-- Aquí inyectamos el nombre específico del Dojo del Sensei -->
-                <p class="zen-subtitle">${nombreDojoReal}</p>
-            </div>`;
-            
+        let dojoNom = p?.dojo ? parseRelation(p.dojo).nombre : "ARASHI GROUP";
+        const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo_sin_fondo.png" class="zen-logo"><h2 class="zen-title">SENSEI</h2><p class="zen-subtitle">${dojoNom.toUpperCase()}</p></div>`;
         if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
 
     } else if (p) {
-        // --- MODO ALUMNO ESTÁNDAR ---
-        
         document.body.classList.remove('is-sensei-mode');
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
@@ -1682,36 +1648,27 @@ async function refreshStudentData() {
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        // Lógica Dan-Step Automática
+        // Lógica Dan-Step
         let meta = p.grado_objetivo;
         if (!meta) {
             const gActual = (p.grado || "S/G").toUpperCase();
             const num = parseInt(gActual.replace(/[^0-9]/g, ''));
-            if (gActual.includes("DAN")) {
-                meta = isNaN(num) ? "1º DAN" : `${num + 1}º DAN`;
-            } else if (gActual.includes("KYU")) {
-                if (!isNaN(num) && num > 1) meta = `${num - 1}º KYU`;
-                else meta = "1º DAN";
-            } else { meta = "5º KYU"; }
+            meta = gActual.includes("DAN") ? `${num + 1}º DAN` : (num > 1 ? `${num - 1}º KYU` : "1º DAN");
         }
-
         const normMeta = normalize(meta);
-        const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;         
+        const req = requisitosGradoGlobal.find(r => r.NORM === normMeta);         
         let target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
         
-        const bar = document.getElementById('progress-bar');
-        if (bar) {
+        if (document.getElementById('progress-bar')) {
             const pct = Math.min((horas / target) * 100, 100);
-            bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
+            document.getElementById('progress-bar').style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
         }
-
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
         }
     }
-    
     return alumnoGlobal;
 }
 
