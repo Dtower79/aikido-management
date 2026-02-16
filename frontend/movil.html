@@ -1819,9 +1819,9 @@ async function validateAttendance(asistId, asiste, aluId, dur) {
             }, 200);
         }
 
-/* --- PRÓXIMO KEIKO (VERSION 6.4 - TIMEZONE FIX LITERAL) --- */
+/* --- PRÓXIMO KEIKO (VERSION 6.5 - CON RELOJ DE DEPURACIÓN) --- */
 async function checkTodayClass(forcedDojoId = null) {
-    console.log("🔍 [DASHBOARD] Escaneando Tatami...");
+    console.log("🔍 [DASHBOARD] Iniciando escaneo de horario...");
     const btn = document.getElementById('confirm-btn');
     const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
     const selectorDojo = document.getElementById('cal-dojo-filter');
@@ -1835,6 +1835,8 @@ async function checkTodayClass(forcedDojoId = null) {
         const json = await res.json();
         const ahora = new Date();
 
+        console.log("🕒 [RELOJ SISTEMA] Hora actual local:", ahora.getHours() + ":" + ahora.getMinutes());
+
         if (!json.data || json.data.length === 0) return setEmptyDashboard("Calendario vacío");
 
         let claseElegida = null;
@@ -1844,21 +1846,26 @@ async function checkTodayClass(forcedDojoId = null) {
             const d = parseData(c);
             const dIdClase = d.dojo ? String(getID(parseRelation(d.dojo))) : null;
             
-            // --- 🥋 TRATAMIENTO LITERAL (FIX 13:00h) ---
+            // --- 🥋 TRATAMIENTO LITERAL ---
             const [fechaPart, resto] = d.Fecha_Hora.split('T');
             const [y, m, day] = fechaPart.split('-');
             const [hh, mm] = resto.split(':');
             
-            // Creamos la fecha sin 'Z' para que el navegador NO aplique el +1h de España
+            // Creamos la fecha exacta de inicio y fin en horario local
             const inicioLiteral = new Date(y, m - 1, day, hh, mm);
-            const duracionHoras = parseFloat(d.Duracion || 1.5);
-            const finLiteral = new Date(inicioLiteral.getTime() + (duracionHoras * 3600000));
+            const duracionH = parseFloat(d.Duracion || 1.5);
+            const finLiteral = new Date(inicioLiteral.getTime() + (duracionH * 60 * 60 * 1000));
 
-            // Si ahora es mayor que el fin literal, esta clase ya es pasado
+            // LOG DE AUDITORÍA: Verás esto en la consola F12
+            console.log(`📊 [CHECK] Clase: ${hh}:${mm} | Fin: ${finLiteral.getHours()}:${finLiteral.getMinutes()} | ¿Pasada?: ${ahora > finLiteral}`);
+
+            // REGLA: Si la hora actual es mayor que el fin literal, saltamos a la siguiente
             if (ahora > finLiteral) continue; 
 
+            // Filtro de Dojo
             if (idFinal !== 'all' && dIdClase !== idFinal) continue;
 
+            // Si ya asistió, no la mostramos como "Siguiente"
             if (aluId) {
                 const cid = getID(c);
                 const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
@@ -1882,16 +1889,16 @@ async function checkTodayClass(forcedDojoId = null) {
             const f = formatTimeSafe(d.Fecha_Hora);
             
             document.getElementById('next-class-time').innerText = f.time;
-            document.getElementById('next-class-date').innerHTML = `${f.date} <br><span style="font-size:11px; color:var(--accent); font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span>`;
+            document.getElementById('next-class-date').innerHTML = `${f.date} <br><span style="font-size:11px; color:var(--accent); font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").replace("Aikido Arashi ", "")}</span>`;
             
             if (btn) {
                 btn.classList.remove('hidden');
-                btn.innerText = (estadoAlumno === 'Confirmado') ? "CONFIRMADO" : "ASISTIR AL KEIKO";
+                btn.innerText = (estadoAlumno === 'Confirmado') ? "YA CONFIRMADO" : "ASISTIR AL KEIKO";
                 btn.disabled = (estadoAlumno === 'Confirmado');
                 btn.style.background = (estadoAlumno === 'Confirmado') ? "#1e293b" : "white";
             }
         } else {
-            setEmptyDashboard(idFinal === 'all' ? "Sin keikos próximos" : "Sin keikos en esta sede");
+            setEmptyDashboard("Sin keikos próximos");
         }
     } catch (e) { console.error("Error Dashboard:", e); }
 }
@@ -2290,7 +2297,7 @@ async function processSingleClass() {
     }
 }
 
-/* --- CALENDARIO (VERSION 6.4 - FIX DESAPARICIÓN CLASES) --- */
+/* --- CALENDARIO (VERSION 6.5 - SINCRONIZACIÓN TEMPORAL) --- */
 async function loadMonthlyClasses(el) {
     if (el) showView('clases', el);
     const container = document.getElementById('calendar-content');
@@ -2303,7 +2310,7 @@ async function loadMonthlyClasses(el) {
                 options += `<option value="${getID(d)}" ${getID(d) == dojoIdGlobal ? 'selected' : ''}>${(d.attributes?.nombre || d.nombre).toUpperCase()}</option>`;
             });
         }
-        container.innerHTML = `<div style="padding: 0 20px 20px; margin-top:10px;"><p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">TATAMI ACTUAL:</p><select id="cal-dojo-filter" class="sensei-select" onchange="loadMonthlyClasses();">${options}</select></div><div id="calendar-list-results"></div>`;
+        container.innerHTML = `<div style="padding: 0 20px 20px; margin-top:10px;"><p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">TATAMI ACTUAL:</p><select id="cal-dojo-filter" class="sensei-select" onchange="loadMonthlyClasses(); checkTodayClass();">${options}</select></div><div id="calendar-list-results"></div>`;
     }
 
     const filterDojo = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
@@ -2319,14 +2326,13 @@ async function loadMonthlyClasses(el) {
         const d = parseData(c); 
         const dojoInfo = parseRelation(d.dojo);
         
-        // --- 🥋 TRATAMIENTO LITERAL ---
+        // TRATAMIENTO LITERAL PARA FILTRADO
         const [fechaPart, resto] = d.Fecha_Hora.split('T');
         const [y, m, day] = fechaPart.split('-');
         const [hh, mm] = resto.split(':');
-        const finLiteral = new Date(new Date(y, m - 1, day, hh, mm).getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
+        const finLit = new Date(new Date(y, m - 1, day, hh, mm).getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
 
-        // Filtro: Si la clase terminó hace 1 min, no se muestra
-        if (ahora > finLiteral) return; 
+        if (ahora > finLit) return; // Si ya terminó, no se muestra en el calendario de futuros
         if (filterDojo !== 'all' && String(getID(dojoInfo)) !== String(filterDojo)) return;
 
         const f = formatTimeSafe(d.Fecha_Hora);
@@ -2350,6 +2356,7 @@ async function loadMonthlyClasses(el) {
     }
     listResults.innerHTML = html || "<p style='text-align:center; padding:40px; opacity:0.5;'>No hay keikos programados.</p>";
 }
+
 /* --- ASISTENCIA (FUNCIÓN INDEPENDIENTE) --- */
 async function confirmAttendance() {
     if (!claseHoyId || !alumnoGlobal) return;
