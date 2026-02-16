@@ -1318,7 +1318,8 @@
 
         // LOG DE AUDITORÍA ARASHI
         console.log("🥋 [AUDITORÍA] API_URL actual:", API_URL);
-
+        let selectedMonthsArray = [new Date().getMonth()]; // Empezamos con el mes actual por defecto
+        
         // Comprobación de seguridad
         if (API_URL.endsWith('/api/')) {
             console.warn("⚠️ ALERTA: La URL termina en /api/. Asegúrate de que tus fetch NO empiecen por /api");
@@ -2081,16 +2082,19 @@ function setGenMonth(m, btn) {
     btn.classList.add('active'); 
 }
 
-/* --- UI: GENERADOR MENSUAL/ANUAL FLEXIBLE --- */
+/* --- UI: GENERADOR MULTI-MES FLEXIBLE --- */
 function uiGenerateMonth() {
     const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     
-    // Botones de Meses
-    let monthGrid = `<div class="month-picker-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">`;
+    // 1. DIBUJAR CUADRÍCULA CON SELECCIÓN MÚLTIPLE
+    let monthGrid = `<div class="month-picker-grid" id="multi-month-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">`;
     months.forEach((m, idx) => { 
-        monthGrid += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" 
-            style="padding: 12px 5px; font-size: 12px; font-weight: 800;" 
-            onclick="setGenMonth(${idx}, this)">${m}</button>`; 
+        const isActive = selectedMonthsArray.includes(idx);
+        monthGrid += `
+            <button class="month-btn ${isActive ? 'active' : ''}" 
+                data-month="${idx}"
+                style="padding: 12px 5px; font-size: 12px; font-weight: 800;" 
+                onclick="toggleGenMonth(${idx}, this)">${m}</button>`; 
     });
     monthGrid += `</div>`;
 
@@ -2127,7 +2131,7 @@ function uiGenerateMonth() {
     });
     daysHtml += `</div>`;
 
-    showModal("PATRÓN DE CALENDARIO", `
+    showModal("PROGRAMACIÓN MASIVA", `
         <div class="no-scrollbar" style="text-align:left; max-height: 85vh; overflow-y: auto; width: 100%;">
             
             <span class="modal-label">1. SELECCIONA EL AÑO:</span>
@@ -2136,10 +2140,10 @@ function uiGenerateMonth() {
                 <option value="${nextYear}">${nextYear}</option>
             </select>
 
-            <span class="modal-label">2. SELECCIONA MES (O TODO EL AÑO):</span>
-            <button class="action-btn" id="btn-gen-all-year" onclick="toggleAllYear(this)" 
-                style="width: 100%; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--accent); color: white; height: 45px; font-size: 12px;">
-                <i class="fa-solid fa-calendar-days"></i> PROGRAMAR TODO EL AÑO
+            <span class="modal-label">2. SELECCIONA MESES A PROGRAMAR:</span>
+            <button class="action-btn" id="btn-gen-all-year" onclick="selectAllMonths(this)" 
+                style="width: 100%; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--accent); color: white; height: 45px; font-size: 11px;">
+                <i class="fa-solid fa-calendar-check"></i> MARCAR TODOS LOS MESES
             </button>
             
             <div id="month-selector-container">
@@ -2151,12 +2155,34 @@ function uiGenerateMonth() {
             ${daysHtml}
 
             <button class="action-btn primary" onclick="processGeneration()" style="margin-top:25px; width:100%; height: 60px; border-radius: 20px;">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> INICIAR GENERACIÓN DE KEIKOS
+                <i class="fa-solid fa-wand-magic-sparkles"></i> LANZAR GENERACIÓN
             </button>
             <button class="action-btn btn-secondary" onclick="closeModal()" style="margin-top:12px; width:100%; height: 50px; border-radius: 15px;">
                 CANCELAR
             </button>
         </div>`, false);
+}
+
+/* --- HELPERS DE SELECCIÓN --- */
+
+// Toggle individual para cada mes
+function toggleGenMonth(m, btn) {
+    const index = selectedMonthsArray.indexOf(m);
+    if (index > -1) {
+        selectedMonthsArray.splice(index, 1);
+        btn.classList.remove('active');
+    } else {
+        selectedMonthsArray.push(m);
+        btn.classList.add('active');
+    }
+}
+
+// Atajo para marcar los 12 meses
+function selectAllMonths(btn) {
+    const allButtons = document.querySelectorAll('#multi-month-grid .month-btn');
+    selectedMonthsArray = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+    allButtons.forEach(b => b.classList.add('active'));
+    btn.innerHTML = '<i class="fa-solid fa-check-double"></i> TODO EL AÑO MARCADO';
 }
 
 // Variable para controlar si es año completo
@@ -2179,18 +2205,24 @@ function toggleAllYear(btn) {
 }
 
 
-/* --- LÓGICA: PROCESADOR MASIVO (MES O AÑO) --- */
+/* --- LÓGICA: PROCESADOR MULTI-MES (VERSIÓN 8.0) --- */
 async function processGeneration() {
     const token = localStorage.getItem('aikido_jwt');
     const year = parseInt(document.getElementById('gen-year-select').value);
     const dojoId = document.getElementById('sensei-dojo-filter').value;
 
+    // 1. VALIDACIONES
     if (!dojoId || dojoId === 'all') {
         showModal("⚠️ AVISO", "Selecciona un DOJO específico arriba antes de generar.");
         return;
     }
 
-    // 1. CAPTURAR EL PATRÓN SEMANAL
+    if (selectedMonthsArray.length === 0) {
+        alert("⚠️ Debes marcar al menos un mes en la cuadrícula.");
+        return;
+    }
+
+    // CAPTURAR EL PATRÓN SEMANAL
     const pattern = {}; 
     for (let day = 0; day <= 6; day++) {
         for (let slot = 1; slot <= 2; slot++) {
@@ -2204,22 +2236,21 @@ async function processGeneration() {
     }
 
     if (Object.keys(pattern).length === 0) {
-        alert("Indica al menos un horario en la semana tipo.");
+        alert("⚠️ Indica al menos un horario en la semana tipo.");
         return;
     }
 
     const btn = document.querySelector('#custom-modal .action-btn.primary');
     btn.disabled = true;
 
-    // 2. DETERMINAR RANGO DE MESES
-    const startMonth = isFullYearGen ? 0 : selectedMonthGen;
-    const endMonth = isFullYearGen ? 11 : selectedMonthGen;
-
     let totalCreadas = 0;
 
-    // 3. BUCLE DE MESES
-    for (let m = startMonth; m <= endMonth; m++) {
-        btn.innerText = `GENERANDO MES ${m + 1}/12...`;
+    // 2. BUCLE POR CADA MES SELECCIONADO
+    // Ordenamos el array para que cree las clases en orden cronológico
+    selectedMonthsArray.sort((a, b) => a - b);
+
+    for (const m of selectedMonthsArray) {
+        btn.innerText = `PROGRAMANDO MES ${m + 1}...`;
         let ultimoDia = new Date(year, m + 1, 0).getDate();
 
         for (let d = 1; d <= ultimoDia; d++) {
@@ -2228,14 +2259,20 @@ async function processGeneration() {
 
             if (pattern[dayOfWeek]) {
                 for (const entreno of pattern[dayOfWeek]) {
-                    // Timezone Fix Literal: YYYY-MM-DDTHH:mm:00.000Z
+                    // Timezone Fix Literal: Formateamos el string ISO manualmente
                     const iso = `${year}-${(m + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${entreno.hora}:00.000Z`;
                     
                     try {
                         await fetch(`${API_URL}/clases`, { 
                             method: 'POST', 
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                            body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: entreno.dur, dojo: dojoId } }) 
+                            body: JSON.stringify({ 
+                                data: { 
+                                    Fecha_Hora: iso, 
+                                    Duracion: entreno.dur, 
+                                    dojo: dojoId 
+                                } 
+                            }) 
                         }); 
                         totalCreadas++;
                     } catch (err) { console.error("Error en clase:", iso); }
@@ -2244,11 +2281,13 @@ async function processGeneration() {
         }
     }
 
-    // 4. FINALIZACIÓN Y LIMPIEZA
+    // 3. FINALIZACIÓN
     localStorage.removeItem('cache_clases_archivo'); 
-    isFullYearGen = false; // Reset del flag
     
-    showModal("¡OSS SENSEI!", `Misión cumplida. Se han sembrado ${totalCreadas} clases en Neon para el Dojo seleccionado.`); 
+    // Reseteamos el array para la próxima vez
+    selectedMonthsArray = [new Date().getMonth()]; 
+    
+    showModal("¡MISIÓN CUMPLIDA!", `Se han inyectado ${totalCreadas} clases en Neon para los meses seleccionados.`); 
     
     if (typeof loadManageClasses === 'function') loadManageClasses();
 }
