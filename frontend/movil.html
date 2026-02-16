@@ -743,27 +743,20 @@
 
         /* --- ZEN MASTER CARD PARA SENSEIS --- */
 .zen-master-card {
-    /* Mantenemos el degradado pero ajustamos el fondo */
-    background: linear-gradient(rgba(5, 8, 15, 0.7), rgba(5, 8, 15, 0.7)), url('img/kanjis.jpg');
-    
-    /* CAMBIO CLAVE: 100% 100% obliga a la imagen a encajar entera en el recuadro */
-    background-size: 100% 100%; 
+    background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('img/kanjis.jpg');
+    background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
-    
     border: 2px solid var(--accent);
     border-radius: 35px;
-    padding: 30px 20px;
+    padding: 40px 20px;
     margin: 20px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(239, 68, 68, 0.2);
-    position: relative;
-    overflow: hidden;
+    box-shadow: var(--neon), inset 0 0 20px rgba(239, 68, 68, 0.2);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 200px; /* Le damos altura para que luzca la imagen */
+    min-height: 220px;
 }
 
 .zen-master-card::before {
@@ -774,36 +767,37 @@
 }
 
 .zen-logo {
-    width: 90px;
-    height: auto;
-    /* object-fit: contain asegura que el logo salga ENTERO siempre */
-    object-fit: contain; 
-    filter: drop-shadow(0 0 15px rgba(239,68,68,0.8));
-    margin-bottom: 10px;
-    position: relative;
-    z-index: 2;
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    /* Usamos el icono que ya sabemos que funciona */
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));
+    margin-bottom: 15px;
 }
 
 .zen-title {
-    font-size: 38px !important; /* Ajuste para móviles */
-    margin: 5px 0 0 !important;
-    letter-spacing: 6px !important;
+    font-size: 32px !important;
     color: white !important;
-    font-weight: 800 !important;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-    position: relative;
-    z-index: 2;
+    letter-spacing: 8px !important;
+    margin: 0 !important;
 }
 
 .zen-subtitle {
     font-size: 12px !important;
     color: var(--accent) !important;
-    letter-spacing: 3px !important;
-    margin-top: 5px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase;
-    position: relative;
-    z-index: 2;
+    letter-spacing: 4px !important;
+    margin-top: 10px !important;
+}
+
+/* FIX ESCRITORIO: Evitar que la nav-bar tape el contenido */
+@media (min-width: 900px) {
+    #app-content {
+        padding-bottom: 150px !important;
+    }
+    .class-hero {
+        max-width: 600px;
+        margin: 0 auto 30px !important;
+    }
 }
 
         /* --- BOTTOM SHEET PERFIL --- */
@@ -1553,13 +1547,10 @@ async function initApp() {
     }
 }
   
-/* --- REFRESH DATA (VERSIÓN 5.8 - SINCRONIZACIÓN MAESTRA) --- */
 async function refreshStudentData() {
-    console.log("📡 [SINCRO] Sincronizando ficha con Neon...");
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
     
-    // 1. INTELIGENCIA DE CACHÉ (Zero Waste)
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
@@ -1578,32 +1569,26 @@ async function refreshStudentData() {
         }
     }
 
-    // 2. ELEMENTOS DE INTERFAZ
     const circle = document.getElementById('student-progress-circle');
     const nextGrade = document.getElementById('next-grade-display');
     const zenCard = document.getElementById('zen-card');
 
-    // 3. DETERMINAR ROL Y DOJO
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     
-    // ACTUALIZACIÓN CRÍTICA DEL DOJO GLOBAL
     if (p && p.dojo) {
         dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
-        console.log("📍 [SINCRO] Dojo del alumno confirmado:", dojoIdGlobal);
     }
 
-    const esSenseiRango = (user.is_sensei === true);
-
-    // 4. LÓGICA DE VISUALIZACIÓN
-    if (esSenseiRango) {
-        // --- MODO MAESTRO ---
+    // --- PURE SENSEI LOGIC ---
+    if (user.is_sensei === true) {
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
+        
         if (!zenCard && circle) {
             const zenHTML = `
                 <div id="zen-card" class="zen-master-card">
-                    <img src="img/icon-512.png" class="zen-logo">
+                    <img src="img/logo_sin_fondo.png" class="zen-logo"> <!-- FIX: Imagen corregida -->
                     <h2 class="zen-title">SENSEI</h2>
                     <p class="zen-subtitle">ARASHI DOJO</p>
                 </div>`;
@@ -1613,17 +1598,14 @@ async function refreshStudentData() {
         document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S").toUpperCase();
 
     } else if (p) {
-        // --- MODO ALUMNO ---
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
         
         document.getElementById('user-display-name').innerText = (p.nombre || user.nombre).toUpperCase();
         document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
-        
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        // LÓGICA DAN-STEP AUTOMÁTICA
         let meta = p.grado_objetivo;
         if (!meta) {
             const gradoActual = (p.grado || "S/G").toUpperCase();
@@ -1637,25 +1619,21 @@ async function refreshStudentData() {
                 meta = "5º KYU";
             }
         }
-
         const normMeta = normalize(meta);
         const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;         
         let target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
-
         const bar = document.getElementById('progress-bar');
         if (bar) {
             const pct = Math.min((horas / target) * 100, 100);
             bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
         }
-
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
         }
     }
-    
-    return alumnoGlobal; // Importante para el 'await' de initApp
+    return alumnoGlobal;
 }
 
  
