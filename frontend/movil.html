@@ -746,7 +746,7 @@
 .zen-master-card {
     background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg');
     background-size: cover;
-    background-position: center;
+    background-position: center 20%;
     background-repeat: no-repeat;
     
     border: 2px solid var(--accent);
@@ -995,6 +995,30 @@
     .month-btn {
         padding: 8px 2px !important;
         font-size: 10px !important;
+    }
+}
+/* --- REGLA DE RANGO: ELIMINAR BOTÓN PARA SENSEI --- */
+/* Si el body tiene la clase 'is-sensei-mode', el botón muere físicamente */
+body.is-sensei-mode #confirm-btn {
+    display: none !important;
+}
+
+/* --- OPTIMIZACIÓN DE ESPACIO EN ESCRITORIO --- */
+@media (min-width: 900px) {
+    .zen-master-card {
+        max-width: 800px;
+        min-height: 180px; /* Reducimos altura para ganar visibilidad del Keiko */
+        padding: 30px;
+    }
+    
+    .class-hero {
+        margin-top: 10px !important;
+        padding: 25px !important;
+    }
+
+    /* Zona de seguridad para que el scroll termine ANTES de los iconos */
+    #dashboard-view {
+        padding-bottom: 150px !important; 
     }
 }
 
@@ -1547,6 +1571,7 @@ async function initApp() {
     }
 }
   
+/* --- REFRESH DATA (VERSION 8.0 - PURE SENSEI LOGIC & UI FIXES) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1554,6 +1579,7 @@ async function refreshStudentData() {
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
+    // 1. OBTENCIÓN DE DATOS (Zero Waste Cache)
     if (savedDocId && savedDocId !== "null") {
         dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
     } else {
@@ -1580,32 +1606,47 @@ async function refreshStudentData() {
         dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
     }
 
-    // --- PURE SENSEI LOGIC ---
+    // --- 🥋 LÓGICA DE VISUALIZACIÓN POR RANGO ---
+
     if (user.is_sensei === true) {
+        // --- CASO MAESTRO (FRANCESC) ---
+        
+        // Marcamos el body para que el CSS oculte botones de alumno
+        document.body.classList.add('is-sensei-mode'); 
+
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         
         if (!zenCard && circle) {
             const zenHTML = `
                 <div id="zen-card" class="zen-master-card">
-                    <img src="img/logo_sin_fondo.png" class="zen-logo"> <!-- FIX: Imagen corregida -->
+                    <img src="img/logo_sin_fondo.png" class="zen-logo">
                     <h2 class="zen-title">SENSEI</h2>
                     <p class="zen-subtitle">ARASHI DOJO</p>
                 </div>`;
             circle.insertAdjacentHTML('afterend', zenHTML);
         }
+        
+        // Actualizamos identidad en cabecera
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
         document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S").toUpperCase();
 
     } else if (p) {
+        // --- CASO ALUMNO (RAÚL / OTROS) ---
+        
+        // Quitamos el modo maestro si existía de una sesión previa
+        document.body.classList.remove('is-sensei-mode');
+
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
         
         document.getElementById('user-display-name').innerText = (p.nombre || user.nombre).toUpperCase();
         document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
+        
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
+        // Lógica Dan-Step automática
         let meta = p.grado_objetivo;
         if (!meta) {
             const gradoActual = (p.grado || "S/G").toUpperCase();
@@ -1619,20 +1660,24 @@ async function refreshStudentData() {
                 meta = "5º KYU";
             }
         }
+
         const normMeta = normalize(meta);
         const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;         
         let target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
+        
         const bar = document.getElementById('progress-bar');
         if (bar) {
             const pct = Math.min((horas / target) * 100, 100);
             bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
         }
+
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
         }
     }
+    
     return alumnoGlobal;
 }
 
