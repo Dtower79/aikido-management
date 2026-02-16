@@ -1969,7 +1969,7 @@ function setEmptyDashboard() {
     document.getElementById('confirm-btn').classList.add('hidden');
 }
 
-/* --- EDITOR DE CLASES (VERSION LIVE 100%) --- */
+/* --- EDITOR DE CLASES (VERSION 7.2 - SINCRONIZADA) --- */
 async function loadManageClasses() {
     const listDiv = document.getElementById('student-list');
     const dojoId = document.getElementById('sensei-dojo-filter').value;
@@ -1979,15 +1979,22 @@ async function loadManageClasses() {
     let endpoint = `/clases?sort=Fecha_Hora:asc&pagination[limit]=100&populate=dojo`;
     if (dojoId !== 'all') endpoint += `&filters[dojo][documentId][$eq]=${dojoId}`;
 
-    // DURACIÓN 0: Obliga al sistema a ignorar la caché y pedir datos nuevos
-    const json = await fetchSmart(endpoint, 'clases_archivo', 0);
+    // USAMOS LA MISMA LLAVE: 'cache_clases_archivo' pero con 0 horas
+    const json = await fetchSmart(endpoint, 'cache_clases_archivo', 0);
     
     if (!json || !json.data) return;
 
     const grouped = {};
     const hoy = new Date();
 
-    json.data.filter(c => new Date(parseData(c).Fecha_Hora) > hoy).forEach(c => {
+    json.data.filter(c => {
+        const d = parseData(c);
+        const [fechaPart, resto] = d.Fecha_Hora.split('T');
+        const [y, m, day] = fechaPart.split('-');
+        const [hh, mm] = resto.split(':');
+        const finLit = new Date(new Date(y, m - 1, day, hh, mm).getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
+        return finLit > hoy;
+    }).forEach(c => {
         const d = parseData(c);
         const f = formatTimeSafe(d.Fecha_Hora);
         const dojoInfo = parseRelation(d.dojo);
@@ -2391,7 +2398,7 @@ async function processSingleClass() {
     }
 }
 
-/* --- CALENDARIO (VERSION 6.5 - SINCRONIZACIÓN TEMPORAL) --- */
+/* --- CALENDARIO (VERSION 7.2 - UNIFICACIÓN DE CACHÉ) --- */
 async function loadMonthlyClasses(el) {
     if (el) showView('clases', el);
     const container = document.getElementById('calendar-content');
@@ -2409,6 +2416,8 @@ async function loadMonthlyClasses(el) {
 
     const filterDojo = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
     const listResults = document.getElementById('calendar-list-results');
+    
+    // USAMOS LA LLAVE UNIFICADA: 'cache_clases_archivo'
     const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'cache_clases_archivo', 1);
     
     if (!json || !json.data) return;
@@ -2420,13 +2429,13 @@ async function loadMonthlyClasses(el) {
         const d = parseData(c); 
         const dojoInfo = parseRelation(d.dojo);
         
-        // TRATAMIENTO LITERAL PARA FILTRADO
+        // TRATAMIENTO LITERAL PARA EVITAR DESFASES
         const [fechaPart, resto] = d.Fecha_Hora.split('T');
         const [y, m, day] = fechaPart.split('-');
         const [hh, mm] = resto.split(':');
         const finLit = new Date(new Date(y, m - 1, day, hh, mm).getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
 
-        if (ahora > finLit) return; // Si ya terminó, no se muestra en el calendario de futuros
+        if (ahora > finLit) return; 
         if (filterDojo !== 'all' && String(getID(dojoInfo)) !== String(filterDojo)) return;
 
         const f = formatTimeSafe(d.Fecha_Hora);
