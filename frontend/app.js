@@ -780,15 +780,14 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     } catch (e) { alert("Error generando historial."); console.error(e); }
 }
 
-// 2. GENERADOR DE INFORMES GENERALES
-// 2. GENERADOR DE INFORMES GENERALES (CORREGIDO: Modal + Fix Multi-página)
+/* --- GENERADOR DE INFORMES GENERALES (VERSION PREMIUM: NUMERACIÓN + GÉNERO) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
     const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
-    // 1. Validar fecha con Modal en lugar de Alert
+    // 1. Validar fecha con Modal
     if (type === 'attendance' && !attendanceDate) {
         showModal("Aviso", "Por favor, selecciona una fecha en el calendario para generar el informe de asistencia.");
         return;
@@ -822,8 +821,8 @@ async function generateReport(type) {
                 const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
                 const json = await res.json();
                 
-                headRow = ['Alumno', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
-                body = (json.data || []).map(item => {
+                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
+                body = (json.data || []).map((item, index) => {
                     const a = item.attributes || item;
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
@@ -832,8 +831,13 @@ async function generateReport(type) {
                         const [f, resto] = cla.Fecha_Hora.split('T');
                         horaStr = resto.substring(0, 5) + "h";
                     }
+                    
+                    const genderSym = alu?.genero === 'MUJER' ? ' ♀' : ' ♂';
+
                     return [
-                        alu ? `${(alu.apellidos||'').toUpperCase()}, ${alu.nombre||''}` : 'DESCONOCIDO',
+                        `${index + 1}.-`,
+                        (alu?.apellidos || '').toUpperCase(),
+                        (alu?.nombre || '') + genderSym,
                         alu?.dni || '-',
                         getDojoName(alu?.dojo),
                         cla?.Tipo || 'General',
@@ -866,15 +870,17 @@ async function generateReport(type) {
                     return (pA.apellidos || '').localeCompare(pB.apellidos || '');
                 });
 
-                headRow = ['Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
+                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
                 if (isBaja) headRow.unshift('Baja');
 
-                body = list.map(item => {
+                body = list.map((item, index) => {
                     const p = item.attributes || item;
+                    const genderSym = p.genero === 'MUJER' ? ' ♀' : ' ♂';
                     const ciudadFull = `${p.cp || ''} ${p.poblacion || ''}`.trim();
                     const row = [
+                        `${index + 1}.-`,
                         (p.apellidos || '').toUpperCase(),
-                        p.nombre || '',
+                        (p.nombre || '') + genderSym,
                         p.dni || '',
                         normalizeGrade(p.grado),
                         parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
@@ -889,17 +895,25 @@ async function generateReport(type) {
                 });
             }
 
-            // RENDERIZADO TABLA: Fix solapamiento segunda página
+            // RENDERIZADO TABLA: Regla Inviolable fontSize: 5 para reportes densos
             doc.autoTable({
-                startY: 30, // Margen inicial primera página
-                margin: { top: 30 }, // Margen superior para páginas siguientes (2, 3...)
+                startY: 30,
+                margin: { top: 30, left: 10, right: 10 },
                 head: [headRow], 
                 body: body, 
                 theme: 'grid',
-                styles: { fontSize: 6, cellPadding: 1.5, overflow: 'linebreak' },
+                styles: { 
+                    fontSize: 5, 
+                    cellPadding: 1, 
+                    overflow: 'linebreak' 
+                },
                 headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: 8 }, // Columna del Número (estrecha)
+                    1: { cellWidth: 35 }, // Apellidos
+                    2: { cellWidth: 25 }, // Nombre + Símbolo
+                },
                 didDrawPage: (data) => {
-                    // Este código se ejecuta en TODAS las páginas
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.setFont("helvetica", "bold");
                     doc.text(title, pageWidth / 2, 12, { align: 'center' });
@@ -907,7 +921,7 @@ async function generateReport(type) {
                     doc.text(subText, pageWidth / 2, 18, { align: 'center' });
                 }
             });
-            doc.save(`Informe_Arashi_${type}.pdf`);
+            doc.save(`Arashi_Informe_${type}.pdf`);
         } catch (e) { 
             console.error(e);
             showModal("Error", "No se ha podido generar el informe. Revisa la conexión."); 
