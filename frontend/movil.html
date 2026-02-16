@@ -2350,7 +2350,7 @@ async function processGeneration() {
     // Reseteamos el array para la próxima vez
     selectedMonthsArray = [new Date().getMonth()]; 
     
-    showModal("¡MISIÓN CUMPLIDA!", `Se han inyectado ${totalCreadas} clases en el calendario para los meses seleccionados.`); 
+    showModal("¡MISIÓN CUMPLIDA!", `Se han añadido ${totalCreadas} clases en el calendario para los meses seleccionados.`); 
     
     if (typeof loadManageClasses === 'function') loadManageClasses();
 }
