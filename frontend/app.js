@@ -780,7 +780,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     } catch (e) { alert("Error generando historial."); console.error(e); }
 }
 
-/* --- GENERADOR DE INFORMES PREMIUM V3: LÓGICA DE ORDENACIÓN AVANZADA --- */
+/* --- GENERADOR DE INFORMES PREMIUM V4: ORDENACIÓN POR GRADO, EDAD Y GÉNERO --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -818,41 +818,51 @@ async function generateReport(type) {
             const json = await res.json();
             let list = json.data || [];
 
-            // 2. 🥋 MOTOR DE ORDENACIÓN MAESTRO
+            // 2. 🥋 MOTOR DE ORDENACIÓN MAESTRO (VERSION 4.0)
             list.sort((a, b) => {
                 const pA = a.attributes || a;
                 const pB = b.attributes || b;
 
-                // A. Orden por Grado (Jerarquía Marcial)
+                // A. Orden por Grado (Jerarquía Marcial - NO DISP al final)
                 if (type === 'grade') {
-                    const gradeMap = { '6º DAN': 14, '5º DAN': 13, '4º DAN': 12, '3º DAN': 11, '2º DAN': 10, '1º DAN': 9, '1º KYU': 5, '2º KYU': 4, '3º KYU': 3, '4º KYU': 2, '5º KYU': 1, 'S/G': 0 };
-                    const valA = gradeMap[pA.grado?.toUpperCase()] || 0;
-                    const valB = gradeMap[pB.grado?.toUpperCase()] || 0;
-                    return valB - valA; // Mayor grado primero
+                    const gradeMap = { 
+                        '6º DAN': 100, '5º DAN': 90, '4º DAN': 80, '3º DAN': 70, '2º DAN': 60, '1º DAN': 50, 
+                        '1º KYU': 40, '2º KYU': 30, '3º KYU': 20, '4º KYU': 10, '5º KYU': 5, 'S/G': 1, 'NO DISP': -1 
+                    };
+                    const valA = gradeMap[normalizeGrade(pA.grado)] ?? -1;
+                    const valB = gradeMap[normalizeGrade(pB.grado)] ?? -1;
+                    if (valA !== valB) return valB - valA; // Mayor grado arriba
+                    return (pA.apellidos || "").localeCompare(pB.apellidos || ""); // Desempate por apellidos
                 }
 
-                // B. Orden por Edad (Veteranos primero)
+                // B. Orden por Género (NUEVO REQUISITO)
+                if (type === 'gender') {
+                    const genA = pA.genero || "MUJER"; // Fallback por si acaso
+                    const genB = pB.genero || "MUJER";
+                    if (genA !== genB) return genA.localeCompare(genB); // Agrupa Género
+                    return (pA.apellidos || "").localeCompare(pB.apellidos || ""); // Orden alfabético dentro
+                }
+
+                // C. Orden por Edad (Veteranos primero)
                 if (type === 'age') {
                     const fechaA = new Date(pA.fecha_nacimiento || '2100-01-01');
                     const fechaB = new Date(pB.fecha_nacimiento || '2100-01-01');
-                    return fechaA - fechaB; // Fecha más antigua (más viejo) primero
+                    return fechaA - fechaB; 
                 }
 
-                // C. Orden por Seguro (Pagado -> Apellidos)
+                // D. Orden por Seguro (Pagado arriba)
                 if (type === 'insurance') {
-                    if (pA.seguro_pagado !== pB.seguro_pagado) {
-                        return pB.seguro_pagado ? 1 : -1; // TRUE (pagado) arriba
-                    }
+                    if (pA.seguro_pagado !== pB.seguro_pagado) return pB.seguro_pagado ? 1 : -1;
                     return (pA.apellidos || "").localeCompare(pB.apellidos || "");
                 }
 
-                // Default: Por Apellidos
+                // Default: Apellidos
                 return (pA.apellidos || "").localeCompare(pB.apellidos || "");
             });
 
             // 3. MAPEO DE CABECERAS Y CUERPO
-            let headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
-            if (type === 'age') headRow.splice(3, 0, 'Edad'); // Añadimos columna edad si procede
+            let headRow = ['Nº', 'Apellidos', 'Nombre', 'Género', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'CP/Ciudad'];
+            if (type === 'age') headRow.splice(4, 0, 'Edad'); 
             if (isBaja) headRow.splice(1, 0, 'Baja');
 
             const body = list.map((item, index) => {
@@ -861,17 +871,16 @@ async function generateReport(type) {
                     `${index + 1}`,
                     (p.apellidos || '').toUpperCase(),
                     p.nombre || '',
-                    p.dni || '',
+                    p.genero || '---',
                     getDojoName(p.dojo),
                     normalizeGrade(p.grado),
-                    parseFloat(p.horas_accumuladas || p.horas_acumuladas || 0).toFixed(1) + 'h',
+                    parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
                     p.seguro_pagado ? 'SÍ' : 'NO',
                     normalizePhone(p.telefono),
                     p.email || '-',
-                    (p.direccion || '').substring(0, 20),
                     `${p.cp || ''} ${p.poblacion || ''}`.trim()
                 ];
-                if (type === 'age') row.splice(3, 0, calculateAge(p.fecha_nacimiento));
+                if (type === 'age') row.splice(4, 0, calculateAge(p.fecha_nacimiento));
                 if (isBaja) row.splice(1, 0, formatDateDisplay(p.fecha_baja));
                 return row;
             });
@@ -888,21 +897,23 @@ async function generateReport(type) {
                 columnStyles: {
                     0: { cellWidth: 6, halign: 'center' },
                     1: { cellWidth: 35 },
-                    2: { cellWidth: 22 }
+                    2: { cellWidth: 22 },
+                    3: { cellWidth: 15 } // Género
                 },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.setFont("helvetica", "bold");
-                    doc.text("INFORME DE GESTIÓN ARASHI", pageWidth / 2, 12, { align: 'center' });
+                    doc.text("ARASHI GROUP - INFORME OFICIAL", pageWidth / 2, 12, { align: 'center' });
                     doc.setFontSize(9); doc.setFont("helvetica", "normal");
-                    doc.text(`${dojoFilterName.toUpperCase()} | ORDEN: ${type.toUpperCase()}`, pageWidth / 2, 18, { align: 'center' });
+                    const subtitulo = isBaja ? `HISTÓRICO BAJAS | ORDEN: ${type.toUpperCase()}` : `ALUMNOS ACTIVOS | DOJO: ${dojoFilterName.toUpperCase()} | ORDEN: ${type.toUpperCase()}`;
+                    doc.text(subtitulo, pageWidth / 2, 18, { align: 'center' });
                 }
             });
 
-            doc.save(`Arashi_Informe_${type}.pdf`);
+            doc.save(`Arashi_Reporte_${type}_${new Date().getTime()}.pdf`);
         } catch (e) { 
             console.error("🔥 Error PDF:", e);
-            showModal("Error", "Fallo al generar el PDF."); 
+            showModal("Error", "Fallo al procesar la lista del Tatami."); 
         }
     };
 }
