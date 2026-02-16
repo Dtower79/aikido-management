@@ -748,32 +748,52 @@
             border-radius: 20px;
         }
 
-        /* --- ZEN MASTER CARD PARA SENSEIS --- */
-//* --- ZEN MASTER CARD (SENSEI - ANCHO UNIFICADO) --- */
+/* --- TARJETA MAESTRA (ZEN CARD) --- */
 .zen-master-card {
-    background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border: 2px solid var(--accent);
-    border-radius: 40px;
-    padding: 40px 30px;
-    margin: 20px auto; /* Centrado horizontal */
+    /* Fondo y Estética */
+    background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    border: 2px solid #ef4444 !important; /* Rojo Arashi */
+    border-radius: 40px !important;
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.4), inset 0 0 20px rgba(239, 68, 68, 0.2) !important;
     
-    /* ANCHO UNIFICADO CON EL KEIKO */
-    width: 90%; 
-    max-width: 600px; 
-    min-height: 220px;
+    /* Geometría y Alineación */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
     
-    text-align: center;
-    box-shadow: var(--neon), inset 0 0 30px rgba(239, 68, 68, 0.2);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    box-sizing: border-box;
+    /* El ancho debe ser igual al del Keiko */
+    width: 90% !important;
+    max-width: 600px !important;
+    min-height: 200px !important;
+    margin: 20px auto !important; /* Centrado absoluto */
+    padding: 30px 20px !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+/* --- TARJETA KEIKO (HERO CARD) --- */
+.class-hero { 
+    background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%) !important; 
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    border-radius: 40px !important; 
+    box-shadow: 0 20px 45px rgba(239,68,68,0.3) !important; 
+    
+    /* Geometría idéntica a la Zen Card */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 90% !important;
+    max-width: 600px !important;
+    margin: 0 auto 25px !important; /* Centrado absoluto */
+    padding: 35px 25px !important;
+    
+    text-align: center !important; 
+    box-sizing: border-box !important;
 }
 
 .zen-logo {
@@ -1647,10 +1667,9 @@ async function refreshStudentData() {
 
         const zenHTML = `
             <div id="zen-card" class="zen-master-card">
-                <img src="img/logo_sin_fondo.png" class="zen-logo">
+                <img src="img/logo_sin_fondo.png" class="zen-logo" style="width:80px; margin-bottom:15px;">
                 <h2 class="zen-title">SENSEI</h2>
-                <!-- DINÁMICO: Muestra el Dojo asignado al Sensei en Rojo -->
-                <p class="zen-subtitle" id="zen-dojo-name">${dojoNameDisplay}</p>
+                <p class="zen-subtitle">${dojoNameDisplay}</p>
             </div>`;
             
         if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
