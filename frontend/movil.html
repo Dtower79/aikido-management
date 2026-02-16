@@ -1969,25 +1969,17 @@ function setEmptyDashboard() {
     document.getElementById('confirm-btn').classList.add('hidden');
 }
 
-/* --- LISTADO DEL EDITOR SENSEI (SIEMPRE LIVE) --- */
+/* --- EDITOR DE CLASES (VERSION LIVE 100%) --- */
 async function loadManageClasses() {
     const listDiv = document.getElementById('student-list');
     const dojoId = document.getElementById('sensei-dojo-filter').value;
+    
+    listDiv.innerHTML = `<button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">← VOLVER</button><p style='text-align:center; opacity:0.5; padding:20px;'>Cargando tatami live...</p>`;
 
-    listDiv.innerHTML = `
-        <button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">
-            <i class="fa-solid fa-chevron-left"></i> VOLVER A VALIDACIONES
-        </button>
-        <p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando con Neon...</p>
-    `;
-
-    // Filtro dinámico según el selector del panel
     let endpoint = `/clases?sort=Fecha_Hora:asc&pagination[limit]=100&populate=dojo`;
-    if (dojoId !== 'all') {
-        endpoint += `&filters[dojo][documentId][$eq]=${dojoId}`;
-    }
+    if (dojoId !== 'all') endpoint += `&filters[dojo][documentId][$eq]=${dojoId}`;
 
-    // Usamos 0 horas para que el editor NUNCA use caché vieja
+    // DURACIÓN 0: Obliga al sistema a ignorar la caché y pedir datos nuevos
     const json = await fetchSmart(endpoint, 'clases_archivo', 0);
     
     if (!json || !json.data) return;
@@ -2000,15 +1992,11 @@ async function loadManageClasses() {
         const f = formatTimeSafe(d.Fecha_Hora);
         const dojoInfo = parseRelation(d.dojo);
         if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
-        const item = { ...f, id: getID(c), dur: d.Duracion, raw: d.Fecha_Hora, dNom: (dojoInfo?.nombre || "Arashi").replace("Aikido Arashi ", "") };
+        const item = { ...f, id: getID(c), dur: d.Duracion, raw: d.Fecha_Hora, dNom: (dojoInfo?.nombre || "ARASHI").replace("Aikido Arashi ", "") };
         if (f.hour < 14) grouped[f.month].morning.push(item); else grouped[f.month].afternoon.push(item);
     });
 
-    listDiv.innerHTML = `
-        <button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">
-            <i class="fa-solid fa-chevron-left"></i> VOLVER A VALIDACIONES
-        </button>
-    `;
+    listDiv.innerHTML = `<button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">← VOLVER A VALIDACIONES</button>`;
 
     for (const month in grouped) {
         let html = `<div class="month-header">${month}</div>`;
@@ -2346,52 +2334,60 @@ function setGenMonth(m, btn) {
             showModal("NUEVA CLASE SUELTA", `<div style="text-align:left; margin-top:10px;"><span class="modal-label">FECHA:</span><input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}"><span class="modal-label">HORA:</span><input type="time" id="single-time" class="modal-field" value="10:00"><span class="modal-label">DURACIÓN:</span><select id="single-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select><button class="action-btn primary" onclick="processSingleClass()" style="margin-top:10px;">CREAR KEIKO</button></div>`, true); 
         }
 
-/* --- CREACIÓN DE KEIKO INDIVIDUAL (CON REFRESCO INSTANTÁNEO) --- */
+/* --- CREACIÓN DE CLASE ÚNICA (CON BLOQUEO DE DUPLICADOS) --- */
 async function processSingleClass() { 
     const token = localStorage.getItem('aikido_jwt');
-    const selector = document.getElementById('sensei-dojo-filter');
-    const dojoId = selector ? selector.value : "";
+    const dojoId = document.getElementById('sensei-dojo-filter').value;
+    const dVal = document.getElementById('single-date').value;
+    const tVal = document.getElementById('single-time').value;
+    const dur = document.getElementById('single-dur').value;
 
-    // Bloqueo de seguridad: Dojo obligatorio
-    if (!dojoId || dojoId === 'all' || dojoId.length < 5) {
-        showModal("⚠️ AVISO", "Selecciona un DOJO específico arriba antes de crear el Keiko.");
+    // 1. BLOQUEO DE SEGURIDAD: DOJO OBLIGATORIO
+    if (!dojoId || dojoId === 'all') {
+        showModal("Aviso", "Selecciona un Dojo específico primero.");
         return;
     }
 
-    const d = document.getElementById('single-date').value;
-    const t = document.getElementById('single-time').value;
-    const dur = document.getElementById('single-dur').value;
+    // 2. CONSTRUCCIÓN DE HORA LITERAL (Timezone Fix)
+    const isoString = `${dVal}T${tVal}:00.000Z`;
 
     try {
+        const btn = document.querySelector('#custom-modal .action-btn.primary');
+        btn.innerText = "VERIFICANDO..."; btn.disabled = true;
+
+        // 3. VERIFICACIÓN DE DUPLICADOS EN NEON
+        const checkRes = await fetch(`${API_URL}/clases?filters[Fecha_Hora][$eq]=${isoString}&filters[dojo][documentId][$eq]=${dojoId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const checkJ = await checkRes.json();
+
+        if (checkJ.data && checkJ.data.length > 0) {
+            btn.innerText = "CREAR KEIKO"; btn.disabled = false;
+            showModal("⚠️ CLASE DUPLICADA", "Ya existe un entrenamiento programado en este Dojo a esta misma hora. No se pueden duplicar keikos.");
+            return; // Abortamos la creación
+        }
+
+        // 4. CREACIÓN REAL
         const res = await fetch(`${API_URL}/clases`, { 
             method: 'POST', 
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
-            }, 
-            body: JSON.stringify({ 
-                data: { 
-                    Fecha_Hora: `${d}T${t}:00.000Z`, 
-                    Duracion: parseFloat(dur), 
-                    dojo: dojoId 
-                } 
-            }) 
-        });
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+            body: JSON.stringify({ data: { Fecha_Hora: isoString, Duracion: parseFloat(dur), dojo: dojoId } }) 
+        }); 
 
         if (res.ok) {
-            // REGLA MAESTRA: Invalidamos la caché para ver el cambio YA
+            // 5. LIMPIEZA DE CACHÉ Y REFRESCO INSTANTÁNEO
             localStorage.removeItem('cache_clases_archivo'); 
-            
             closeModal(); 
             
-            // Refrescamos el editor y el dashboard sin F5
+            // Forzamos al calendario y al editor a recargar los datos de Neon
+            await loadMonthlyClasses(); 
             await loadManageClasses(); 
-            checkTodayClass(); 
-            
-            showModal("¡OSS!", "Keiko creado y sincronizado.");
+            await checkTodayClass(); 
+
+            showModal("¡OSS!", "Keiko creado y sincronizado correctamente.");
         }
     } catch (e) {
-        showModal("Error", "No se pudo guardar la clase en Neon.");
+        showModal("Error", "Fallo al conectar con el Dojo.");
     }
 }
 
