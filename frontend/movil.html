@@ -742,62 +742,62 @@
         }
 
         /* --- ZEN MASTER CARD PARA SENSEIS --- */
+/* --- ZEN MASTER CARD (VERSIÓN DESKTOP ELITE) --- */
 .zen-master-card {
-    background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('img/kanjis.jpg');
+    background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg');
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
+    
     border: 2px solid var(--accent);
-    border-radius: 35px;
-    padding: 40px 20px;
-    margin: 20px;
+    border-radius: 40px;
+    padding: 50px 30px;
+    margin: 20px auto; /* Centrado automático */
+    
+    /* LIMITACIÓN PARA ESCRITORIO */
+    max-width: 700px; 
+    min-height: 250px;
+    
     text-align: center;
-    box-shadow: var(--neon), inset 0 0 20px rgba(239, 68, 68, 0.2);
+    box-shadow: var(--neon), inset 0 0 30px rgba(239, 68, 68, 0.2);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 220px;
-}
-
-.zen-master-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at center, transparent, rgba(0,0,0,0.4));
+    position: relative;
+    overflow: hidden;
 }
 
 .zen-logo {
-    width: 80px;
-    height: 80px;
+    width: 90px;
+    height: 90px;
     object-fit: contain;
-    /* Usamos el icono que ya sabemos que funciona */
-    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));
-    margin-bottom: 15px;
+    filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.9));
+    margin-bottom: 20px;
+    z-index: 2;
 }
 
 .zen-title {
-    font-size: 32px !important;
+    font-size: 42px !important;
     color: white !important;
-    letter-spacing: 8px !important;
+    letter-spacing: 12px !important; /* Más aire entre letras para elegancia */
     margin: 0 !important;
+    text-shadow: 0 0 20px rgba(0,0,0,1);
+    z-index: 2;
 }
 
 .zen-subtitle {
-    font-size: 12px !important;
+    font-size: 13px !important;
     color: var(--accent) !important;
-    letter-spacing: 4px !important;
-    margin-top: 10px !important;
+    letter-spacing: 5px !important;
+    margin-top: 15px !important;
+    font-weight: 800 !important;
+    z-index: 2;
 }
 
-/* FIX ESCRITORIO: Evitar que la nav-bar tape el contenido */
-@media (min-width: 900px) {
-    #app-content {
-        padding-bottom: 150px !important;
-    }
-    .class-hero {
-        max-width: 600px;
-        margin: 0 auto 30px !important;
-    }
+/* FIX PARA EVITAR EL CORTE POR LA BARRA INFERIOR */
+#app-content {
+    padding-bottom: 120px;
 }
 
         /* --- BOTTOM SHEET PERFIL --- */
@@ -1841,13 +1841,13 @@ async function validateAttendance(asistId, asiste, aluId, dur) {
             }, 200);
         }
 
-/* --- PRÓXIMO KEIKO (VERSION 6.5 - CON RELOJ DE DEPURACIÓN) --- */
+/* --- PRÓXIMO KEIKO (VERSION 7.0 - SIN BOTÓN PARA SENSEI) --- */
 async function checkTodayClass(forcedDojoId = null) {
-    console.log("🔍 [DASHBOARD] Iniciando escaneo de horario...");
     const btn = document.getElementById('confirm-btn');
+    const user = JSON.parse(localStorage.getItem('aikido_user')); 
     const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
-    const selectorDojo = document.getElementById('cal-dojo-filter');
-    let dojoBusqueda = forcedDojoId || (selectorDojo ? selectorDojo.value : dojoIdGlobal) || 'all';
+    const filterEl = document.getElementById('cal-dojo-filter');
+    let dojoBusqueda = forcedDojoId || (filterEl ? filterEl.value : dojoIdGlobal) || 'all';
     const idFinal = String(dojoBusqueda);
 
     try {
@@ -1857,8 +1857,6 @@ async function checkTodayClass(forcedDojoId = null) {
         const json = await res.json();
         const ahora = new Date();
 
-        console.log("🕒 [RELOJ SISTEMA] Hora actual local:", ahora.getHours() + ":" + ahora.getMinutes());
-
         if (!json.data || json.data.length === 0) return setEmptyDashboard("Calendario vacío");
 
         let claseElegida = null;
@@ -1867,27 +1865,15 @@ async function checkTodayClass(forcedDojoId = null) {
         for (const c of json.data) {
             const d = parseData(c);
             const dIdClase = d.dojo ? String(getID(parseRelation(d.dojo))) : null;
-            
-            // --- 🥋 TRATAMIENTO LITERAL ---
             const [fechaPart, resto] = d.Fecha_Hora.split('T');
             const [y, m, day] = fechaPart.split('-');
             const [hh, mm] = resto.split(':');
-            
-            // Creamos la fecha exacta de inicio y fin en horario local
-            const inicioLiteral = new Date(y, m - 1, day, hh, mm);
-            const duracionH = parseFloat(d.Duracion || 1.5);
-            const finLiteral = new Date(inicioLiteral.getTime() + (duracionH * 60 * 60 * 1000));
+            const inicioLit = new Date(y, m - 1, day, hh, mm);
+            const finLit = new Date(inicioLit.getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
 
-            // LOG DE AUDITORÍA: Verás esto en la consola F12
-            console.log(`📊 [CHECK] Clase: ${hh}:${mm} | Fin: ${finLiteral.getHours()}:${finLiteral.getMinutes()} | ¿Pasada?: ${ahora > finLiteral}`);
-
-            // REGLA: Si la hora actual es mayor que el fin literal, saltamos a la siguiente
-            if (ahora > finLiteral) continue; 
-
-            // Filtro de Dojo
+            if (ahora > finLit) continue; 
             if (idFinal !== 'all' && dIdClase !== idFinal) continue;
 
-            // Si ya asistió, no la mostramos como "Siguiente"
             if (aluId) {
                 const cid = getID(c);
                 const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
@@ -1895,11 +1881,9 @@ async function checkTodayClass(forcedDojoId = null) {
                 });
                 const chkJ = await chk.json();
                 const asistencia = chkJ.data?.[0];
-                const estado = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
-                if (estado === 'Asistio') continue;
-                estadoAlumno = estado;
+                estadoAlumno = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
+                if (estadoAlumno === 'Asistio') continue;
             }
-
             claseElegida = c;
             break; 
         }
@@ -1911,18 +1895,29 @@ async function checkTodayClass(forcedDojoId = null) {
             const f = formatTimeSafe(d.Fecha_Hora);
             
             document.getElementById('next-class-time').innerText = f.time;
-            document.getElementById('next-class-date').innerHTML = `${f.date} <br><span style="font-size:11px; color:var(--accent); font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").replace("Aikido Arashi ", "")}</span>`;
+            document.getElementById('next-class-date').innerHTML = `${f.date} <br><span style="font-size:11px; color:var(--accent); font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span>`;
             
-            if (btn) {
-                btn.classList.remove('hidden');
-                btn.innerText = (estadoAlumno === 'Confirmado') ? "YA CONFIRMADO" : "ASISTIR AL KEIKO";
-                btn.disabled = (estadoAlumno === 'Confirmado');
-                btn.style.background = (estadoAlumno === 'Confirmado') ? "#1e293b" : "white";
+            // --- 🥋 EL CAMBIO MAESTRO AQUÍ ---
+            if (user && user.is_sensei === true) {
+                // Francesc no necesita el botón, lo borramos de la vista
+                if(btn) {
+                    btn.classList.add('hidden');
+                    btn.style.display = 'none';
+                }
+            } else {
+                // Los alumnos lo ven normal
+                if(btn) {
+                    btn.classList.remove('hidden');
+                    btn.style.display = 'flex';
+                    btn.innerText = (estadoAlumno === 'Confirmado') ? "YA CONFIRMADO" : "ASISTIR AL KEIKO";
+                    btn.disabled = (estadoAlumno === 'Confirmado');
+                    btn.style.background = (estadoAlumno === 'Confirmado') ? "#1e293b" : "white";
+                }
             }
         } else {
             setEmptyDashboard("Sin keikos próximos");
         }
-    } catch (e) { console.error("Error Dashboard:", e); }
+    } catch (e) { console.error(e); }
 }
 
 function setEmptyDashboard(msg) {
