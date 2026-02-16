@@ -108,11 +108,11 @@ body {
         filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); /* Sombra para darle profundidad */
     }
 
-    .logo-img-sidebar:hover, .logo-welcome:hover {
+    /*.logo-img-sidebar:hover, .logo-welcome:hover {
         filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.6));
         transform: scale(1.05);
         transition: all 0.3s ease;
-    }   
+    }*/   
 
 
 
