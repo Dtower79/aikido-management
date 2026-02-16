@@ -780,16 +780,15 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     } catch (e) { alert("Error generando historial."); console.error(e); }
 }
 
-/* --- GENERADOR DE INFORMES GENERALES (VERSION PREMIUM: NUMERACIÓN + GÉNERO) --- */
+/* --- GENERADOR DE INFORMES GENERALES (VERSION PREMIUM V2: LIMPIEZA TOTAL) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
     const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
-    // 1. Validar fecha con Modal
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Aviso", "Por favor, selecciona una fecha en el calendario para generar el informe de asistencia.");
+        showModal("Aviso", "Por favor, selecciona una fecha en el calendario.");
         return;
     }
 
@@ -802,7 +801,7 @@ async function generateReport(type) {
 
     const subtitleMap = {
         'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro',
-        'bajas_surname': 'Histórico Bajas (Por Apellidos)', 'bajas_date': 'Histórico Bajas (Por Fecha)',
+        'bajas_surname': 'Histórico Bajas (Apellidos)', 'bajas_date': 'Histórico Bajas (Fecha)',
         'attendance': 'Asistencia Diaria'
     };
 
@@ -832,12 +831,10 @@ async function generateReport(type) {
                         horaStr = resto.substring(0, 5) + "h";
                     }
                     
-                    const genderSym = alu?.genero === 'MUJER' ? ' ♀' : ' ♂';
-
                     return [
-                        `${index + 1}.-`,
+                        `${index + 1}`,
                         (alu?.apellidos || '').toUpperCase(),
-                        (alu?.nombre || '') + genderSym,
+                        (alu?.nombre || ''), // Género eliminado para evitar errores de fuente
                         alu?.dni || '-',
                         getDojoName(alu?.dojo),
                         cla?.Tipo || 'General',
@@ -863,39 +860,33 @@ async function generateReport(type) {
 
                 list.sort((a, b) => {
                     const pA = a.attributes || a; const pB = b.attributes || b;
-                    if (type === 'grade') return getGradeWeight(pB.grado) - getGradeWeight(pA.grado);
-                    if (type === 'age') return new Date(pA.fecha_nacimiento || '0') - new Date(pB.fecha_nacimiento || '0');
-                    if (type === 'group') return (pA.grupo || '').localeCompare(pB.grupo || '');
-                    if (type === 'dojo') return getDojoName(pA.dojo).localeCompare(getDojoName(pB.dojo));
                     return (pA.apellidos || '').localeCompare(pB.apellidos || '');
                 });
 
                 headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
-                if (isBaja) headRow.unshift('Baja');
+                if (isBaja) headRow.splice(1, 0, 'Baja');
 
                 body = list.map((item, index) => {
                     const p = item.attributes || item;
-                    const genderSym = p.genero === 'MUJER' ? ' ♀' : ' ♂';
-                    const ciudadFull = `${p.cp || ''} ${p.poblacion || ''}`.trim();
                     const row = [
-                        `${index + 1}.-`,
+                        `${index + 1}`,
                         (p.apellidos || '').toUpperCase(),
-                        (p.nombre || '') + genderSym,
+                        (p.nombre || ''),
                         p.dni || '',
                         normalizeGrade(p.grado),
                         parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
-                        p.seguro_pagado ? 'PAGADO' : 'NO',
+                        p.seguro_pagado ? 'SÍ' : 'NO',
                         normalizePhone(p.telefono),
                         p.email || '-',
                         (p.direccion || '').substring(0, 30),
-                        ciudadFull
+                        `${p.cp || ''} ${p.poblacion || ''}`.trim()
                     ];
-                    if (isBaja) row.unshift(formatDateDisplay(p.fecha_baja));
+                    if (isBaja) row.splice(1, 0, formatDateDisplay(p.fecha_baja));
                     return row;
                 });
             }
 
-            // RENDERIZADO TABLA: Regla Inviolable fontSize: 5 para reportes densos
+            // RENDERIZADO TABLA: Configuración de anchos milimétricos
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
@@ -903,15 +894,15 @@ async function generateReport(type) {
                 body: body, 
                 theme: 'grid',
                 styles: { 
-                    fontSize: 5, 
-                    cellPadding: 1, 
+                    fontSize: 5, // Regla Inviolable para 12 columnas
+                    cellPadding: 0.8, 
                     overflow: 'linebreak' 
                 },
                 headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
                 columnStyles: {
-                    0: { cellWidth: 8 }, // Columna del Número (estrecha)
-                    1: { cellWidth: 35 }, // Apellidos
-                    2: { cellWidth: 25 }, // Nombre + Símbolo
+                    0: { cellWidth: 6, halign: 'center' }, // Nº: Lo justo para el número
+                    1: { cellWidth: isBaja ? 15 : 40 },   // Bajas o Apellidos
+                    2: { cellWidth: isBaja ? 40 : 25 },   // Apellidos o Nombre
                 },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
@@ -921,10 +912,10 @@ async function generateReport(type) {
                     doc.text(subText, pageWidth / 2, 18, { align: 'center' });
                 }
             });
-            doc.save(`Arashi_Informe_${type}.pdf`);
+            doc.save(`Arashi_Reporte_${type}.pdf`);
         } catch (e) { 
             console.error(e);
-            showModal("Error", "No se ha podido generar el informe. Revisa la conexión."); 
+            showModal("Error", "Fallo al generar el PDF."); 
         }
     };
 }
