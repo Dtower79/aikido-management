@@ -2078,36 +2078,41 @@ async function saveClass(id) {
     checkTodayClass(); // Actualizamos dashboard por si era la clase de hoy
 }
 
-/* --- SOLICITAR CONFIRMACIÓN DE BORRADO (MODAL PREMIUM) --- */
+/* --- PREGUNTA DE BORRADO (MODAL PERSONALIZADO) --- */
 async function deleteClass(id) {
-    const htmlConfirmacion = `
-        <div style="text-align: center;">
-            <p style="margin-bottom: 25px; color: #cbd5e1; font-size: 14px; line-height: 1.5;">
-                ¿Estás seguro de que deseas eliminar este entrenamiento? <br>
-                <span style="color: var(--accent); font-weight: 800;">Esta acción no se puede deshacer.</span>
+    // Creamos el diseño que irá dentro del modal
+    const diseñoModal = `
+        <div style="text-align: center; padding: 10px 0;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 40px; color: var(--accent); margin-bottom: 20px;"></i>
+            <p style="margin-bottom: 25px; color: #cbd5e1; font-size: 15px; line-height: 1.6;">
+                ¿Estás seguro de que deseas eliminar este entrenamiento?<br>
+                <span style="color: var(--accent); font-weight: 800;">ESTA ACCIÓN ES IRREVERSIBLE.</span>
             </p>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="action-btn primary" onclick="executeDelete('${id}')">
-                    <i class="fa-solid fa-trash-can"></i> SÍ, ELIMINAR KEIKO
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button class="action-btn primary" onclick="executeDelete('${id}')" style="height: 55px;">
+                    <i class="fa-solid fa-trash-can"></i> SÍ, ELIMINAR AHORA
                 </button>
-                <button class="action-btn" style="background: #334155; color: white;" onclick="closeModal()">
+                <button class="action-btn" style="background: #334155; color: white; height: 50px;" onclick="closeModal()">
                     CANCELAR
                 </button>
             </div>
         </div>
     `;
     
-    // Abrimos el modal con los botones inyectados y ocultamos el botón "CERRAR" de serie
-    showModal("¿BORRAR ENTRENAMIENTO?", htmlConfirmacion, false);
+    // Llamamos a tu función showModal pasándole 'false' al final para que no salga el botón cerrar de serie
+    showModal("CONFIRMAR BORRADO", diseñoModal, false);
 }
 
-/* --- EJECUCIÓN REAL DEL BORRADO EN NEON --- */
+/* --- EJECUCIÓN DEL BORRADO EN NEON --- */
 async function executeDelete(id) {
     const token = localStorage.getItem('aikido_jwt');
     
-    // Cambiamos el texto del botón para dar feedback
-    const btn = document.querySelector('#custom-modal .action-btn.primary');
-    if (btn) { btn.innerText = "BORRANDO..."; btn.disabled = true; }
+    // Feedback visual en el botón
+    const btnOk = document.querySelector('#custom-modal .action-btn.primary');
+    if (btnOk) { 
+        btnOk.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> BORRANDO...'; 
+        btnOk.disabled = true; 
+    }
 
     try {
         const res = await fetch(`${API_URL}/clases/${id}`, { 
@@ -2115,23 +2120,21 @@ async function executeDelete(id) {
             headers: { 'Authorization': `Bearer ${token}` } 
         }); 
 
-        if (!res.ok) throw new Error("Fallo en el servidor");
+        if (!res.ok) throw new Error("Fallo en la conexión");
 
-        // Limpieza de caché y sincronización
+        // Limpieza de caché e interfaz
         localStorage.removeItem('cache_clases_archivo'); 
+        closeModal(); 
         
-        closeModal(); // Cerramos el modal de pregunta
-        
-        // Refrescamos las vistas
         await loadManageClasses(); 
         await checkTodayClass(); 
 
-        // Notificación final de éxito
+        // Aviso final de éxito
         showModal("¡OSS!", "Keiko eliminado correctamente.");
 
     } catch (e) {
-        console.error("❌ Error:", e);
-        showModal("Error", "No se pudo eliminar la clase. Inténtalo de nuevo.");
+        console.error("Error al borrar:", e);
+        showModal("Error", "No se ha podido eliminar la clase de la base de datos.");
     }
 }
 
@@ -2347,7 +2350,7 @@ async function processGeneration() {
     // Reseteamos el array para la próxima vez
     selectedMonthsArray = [new Date().getMonth()]; 
     
-    showModal("¡MISIÓN CUMPLIDA!", `Se han inyectado ${totalCreadas} clases en Neon para los meses seleccionados.`); 
+    showModal("¡MISIÓN CUMPLIDA!", `Se han inyectado ${totalCreadas} clases en el calendario para los meses seleccionados.`); 
     
     if (typeof loadManageClasses === 'function') loadManageClasses();
 }
