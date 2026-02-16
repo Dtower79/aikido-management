@@ -780,7 +780,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     } catch (e) { alert("Error generando historial."); console.error(e); }
 }
 
-/* --- GENERADOR DE INFORMES GENERALES (VERSIÓN 100% BLINDADA) --- */
+/* --- GENERADOR DE INFORMES PREMIUM V3: LÓGICA DE ORDENACIÓN AVANZADA --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -788,7 +788,7 @@ async function generateReport(type) {
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Aviso", "Por favor, selecciona una fecha en el calendario para generar el informe de asistencia.");
+        showModal("Aviso", "Por favor, selecciona una fecha para el informe de asistencia.");
         return;
     }
 
@@ -799,95 +799,84 @@ async function generateReport(type) {
     const logoImg = new Image();
     logoImg.src = 'img/logo-arashi-informe.png';
 
-    const subtitleMap = {
-        'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro',
-        'bajas_surname': 'Histórico Bajas (Apellidos)', 'bajas_date': 'Histórico Bajas (Fecha)',
-        'attendance': 'Asistencia Diaria'
-    };
-
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
-        let headRow = [], body = [], title = "", subText = "";
-        
-        // 🥋 LLAVE MAESTRA: Definimos isBaja aquí para que sea global en la función
         const isBaja = type.startsWith('bajas');
 
         try {
+            // 1. OBTENCIÓN DE DATOS
+            let apiUrl = "";
             if (type === 'attendance') {
-                title = "ASISTENCIA DIARIA - TATAMI";
-                subText = `Día: ${formatDateDisplay(attendanceDate)} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'}`;
-                
-                let apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
-                if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
-
-                const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-                const json = await res.json();
-                
-                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
-                body = (json.data || []).map((item, index) => {
-                    const a = item.attributes || item;
-                    const alu = parseRelation(a.alumno);
-                    const cla = parseRelation(a.clase);
-                    let horaStr = "--:--";
-                    if(cla?.Fecha_Hora) {
-                        const [f, resto] = cla.Fecha_Hora.split('T');
-                        horaStr = resto.substring(0, 5) + "h";
-                    }
-                    return [
-                        `${index + 1}`,
-                        (alu?.apellidos || '').toUpperCase(),
-                        (alu?.nombre || ''),
-                        alu?.dni || '-',
-                        getDojoName(alu?.dojo),
-                        cla?.Tipo || 'General',
-                        horaStr,
-                        a.Estado === 'Asistio' ? 'ASISTIÓ' : 'NO SE PRESENTÓ'
-                    ];
-                });
-
+                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
             } else {
-                title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO COMPLETO ALUMNOS";
-                if (!isBaja && type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
-                else if (!isBaja) title += ` POR ${subtitleMap[type].toUpperCase()}`;
-
-                subText = `${isBaja ? 'Alumnos Inactivos' : 'Alumnos Activos'} | ${dojoFilterId ? dojoFilterName : 'Todos los Dojos'} | ${new Date().toLocaleDateString()}`;
-
-                let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
-                if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
-
-                const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-                const json = await res.json();
-                let list = json.data || [];
-
-                list.sort((a, b) => {
-                    const pA = a.attributes || a; const pB = b.attributes || b;
-                    return (pA.apellidos || '').localeCompare(pB.apellidos || '');
-                });
-
-                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
-                if (isBaja) headRow.splice(1, 0, 'Baja'); // Inserta columna "Baja" en la posición 1
-
-                body = list.map((item, index) => {
-                    const p = item.attributes || item;
-                    const row = [
-                        `${index + 1}`,
-                        (p.apellidos || '').toUpperCase(),
-                        (p.nombre || ''),
-                        p.dni || '',
-                        normalizeGrade(p.grado),
-                        parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
-                        p.seguro_pagado ? 'SÍ' : 'NO',
-                        normalizePhone(p.telefono),
-                        p.email || '-',
-                        (p.direccion || '').substring(0, 30),
-                        `${p.cp || ''} ${p.poblacion || ''}`.trim()
-                    ];
-                    if (isBaja) row.splice(1, 0, formatDateDisplay(p.fecha_baja));
-                    return row;
-                });
+                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
             }
 
-            // RENDERIZADO DE TABLA
+            if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+
+            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            const json = await res.json();
+            let list = json.data || [];
+
+            // 2. 🥋 MOTOR DE ORDENACIÓN MAESTRO
+            list.sort((a, b) => {
+                const pA = a.attributes || a;
+                const pB = b.attributes || b;
+
+                // A. Orden por Grado (Jerarquía Marcial)
+                if (type === 'grade') {
+                    const gradeMap = { '6º DAN': 14, '5º DAN': 13, '4º DAN': 12, '3º DAN': 11, '2º DAN': 10, '1º DAN': 9, '1º KYU': 5, '2º KYU': 4, '3º KYU': 3, '4º KYU': 2, '5º KYU': 1, 'S/G': 0 };
+                    const valA = gradeMap[pA.grado?.toUpperCase()] || 0;
+                    const valB = gradeMap[pB.grado?.toUpperCase()] || 0;
+                    return valB - valA; // Mayor grado primero
+                }
+
+                // B. Orden por Edad (Veteranos primero)
+                if (type === 'age') {
+                    const fechaA = new Date(pA.fecha_nacimiento || '2100-01-01');
+                    const fechaB = new Date(pB.fecha_nacimiento || '2100-01-01');
+                    return fechaA - fechaB; // Fecha más antigua (más viejo) primero
+                }
+
+                // C. Orden por Seguro (Pagado -> Apellidos)
+                if (type === 'insurance') {
+                    if (pA.seguro_pagado !== pB.seguro_pagado) {
+                        return pB.seguro_pagado ? 1 : -1; // TRUE (pagado) arriba
+                    }
+                    return (pA.apellidos || "").localeCompare(pB.apellidos || "");
+                }
+
+                // Default: Por Apellidos
+                return (pA.apellidos || "").localeCompare(pB.apellidos || "");
+            });
+
+            // 3. MAPEO DE CABECERAS Y CUERPO
+            let headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
+            if (type === 'age') headRow.splice(3, 0, 'Edad'); // Añadimos columna edad si procede
+            if (isBaja) headRow.splice(1, 0, 'Baja');
+
+            const body = list.map((item, index) => {
+                const p = item.attributes || item;
+                const row = [
+                    `${index + 1}`,
+                    (p.apellidos || '').toUpperCase(),
+                    p.nombre || '',
+                    p.dni || '',
+                    getDojoName(p.dojo),
+                    normalizeGrade(p.grado),
+                    parseFloat(p.horas_accumuladas || p.horas_acumuladas || 0).toFixed(1) + 'h',
+                    p.seguro_pagado ? 'SÍ' : 'NO',
+                    normalizePhone(p.telefono),
+                    p.email || '-',
+                    (p.direccion || '').substring(0, 20),
+                    `${p.cp || ''} ${p.poblacion || ''}`.trim()
+                ];
+                if (type === 'age') row.splice(3, 0, calculateAge(p.fecha_nacimiento));
+                if (isBaja) row.splice(1, 0, formatDateDisplay(p.fecha_baja));
+                return row;
+            });
+
+            // 4. RENDERIZADO DE TABLA (FontSize 5 Inviolable)
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
@@ -897,22 +886,23 @@ async function generateReport(type) {
                 styles: { fontSize: 5, cellPadding: 0.8, overflow: 'linebreak' },
                 headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
                 columnStyles: {
-                    0: { cellWidth: 6, halign: 'center' }, // Nº: Muy estrecho como pediste
-                    1: { cellWidth: isBaja ? 15 : 40 },   // Ajuste dinámico si es Baja o Apellido
-                    2: { cellWidth: isBaja ? 40 : 25 }    // Ajuste dinámico
+                    0: { cellWidth: 6, halign: 'center' },
+                    1: { cellWidth: 35 },
+                    2: { cellWidth: 22 }
                 },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.setFont("helvetica", "bold");
-                    doc.text(title, pageWidth / 2, 12, { align: 'center' });
+                    doc.text("INFORME DE GESTIÓN ARASHI", pageWidth / 2, 12, { align: 'center' });
                     doc.setFontSize(9); doc.setFont("helvetica", "normal");
-                    doc.text(subText, pageWidth / 2, 18, { align: 'center' });
+                    doc.text(`${dojoFilterName.toUpperCase()} | ORDEN: ${type.toUpperCase()}`, pageWidth / 2, 18, { align: 'center' });
                 }
             });
-            doc.save(`Arashi_Reporte_${type}.pdf`);
+
+            doc.save(`Arashi_Informe_${type}.pdf`);
         } catch (e) { 
             console.error("🔥 Error PDF:", e);
-            showModal("Error", "Fallo al generar el PDF. Revisa los datos."); 
+            showModal("Error", "Fallo al generar el PDF."); 
         }
     };
 }
