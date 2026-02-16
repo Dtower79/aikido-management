@@ -266,25 +266,18 @@
             cursor: default; 
         }
         
-/* --- TARJETA KEIKO (DASHBOARD - ANCHO UNIFICADO) --- */
-.class-hero { 
-    background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
-    padding: 35px 25px; 
-    border-radius: 40px; 
-    box-shadow: 0 20px 45px rgba(239,68,68,0.3); 
-    text-align: center; 
-    
-    /* MARGEN Y ANCHO IDÉNTICO AL SENSEI */
-    margin: 0 auto 25px; 
-    width: 90%;
-    max-width: 600px; 
-    
-    border: 1px solid rgba(255,255,255,0.2); 
-    opacity: 0; 
-    transform: translateY(20px); 
-    animation: fadeInUp 0.8s forwards; 
-    box-sizing: border-box;
-}
+        .class-hero { 
+            background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
+            padding: 35px 25px; 
+            border-radius: 40px; 
+            box-shadow: 0 20px 45px rgba(239,68,68,0.3); 
+            text-align: center; 
+            margin: 0 20px 25px; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            opacity: 0; 
+            transform: translateY(20px); 
+            animation: fadeInUp 0.8s forwards; 
+        }
 
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
@@ -749,21 +742,21 @@
         }
 
         /* --- ZEN MASTER CARD PARA SENSEIS --- */
-//* --- ZEN MASTER CARD (SENSEI - ANCHO UNIFICADO) --- */
+/* --- ZEN MASTER CARD (VERSIÓN DESKTOP ELITE) --- */
 .zen-master-card {
     background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg');
     background-size: cover;
-    background-position: center;
+    background-position: center 20%;
     background-repeat: no-repeat;
+    
     border: 2px solid var(--accent);
     border-radius: 40px;
-    padding: 40px 30px;
-    margin: 20px auto; /* Centrado horizontal */
+    padding: 50px 30px;
+    margin: 20px auto; /* Centrado automático */
     
-    /* ANCHO UNIFICADO CON EL KEIKO */
-    width: 90%; 
-    max-width: 600px; 
-    min-height: 220px;
+    /* LIMITACIÓN PARA ESCRITORIO */
+    max-width: 700px; 
+    min-height: 250px;
     
     text-align: center;
     box-shadow: var(--neon), inset 0 0 30px rgba(239, 68, 68, 0.2);
@@ -773,7 +766,6 @@
     justify-content: center;
     position: relative;
     overflow: hidden;
-    box-sizing: border-box;
 }
 
 .zen-logo {
@@ -1013,20 +1005,6 @@ body.is-sensei-mode #confirm-btn {
 
 /* --- OPTIMIZACIÓN DE ESPACIO EN ESCRITORIO --- */
 @media (min-width: 900px) {
-     #app-content {
-        padding-top: 10vh; /* Bajamos un poco el contenido para que no pegue arriba */
-        padding-bottom: 140px !important; /* Espacio para que la nav-bar no pise las tarjetas */
-    }
-    .header-app {
-        max-width: 600px;
-        margin: 0 auto 20px;
-        padding: 0;
-    }
-    .zen-master-card, .class-hero {
-        margin-left: auto !important;
-        margin-right: auto !important;
-    }
-
     .zen-master-card {
         max-width: 800px;
         min-height: 180px; /* Reducimos altura para ganar visibilidad del Keiko */
@@ -1593,7 +1571,7 @@ async function initApp() {
     }
 }
   
-/* --- REFRESH DATA (VERSION 8.1 - IDENTIDAD GEOGRÁFICA DE MAESTRO) --- */
+/* --- REFRESH DATA (VERSION 8.0 - PURE SENSEI LOGIC & UI FIXES) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1624,44 +1602,41 @@ async function refreshStudentData() {
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     
-    // --- 🥋 LÓGICA DE IDENTIFICACIÓN DE DOJO ---
-    let dojoNameDisplay = "ARASHI GROUP"; // Fallback por defecto
     if (p && p.dojo) {
-        const dData = parseRelation(p.dojo);
-        dojoNameDisplay = dData.nombre ? dData.nombre.toUpperCase() : "ARASHI GROUP";
-        dojoIdGlobal = String(getID(dData));
+        dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
     }
 
-    // --- 🧘 LÓGICA DE VISUALIZACIÓN ---
+    // --- 🥋 LÓGICA DE VISUALIZACIÓN POR RANGO ---
 
     if (user.is_sensei === true) {
-        // --- CASO MAESTRO (FRANCESC Y OTROS SENSEIS) ---
+        // --- CASO MAESTRO (FRANCESC) ---
         
+        // Marcamos el body para que el CSS oculte botones de alumno
         document.body.classList.add('is-sensei-mode'); 
 
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         
-        // Si ya existe una tarjeta vieja, la quitamos para actualizar el nombre del Dojo
-        if (zenCard) zenCard.remove();
-
-        const zenHTML = `
-            <div id="zen-card" class="zen-master-card">
-                <img src="img/logo_sin_fondo.png" class="zen-logo">
-                <h2 class="zen-title">SENSEI</h2>
-                <!-- DINÁMICO: Muestra el Dojo asignado al Sensei en Rojo -->
-                <p class="zen-subtitle" id="zen-dojo-name">${dojoNameDisplay}</p>
-            </div>`;
-            
-        if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
+        if (!zenCard && circle) {
+            const zenHTML = `
+                <div id="zen-card" class="zen-master-card">
+                    <img src="img/logo_sin_fondo.png" class="zen-logo">
+                    <h2 class="zen-title">SENSEI</h2>
+                    <p class="zen-subtitle">ARASHI DOJO</p>
+                </div>`;
+            circle.insertAdjacentHTML('afterend', zenHTML);
+        }
         
+        // Actualizamos identidad en cabecera
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
         document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S").toUpperCase();
 
     } else if (p) {
-        // --- CASO ALUMNO (RAÚL / CARLOS) ---
+        // --- CASO ALUMNO (RAÚL / OTROS) ---
         
+        // Quitamos el modo maestro si existía de una sesión previa
         document.body.classList.remove('is-sensei-mode');
+
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
         
