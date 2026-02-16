@@ -780,7 +780,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     } catch (e) { alert("Error generando historial."); console.error(e); }
 }
 
-/* --- GENERADOR DE INFORMES GENERALES (VERSION PREMIUM V2: LIMPIEZA TOTAL) --- */
+/* --- GENERADOR DE INFORMES GENERALES (VERSIÓN 100% BLINDADA) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -788,7 +788,7 @@ async function generateReport(type) {
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Aviso", "Por favor, selecciona una fecha en el calendario.");
+        showModal("Aviso", "Por favor, selecciona una fecha en el calendario para generar el informe de asistencia.");
         return;
     }
 
@@ -808,6 +808,9 @@ async function generateReport(type) {
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
         let headRow = [], body = [], title = "", subText = "";
+        
+        // 🥋 LLAVE MAESTRA: Definimos isBaja aquí para que sea global en la función
+        const isBaja = type.startsWith('bajas');
 
         try {
             if (type === 'attendance') {
@@ -830,11 +833,10 @@ async function generateReport(type) {
                         const [f, resto] = cla.Fecha_Hora.split('T');
                         horaStr = resto.substring(0, 5) + "h";
                     }
-                    
                     return [
                         `${index + 1}`,
                         (alu?.apellidos || '').toUpperCase(),
-                        (alu?.nombre || ''), // Género eliminado para evitar errores de fuente
+                        (alu?.nombre || ''),
                         alu?.dni || '-',
                         getDojoName(alu?.dojo),
                         cla?.Tipo || 'General',
@@ -844,7 +846,6 @@ async function generateReport(type) {
                 });
 
             } else {
-                const isBaja = type.startsWith('bajas_');
                 title = isBaja ? "HISTÓRICO DE BAJAS" : "LISTADO COMPLETO ALUMNOS";
                 if (!isBaja && type === 'insurance') title = "ESTADO DE PAGOS DE SEGURO ANUAL";
                 else if (!isBaja) title += ` POR ${subtitleMap[type].toUpperCase()}`;
@@ -864,7 +865,7 @@ async function generateReport(type) {
                 });
 
                 headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Dirección', 'CP/Ciudad'];
-                if (isBaja) headRow.splice(1, 0, 'Baja');
+                if (isBaja) headRow.splice(1, 0, 'Baja'); // Inserta columna "Baja" en la posición 1
 
                 body = list.map((item, index) => {
                     const p = item.attributes || item;
@@ -886,23 +887,19 @@ async function generateReport(type) {
                 });
             }
 
-            // RENDERIZADO TABLA: Configuración de anchos milimétricos
+            // RENDERIZADO DE TABLA
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
                 head: [headRow], 
                 body: body, 
                 theme: 'grid',
-                styles: { 
-                    fontSize: 5, // Regla Inviolable para 12 columnas
-                    cellPadding: 0.8, 
-                    overflow: 'linebreak' 
-                },
+                styles: { fontSize: 5, cellPadding: 0.8, overflow: 'linebreak' },
                 headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
                 columnStyles: {
-                    0: { cellWidth: 6, halign: 'center' }, // Nº: Lo justo para el número
-                    1: { cellWidth: isBaja ? 15 : 40 },   // Bajas o Apellidos
-                    2: { cellWidth: isBaja ? 40 : 25 },   // Apellidos o Nombre
+                    0: { cellWidth: 6, halign: 'center' }, // Nº: Muy estrecho como pediste
+                    1: { cellWidth: isBaja ? 15 : 40 },   // Ajuste dinámico si es Baja o Apellido
+                    2: { cellWidth: isBaja ? 40 : 25 }    // Ajuste dinámico
                 },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
@@ -914,8 +911,8 @@ async function generateReport(type) {
             });
             doc.save(`Arashi_Reporte_${type}.pdf`);
         } catch (e) { 
-            console.error(e);
-            showModal("Error", "Fallo al generar el PDF."); 
+            console.error("🔥 Error PDF:", e);
+            showModal("Error", "Fallo al generar el PDF. Revisa los datos."); 
         }
     };
 }
