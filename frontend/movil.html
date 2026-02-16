@@ -1571,7 +1571,7 @@ async function initApp() {
     }
 }
   
-/* --- REFRESH DATA (VERSION 8.0 - PURE SENSEI LOGIC & UI FIXES) --- */
+/* --- REFRESH DATA (VERSION 8.1 - IDENTIDAD GEOGRÁFICA DE MAESTRO) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1602,41 +1602,44 @@ async function refreshStudentData() {
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     
+    // --- 🥋 LÓGICA DE IDENTIFICACIÓN DE DOJO ---
+    let dojoNameDisplay = "ARASHI GROUP"; // Fallback por defecto
     if (p && p.dojo) {
-        dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
+        const dData = parseRelation(p.dojo);
+        dojoNameDisplay = dData.nombre ? dData.nombre.toUpperCase() : "ARASHI GROUP";
+        dojoIdGlobal = String(getID(dData));
     }
 
-    // --- 🥋 LÓGICA DE VISUALIZACIÓN POR RANGO ---
+    // --- 🧘 LÓGICA DE VISUALIZACIÓN ---
 
     if (user.is_sensei === true) {
-        // --- CASO MAESTRO (FRANCESC) ---
+        // --- CASO MAESTRO (FRANCESC Y OTROS SENSEIS) ---
         
-        // Marcamos el body para que el CSS oculte botones de alumno
         document.body.classList.add('is-sensei-mode'); 
 
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         
-        if (!zenCard && circle) {
-            const zenHTML = `
-                <div id="zen-card" class="zen-master-card">
-                    <img src="img/logo_sin_fondo.png" class="zen-logo">
-                    <h2 class="zen-title">SENSEI</h2>
-                    <p class="zen-subtitle">ARASHI DOJO</p>
-                </div>`;
-            circle.insertAdjacentHTML('afterend', zenHTML);
-        }
+        // Si ya existe una tarjeta vieja, la quitamos para actualizar el nombre del Dojo
+        if (zenCard) zenCard.remove();
+
+        const zenHTML = `
+            <div id="zen-card" class="zen-master-card">
+                <img src="img/logo_sin_fondo.png" class="zen-logo">
+                <h2 class="zen-title">SENSEI</h2>
+                <!-- DINÁMICO: Muestra el Dojo asignado al Sensei en Rojo -->
+                <p class="zen-subtitle" id="zen-dojo-name">${dojoNameDisplay}</p>
+            </div>`;
+            
+        if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
         
-        // Actualizamos identidad en cabecera
         document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
         document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S").toUpperCase();
 
     } else if (p) {
-        // --- CASO ALUMNO (RAÚL / OTROS) ---
+        // --- CASO ALUMNO (RAÚL / CARLOS) ---
         
-        // Quitamos el modo maestro si existía de una sesión previa
         document.body.classList.remove('is-sensei-mode');
-
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
         
