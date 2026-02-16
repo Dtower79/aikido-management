@@ -2081,18 +2081,15 @@ function setGenMonth(m, btn) {
     btn.classList.add('active'); 
 }
 
-/* --- UI: GENERADOR MENSUAL (VISTA ENSANCHADA + CABECERAS) --- */
-/* --- UI: GENERADOR MENSUAL (AÑOS DINÁMICOS + VISTA ENSANCHADA) --- */
-/* --- UI: GENERADOR MENSUAL (REDISEÑO SIMÉTRICO PREMIUM) --- */
+/* --- UI: GENERADOR MENSUAL/ANUAL FLEXIBLE --- */
 function uiGenerateMonth() {
     const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     
-    // 1. MESES MÁS GRANDES
-    let monthGrid = `<div class="month-picker-grid" style="grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 25px;">`;
+    // Botones de Meses
+    let monthGrid = `<div class="month-picker-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">`;
     months.forEach((m, idx) => { 
-        // Aumentamos padding y font-size para mayor legibilidad
         monthGrid += `<button class="month-btn ${idx === selectedMonthGen ? 'active' : ''}" 
-            style="padding: 15px 5px; font-size: 13px; font-weight: 800;" 
+            style="padding: 12px 5px; font-size: 12px; font-weight: 800;" 
             onclick="setGenMonth(${idx}, this)">${m}</button>`; 
     });
     monthGrid += `</div>`;
@@ -2105,71 +2102,56 @@ function uiGenerateMonth() {
         { n: "Jue", v: 4 }, { n: "Vie", v: 5 }, { n: "Sáb", v: 6 }, { n: "Dom", v: 0 }
     ];
 
-    // 2. CABECERAS IDÉNTICAS Y ALINEADAS
     let headerHtml = `
         <div style="display: grid; grid-template-columns: 60px 1fr 1fr; gap: 12px; margin-bottom: 10px; padding: 0 10px;">
             <div></div>
-            <div style="font-size: 10px; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 1px; text-transform: uppercase;">Mañana</div>
-            <div style="font-size: 10px; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 1px; text-transform: uppercase;">Tarde</div>
+            <div style="font-size: 9px; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 1px;">MAÑANA</div>
+            <div style="font-size: 9px; font-weight: 800; color: var(--accent); text-align: center; letter-spacing: 1px;">TARDE</div>
         </div>
     `;
 
-    // 3. CUERPO SIMÉTRICO (SLOT 1 Y SLOT 2 IGUALES)
     let daysHtml = `<div style="background: rgba(0,0,0,0.3); border-radius: 25px; padding: 15px; border: 1px solid var(--glass-border);">`;
-    
     days.forEach(d => {
         daysHtml += `
             <div style="display: grid; grid-template-columns: 60px 1fr 1fr; gap: 12px; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
-                <label style="font-size: 12px; font-weight: 800; color: white; letter-spacing: 1px;">${d.n.toUpperCase()}</label>
-                
-                <!-- COLUMNA MAÑANA -->
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="1" 
-                           style="margin-bottom:0; padding: 10px 5px; font-size: 12px; text-align: center; border-radius: 12px; background: rgba(15, 23, 42, 0.8) !important;">
-                    <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="1" 
-                            style="margin-bottom:0; padding: 5px; font-size: 11px; border-radius: 10px; height: 35px; background-position: right 5px center;">
-                        <option value="1.5">1.5h</option>
-                        <option value="1">1h</option>
-                        <option value="2">2h</option>
-                    </select>
+                <label style="font-size: 11px; font-weight: 800; color: white;">${d.n.toUpperCase()}</label>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="1" style="margin-bottom:0; padding: 8px 4px; font-size: 11px; text-align: center; border-radius: 10px; background: rgba(15,23,42,0.8) !important;">
+                    <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="1" style="margin-bottom:0; padding: 4px; font-size: 10px; border-radius: 8px; height: 30px;"><option value="1.5">1.5h</option><option value="1">1h</option><option value="2">2h</option></select>
                 </div>
-
-                <!-- COLUMNA TARDE (DISEÑO IDÉNTICO) -->
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="2" 
-                           style="margin-bottom:0; padding: 10px 5px; font-size: 12px; text-align: center; border-radius: 12px; background: rgba(15, 23, 42, 0.8) !important;">
-                    <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="2" 
-                            style="margin-bottom:0; padding: 5px; font-size: 11px; border-radius: 10px; height: 35px; background-position: right 5px center;">
-                        <option value="1.5">1.5h</option>
-                        <option value="1">1h</option>
-                        <option value="2">2h</option>
-                    </select>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <input type="time" class="modal-field gen-time-input" data-day="${d.v}" data-slot="2" style="margin-bottom:0; padding: 8px 4px; font-size: 11px; text-align: center; border-radius: 10px; background: rgba(15,23,42,0.8) !important;">
+                    <select class="modal-field gen-dur-input" data-day="${d.v}" data-slot="2" style="margin-bottom:0; padding: 4px; font-size: 10px; border-radius: 8px; height: 30px;"><option value="1.5">1.5h</option><option value="1">1h</option><option value="2">2h</option></select>
                 </div>
             </div>`;
     });
     daysHtml += `</div>`;
 
-    showModal("PATRÓN MENSUAL", `
+    showModal("PATRÓN DE CALENDARIO", `
         <div class="no-scrollbar" style="text-align:left; max-height: 85vh; overflow-y: auto; width: 100%;">
             
-            <!-- AÑO ARRIBA -->
-            <span class="modal-label">AÑO:</span>
+            <span class="modal-label">1. SELECCIONA EL AÑO:</span>
             <select id="gen-year-select" class="modal-field" style="width: 100%; border-radius: 15px; margin-bottom: 20px;">
                 <option value="${currentYear}" selected>${currentYear}</option>
                 <option value="${nextYear}">${nextYear}</option>
             </select>
 
-            <!-- MESES GRANDES -->
-            <span class="modal-label">MES:</span>
-            ${monthGrid}
+            <span class="modal-label">2. SELECCIONA MES (O TODO EL AÑO):</span>
+            <button class="action-btn" id="btn-gen-all-year" onclick="toggleAllYear(this)" 
+                style="width: 100%; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--accent); color: white; height: 45px; font-size: 12px;">
+                <i class="fa-solid fa-calendar-days"></i> PROGRAMAR TODO EL AÑO
+            </button>
+            
+            <div id="month-selector-container">
+                ${monthGrid}
+            </div>
 
-            <!-- HORARIOS -->
-            <span class="modal-label">HORARIOS SEMANALES:</span>
+            <span class="modal-label">3. CONFIGURAR SEMANA TIPO:</span>
             ${headerHtml}
             ${daysHtml}
 
             <button class="action-btn primary" onclick="processGeneration()" style="margin-top:25px; width:100%; height: 60px; border-radius: 20px;">
-                <i class="fa-solid fa-calendar-check"></i> GENERAR CALENDARIO
+                <i class="fa-solid fa-wand-magic-sparkles"></i> INICIAR GENERACIÓN MASIVA
             </button>
             <button class="action-btn btn-secondary" onclick="closeModal()" style="margin-top:12px; width:100%; height: 50px; border-radius: 15px;">
                 CANCELAR
@@ -2177,64 +2159,98 @@ function uiGenerateMonth() {
         </div>`, false);
 }
 
+// Variable para controlar si es año completo
+let isFullYearGen = false;
 
-/* --- GENERACIÓN MENSUAL (CON REFRESCO INSTANTÁNEO) --- */
+function toggleAllYear(btn) {
+    isFullYearGen = !isFullYearGen;
+    const container = document.getElementById('month-selector-container');
+    if (isFullYearGen) {
+        btn.style.background = "var(--accent)";
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> AÑO COMPLETO SELECCIONADO';
+        container.style.opacity = "0.3";
+        container.style.pointerEvents = "none";
+    } else {
+        btn.style.background = "rgba(255,255,255,0.05)";
+        btn.innerHTML = '<i class="fa-solid fa-calendar-days"></i> PROGRAMAR TODO EL AÑO';
+        container.style.opacity = "1";
+        container.style.pointerEvents = "all";
+    }
+}
+
+
+/* --- LÓGICA: PROCESADOR MASIVO (MES O AÑO) --- */
 async function processGeneration() {
     const token = localStorage.getItem('aikido_jwt');
     const year = parseInt(document.getElementById('gen-year-select').value);
-    const month = selectedMonthGen;
-    const selector = document.getElementById('sensei-dojo-filter');
-    const dojoId = selector ? selector.value : "";
+    const dojoId = document.getElementById('sensei-dojo-filter').value;
 
     if (!dojoId || dojoId === 'all') {
-        showModal("⚠️ AVISO", "Selecciona un DOJO específico antes de generar el mes.");
+        showModal("⚠️ AVISO", "Selecciona un DOJO específico arriba antes de generar.");
         return;
     }
 
-    const timeInputs = document.querySelectorAll('.gen-time-input');
-    const pattern = {};
-    timeInputs.forEach(input => {
-        if (input.value) {
-            const day = input.dataset.day;
-            const slot = input.dataset.slot;
-            const dur = document.querySelector(`.gen-dur-input[data-day="${day}"][data-slot="${slot}"]`).value;
-            if (!pattern[day]) pattern[day] = [];
-            pattern[day].push({ h: input.value, d: dur });
-        }
-    });
-
-    if (Object.keys(pattern).length === 0) {
-        alert("⚠️ Indica al menos un horario.");
-        return;
-    }
-
-    const btn = document.querySelector('#custom-modal .action-btn.primary');
-    btn.innerText = "PROCESANDO..."; btn.disabled = true;
-
-    let ultimoDia = new Date(year, month + 1, 0).getDate();
-    for (let d = 1; d <= ultimoDia; d++) {
-        const dateObj = new Date(year, month, d);
-        const dayOfWeek = dateObj.getDay().toString();
-
-        if (pattern[dayOfWeek]) {
-            for (const entreno of pattern[dayOfWeek]) {
-                const iso = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${entreno.h}:00.000Z`;
-                await fetch(`${API_URL}/clases`, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-                    body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: parseFloat(entreno.d), dojo: dojoId } }) 
-                }); 
+    // 1. CAPTURAR EL PATRÓN SEMANAL
+    const pattern = {}; 
+    for (let day = 0; day <= 6; day++) {
+        for (let slot = 1; slot <= 2; slot++) {
+            const timeInput = document.querySelector(`.gen-time-input[data-day="${day}"][data-slot="${slot}"]`);
+            const durInput = document.querySelector(`.gen-dur-input[data-day="${day}"][data-slot="${slot}"]`);
+            if (timeInput && timeInput.value) {
+                if (!pattern[day]) pattern[day] = [];
+                pattern[day].push({ hora: timeInput.value, dur: parseFloat(durInput.value) });
             }
         }
     }
 
-    // REGLA MAESTRA: Limpieza de caché tras generación masiva
+    if (Object.keys(pattern).length === 0) {
+        alert("Indica al menos un horario en la semana tipo.");
+        return;
+    }
+
+    const btn = document.querySelector('#custom-modal .action-btn.primary');
+    btn.disabled = true;
+
+    // 2. DETERMINAR RANGO DE MESES
+    const startMonth = isFullYearGen ? 0 : selectedMonthGen;
+    const endMonth = isFullYearGen ? 11 : selectedMonthGen;
+
+    let totalCreadas = 0;
+
+    // 3. BUCLE DE MESES
+    for (let m = startMonth; m <= endMonth; m++) {
+        btn.innerText = `GENERANDO MES ${m + 1}/12...`;
+        let ultimoDia = new Date(year, m + 1, 0).getDate();
+
+        for (let d = 1; d <= ultimoDia; d++) {
+            const dateObj = new Date(year, m, d);
+            const dayOfWeek = dateObj.getDay().toString();
+
+            if (pattern[dayOfWeek]) {
+                for (const entreno of pattern[dayOfWeek]) {
+                    // Timezone Fix Literal: YYYY-MM-DDTHH:mm:00.000Z
+                    const iso = `${year}-${(m + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${entreno.hora}:00.000Z`;
+                    
+                    try {
+                        await fetch(`${API_URL}/clases`, { 
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+                            body: JSON.stringify({ data: { Fecha_Hora: iso, Duracion: entreno.dur, dojo: dojoId } }) 
+                        }); 
+                        totalCreadas++;
+                    } catch (err) { console.error("Error en clase:", iso); }
+                }
+            }
+        }
+    }
+
+    // 4. FINALIZACIÓN Y LIMPIEZA
     localStorage.removeItem('cache_clases_archivo'); 
+    isFullYearGen = false; // Reset del flag
     
-    showModal("¡OSS!", "Mes generado correctamente.");
+    showModal("¡OSS SENSEI!", `Misión cumplida. Se han sembrado ${totalCreadas} clases en Neon para el Dojo seleccionado.`); 
     
-    // Refresco inmediato de la lista del editor
-    await loadManageClasses();
+    if (typeof loadManageClasses === 'function') loadManageClasses();
 }
 
 /* --- BLOQUE AUXILIAR: SELECCIÓN DE MES --- */
