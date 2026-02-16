@@ -2615,13 +2615,13 @@ async function loadDojosFilter() {
     }
 }
 
-/* --- PROCESADOR QR (VERSION 7.6 - FOCO EN PROGRESO VERDE) --- */
+/* --- PROCESADOR QR (VERSIÓN FINAL 7.7 - ACUMULATIVA Y SINCRONIZADA) --- */
 async function procesarAsistenciaQR(classId) {
     const token = localStorage.getItem('aikido_jwt');
     const aluDocId = localStorage.getItem('aikido_student_doc_id');
     
     try {
-        // 1. OBTENER DATOS DEL KEIKO
+        // 1. OBTENER DATOS DEL KEIKO (Con populate para el recibo)
         const resClase = await fetch(`${API_URL}/clases/${classId}?populate=dojo`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
@@ -2631,7 +2631,7 @@ async function procesarAsistenciaQR(classId) {
         const f = formatTimeSafe(dC.Fecha_Hora);
         const duracion = parseFloat(dC.Duracion || 1.5);
 
-        // 2. BUSCAR Y ACTUALIZAR ASISTENCIA EXISTENTE
+        // 2. BUSCAR Y ACTUALIZAR ASISTENCIA EXISTENTE (Para limpiar lista del Sensei)
         const resCheck = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[clase][documentId][$eq]=${classId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -2639,6 +2639,7 @@ async function procesarAsistenciaQR(classId) {
         const asistenciaPrevia = checkJ.data?.[0];
 
         if (asistenciaPrevia) {
+            // Actualizamos registro de 'Confirmado' a 'Asistio'
             const asistId = getID(asistenciaPrevia);
             await fetch(`${API_URL}/asistencias/${asistId}`, {
                 method: 'PUT',
@@ -2646,6 +2647,7 @@ async function procesarAsistenciaQR(classId) {
                 body: JSON.stringify({ data: { Estado: 'Asistio' } })
             });
         } else {
+            // Registro directo si no se había apuntado antes
             await fetch(`${API_URL}/asistencias`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -2653,7 +2655,7 @@ async function procesarAsistenciaQR(classId) {
             });
         }
 
-        // 3. ACTUALIZAR Y OBTENER TOTAL DE HORAS ACTUALIZADO
+        // 3. ACTUALIZAR HORAS EN LA FICHA DEL ALUMNO
         const alRes = await fetch(`${API_URL}/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
         const alJson = await alRes.json();
         const p = alJson.data?.attributes || alJson.data;
@@ -2665,18 +2667,26 @@ async function procesarAsistenciaQR(classId) {
             body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } }) 
         });
 
-        // 4. LIMPIEZA DE CACHÉ
+        // --- 🥋 EL CAMBIO CRÍTICO: SINCRONIZACIÓN DE TODAS LAS VISTAS ---
+        
+        // A. Limpiamos TODAS las cachés implicadas
         localStorage.removeItem('cache_perfil_alumno');
         localStorage.removeItem('cache_asistencias_sensei');
-        localStorage.removeItem('cache_clases_archivo'); // Sincronizamos calendario también
-        
+        localStorage.removeItem('cache_clases_archivo'); // <--- ESTO ARREGLA TU CALENDARIO
+
+        // B. Refrescamos datos de fondo
         await refreshStudentData(); 
         await checkTodayClass();
+        
+        // C. Refrescamos el panel del Sensei si está abierto
+        if (!document.getElementById('sensei-view').classList.contains('hidden')) {
+            await loadSenseiPanel();
+        }
         
         isProcessingQR = false; 
         closeModal();
 
-        // 5. MODAL DISEÑO PREMIUM (HORAS EN VERDE + TOTAL)
+        // 4. RECIBO PREMIUM (Diseño v7.6 con información detallada)
         const htmlRecibo = `
             <div style="text-align: center; margin-top: 10px;">
                 <p style="color: var(--accent); font-weight: 800; font-size: 13px; margin-bottom: 5px; letter-spacing: 1px;">
@@ -2699,9 +2709,8 @@ async function procesarAsistenciaQR(classId) {
                         ${totalNuevo.toFixed(1)}H
                     </p>
                 </div>
-                
                 <p style="font-size: 10px; color: var(--text-muted); margin-top: 20px; font-style: italic;">
-                    Sincronizado con el Tatami de Neon
+                    Datos sincronizados con Neon
                 </p>
             </div>
         `;
