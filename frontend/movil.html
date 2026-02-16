@@ -752,30 +752,28 @@
         }
 
         /* --- ZEN MASTER CARD PARA SENSEIS --- */
-/* --- ZEN MASTER CARD (VERSIÓN DESKTOP ELITE) --- */
+
+/* --- TARJETA MAESTRA (BLACK CARD - ANCHO UNIFICADO) --- */
 .zen-master-card {
-    background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg');
-    background-size: cover;
-    background-position: center 20%;
-    background-repeat: no-repeat;
+    background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    border: 2px solid var(--accent) !important;
+    border-radius: 40px !important;
+    padding: 40px 20px !important;
     
-    border: 2px solid var(--accent);
-    border-radius: 40px;
-    padding: 50px 30px;
-    margin: 20px auto; /* Centrado automático */
+    /* REGLA MAESTRA DE ANCHO (IDÉNTICA A LA ANTERIOR) */
+    width: 95% !important;
+    max-width: 600px !important;
+    margin: 20px auto !important;
     
-    /* LIMITACIÓN PARA ESCRITORIO */
-    max-width: 700px; 
-    min-height: 250px;
-    
-    text-align: center;
-    box-shadow: var(--neon), inset 0 0 30px rgba(239, 68, 68, 0.2);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
+    text-align: center !important;
+    box-shadow: var(--neon), inset 0 0 20px rgba(239, 68, 68, 0.2) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
 }
 
 .zen-logo {
@@ -1581,7 +1579,7 @@ async function initApp() {
     }
 }
   
-/* --- REFRESH DATA (VERSION 8.0 - PURE SENSEI LOGIC & UI FIXES) --- */
+/* --- REFRESH DATA (VERSION 9.1 - DINAMISMO DE SEDE PARA SENSEI) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1589,7 +1587,7 @@ async function refreshStudentData() {
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // 1. OBTENCIÓN DE DATOS (Zero Waste Cache)
+    // 1. OBTENCIÓN DE DATOS (Caché inteligente)
     if (savedDocId && savedDocId !== "null") {
         dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
     } else {
@@ -1612,41 +1610,50 @@ async function refreshStudentData() {
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     
+    // Sincronización del ID de Dojo para filtros
     if (p && p.dojo) {
         dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
     }
 
-    // --- 🥋 LÓGICA DE VISUALIZACIÓN POR RANGO ---
+    // --- 🥋 LÓGICA DE IDENTIDAD VISUAL ---
 
     if (user.is_sensei === true) {
-        // --- CASO MAESTRO (FRANCESC) ---
+        // --- MODO MAESTRO (Francesc / Instructores con rango) ---
         
-        // Marcamos el body para que el CSS oculte botones de alumno
+        // Activamos clase en body para ocultar botón de asistencia vía CSS
         document.body.classList.add('is-sensei-mode'); 
 
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         
-        if (!zenCard && circle) {
-            const zenHTML = `
-                <div id="zen-card" class="zen-master-card">
-                    <img src="img/logo_sin_fondo.png" class="zen-logo">
-                    <h2 class="zen-title">SENSEI</h2>
-                    <p class="zen-subtitle">ARASHI DOJO</p>
-                </div>`;
-            circle.insertAdjacentHTML('afterend', zenHTML);
+        // Limpiamos tarjeta previa si existe para evitar duplicados al refrescar
+        if (zenCard) zenCard.remove();
+
+        // 📍 EXTRACCIÓN DINÁMICA DEL NOMBRE DEL DOJO
+        let nombreDojoReal = "ARASHI GROUP"; // Fallback de seguridad
+        if (p && p.dojo) {
+            const dData = parseRelation(p.dojo);
+            nombreDojoReal = dData.nombre ? dData.nombre.toUpperCase() : "ARASHI DOJO";
         }
+
+        const zenHTML = `
+            <div id="zen-card" class="zen-master-card">
+                <img src="img/logo_sin_fondo.png" class="zen-logo">
+                <h2 class="zen-title">SENSEI</h2>
+                <!-- Aquí inyectamos el nombre específico del Dojo del Sensei -->
+                <p class="zen-subtitle">${nombreDojoReal}</p>
+            </div>`;
+            
+        if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
         
-        // Actualizamos identidad en cabecera
-        document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
-        document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S").toUpperCase();
+        // Cabecera superior
+        document.getElementById('user-display-name').innerText = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
+        document.getElementById('user-initials').innerText = ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || "")).toUpperCase();
 
     } else if (p) {
-        // --- CASO ALUMNO (RAÚL / OTROS) ---
+        // --- MODO ALUMNO ESTÁNDAR ---
         
-        // Quitamos el modo maestro si existía de una sesión previa
         document.body.classList.remove('is-sensei-mode');
-
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
         
@@ -1656,19 +1663,17 @@ async function refreshStudentData() {
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        // Lógica Dan-Step automática
+        // Lógica Dan-Step Automática
         let meta = p.grado_objetivo;
         if (!meta) {
-            const gradoActual = (p.grado || "S/G").toUpperCase();
-            const num = parseInt(gradoActual.replace(/[^0-9]/g, ''));
-            if (gradoActual.includes("DAN")) {
+            const gActual = (p.grado || "S/G").toUpperCase();
+            const num = parseInt(gActual.replace(/[^0-9]/g, ''));
+            if (gActual.includes("DAN")) {
                 meta = isNaN(num) ? "1º DAN" : `${num + 1}º DAN`;
-            } else if (gradoActual.includes("KYU")) {
+            } else if (gActual.includes("KYU")) {
                 if (!isNaN(num) && num > 1) meta = `${num - 1}º KYU`;
                 else meta = "1º DAN";
-            } else {
-                meta = "5º KYU";
-            }
+            } else { meta = "5º KYU"; }
         }
 
         const normMeta = normalize(meta);
