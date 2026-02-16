@@ -2493,38 +2493,48 @@ async function loadDojosFilter() {
     }
 }
 
-/* --- PROCESADOR QR (VERSION 6.9 - SOLO DATOS) --- */
+/* --- PROCESADOR QR (VERSION 7.1 - FIX DESAPARICIÓN EN PANEL SENSEI) --- */
 async function procesarAsistenciaQR(classId) {
     const token = localStorage.getItem('aikido_jwt');
     const aluDocId = localStorage.getItem('aikido_student_doc_id');
     
-    // Aquí ya no tocamos la cámara (html5QrCode), así que el error 400 desaparece
     try {
-        // PASO 1: Obtener Clase
-        const resClase = await fetch(`${API_URL}/clases/${classId}`, { 
+        // 1. OBTENER DATOS DEL KEIKO
+        const resClase = await fetch(`${API_URL}/clases/${classId}?populate=dojo`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
-        if (!resClase.ok) throw new Error("Keiko no encontrado en el sistema.");
-        
         const classJ = await resClase.json();
-        const dataC = classJ.data?.attributes || classJ.data;
-        const duracion = parseFloat(dataC?.Duracion || 1.5);
+        const dC = classJ.data?.attributes || classJ.data;
+        const f = formatTimeSafe(dC.Fecha_Hora);
+        const duracion = parseFloat(dC.Duracion || 1.5);
 
-        // PASO 2: Registrar Asistencia
-        const resAsist = await fetch(`${API_URL}/asistencias`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ 
-                data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } 
-            })
+        // 2. 🥋 BUSCAR SI YA EXISTE UNA ASISTENCIA "CONFIRMADA"
+        const resCheck = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[clase][documentId][$eq]=${classId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
+        const checkJ = await resCheck.json();
+        const asistenciaPrevia = checkJ.data?.[0];
 
-        if (!resAsist.ok) {
-            // Si Strapi da error aquí, es probable que la asistencia ya exista
-            throw new Error("Asistencia ya registrada o error de permisos.");
+        if (asistenciaPrevia) {
+            // SI EXISTE: La actualizamos de 'Confirmado' a 'Asistio'
+            const asistId = getID(asistenciaPrevia);
+            await fetch(`${API_URL}/asistencias/${asistId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ data: { Estado: 'Asistio' } })
+            });
+            console.log("♻️ Registro previo actualizado a 'Asistio'");
+        } else {
+            // SI NO EXISTE: La creamos de cero (alumno que no pulsó el botón antes)
+            await fetch(`${API_URL}/asistencias`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
+            });
+            console.log("✨ Nuevo registro de asistencia creado");
         }
 
-        // PASO 3: Sumar Horas
+        // 3. ACTUALIZAR HORAS EN EL ALUMNO
         const alRes = await fetch(`${API_URL}/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
         const alJson = await alRes.json();
         const p = alJson.data?.attributes || alJson.data;
@@ -2536,19 +2546,30 @@ async function procesarAsistenciaQR(classId) {
             body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } }) 
         });
 
-        // LIMPIEZA Y ÉXITO
+        // 4. LIMPIEZA DE CACHÉ (Fundamental para el Sensei)
         localStorage.removeItem('cache_perfil_alumno');
-        localStorage.removeItem('cache_asistencias_sensei');
+        localStorage.removeItem('cache_asistencias_sensei'); // Esto limpia el panel del Sensei
+        
         await refreshStudentData(); 
         await checkTodayClass();
         
-        isProcessingQR = false;
+        isProcessingQR = false; 
         closeModal();
-        showModal("¡OSS!", `Has sumado +${duracion}h correctamente.`);
+
+        // 5. RECIBO PREMIUM
+        showModal("¡ENTRENAMIENTO REGISTRADO!", `
+            <div style="text-align: center; margin-top: 10px;">
+                <p style="font-size: 16px; color: white;">${f.date} | ${f.time}</p>
+                <div style="background: rgba(35, 197, 94, 0.1); padding: 15px; border-radius: 15px; border: 1px solid var(--success);">
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">HORAS SUMADAS:</p>
+                    <p style="font-size: 24px; color: var(--success); font-weight: 800; margin: 0;">+${duracion}H</p>
+                </div>
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 15px;">Ya has desaparecido de la lista de pendientes del Sensei.</p>
+            </div>
+        `);
 
     } catch (e) {
         isProcessingQR = false; 
-        console.error("🔥 Error Datos QR:", e.message);
         showModal("AVISO", e.message);
     }
 }
