@@ -2621,7 +2621,7 @@ async function loadDojosFilter() {
     }
 }
 
-/* --- PROCESADOR QR (VERSION 7.1 - FIX DESAPARICIÓN EN PANEL SENSEI) --- */
+/* --- PROCESADOR QR (VERSION 7.2 - ACTUALIZACIÓN DE VISTA INSTANTÁNEA) --- */
 async function procesarAsistenciaQR(classId) {
     const token = localStorage.getItem('aikido_jwt');
     const aluDocId = localStorage.getItem('aikido_student_doc_id');
@@ -2636,7 +2636,7 @@ async function procesarAsistenciaQR(classId) {
         const f = formatTimeSafe(dC.Fecha_Hora);
         const duracion = parseFloat(dC.Duracion || 1.5);
 
-        // 2. 🥋 BUSCAR SI YA EXISTE UNA ASISTENCIA "CONFIRMADA"
+        // 2. BUSCAR Y ACTUALIZAR ASISTENCIA EXISTENTE (Para que desaparezca de la lista)
         const resCheck = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluDocId}&filters[clase][documentId][$eq]=${classId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -2644,25 +2644,23 @@ async function procesarAsistenciaQR(classId) {
         const asistenciaPrevia = checkJ.data?.[0];
 
         if (asistenciaPrevia) {
-            // SI EXISTE: La actualizamos de 'Confirmado' a 'Asistio'
+            // Actualizamos el registro que el Sensei está viendo en su lista
             const asistId = getID(asistenciaPrevia);
             await fetch(`${API_URL}/asistencias/${asistId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ data: { Estado: 'Asistio' } })
             });
-            console.log("♻️ Registro previo actualizado a 'Asistio'");
         } else {
-            // SI NO EXISTE: La creamos de cero (alumno que no pulsó el botón antes)
+            // Si el alumno no se había apuntado, creamos la fila directamente como asistida
             await fetch(`${API_URL}/asistencias`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ data: { alumno: aluDocId, clase: classId, Estado: 'Asistio' } })
             });
-            console.log("✨ Nuevo registro de asistencia creado");
         }
 
-        // 3. ACTUALIZAR HORAS EN EL ALUMNO
+        // 3. SUMAR HORAS AL ALUMNO
         const alRes = await fetch(`${API_URL}/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
         const alJson = await alRes.json();
         const p = alJson.data?.attributes || alJson.data;
@@ -2674,25 +2672,34 @@ async function procesarAsistenciaQR(classId) {
             body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } }) 
         });
 
-        // 4. LIMPIEZA DE CACHÉ (Fundamental para el Sensei)
-        localStorage.removeItem('cache_perfil_alumno');
-        localStorage.removeItem('cache_asistencias_sensei'); // Esto limpia el panel del Sensei
+        // --- 🥋 EL CAMBIO QUIRÚRGICO DE SINCRONIZACIÓN ---
         
+        // A. Limpiamos las cachés
+        localStorage.removeItem('cache_perfil_alumno');
+        localStorage.removeItem('cache_asistencias_sensei');
+        
+        // B. Refrescamos los datos en segundo plano
         await refreshStudentData(); 
         await checkTodayClass();
+        
+        // C. RE-DIBUJAMOS EL PANEL SENSEI (Esto es lo que quita al alumno de la lista)
+        // Solo lo hacemos si la vista actual es la de Sensei para evitar errores
+        if (!document.getElementById('sensei-view').classList.contains('hidden')) {
+            await loadSenseiPanel();
+        }
         
         isProcessingQR = false; 
         closeModal();
 
-        // 5. RECIBO PREMIUM
-        showModal("¡ENTRENAMIENTO REGISTRADO!", `
+        // 4. RECIBO PREMIUM
+        showModal("¡GESTIÓN COMPLETADA!", `
             <div style="text-align: center; margin-top: 10px;">
-                <p style="font-size: 16px; color: white;">${f.date} | ${f.time}</p>
-                <div style="background: rgba(35, 197, 94, 0.1); padding: 15px; border-radius: 15px; border: 1px solid var(--success);">
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">HORAS SUMADAS:</p>
-                    <p style="font-size: 24px; color: var(--success); font-weight: 800; margin: 0;">+${duracion}H</p>
+                <p style="font-size: 14px; color: var(--success); font-weight: 800;">ASISTENCIA VALIDADA</p>
+                <p style="font-size: 16px; color: white; margin: 10px 0;">${f.date} | ${f.time}</p>
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--glass-border);">
+                    <p style="font-size: 11px; color: var(--text-muted);">HORAS SUMADAS: <strong>+${duracion}H</strong></p>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">ESTADO: <strong>EN TATAMI</strong></p>
                 </div>
-                <p style="font-size: 11px; color: var(--text-muted); margin-top: 15px;">Ya has desaparecido de la lista de pendientes del Sensei.</p>
             </div>
         `);
 
