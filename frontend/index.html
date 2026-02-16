@@ -38,9 +38,10 @@
     <div id="dashboard" class="dashboard-container hidden">
         
         <!-- BARRA LATERAL / SIDEBAR -->
-        <div class="sidebar-header">
-            <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar" onclick="window.location.href='movil.html'" style="cursor: pointer;" title="Volver a la App">
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-img-sidebar">
+                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
                     <i class="fa-solid fa-bars"></i>
                 </button>
             </div>
@@ -71,7 +72,7 @@
             
             <!-- SECCIÓN BIENVENIDA -->
             <div id="sec-welcome" class="section active welcome-flex">
-                <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-welcome" onclick="window.location.href='movil.html'" style="cursor: pointer;" title="Volver a la App">
+                <img src="img/logo-arashi.png" alt="Arashi Group" class="logo-welcome">
             </div>
 
             <!-- GESTIÓN ALUMNO (FORMULARIO) -->
@@ -109,35 +110,34 @@
                             <div class="form-group"><label>Grado Actual</label><select id="new-grado"><option value="">Selecciona grado...</option><option value="5º Kyu">5º Kyu</option><option value="4º Kyu">4º Kyu</option><option value="3º Kyu">3º Kyu</option><option value="2º Kyu">2º Kyu</option><option value="1º Kyu">1º Kyu</option><option value="1º Dan">1º Dan</option><option value="2º Dan">2º Dan</option><option value="3º Dan">3º Dan</option><option value="4º Dan">4º Dan</option><option value="5º Dan">5º Dan</option><option value="6º Dan">6º Dan</option><option value="7º Dan">7º Dan</option><option value="8º Dan">8º Dan</option></select></div>
                         </div>
 
-<!-- BARRA DE CONTROL ADMINISTRATIVO (DISEÑO UNIFICADO) -->
-<div class="admin-control-wrapper">
-    <div class="admin-control-bar">
-        
-        <!-- Bloque Seguro -->
-        <div class="control-item">
-            <label>Seguro Anual (<span id="current-year-lbl"></span>):</label>
-            <div class="control-action">
-                <label class="switch">
-                    <input type="checkbox" id="new-seguro">
-                    <span class="slider round"></span>
-                </label>
-                <span id="seguro-status-text">NO PAGADO</span>
-            </div>
+<!-- BARRA ADMINISTRATIVA RESPONSIVA -->
+<div class="admin-control-bar">
+    
+    <!-- Bloque Seguro -->
+    <div class="control-item">
+        <label>Seguro Anual:</label>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <label class="switch">
+                <input type="checkbox" id="new-seguro">
+                <span class="slider round"></span>
+            </label>
+            <span id="seguro-status-text" style="font-size:0.7rem; font-weight:800;">NO PAGADO</span>
         </div>
-
-        <div class="control-separator"></div>
-
-        <!-- Bloque Género -->
-        <div class="control-item">
-            <label>Género:</label>
-            <div class="gender-pill-container">
-                <button type="button" id="btn-gender-home" class="gender-btn active" onclick="setGender('HOMBRE')">HOMBRE</button>
-                <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('MUJER')">MUJER</button>
-            </div>
-            <input type="hidden" id="new-genero" value="HOMBRE">
-        </div>
-
     </div>
+
+    <!-- Línea divisoria (Solo visible en PC) -->
+    <div class="control-separator"></div>
+
+    <!-- Bloque Género -->
+    <div class="control-item">
+        <label>Género:</label>
+        <div class="gender-pill-container">
+            <button type="button" id="btn-gender-home" class="gender-btn active" onclick="setGender('HOMBRE')">HOMBRE</button>
+            <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('MUJER')">MUJER</button>
+        </div>
+        <input type="hidden" id="new-genero" value="HOMBRE">
+    </div>
+
 </div>                        
                         <!-- SECCIÓN TÉCNICA INTEGRADA -->
                         <div class="sidebar-sep tecnico-header">
