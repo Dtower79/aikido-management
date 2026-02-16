@@ -780,7 +780,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     } catch (e) { alert("Error generando historial."); console.error(e); }
 }
 
-/* --- GENERADOR DE INFORMES PREMIUM V4: ORDENACIÓN POR GRADO, EDAD Y GÉNERO --- */
+/* --- GENERADOR DE INFORMES PREMIUM V4.1: FIX GÉNERO POR DEFECTO --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -798,6 +798,12 @@ async function generateReport(type) {
     const doc = new jsPDF('l', 'mm', 'a4'); 
     const logoImg = new Image();
     logoImg.src = 'img/logo-arashi-informe.png';
+
+    const subtitleMap = {
+        'surname': 'Apellidos', 'age': 'Edad', 'grade': 'Grado', 'dojo': 'Dojo', 'group': 'Grupo', 'insurance': 'Estado del Seguro',
+        'gender': 'Género', 'bajas_surname': 'Histórico Bajas (Apellidos)', 'bajas_date': 'Histórico Bajas (Fecha)',
+        'attendance': 'Asistencia Diaria'
+    };
 
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -818,12 +824,15 @@ async function generateReport(type) {
             const json = await res.json();
             let list = json.data || [];
 
-            // 2. 🥋 MOTOR DE ORDENACIÓN MAESTRO (VERSION 4.0)
+            // 2. 🥋 MOTOR DE ORDENACIÓN MAESTRO
             list.sort((a, b) => {
                 const pA = a.attributes || a;
                 const pB = b.attributes || b;
+                
+                // Normalizamos género para la ordenación (si es null, es HOMBRE)
+                const genA = pA.genero || "HOMBRE";
+                const genB = pB.genero || "HOMBRE";
 
-                // A. Orden por Grado (Jerarquía Marcial - NO DISP al final)
                 if (type === 'grade') {
                     const gradeMap = { 
                         '6º DAN': 100, '5º DAN': 90, '4º DAN': 80, '3º DAN': 70, '2º DAN': 60, '1º DAN': 50, 
@@ -831,32 +840,26 @@ async function generateReport(type) {
                     };
                     const valA = gradeMap[normalizeGrade(pA.grado)] ?? -1;
                     const valB = gradeMap[normalizeGrade(pB.grado)] ?? -1;
-                    if (valA !== valB) return valB - valA; // Mayor grado arriba
-                    return (pA.apellidos || "").localeCompare(pB.apellidos || ""); // Desempate por apellidos
+                    if (valA !== valB) return valB - valA;
+                    return (pA.apellidos || "").localeCompare(pB.apellidos || "");
                 }
 
-                // B. Orden por Género (NUEVO REQUISITO)
                 if (type === 'gender') {
-                    const genA = pA.genero || "MUJER"; // Fallback por si acaso
-                    const genB = pB.genero || "MUJER";
-                    if (genA !== genB) return genA.localeCompare(genB); // Agrupa Género
-                    return (pA.apellidos || "").localeCompare(pB.apellidos || ""); // Orden alfabético dentro
+                    if (genA !== genB) return genA.localeCompare(genB);
+                    return (pA.apellidos || "").localeCompare(pB.apellidos || "");
                 }
 
-                // C. Orden por Edad (Veteranos primero)
                 if (type === 'age') {
                     const fechaA = new Date(pA.fecha_nacimiento || '2100-01-01');
                     const fechaB = new Date(pB.fecha_nacimiento || '2100-01-01');
                     return fechaA - fechaB; 
                 }
 
-                // D. Orden por Seguro (Pagado arriba)
                 if (type === 'insurance') {
                     if (pA.seguro_pagado !== pB.seguro_pagado) return pB.seguro_pagado ? 1 : -1;
                     return (pA.apellidos || "").localeCompare(pB.apellidos || "");
                 }
 
-                // Default: Apellidos
                 return (pA.apellidos || "").localeCompare(pB.apellidos || "");
             });
 
@@ -867,11 +870,14 @@ async function generateReport(type) {
 
             const body = list.map((item, index) => {
                 const p = item.attributes || item;
+                // 🥋 LÓGICA DE INTEGRIDAD: Si genero es null o undefined, mostramos HOMBRE
+                const generoFinal = p.genero || 'HOMBRE';
+
                 const row = [
                     `${index + 1}`,
                     (p.apellidos || '').toUpperCase(),
                     p.nombre || '',
-                    p.genero || '---',
+                    generoFinal,
                     getDojoName(p.dojo),
                     normalizeGrade(p.grado),
                     parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h',
@@ -895,17 +901,17 @@ async function generateReport(type) {
                 styles: { fontSize: 5, cellPadding: 0.8, overflow: 'linebreak' },
                 headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
                 columnStyles: {
-                    0: { cellWidth: 6, halign: 'center' },
-                    1: { cellWidth: 35 },
-                    2: { cellWidth: 22 },
-                    3: { cellWidth: 15 } // Género
+                    0: { cellWidth: 7, halign: 'center' }, // Nº
+                    1: { cellWidth: 35 }, // Apellidos
+                    2: { cellWidth: 22 }, // Nombre
+                    3: { cellWidth: 15, halign: 'center' } // Género centrado
                 },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.setFont("helvetica", "bold");
                     doc.text("ARASHI GROUP - INFORME OFICIAL", pageWidth / 2, 12, { align: 'center' });
                     doc.setFontSize(9); doc.setFont("helvetica", "normal");
-                    const subtitulo = isBaja ? `HISTÓRICO BAJAS | ORDEN: ${type.toUpperCase()}` : `ALUMNOS ACTIVOS | DOJO: ${dojoFilterName.toUpperCase()} | ORDEN: ${type.toUpperCase()}`;
+                    const subtitulo = isBaja ? `HISTÓRICO BAJAS | ORDEN: ${type.toUpperCase()}` : `ALUMNOS ACTIVOS | DOJO: ${dojoFilterName.toUpperCase()} | ORDEN: ${subtitleMap[type].toUpperCase()}`;
                     doc.text(subtitulo, pageWidth / 2, 18, { align: 'center' });
                 }
             });
