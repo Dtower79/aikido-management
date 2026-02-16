@@ -2410,17 +2410,18 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         showModal("Error", "DNI o contraseña incorrectos."); 
     }
 });
-/* --- BLOQUE ÚNICO: ESCÁNER QR ARASHI (CORREGIDO Y CENTRADO) --- */
+
+/* --- ESCÁNER QR (VERSION 6.9 - APAGADO PRIORITARIO) --- */
 async function startQRScanner() {
-    if (!alumnoGlobal) return showModal("Aviso", "Perfil no cargado correctamente.");
+    if (!alumnoGlobal) return showModal("Aviso", "Perfil no cargado.");
     
-    isProcessingQR = false; // Reseteamos el escudo al abrir
+    isProcessingQR = false; // Reset de seguridad
 
     showModal("ESCANEAR ASISTENCIA", `
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; margin-top:10px;">
             <div id="qr-reader" style="width:280px; height:280px; border-radius:25px; overflow:hidden; background:#000; border:4px solid var(--accent);"></div>
-            <p id="scan-status" style="font-size:12px; color:var(--text-muted); margin-top:20px; text-align:center; font-weight:700;">
-                <i class="fa-solid fa-expand" style="color:var(--accent)"></i> ENFOCA EL CÓDIGO DEL SENSEI
+            <p id="scan-status" style="font-size:12px; color:var(--text-muted); margin-top:20px; text-align:center;">
+                ENFOCA EL CÓDIGO DEL SENSEI
             </p>
         </div>
     `, true);
@@ -2433,26 +2434,26 @@ async function startQRScanner() {
             const constraints = isMobile ? { facingMode: "environment" } : { facingMode: "user" };
 
             await html5QrCode.start(constraints, config, async (decodedText) => {
-                // --- 🥋 ESCUDO ACTIVADO ---
-                if (isProcessingQR) return; // Si ya estamos trabajando, ignoramos esta lectura
+                // 1. BLOQUEO DE ENTRADA
+                if (isProcessingQR) return;
                 isProcessingQR = true; 
 
-                console.log("🎯 QR Detectado:", decodedText);
-                document.getElementById('scan-status').innerHTML = "<span style='color:var(--success)'>¡LECTURA OK! PROCESANDO...</span>";
+                console.log("🎯 QR Capturado. Apagando cámara...");
                 
-                // Apagamos la cámara de forma segura
-                try {
-                    if (html5QrCode && html5QrCode.isScanning) {
-                        await html5QrCode.stop();
-                    }
-                } catch (e) { console.warn("Cámara ya cerrada"); }
+                // 2. APAGADO FULMINANTE DE CÁMARA (Antes de procesar nada)
+                if (html5QrCode) {
+                    await html5QrCode.stop().catch(() => {});
+                    html5QrCode = null; // Destruimos la instancia para liberar memoria
+                }
+
+                document.getElementById('scan-status').innerHTML = "<span style='color:var(--success)'>LECTURA OK. GRABANDO...</span>";
                 
-                // Llamamos al procesador
+                // 3. ENVIAMOS A DATOS
                 procesarAsistenciaQR(decodedText);
             });
         } catch (err) {
-            console.error("❌ Error Cámara:", err);
-            document.getElementById('scan-status').innerHTML = "<span style='color:var(--accent)'>ERROR: ACTIVA LOS PERMISOS</span>";
+            console.error("Error Cámara:", err);
+            document.getElementById('scan-status').innerText = "ERROR: ACTIVA PERMISOS DE CÁMARA";
         }
     }, 350);
 } // <--- FIN DE LA FUNCIÓN
@@ -2492,23 +2493,24 @@ async function loadDojosFilter() {
     }
 }
 
-/* --- PROCESADOR QR (VERSION 6.7 - BLINDAJE DE RESPUESTA) --- */
+/* --- PROCESADOR QR (VERSION 6.9 - SOLO DATOS) --- */
 async function procesarAsistenciaQR(classId) {
     const token = localStorage.getItem('aikido_jwt');
     const aluDocId = localStorage.getItem('aikido_student_doc_id');
     
+    // Aquí ya no tocamos la cámara (html5QrCode), así que el error 400 desaparece
     try {
-        // PASO 1: Datos de Clase
+        // PASO 1: Obtener Clase
         const resClase = await fetch(`${API_URL}/clases/${classId}`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
-        if (!resClase.ok) throw new Error(`Keiko no encontrado (${resClase.status})`);
+        if (!resClase.ok) throw new Error("Keiko no encontrado en el sistema.");
         
         const classJ = await resClase.json();
         const dataC = classJ.data?.attributes || classJ.data;
         const duracion = parseFloat(dataC?.Duracion || 1.5);
 
-        // PASO 2: Registrar Asistencia (ESTADO: Asistio)
+        // PASO 2: Registrar Asistencia
         const resAsist = await fetch(`${API_URL}/asistencias`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -2518,9 +2520,8 @@ async function procesarAsistenciaQR(classId) {
         });
 
         if (!resAsist.ok) {
-            const errorTxt = await resAsist.text();
-            console.error("❌ Error Strapi:", errorTxt);
-            throw new Error(`Asistencia rechazada. ¿Ya la habías registrado?`);
+            // Si Strapi da error aquí, es probable que la asistencia ya exista
+            throw new Error("Asistencia ya registrada o error de permisos.");
         }
 
         // PASO 3: Sumar Horas
@@ -2535,20 +2536,20 @@ async function procesarAsistenciaQR(classId) {
             body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } }) 
         });
 
-        // ÉXITO Y LIMPIEZA
+        // LIMPIEZA Y ÉXITO
         localStorage.removeItem('cache_perfil_alumno');
         localStorage.removeItem('cache_asistencias_sensei');
         await refreshStudentData(); 
         await checkTodayClass();
         
-        isProcessingQR = false; // Liberamos el escudo
+        isProcessingQR = false;
         closeModal();
-        showModal("¡OSS!", `Asistencia y +${duracion}h registradas en Neon.`);
+        showModal("¡OSS!", `Has sumado +${duracion}h correctamente.`);
 
     } catch (e) {
-        isProcessingQR = false; // Liberamos el escudo para que pueda volver a intentar
-        console.error("🔥 Error:", e.message);
-        showModal("ERROR DE VALIDACIÓN", e.message);
+        isProcessingQR = false; 
+        console.error("🔥 Error Datos QR:", e.message);
+        showModal("AVISO", e.message);
     }
 }
 
