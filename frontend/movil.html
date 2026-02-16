@@ -2078,11 +2078,10 @@ async function saveClass(id) {
     checkTodayClass(); // Actualizamos dashboard por si era la clase de hoy
 }
 
-/* --- ACCIÓN: ELIMINAR KEIKO --- */
-/* --- ACCIÓN: ELIMINAR KEIKO (UNIFICADA Y COMPLETA) --- */
+/* --- ACCIÓN: ELIMINAR KEIKO (FIX TYPO + SINCRONIZACIÓN) --- */
 async function deleteClass(id) { 
-    // 1. ESCUDO DE SEGURIDAD (De la primera versión)
-    if (!confirm("¿Seguro que quieres borrar este entrenamiento? Esta acción no se puede deshacer.")) return;
+    // 1. ESCUDO DE CONFIRMACIÓN (Nativo por seguridad de ejecución)
+    if (!confirm("⚠️ ¿Seguro que quieres borrar este entrenamiento? Esta acción no se puede deshacer.")) return;
 
     const token = localStorage.getItem('aikido_jwt');
 
@@ -2092,24 +2091,24 @@ async function deleteClass(id) {
             headers: { 'Authorization': `Bearer ${token}` } 
         }); 
 
-        if (!res.ok) throw new Error("Error en Neon/Render");
+        if (!res.ok) throw new Error("Error al comunicar con Render/Neon");
 
-        // 2. REGLA ZERO WASTE: Sincronización instantánea (En ambas versiones)
-        llocalStorage.removeItem('cache_clases_archivo');
+        // 2. REGLA ZERO WASTE: Limpieza de caché (CORREGIDO: localStorage sin doble L)
+        localStorage.removeItem('cache_clases_archivo'); 
         
-        // 3. CIERRE DE INTERFAZ
+        // 3. CIERRE Y REFRESCO DE VISTAS
         closeModal(); 
         
-        // 4. REFRESCO DE VISTAS (Mantenemos checkTodayClass de la primera versión)
-        loadManageClasses(); // Refresca la lista del editor
-        checkTodayClass();   // Refresca el dashboard (Imprescindible)
+        // Recargamos el editor y el dashboard para que el cambio sea instantáneo
+        await loadManageClasses(); 
+        await checkTodayClass(); 
 
-        // 5. FEEDBACK PREMIUM
-        showModal("¡OSS!", "Entrenamiento eliminado y sistema sincronizado.");
+        // 4. FEEDBACK PREMIUM (Ahora sí, el Modal de éxito)
+        showModal("¡OSS!", "Keiko eliminado correctamente. El calendario ya está actualizado.");
 
     } catch (e) {
         console.error("❌ Error al borrar:", e);
-        showModal("Error", "No se pudo eliminar la clase de la base de datos.");
+        showModal("Error", "No se ha podido eliminar la clase de la base de datos.");
     }
 }
 
