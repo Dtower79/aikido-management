@@ -266,18 +266,25 @@
             cursor: default; 
         }
         
-        .class-hero { 
-            background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
-            padding: 35px 25px; 
-            border-radius: 40px; 
-            box-shadow: 0 20px 45px rgba(239,68,68,0.3); 
-            text-align: center; 
-            margin: 0 20px 25px; 
-            border: 1px solid rgba(255,255,255,0.2); 
-            opacity: 0; 
-            transform: translateY(20px); 
-            animation: fadeInUp 0.8s forwards; 
-        }
+/* --- TARJETA KEIKO (DASHBOARD - ANCHO UNIFICADO) --- */
+.class-hero { 
+    background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%); 
+    padding: 35px 25px; 
+    border-radius: 40px; 
+    box-shadow: 0 20px 45px rgba(239,68,68,0.3); 
+    text-align: center; 
+    
+    /* MARGEN Y ANCHO IDÉNTICO AL SENSEI */
+    margin: 0 auto 25px; 
+    width: 90%;
+    max-width: 600px; 
+    
+    border: 1px solid rgba(255,255,255,0.2); 
+    opacity: 0; 
+    transform: translateY(20px); 
+    animation: fadeInUp 0.8s forwards; 
+    box-sizing: border-box;
+}
 
         @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
@@ -742,21 +749,21 @@
         }
 
         /* --- ZEN MASTER CARD PARA SENSEIS --- */
-/* --- ZEN MASTER CARD (VERSIÓN DESKTOP ELITE) --- */
+//* --- ZEN MASTER CARD (SENSEI - ANCHO UNIFICADO) --- */
 .zen-master-card {
     background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg');
     background-size: cover;
-    background-position: center 20%;
+    background-position: center;
     background-repeat: no-repeat;
-    
     border: 2px solid var(--accent);
     border-radius: 40px;
-    padding: 50px 30px;
-    margin: 20px auto; /* Centrado automático */
+    padding: 40px 30px;
+    margin: 20px auto; /* Centrado horizontal */
     
-    /* LIMITACIÓN PARA ESCRITORIO */
-    max-width: 700px; 
-    min-height: 250px;
+    /* ANCHO UNIFICADO CON EL KEIKO */
+    width: 90%; 
+    max-width: 600px; 
+    min-height: 220px;
     
     text-align: center;
     box-shadow: var(--neon), inset 0 0 30px rgba(239, 68, 68, 0.2);
@@ -766,6 +773,7 @@
     justify-content: center;
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .zen-logo {
@@ -1005,6 +1013,20 @@ body.is-sensei-mode #confirm-btn {
 
 /* --- OPTIMIZACIÓN DE ESPACIO EN ESCRITORIO --- */
 @media (min-width: 900px) {
+     #app-content {
+        padding-top: 10vh; /* Bajamos un poco el contenido para que no pegue arriba */
+        padding-bottom: 140px !important; /* Espacio para que la nav-bar no pise las tarjetas */
+    }
+    .header-app {
+        max-width: 600px;
+        margin: 0 auto 20px;
+        padding: 0;
+    }
+    .zen-master-card, .class-hero {
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
     .zen-master-card {
         max-width: 800px;
         min-height: 180px; /* Reducimos altura para ganar visibilidad del Keiko */
