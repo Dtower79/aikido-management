@@ -2500,54 +2500,89 @@ async function loadDojosFilter() {
     }
 }
 
-/* --- PROCESADOR QR (VERSIÓN 6.3 - INTEGRIDAD TOTAL) --- */
+/* --- PROCESADOR QR (VERSION 6.6 - AUDITORÍA DE ERRORES) --- */
 async function procesarAsistenciaQR(classId) {
     const token = localStorage.getItem('aikido_jwt');
     const aluDocId = localStorage.getItem('aikido_student_doc_id');
     
-    if(!aluDocId || aluDocId === "null") return showModal("Error", "Ficha de alumno no vinculada.");
+    console.log("🎫 [QR-START] Iniciando validación...");
+    console.log("👉 ID Clase detectado:", classId);
+    console.log("👤 ID Alumno vinculado:", aluDocId);
+
+    if(!aluDocId || aluDocId === "null") {
+        console.error("❌ [QR-STOP] El alumno no tiene documentId vinculado.");
+        return showModal("Error de Vínculo", "Tu sesión no tiene asociada una ficha de alumno. Cierra sesión y vuelve a entrar.");
+    }
 
     try {
-        // 1. Obtener duración del Keiko
+        // PASO 1: OBTENER DATOS DE LA CLASE
+        console.log("📡 [PASO 1] Consultando duración del Keiko...");
         const resClase = await fetch(`${API_URL}/clases/${classId}`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
+        
         const classJ = await resClase.json();
-        if (!resClase.ok) throw new Error("Clase no encontrada.");
+        
+        if (!resClase.ok) {
+            console.error("❌ [PASO 1-ERROR]", classJ);
+            throw new Error(`Servidor dice: ${classJ.error?.message || 'Keiko no encontrado'}`);
+        }
         
         const dataC = classJ.data.attributes || classJ.data;
         const duracion = parseFloat(dataC.Duracion || 1.5);
+        console.log("✅ [PASO 1-OK] Duración detectada:", duracion + "h");
 
-        // 2. Crear registro de asistencia (POST)
+        // PASO 2: REGISTRAR ASISTENCIA (EL PUNTO CRÍTICO)
+        console.log("📡 [PASO 2] Intentando registrar asistencia en Neon...");
         const resAsist = await fetch(`${API_URL}/asistencias`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+            },
             body: JSON.stringify({ 
                 data: { 
                     alumno: aluDocId, 
                     clase: classId, 
-                    Estado: 'Asistio' // Coincide con tu Enum de Strapi
+                    Estado: 'Asistio' // Asegúrate de que en Strapi es exacto
                 } 
             })
         });
 
-        if (!resAsist.ok) {
-            const errJ = await resAsist.json();
-            throw new Error(errJ.error?.message || "No se pudo registrar la asistencia.");
-        }
+        const asistJ = await resAsist.json();
 
-        // 3. Actualizar contador de horas en Neon
+        if (!resAsist.ok) {
+            console.error("❌ [PASO 2-ERROR]", asistJ);
+            // Si el error es 403, es un tema de permisos en Strapi
+            if(resAsist.status === 403) throw new Error("PERMISOS DENEGADOS: El rol Authenticated no puede crear Asistencias.");
+            throw new Error(asistJ.error?.message || "Error al crear registro");
+        }
+        console.log("✅ [PASO 2-OK] Fila de asistencia creada.");
+
+        // PASO 3: SUMAR HORAS AL ALUMNO
+        console.log("📡 [PASO 3] Actualizando contador de horas...");
         const alRes = await fetch(`${API_URL}/alumnos/${aluDocId}`, { headers: { 'Authorization': `Bearer ${token}` } });
         const alJson = await alRes.json();
         const p = alJson.data.attributes || alJson.data;
         const totalNuevo = (parseFloat(p.horas_acumuladas || 0) + duracion);
 
-        await fetch(`${API_URL}/alumnos/${aluDocId}`, {
+        const upRes = await fetch(`${API_URL}/alumnos/${aluDocId}`, {
             method: 'PUT', 
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+            }, 
             body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } }) 
         });
 
+        if(!upRes.ok) {
+            const upErr = await upRes.json();
+            console.error("❌ [PASO 3-ERROR]", upErr);
+            throw new Error("Ficha actualizada pero fallo al sumar horas.");
+        }
+        console.log("✅ [PASO 3-OK] Horas grabadas: ", totalNuevo);
+
+        // FINALIZACIÓN
         localStorage.removeItem('cache_perfil_alumno');
         localStorage.removeItem('cache_asistencias_sensei');
         
@@ -2555,10 +2590,12 @@ async function procesarAsistenciaQR(classId) {
         await checkTodayClass();
         
         closeModal();
-        showModal("¡OSS!", "Asistencia y horas registradas con éxito.");
+        showModal("¡OSS!", `Asistencia registrada: +${duracion}h. ¡Buen entrenamiento!`);
 
     } catch (e) {
-        showModal("Error de QR", e.message);
+        console.error("🔥 [FALLO CRÍTICO QR]:", e.message);
+        // El modal ahora mostrará el detalle técnico real
+        showModal("ERROR DE QR", `No se ha podido validar: ${e.message}`);
     }
 }
 
