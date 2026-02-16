@@ -1319,7 +1319,7 @@
         // LOG DE AUDITORÍA ARASHI
         console.log("🥋 [AUDITORÍA] API_URL actual:", API_URL);
         let selectedMonthsArray = [new Date().getMonth()]; // Empezamos con el mes actual por defecto
-        
+
         // Comprobación de seguridad
         if (API_URL.endsWith('/api/')) {
             console.warn("⚠️ ALERTA: La URL termina en /api/. Asegúrate de que tus fetch NO empiecen por /api");
@@ -2155,7 +2155,7 @@ function uiGenerateMonth() {
             ${daysHtml}
 
             <button class="action-btn primary" onclick="processGeneration()" style="margin-top:25px; width:100%; height: 60px; border-radius: 20px;">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> LANZAR GENERACIÓN
+                <i class="fa-solid fa-wand-magic-sparkles"></i> PROGRAMAR KEIKOS
             </button>
             <button class="action-btn btn-secondary" onclick="closeModal()" style="margin-top:12px; width:100%; height: 50px; border-radius: 15px;">
                 CANCELAR
