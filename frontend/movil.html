@@ -1969,32 +1969,26 @@ function setEmptyDashboard() {
     document.getElementById('confirm-btn').classList.add('hidden');
 }
 
-/* --- EDITOR DE CLASES (VERSION 7.2 - SINCRONIZADA) --- */
+/* --- EDITOR DE CLASES (VERSION 7.5 - LIVE) --- */
 async function loadManageClasses() {
     const listDiv = document.getElementById('student-list');
     const dojoId = document.getElementById('sensei-dojo-filter').value;
     
-    listDiv.innerHTML = `<button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">← VOLVER</button><p style='text-align:center; opacity:0.5; padding:20px;'>Cargando tatami live...</p>`;
+    listDiv.innerHTML = `<button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">← VOLVER</button><p style='text-align:center; opacity:0.5; padding:20px;'>Actualizando Tatami Live...</p>`;
 
     let endpoint = `/clases?sort=Fecha_Hora:asc&pagination[limit]=100&populate=dojo`;
     if (dojoId !== 'all') endpoint += `&filters[dojo][documentId][$eq]=${dojoId}`;
 
-    // USAMOS LA MISMA LLAVE: 'cache_clases_archivo' pero con 0 horas
-    const json = await fetchSmart(endpoint, 'cache_clases_archivo', 0);
+    // Forzamos bypass de caché (0 horas) usando la llave unificada
+    const json = await fetchSmart(endpoint, 'clases_archivo', 0);
     
     if (!json || !json.data) return;
 
     const grouped = {};
-    const hoy = new Date();
+    const hoyCorte = new Date(); 
+    hoyCorte.setHours(0,0,0,0); // Mostramos todo lo de hoy en adelante
 
-    json.data.filter(c => {
-        const d = parseData(c);
-        const [fechaPart, resto] = d.Fecha_Hora.split('T');
-        const [y, m, day] = fechaPart.split('-');
-        const [hh, mm] = resto.split(':');
-        const finLit = new Date(new Date(y, m - 1, day, hh, mm).getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
-        return finLit > hoy;
-    }).forEach(c => {
+    json.data.filter(c => new Date(parseData(c).Fecha_Hora) >= hoyCorte).forEach(c => {
         const d = parseData(c);
         const f = formatTimeSafe(d.Fecha_Hora);
         const dojoInfo = parseRelation(d.dojo);
@@ -2366,7 +2360,7 @@ function setGenMonth(m, btn) {
             showModal("NUEVA CLASE SUELTA", `<div style="text-align:left; margin-top:10px;"><span class="modal-label">FECHA:</span><input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}"><span class="modal-label">HORA:</span><input type="time" id="single-time" class="modal-field" value="10:00"><span class="modal-label">DURACIÓN:</span><select id="single-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select><button class="action-btn primary" onclick="processSingleClass()" style="margin-top:10px;">CREAR KEIKO</button></div>`, true); 
         }
 
-/* --- CREACIÓN DE CLASE ÚNICA (CON BLOQUEO DE DUPLICADOS) --- */
+/* --- CREACIÓN DE CLASE (VERSION 7.5 - SINCRONIZACIÓN ATÓMICA) --- */
 async function processSingleClass() { 
     const token = localStorage.getItem('aikido_jwt');
     const dojoId = document.getElementById('sensei-dojo-filter').value;
@@ -2374,20 +2368,18 @@ async function processSingleClass() {
     const tVal = document.getElementById('single-time').value;
     const dur = document.getElementById('single-dur').value;
 
-    // 1. BLOQUEO DE SEGURIDAD: DOJO OBLIGATORIO
     if (!dojoId || dojoId === 'all') {
         showModal("Aviso", "Selecciona un Dojo específico primero.");
         return;
     }
 
-    // 2. CONSTRUCCIÓN DE HORA LITERAL (Timezone Fix)
     const isoString = `${dVal}T${tVal}:00.000Z`;
 
     try {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
         btn.innerText = "VERIFICANDO..."; btn.disabled = true;
 
-        // 3. VERIFICACIÓN DE DUPLICADOS EN NEON
+        // VERIFICACIÓN DE DUPLICADOS
         const checkRes = await fetch(`${API_URL}/clases?filters[Fecha_Hora][$eq]=${isoString}&filters[dojo][documentId][$eq]=${dojoId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -2395,11 +2387,11 @@ async function processSingleClass() {
 
         if (checkJ.data && checkJ.data.length > 0) {
             btn.innerText = "CREAR KEIKO"; btn.disabled = false;
-            showModal("⚠️ CLASE DUPLICADA", "Ya existe un entrenamiento programado en este Dojo a esta misma hora. No se pueden duplicar keikos.");
-            return; // Abortamos la creación
+            showModal("⚠️ CLASE DUPLICADA", "Ya existe un entrenamiento a esta misma hora en este Dojo.");
+            return;
         }
 
-        // 4. CREACIÓN REAL
+        // CREACIÓN
         const res = await fetch(`${API_URL}/clases`, { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
@@ -2407,23 +2399,26 @@ async function processSingleClass() {
         }); 
 
         if (res.ok) {
-            // 5. LIMPIEZA DE CACHÉ Y REFRESCO INSTANTÁNEO
+            // --- 🥋 LIMPIEZA DE TODAS LAS CACHÉS POSIBLES ---
             localStorage.removeItem('cache_clases_archivo'); 
+            localStorage.removeItem('cache_calendario_clases');
+            localStorage.removeItem('cache_calendario_clases_completo');
+            
             closeModal(); 
             
-            // Forzamos al calendario y al editor a recargar los datos de Neon
-            await loadMonthlyClasses(); 
+            // Refresco de todas las vistas
             await loadManageClasses(); 
+            await loadMonthlyClasses(); 
             await checkTodayClass(); 
 
-            showModal("¡OSS!", "Keiko creado y sincronizado correctamente.");
+            showModal("¡OSS!", "Keiko creado y sincronizado en todo el sistema.");
         }
     } catch (e) {
-        showModal("Error", "Fallo al conectar con el Dojo.");
+        showModal("Error", "Fallo al conectar con Neon.");
     }
 }
 
-/* --- CALENDARIO (VERSION 7.2 - UNIFICACIÓN DE CACHÉ) --- */
+/* --- CALENDARIO (VERSION 7.5 - CACHÉ UNIFICADA) --- */
 async function loadMonthlyClasses(el) {
     if (el) showView('clases', el);
     const container = document.getElementById('calendar-content');
@@ -2442,8 +2437,8 @@ async function loadMonthlyClasses(el) {
     const filterDojo = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
     const listResults = document.getElementById('calendar-list-results');
     
-    // USAMOS LA LLAVE UNIFICADA: 'cache_clases_archivo'
-    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'cache_clases_archivo', 1);
+    // LLAVE MAESTRA: 'clases_archivo'
+    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'clases_archivo', 1);
     
     if (!json || !json.data) return;
 
@@ -2454,7 +2449,6 @@ async function loadMonthlyClasses(el) {
         const d = parseData(c); 
         const dojoInfo = parseRelation(d.dojo);
         
-        // TRATAMIENTO LITERAL PARA EVITAR DESFASES
         const [fechaPart, resto] = d.Fecha_Hora.split('T');
         const [y, m, day] = fechaPart.split('-');
         const [hh, mm] = resto.split(':');
@@ -2472,17 +2466,17 @@ async function loadMonthlyClasses(el) {
     let html = ""; 
     for (const m in grouped) {
         html += `<div class="month-header">${m}</div>`;
-        ['morning', 'afternoon'].forEach(p => {
-            if(grouped[m][p].length) {
-                html += `<div class="section-label">${p === 'morning' ? 'MAÑANA' : 'TARDE'}</div><div class="grid-container">`;
-                grouped[m][p].forEach(x => {
+        ['morning', 'afternoon'].forEach(per => {
+            if(grouped[m][per].length) {
+                html += `<div class="section-label">${per === 'morning' ? 'MAÑANA' : 'TARDE'}</div><div class="grid-container">`;
+                grouped[m][per].forEach(x => {
                     html += `<div class="class-card"><span style="font-size:9px; color:var(--accent); font-weight:800; display:block; margin-bottom:4px;">${x.dNom.toUpperCase()}</span><h4>${x.date}</h4><p>${x.time} • ${x.dur}H</p></div>`;
                 });
                 html += "</div>";
             }
         });
     }
-    listResults.innerHTML = html || "<p style='text-align:center; padding:40px; opacity:0.5;'>No hay keikos programados.</p>";
+    listResults.innerHTML = html || "<p style='text-align:center; padding:40px; opacity:0.5;'>Sin clases programadas.</p>";
 }
 
 /* --- ASISTENCIA (FUNCIÓN INDEPENDIENTE) --- */
