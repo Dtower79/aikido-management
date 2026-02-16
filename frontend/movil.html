@@ -211,16 +211,16 @@
         }
 
         /* --- DASHBOARD ELEMENTS --- */
-.header-app { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 15px; 
-    width: 100%; 
-    padding: 20px 25px 0; 
-    box-sizing: border-box; 
-    height: 80px; /* Altura fija para evitar saltos de layout */
-}
+        .header-app { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 15px; 
+            width: 100%; 
+            padding: 20px 25px 0; 
+            box-sizing: border-box; 
+        }
+
         .profile-circle { 
             width: 50px; 
             height: 50px; 
@@ -748,71 +748,32 @@
             border-radius: 20px;
         }
 
-/* --- TARJETA MAESTRA (ZEN CARD) --- */
-/* --- CABECERA UNIVERSAL (NO TOCAR) --- */
-.header-app { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 15px; 
-    width: 100%; 
-    padding: 20px 25px 0; 
-    box-sizing: border-box; 
-    height: 80px; /* Altura fija para evitar saltos de layout */
-}
-
-/* --- TARJETAS UNIFICADAS (ANCHO 600px) --- */
-.zen-master-card, .class-hero {
-    width: 90% !important;
-    max-width: 600px !important;
-    margin: 20px auto !important;
-    border-radius: 40px !important;
-    box-sizing: border-box !important;
-}
-
+        /* --- ZEN MASTER CARD PARA SENSEIS --- */
+//* --- ZEN MASTER CARD (SENSEI - ANCHO UNIFICADO) --- */
 .zen-master-card {
     background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg');
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
     border: 2px solid var(--accent);
-    padding: 40px 20px;
+    border-radius: 40px;
+    padding: 40px 30px;
+    margin: 20px auto; /* Centrado horizontal */
+    
+    /* ANCHO UNIFICADO CON EL KEIKO */
+    width: 90%; 
+    max-width: 600px; 
+    min-height: 220px;
+    
     text-align: center;
-    box-shadow: var(--neon), inset 0 0 20px rgba(239, 68, 68, 0.2);
+    box-shadow: var(--neon), inset 0 0 30px rgba(239, 68, 68, 0.2);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 200px;
-}
-
-/* FIX ESCRITORIO: Espacio para que el scroll respire */
-@media (min-width: 900px) {
-    #app-content { padding-bottom: 150px !important; }
-}
-
-/* MATA EL BOTÓN SI ES SENSEI */
-body.is-sensei-mode #confirm-btn {
-    display: none !important;
-}
-
-/* --- TARJETA KEIKO (HERO CARD) --- */
-.class-hero { 
-    background: linear-gradient(145deg, #ef4444 0%, #7f1d1d 100%) !important; 
-    border: 1px solid rgba(255,255,255,0.2) !important;
-    border-radius: 40px !important; 
-    box-shadow: 0 20px 45px rgba(239,68,68,0.3) !important; 
-    
-    /* Geometría idéntica a la Zen Card */
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    width: 90% !important;
-    max-width: 600px !important;
-    margin: 0 auto 25px !important; /* Centrado absoluto */
-    padding: 35px 25px !important;
-    
-    text-align: center !important; 
-    box-sizing: border-box !important;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .zen-logo {
@@ -1061,28 +1022,16 @@ body.is-sensei-mode #confirm-btn {
         margin: 0 auto 20px;
         padding: 0;
     }
-.zen-master-card, .class-hero {
-    width: 90% !important;
-    max-width: 600px !important;
-    margin: 20px auto !important;
-    border-radius: 40px !important;
-    box-sizing: border-box !important;
-}
+    .zen-master-card, .class-hero {
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
 
-.zen-master-card {
-    background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('img/kanjis.jpg');
-    background-size: cover;
-    background-position: center;
-    border: 2px solid var(--accent);
-    padding: 40px 20px;
-    text-align: center;
-    box-shadow: var(--neon), inset 0 0 20px rgba(239, 68, 68, 0.2);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px;
-}
+    .zen-master-card {
+        max-width: 800px;
+        min-height: 180px; /* Reducimos altura para ganar visibilidad del Keiko */
+        padding: 30px;
+    }
     
     .class-hero {
         margin-top: 10px !important;
@@ -1644,7 +1593,7 @@ async function initApp() {
     }
 }
   
-/* --- REFRESH DATA (VERSION 9.0 - HEADERS RESTAURADOS) --- */
+/* --- REFRESH DATA (VERSION 8.1 - IDENTIDAD GEOGRÁFICA DE MAESTRO) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1652,7 +1601,7 @@ async function refreshStudentData() {
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // 1. OBTENCIÓN DE DATOS
+    // 1. OBTENCIÓN DE DATOS (Zero Waste Cache)
     if (savedDocId && savedDocId !== "null") {
         dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
     } else {
@@ -1675,47 +1624,54 @@ async function refreshStudentData() {
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     
-    // Sincronización de Dojo
+    // --- 🥋 LÓGICA DE IDENTIFICACIÓN DE DOJO ---
+    let dojoNameDisplay = "ARASHI GROUP"; // Fallback por defecto
     if (p && p.dojo) {
-        dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
+        const dData = parseRelation(p.dojo);
+        dojoNameDisplay = dData.nombre ? dData.nombre.toUpperCase() : "ARASHI GROUP";
+        dojoIdGlobal = String(getID(dData));
     }
 
-    // --- 🥋 PASO A: RESTAURACIÓN DE CABECERA (NOMBRE E INICIALES) ---
-    // Usamos la misma lógica que iba bien antes para todos los perfiles
-    const displayName = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
-    const initials = ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
-    
-    document.getElementById('user-display-name').innerText = displayName;
-    document.getElementById('user-initials').innerText = initials;
+    // --- 🧘 LÓGICA DE VISUALIZACIÓN ---
 
-    // --- 🧘 PASO B: RAMIFICACIÓN VISUAL POR RANGO ---
     if (user.is_sensei === true) {
+        // --- CASO MAESTRO (FRANCESC Y OTROS SENSEIS) ---
+        
         document.body.classList.add('is-sensei-mode'); 
 
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         
-        if (zenCard) zenCard.remove(); // Limpieza para asegurar nombre de dojo fresco
+        // Si ya existe una tarjeta vieja, la quitamos para actualizar el nombre del Dojo
+        if (zenCard) zenCard.remove();
 
-        let dojoNom = p?.dojo ? parseRelation(p.dojo).nombre : "ARASHI GROUP";
-        
         const zenHTML = `
             <div id="zen-card" class="zen-master-card">
                 <img src="img/logo_sin_fondo.png" class="zen-logo">
                 <h2 class="zen-title">SENSEI</h2>
-                <p class="zen-subtitle">${dojoNom.toUpperCase()}</p>
+                <!-- DINÁMICO: Muestra el Dojo asignado al Sensei en Rojo -->
+                <p class="zen-subtitle" id="zen-dojo-name">${dojoNameDisplay}</p>
             </div>`;
+            
         if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
+        
+        document.getElementById('user-display-name').innerText = (user.nombre || "SENSEI").toUpperCase();
+        document.getElementById('user-initials').innerText = (user.nombre?.[0] || "S").toUpperCase();
 
     } else if (p) {
+        // --- CASO ALUMNO (RAÚL / CARLOS) ---
+        
         document.body.classList.remove('is-sensei-mode');
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
         
+        document.getElementById('user-display-name').innerText = (p.nombre || user.nombre).toUpperCase();
+        document.getElementById('user-initials').innerText = ((p.nombre?.[0] || "") + (p.apellidos?.[0] || "")).toUpperCase();
+        
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        // Lógica Dan-Step Automática
+        // Lógica Dan-Step automática
         let meta = p.grado_objetivo;
         if (!meta) {
             const gradoActual = (p.grado || "S/G").toUpperCase();
@@ -1725,7 +1681,9 @@ async function refreshStudentData() {
             } else if (gradoActual.includes("KYU")) {
                 if (!isNaN(num) && num > 1) meta = `${num - 1}º KYU`;
                 else meta = "1º DAN";
-            } else { meta = "5º KYU"; }
+            } else {
+                meta = "5º KYU";
+            }
         }
 
         const normMeta = normalize(meta);
@@ -1737,12 +1695,14 @@ async function refreshStudentData() {
             const pct = Math.min((horas / target) * 100, 100);
             bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
         }
+
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
         }
     }
+    
     return alumnoGlobal;
 }
 
@@ -1951,13 +1911,13 @@ async function validateAttendance(asistId, asiste, aluId, dur) {
             }, 200);
         }
 
-/* --- PRÓXIMO KEIKO (VERSION 9.0 - TIMEZONE LITERAL & SENSEI HIDE) --- */
+/* --- PRÓXIMO KEIKO (VERSION 7.0 - SIN BOTÓN PARA SENSEI) --- */
 async function checkTodayClass(forcedDojoId = null) {
     const btn = document.getElementById('confirm-btn');
     const user = JSON.parse(localStorage.getItem('aikido_user')); 
     const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
-    const selectorDojo = document.getElementById('cal-dojo-filter');
-    let dojoBusqueda = forcedDojoId || (selectorDojo ? selectorDojo.value : dojoIdGlobal) || 'all';
+    const filterEl = document.getElementById('cal-dojo-filter');
+    let dojoBusqueda = forcedDojoId || (filterEl ? filterEl.value : dojoIdGlobal) || 'all';
     const idFinal = String(dojoBusqueda);
 
     try {
@@ -1975,8 +1935,6 @@ async function checkTodayClass(forcedDojoId = null) {
         for (const c of json.data) {
             const d = parseData(c);
             const dIdClase = d.dojo ? String(getID(parseRelation(d.dojo))) : null;
-            
-            // Timezone Fix Literal
             const [fechaPart, resto] = d.Fecha_Hora.split('T');
             const [y, m, day] = fechaPart.split('-');
             const [hh, mm] = resto.split(':');
@@ -1992,7 +1950,8 @@ async function checkTodayClass(forcedDojoId = null) {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
                 });
                 const chkJ = await chk.json();
-                estadoAlumno = chkJ.data?.[0] ? (chkJ.data[0].attributes?.Estado || chkJ.data[0].Estado) : null;
+                const asistencia = chkJ.data?.[0];
+                estadoAlumno = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
                 if (estadoAlumno === 'Asistio') continue;
             }
             claseElegida = c;
@@ -2008,18 +1967,22 @@ async function checkTodayClass(forcedDojoId = null) {
             document.getElementById('next-class-time').innerText = f.time;
             document.getElementById('next-class-date').innerHTML = `${f.date} <br><span style="font-size:11px; color:var(--accent); font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span>`;
             
-            // --- 🥋 LÓGICA DE BOTÓN PARA SENSEI ---
+            // --- 🥋 EL CAMBIO MAESTRO AQUÍ ---
             if (user && user.is_sensei === true) {
+                // Francesc no necesita el botón, lo borramos de la vista
                 if(btn) {
                     btn.classList.add('hidden');
-                    btn.style.display = 'none'; // Desaparece físicamente
+                    btn.style.display = 'none';
                 }
-            } else if(btn) {
-                btn.classList.remove('hidden');
-                btn.style.display = 'flex';
-                btn.innerText = (estadoAlumno === 'Confirmado') ? "YA CONFIRMADO" : "ASISTIR AL KEIKO";
-                btn.disabled = (estadoAlumno === 'Confirmado');
-                btn.style.background = (estadoAlumno === 'Confirmado') ? "#1e293b" : "white";
+            } else {
+                // Los alumnos lo ven normal
+                if(btn) {
+                    btn.classList.remove('hidden');
+                    btn.style.display = 'flex';
+                    btn.innerText = (estadoAlumno === 'Confirmado') ? "YA CONFIRMADO" : "ASISTIR AL KEIKO";
+                    btn.disabled = (estadoAlumno === 'Confirmado');
+                    btn.style.background = (estadoAlumno === 'Confirmado') ? "#1e293b" : "white";
+                }
             }
         } else {
             setEmptyDashboard("Sin keikos próximos");
