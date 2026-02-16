@@ -71,13 +71,22 @@
             min-height: 100vh;
             flex-direction: column;
             opacity: 0; /* Totalmente invisible por defecto */
-            transition: opacity 0.5s ease-in-out; /* Fundido suave de medio segundo */
-            display: none; /* No ocupa espacio inicial */
+            transition: opacity 0.8s ease-in-out; /* Fundido suave de medio segundo */
+            
         }
         /* Solo cuando esta clase esté presente, el contenido aparece */
         .app-ready #app-content {
-            display: flex !important;
+            /*display: flex !important;*/
             opacity: 1 !important;
+        }
+
+        /* Si por algún motivo el JS falla, este backup asegura que se vea tras 4 segundos */
+        @keyframes emergency-show {
+            to { opacity: 1; }
+        }
+        #app-content {
+            animation: emergency-show 0.5s forwards;
+            animation-delay: 4s; /* Si en 4 segundos el JS no responde, la App aparece sí o sí */
         }
 
         #install-wall {
@@ -1470,68 +1479,77 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         /* --- CORE INIT --- */
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 9.0 - ZERO FLICKER) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 9.1 - ANTI-BLOQUEO) --- */
 async function initApp() {
     console.log("🚀 [INIT] Arrancando Sistema Arashi...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     const mainNav = document.getElementById('main-nav');
-    const html = document.documentElement;
-    
-    // 1. OCULTACIÓN PREVENTIVA
-    // Nos aseguramos de que nada sea visible hasta el final
+    const body = document.body;
+
+    // 1. LIMPIEZA INICIAL
     document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
             .forEach(v => v.classList.add('hidden'));
 
-    // 2. CASO: REGISTRO / LOGIN (Sin token)
+    // 2. CASO: LOGIN (Sin sesión)
     if (!token || !user) {
-        console.log("🔑 [AUTH] Mostrando Login.");
         if (mainNav) mainNav.classList.add('hidden');
         document.getElementById('login-view')?.classList.remove('hidden');
-        
-        // El login se muestra rápido porque no necesita peticiones pesadas
-        html.classList.add('app-ready'); 
+        body.classList.add('app-ready'); // Liberar pantalla para login
+        document.documentElement.classList.add('app-loaded');
         return;
     }
 
-    // 3. CASO: ENTRADA AL DOJO (Con token)
+    // 3. CASO: DENTRO DEL DOJO (Con sesión)
+    // Liberación de Emergencia: Si en 3 segundos no ha cargado, forzamos la vista
+    const emergencyRelease = setTimeout(() => {
+        if (!body.classList.contains('app-ready')) {
+            console.warn("⚠️ [INIT] Carga lenta. Activando liberación de emergencia.");
+            body.classList.add('app-ready');
+            document.documentElement.classList.add('app-loaded');
+        }
+    }, 3000);
+
     try {
-        // A. Sincronizamos Requisitos (24h caché)
-        await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
-
-        // B. Sincronizamos Ficha del Alumno (Crítico para saber el Dojo)
-        await refreshStudentData(); 
-
-        // C. Sincronizamos el Keiko (Ahora que ya sabemos el Dojo)
-        await checkTodayClass();
-
-        // D. Configuramos interfaz y permisos
+        // Mostramos Dashboard y Nav de inmediato (estarán vacíos un milisegundo)
         if (mainNav) {
             mainNav.classList.remove('hidden');
-            mainNav.style.display = 'grid'; 
+            mainNav.style.display = 'grid';
         }
+        document.getElementById('dashboard-view')?.classList.remove('hidden');
+        showView('dashboard');
 
+        // Peticiones asíncronas en paralelo para ganar velocidad
+        await Promise.all([
+            fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24),
+            refreshStudentData()
+        ]);
+
+        // Una vez tenemos los datos del alumno, buscamos su clase
+        await checkTodayClass();
+
+        // Configuración de permisos de Sensei
         const esSenseiRango = (user.is_sensei === true);
         const pAlu = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
         const esInstructor = (pAlu && (pAlu.es_instructor === true || pAlu.es_instructor === "true"));
         
         if (esSenseiRango || esInstructor) {
-            document.getElementById('nav-sensei').style.display = 'flex';
+            const navS = document.getElementById('nav-sensei');
+            if (navS) navS.style.display = 'flex';
             await loadDojosFilter(); 
         }
 
-        // --- 🥋 EL MOMENTO DE LA VERDAD ---
-        // Solo ahora, cuando todo está cargado y en su sitio, levantamos el velo
-        setTimeout(() => {
-            html.classList.add('app-ready');
-            console.log("✨ [INIT] Despliegue profesional completado.");
-        }, 100);
+        // --- 🥋 ÉXITO: LEVANTAMOS EL VELO ---
+        clearTimeout(emergencyRelease);
+        body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+        console.log("✨ [INIT] Dojo cargado correctamente.");
 
     } catch (error) {
-        console.error("Fallo en la carga inicial:", error);
-        // Si hay error, mostramos el login por seguridad
-        localStorage.clear();
-        location.reload();
+        console.error("🔥 [INIT] Fallo crítico:", error);
+        clearTimeout(emergencyRelease);
+        body.classList.add('app-ready'); // Mostramos aunque haya error
+        document.documentElement.classList.add('app-loaded');
     }
 }
   
