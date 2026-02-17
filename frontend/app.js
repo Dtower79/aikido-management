@@ -240,14 +240,12 @@ async function loadAlumnos(activos) {
     }
 }
 
-// Función auxiliar para pintar la tabla (limpieza de código)
-/* --- RENDERIZADO DE TABLA (CON ICONOGRAFÍA DE GÉNERO) --- */
-/* --- RENDERIZADO DE TABLA TOTAL (MÁXIMA INFORMACIÓN) --- */
+/* --- RENDERIZADO DE TABLA (CON EDAD E INFORMACIÓN TOTAL) --- */
 function renderTableAlumnos(data, tbody, activos) {
     tbody.innerHTML = '';
     
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:20px; opacity:0.5;">No hay registros.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:20px; opacity:0.5;">No hay registros.</td></tr>`;
         return;
     }
 
@@ -261,15 +259,20 @@ function renderTableAlumnos(data, tbody, activos) {
         tr.id = `row-${id}`;
         tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
         
+        // Icono de Género
         const genIcon = p.genero === 'MUJER' 
-            ? ' <i class="fa-solid fa-venus" style="color:#f472b6; font-size:10px;"></i>' 
-            : ' <i class="fa-solid fa-mars" style="color:#60a5fa; font-size:10px;"></i>';
+            ? ' <i class="fa-solid fa-venus" style="color:#f472b6; font-size:10px; margin-left:5px;"></i>' 
+            : ' <i class="fa-solid fa-mars" style="color:#60a5fa; font-size:10px; margin-left:5px;"></i>';
+
+        // Cálculo de Edad en tiempo real
+        const edadActual = calculateAge(p.fecha_nacimiento);
 
         tr.innerHTML = `
             <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
             <td>${p.nombre || ''}${genIcon}</td>
             <td style="font-size:0.7rem; color:#94a3b8">${p.genero || 'HOMBRE'}</td>
             <td>${p.dni || ''}</td>
+            <td style="font-weight:600; color:#cbd5e1">${edadActual} años</td>
             <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
             <td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>
             <td><span class="${p.seguro_pagado ? 'badge-ok' : 'badge-no'}">${p.seguro_pagado ? 'SÍ' : 'NO'}</span></td>

@@ -231,14 +231,18 @@
                     <table id="table-bajas">
                         <thead>
                             <tr>
-                                <th class="txt-accent">Fecha Baja</th>
-                                <th>Apellidos</th>
-                                <th>Nombre</th>
+                                <th onclick="sortTable('apellidos')" style="cursor:pointer">Apellidos <i class="fa-solid fa-sort"></i></th>
+                                <th onclick="sortTable('nombre')" style="cursor:pointer">Nombre <i class="fa-solid fa-sort"></i></th>
+                                <th onclick="sortTable('genero')" style="cursor:pointer">Género <i class="fa-solid fa-sort"></i></th>
                                 <th>DNI</th>
-                                <th>Grado</th>
-                                <th>Seguro</th>
+                                <th>Edad</th> <!-- <--- NUEVA COLUMNA -->
+                                <th onclick="sortTable('grado')" style="cursor:pointer">Grado <i class="fa-solid fa-sort"></i></th>
+                                <th onclick="sortTable('horas_acumuladas')" style="cursor:pointer">Horas <i class="fa-solid fa-sort"></i></th>
+                                <th onclick="sortTable('seguro_pagado')" style="cursor:pointer">Seguro <i class="fa-solid fa-sort"></i></th>
                                 <th>Teléfono</th>
-                                <th>Dojo</th>
+                                <th>Email</th>
+                                <th>Dirección / Población</th>
+                                <th onclick="sortTable('dojo')" style="cursor:pointer">Dojo <i class="fa-solid fa-sort"></i></th>
                             </tr>
                         </thead>
                         <tbody id="lista-bajas-body"></tbody>
