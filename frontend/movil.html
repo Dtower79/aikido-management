@@ -2552,6 +2552,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         body: JSON.stringify({ identifier, password }) 
     });
 
+
+
     if (res.ok) { 
         const d = await res.json(); 
         localStorage.setItem('aikido_jwt', d.jwt); 
@@ -2561,6 +2563,88 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         showModal("Error", "DNI o contraseña incorrectos."); 
     }
 });
+
+/* --- FUNCIÓN RESTAURADA: ACTIVACIÓN DE ALUMNOS EXISTENTES --- */
+const formActiva = document.getElementById('activate-form');
+if (formActiva) {
+    formActiva.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const dni = document.getElementById('act-dni').value.trim().toUpperCase();
+        const p1 = document.getElementById('act-pass').value.trim();
+        const p2 = document.getElementById('act-pass2').value.trim();
+
+        if (p1 !== p2) return showModal("Aviso", "Las contraseñas no coinciden.");
+        if (p1.length < 6) return showModal("Aviso", "La contraseña debe tener al menos 6 caracteres.");
+
+        const btn = document.getElementById('btn-activate-submit');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ACTIVANDO...';
+        btn.disabled = true;
+
+        try {
+            // 1. Verificar existencia en Neon
+            const resSearch = await fetch(`${API_URL}/alumnos?filters[dni][$eq]=${dni}`);
+            const dataSearch = await resSearch.json();
+
+            if (!dataSearch.data || dataSearch.data.length === 0) {
+                throw new Error("DNI no encontrado. Si eres nuevo, usa 'Quiero inscribirme'.");
+            }
+
+            const alu = dataSearch.data[0];
+            const alumnoDocId = alu.documentId || alu.id;
+            const nombreAlumno = (alu.attributes?.nombre || alu.nombre || "Aikidoka").toUpperCase();
+
+            // 2. Crear usuario en Strapi
+            const regRes = await fetch(`${API_URL}/auth/local/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: dni,
+                    email: `${dni.toLowerCase()}@arashi.com`, 
+                    password: p1
+                })
+            });
+
+            const regData = await regRes.json();
+
+            if (!regRes.ok) {
+                if (regData.error?.message.includes("taken")) {
+                    throw new Error("Este DNI ya está activo. Intenta entrar con tu contraseña.");
+                }
+                throw new Error(regData.error?.message || "Fallo al crear acceso.");
+            }
+
+            // 3. Vínculo técnico con la ficha de Alumno
+            const linkRes = await fetch(`${API_URL}/alumnos/${alumnoDocId}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${regData.jwt}` 
+                },
+                body: JSON.stringify({ 
+                    data: { 
+                        cuenta_usuario: regData.user.id 
+                    } 
+                })
+            });
+
+            if (linkRes.ok) {
+                document.getElementById('activate-modal').classList.add('hidden');
+                // MODAL DE ÉXITO PREMIUM
+                showModal("¡ACCESO CONCEDIDO!", `OSS ${nombreAlumno}, tu cuenta ha sido activada con éxito. Ya puedes entrar al Dojo.`);
+                e.target.reset();
+            } else {
+                throw new Error("Acceso creado pero fallo de vínculo. Avisa al administrador.");
+            }
+
+        } catch (err) {
+            showModal("Error de Activación", err.message);
+        } finally {
+            btn.innerText = "ACTIVAR";
+            btn.disabled = false;
+        }
+    });
+}
 
 /* --- ESCÁNER QR (VERSION 6.9 - APAGADO PRIORITARIO) --- */
 async function startQRScanner() {
