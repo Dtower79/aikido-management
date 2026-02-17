@@ -242,10 +242,12 @@ async function loadAlumnos(activos) {
 
 // Función auxiliar para pintar la tabla (limpieza de código)
 /* --- RENDERIZADO DE TABLA (CON ICONOGRAFÍA DE GÉNERO) --- */
+/* --- RENDERIZADO DE TABLA TOTAL (MÁXIMA INFORMACIÓN) --- */
 function renderTableAlumnos(data, tbody, activos) {
     tbody.innerHTML = '';
+    
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${activos ? 9 : 8}" style="text-align:center; padding:20px; opacity:0.5;">No hay registros en esta sección.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:20px; opacity:0.5;">No hay registros.</td></tr>`;
         return;
     }
 
@@ -255,25 +257,26 @@ function renderTableAlumnos(data, tbody, activos) {
         const safeNombre = escapeQuotes(p.nombre || '');
         const safeApellidos = escapeQuotes(p.apellidos || '');
         
-        // Icono dinámico según género
-        const genIcon = p.genero === 'MUJER' 
-            ? ' <i class="fa-solid fa-venus" style="color:#f472b6; font-size:11px; margin-left:5px;"></i>' 
-            : ' <i class="fa-solid fa-mars" style="color:#60a5fa; font-size:11px; margin-left:5px;"></i>';
-
         const tr = document.createElement('tr');
         tr.id = `row-${id}`;
         tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
+        
+        const genIcon = p.genero === 'MUJER' 
+            ? ' <i class="fa-solid fa-venus" style="color:#f472b6; font-size:10px;"></i>' 
+            : ' <i class="fa-solid fa-mars" style="color:#60a5fa; font-size:10px;"></i>';
+
         tr.innerHTML = `
-            ${!activos ? `<td><strong>${formatDateDisplay(p.fecha_baja)}</strong></td>` : ''}
             <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
             <td>${p.nombre || ''}${genIcon}</td>
+            <td style="font-size:0.7rem; color:#94a3b8">${p.genero || 'HOMBRE'}</td>
             <td>${p.dni || ''}</td>
             <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
-            ${activos ? `<td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>` : ''}
+            <td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>
             <td><span class="${p.seguro_pagado ? 'badge-ok' : 'badge-no'}">${p.seguro_pagado ? 'SÍ' : 'NO'}</span></td>
             <td>${normalizePhone(p.telefono)}</td>
+            <td style="font-size:0.75rem; color:#94a3b8">${p.email || '-'}</td>
+            <td style="font-size:0.75rem;">${p.direccion || ''} <br> <small style="opacity:0.6">${p.poblacion || ''}</small></td>
             <td>${getDojoName(p.dojo)}</td>
-            ${activos ? `<td>${formatDateDisplay(p.fecha_inicio)}</td>` : ''}
         `;
         tbody.appendChild(tr);
     });
@@ -722,62 +725,69 @@ document.getElementById('change-pass-form')?.addEventListener('submit', async (e
 // --- INFORMES ---
 function openReportModal() { document.getElementById('report-modal').classList.remove('hidden'); }
 
-// 1. INFORME HISTÓRICO INDIVIDUAL
-// 1. INFORME HISTÓRICO INDIVIDUAL (CORREGIDO: Timezone Fix literal)
+/* --- INFORME TÉCNICO COMPLETO (CLASES + SEMINARIOS) --- */
 async function generateIndividualHistory(id, nombre, apellidos) {
-    // Cerramos el panel antes de procesar el PDF
     closeAlumnoActions();
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     
     try {
-        const res = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${id}&populate=clase&sort=createdAt:desc&pagination[limit]=200`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-        const json = await res.json();
-        const data = json.data || [];
+        // 1. OBTENER FICHA COMPLETA (Para seminarios)
+        const resAlu = await fetch(`${API_URL}/api/alumnos/${id}?populate=*`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const jsonAlu = await resAlu.json();
+        const p = jsonAlu.data.attributes || jsonAlu.data;
 
-        const headRow = ['Fecha', 'Hora', 'Tipo', 'Duración', 'Estado'];
-        let totalHoras = 0;
+        // 2. OBTENER ASISTENCIAS
+        const resAsist = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${id}&populate=clase&sort=createdAt:desc&pagination[limit]=200`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        const jsonAsist = await resAsist.json();
+        const asistencias = jsonAsist.data || [];
 
-        const body = data.map(item => {
-            const a = item.attributes || item;
-            const c = parseRelation(a.clase);
-            
-            let fechaStr = "NO DISP", horaStr = "--:--", duracion = 0, tipo = "General";
-            
-            if (c && c.Fecha_Hora) {
-                // TRATAMIENTO LITERAL: Evitamos que el navegador aplique el desfase de +1 hora
-                const [fechaPart, resto] = c.Fecha_Hora.split('T'); // "2026-01-20" y "10:00:00.000Z"
-                const [y, m, d] = fechaPart.split('-');
-                
-                fechaStr = `${d}/${m}/${y}`;
-                horaStr = resto.substring(0, 5); // Cogemos "10:00" directamente de la cadena
-                
-                duracion = parseFloat(c.Duracion || 0);
-                tipo = c.Tipo || "General";
-            }
-            
-            if(a.Estado === 'Asistio') totalHoras += duracion;
+        // CABECERA
+        doc.setFontSize(18); doc.text(`PASAPORTE TÉCNICO ARASHI`, 105, 15, { align: 'center' });
+        doc.setFontSize(12); doc.text(`${apellidos.toUpperCase()}, ${nombre} - ${normalizeGrade(p.grado)}`, 105, 23, { align: 'center' });
+        doc.setFontSize(10); doc.text(`Horas en Tatami: ${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h | Dojo: ${getDojoName(p.dojo)}`, 105, 29, { align: 'center' });
 
-            return [fechaStr, horaStr, tipo, duracion + 'h', a.Estado === 'Asistio' ? 'ASISTIÓ' : 'NO VINO'];
-        });
+        // SECCIÓN A: SEMINARIOS REALIZADOS
+        doc.setFontSize(12); doc.setTextColor(190, 0, 0); doc.text("HISTORIAL DE SEMINARIOS Y CURSOS", 14, 38);
+        doc.setTextColor(0, 0, 0);
 
-        doc.setFontSize(16); doc.text(`HISTORIAL DE ASISTENCIA`, 105, 15, { align: 'center' });
-        doc.setFontSize(12); doc.text(`Alumno: ${apellidos.toUpperCase()}, ${nombre}`, 105, 22, { align: 'center' });
-        doc.setFontSize(10); doc.text(`Total Horas Registradas: ${totalHoras.toFixed(1)}h`, 105, 28, { align: 'center' });
+        const semBody = (p.seminarios || []).map(s => [
+            s.sensei || '-', s.ciudad || '-', s.pais || '-', `${s.mes || ''} ${s.any || ''}`
+        ]);
 
         doc.autoTable({
-            startY: 35, head: [headRow], body: body, theme: 'grid',
-            headStyles: { fillColor: [190, 0, 0] },
-            didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 4) {
-                    data.cell.styles.textColor = data.cell.raw === 'ASISTIÓ' ? [0, 128, 0] : [190, 0, 0];
-                }
-            }
+            startY: 42, head: [['SENSEI / MAESTRO', 'CIUDAD', 'PAÍS', 'FECHA']], body: semBody.length ? semBody : [['---', 'No hay seminarios registrados', '---', '---']],
+            theme: 'grid', headStyles: { fillColor: [51, 65, 85] }, styles: { fontSize: 8 }
         });
 
-        doc.save(`Historial_${apellidos}_${nombre}.pdf`);
+        // SECCIÓN B: ÚLTIMAS ASISTENCIAS
+        let finalY = doc.lastAutoTable.finalY + 15;
+        doc.setFontSize(12); doc.setTextColor(190, 0, 0); doc.text("REGISTRO DE CLASES RECIENTES", 14, finalY);
+        doc.setTextColor(0, 0, 0);
 
-    } catch (e) { alert("Error generando historial."); console.error(e); }
+        const asistBody = asistencias.map(item => {
+            const a = item.attributes || item;
+            const c = parseRelation(a.clase);
+            const [fechaPart, resto] = (c?.Fecha_Hora || "T").split('T');
+            return [
+                formatDateDisplay(fechaPart),
+                resto.substring(0, 5) + "h",
+                c?.Duracion + "h",
+                a.Estado === 'Asistio' ? 'ASISTIÓ' : 'FALTA'
+            ];
+        });
+
+        doc.autoTable({
+            startY: finalY + 4, head: [['FECHA', 'HORA', 'DURACIÓN', 'ESTADO']], body: asistBody,
+            theme: 'striped', headStyles: { fillColor: [190, 0, 0] }, styles: { fontSize: 8 }
+        });
+
+        doc.save(`Pasaporte_${apellidos}_${nombre}.pdf`);
+
+    } catch (e) { 
+        console.error(e);
+        showModal("Error", "No se pudo generar el pasaporte técnico."); 
+    }
 }
 
 /* --- GENERADOR DE INFORMES PREMIUM V4.1: FIX GÉNERO POR DEFECTO --- */
@@ -1290,3 +1300,43 @@ setInterval(() => {
         .then(() => console.log("💓 Latido Arashi: Render está despierto"))
         .catch(() => {});
 }, 1000 * 60 * 5); // Cada 5 minutos para que coincida con el robot
+
+/* --- SISTEMA DE ORDENACIÓN DINÁMICA POR CABECERA --- */
+let currentSortCol = '';
+let isAsc = true;
+
+async function sortTable(colName) {
+    const actives = !document.getElementById('sec-alumnos').classList.contains('hidden');
+    const cacheKey = actives ? 'cache_alumnos_activos' : 'cache_alumnos_bajas';
+    const cached = JSON.parse(localStorage.getItem(cacheKey));
+    
+    if (!cached || !cached.data) return;
+
+    let data = cached.data;
+    isAsc = (currentSortCol === colName) ? !isAsc : true;
+    currentSortCol = colName;
+
+    data.sort((a, b) => {
+        const pA = a.attributes || a;
+        const pB = b.attributes || b;
+        
+        let valA, valB;
+
+        // Lógica especial para Dojo (relación) y Horas (número)
+        if (colName === 'dojo') {
+            valA = getDojoName(pA.dojo); valB = getDojoName(pB.dojo);
+        } else if (colName === 'horas_acumuladas') {
+            valA = parseFloat(pA[colName] || 0); valB = parseFloat(pB[colName] || 0);
+        } else {
+            valA = (pA[colName] || "").toString().toUpperCase();
+            valB = (pB[colName] || "").toString().toUpperCase();
+        }
+
+        if (valA < valB) return isAsc ? -1 : 1;
+        if (valA > valB) return isAsc ? 1 : -1;
+        return 0;
+    });
+
+    const tbody = document.getElementById(actives ? 'lista-alumnos-body' : 'lista-bajas-body');
+    renderTableAlumnos(data, tbody, actives);
+}
