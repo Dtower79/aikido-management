@@ -2894,13 +2894,17 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 async function handleAndroidInstall() {
-    if (deferredPrompt) { 
-        deferredPrompt.prompt(); 
-        const { outcome } = await deferredPrompt.userChoice; 
-        console.log(`User response: ${outcome}`);
+    console.log("🖱️ Botón 'INSTALAR AHORA' pulsado"); // <--- Esto DEBE salir siempre
+
+    if (deferredPrompt) {
+        console.log("✅ Llave de instalación detectada. Lanzando ventana...");
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`👤 Respuesta del usuario: ${outcome}`);
         deferredPrompt = null; 
     } else { 
-        showModal("Info", "La App ya está instalada o el acceso directo ya ha sido creado."); 
+        console.warn("⚠️ No hay 'llave' (deferredPrompt). El navegador ha bloqueado la instalación automática.");
+        showModal("Instalación en PC", "En ordenador, si el botón no reacciona, busca el icono de 'Instalar' (una pantalla con un +) que aparece arriba a la derecha, en la barra de la URL."); 
     }
 }
 
