@@ -183,12 +183,12 @@ function calculateAge(d) { if (!d) return 'NO DISP'; const t = new Date(), b = n
 function normalizePhone(t) { if (!t || t === "-") return 'NO DISP'; return t.toString().replace(/^(\+?34)/, '').trim(); }
 function togglePassword(i, icon) { const x = document.getElementById(i); if (x.type === "password") { x.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } }
 
-/* --- CARGA DE ALUMNOS (OPTIMIZADA PARA 12 COLUMNAS) --- */
+/* --- CARGA DE ALUMNOS (REGLA DE 12 COLUMNAS) --- */
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
     const cacheKey = activos ? 'cache_alumnos_activos' : 'cache_alumnos_bajas';
     
-    // Mostramos cargando con ancho total
+    // Mostramos cargando con el colspan de 12
     tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px;">
         <i class="fa-solid fa-spinner fa-spin"></i> Sincronizando Tatami con Neon...
     </td></tr>`;
@@ -196,23 +196,18 @@ async function loadAlumnos(activos) {
     try {
         const filter = `filters[activo][$eq]=${activos}`;
         const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
-        
         const res = await fetch(`${API_URL}/api/alumnos?populate=dojo&${filter}&${sort}&pagination[limit]=500`, { 
             headers: { 'Authorization': `Bearer ${jwtToken}` } 
         });
-
         const json = await res.json();
-        const dataAlumnos = json.data || [];
-        
-        localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), data: dataAlumnos }));
-        renderTableAlumnos(dataAlumnos, tbody, activos);
-
+        localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), data: json.data || [] }));
+        renderTableAlumnos(json.data || [], tbody, activos);
     } catch (e) { 
-        tbody.innerHTML = `<tr><td colspan="12" style="color:#ef4444; text-align:center; padding:20px;">Fallo de conexión.</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="12" style="color:#ef4444; text-align:center; padding:20px;">Fallo de conexión con Render.</td></tr>`; 
     }
 }
 
-/* --- RENDERIZADO DE TABLA (VERSION 12 COLUMNAS SINCRONIZADAS) --- */
+/* --- RENDERIZADO DE TABLA (VERSION 12 COLUMNAS - ALINEACIÓN TOTAL) --- */
 function renderTableAlumnos(data, tbody, activos) {
     tbody.innerHTML = '';
     
@@ -234,26 +229,26 @@ function renderTableAlumnos(data, tbody, activos) {
 
         // 2. Cálculo de Edad
         const edadActual = calculateAge(p.fecha_nacimiento);
-        const edadDisplay = edadActual !== 'NO DISP' ? `${edadActual} años` : 'NO DISP';
+        const edadDisplay = edadActual !== 'NO DISP' ? `${edadActual} años` : '---';
 
         const tr = document.createElement('tr');
         tr.id = `row-${id}`;
         tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
         
-        // 3. Inyección de las 12 celdas en orden estricto
+        // 3. INYECCIÓN DE LAS 12 CELDAS (Orden estricto)
         tr.innerHTML = `
             <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
             <td>${p.nombre || ''}${genIcon}</td>
-            <td style="font-size:0.7rem; color:#94a3b8">${p.genero || 'HOMBRE'}</td>
-            <td>${p.dni || ''}</td>
+            <td style="font-size:0.7rem; color:#94a3b8; font-weight:800;">${p.genero || 'HOMBRE'}</td>
+            <td style="font-size:0.8rem;">${p.dni || ''}</td>
             <td style="font-weight:600; color:#cbd5e1">${edadDisplay}</td>
             <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
             <td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>
             <td><span class="${p.seguro_pagado ? 'badge-ok' : 'badge-no'}">${p.seguro_pagado ? 'SÍ' : 'NO'}</span></td>
-            <td>${normalizePhone(p.telefono)}</td>
-            <td style="font-size:0.75rem; color:#94a3b8">${p.email || '-'}</td>
-            <td style="font-size:0.75rem;">${p.direccion || ''} <br> <small style="opacity:0.6">${p.poblacion || ''}</small></td>
-            <td>${getDojoName(p.dojo)}</td>
+            <td style="font-size:0.8rem;">${normalizePhone(p.telefono)}</td>
+            <td style="font-size:0.7rem; color:#94a3b8">${p.email || '-'}</td>
+            <td style="font-size:0.7rem;">${(p.direccion || '').toUpperCase()} <br> <small style="opacity:0.6">${(p.poblacion || '').toUpperCase()}</small></td>
+            <td style="font-weight:600;">${getDojoName(p.dojo)}</td>
         `;
         tbody.appendChild(tr);
     });

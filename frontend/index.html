@@ -196,21 +196,23 @@
                 </header>
                 <div class="table-container drag-scroll">
                     <table id="table-alumnos">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable('apellidos')" style="cursor:pointer">Apellidos <i class="fa-solid fa-sort"></i></th>
-                            <th onclick="sortTable('nombre')" style="cursor:pointer">Nombre <i class="fa-solid fa-sort"></i></th>
-                            <th onclick="sortTable('genero')" style="cursor:pointer">Género <i class="fa-solid fa-sort"></i></th>
-                            <th>DNI</th>
-                            <th onclick="sortTable('grado')" style="cursor:pointer">Grado <i class="fa-solid fa-sort"></i></th>
-                            <th onclick="sortTable('horas_acumuladas')" style="cursor:pointer">Horas <i class="fa-solid fa-sort"></i></th>
-                            <th onclick="sortTable('seguro_pagado')" style="cursor:pointer">Seguro <i class="fa-solid fa-sort"></i></th>
-                            <th>Teléfono</th>
-                            <th>Email</th>
-                            <th>Dirección / Población</th>
-                            <th onclick="sortTable('dojo')" style="cursor:pointer">Dojo <i class="fa-solid fa-sort"></i></th>
-                        </tr>
-                    </thead>
+                    <!-- CABECERA DE TABLA SINCRONIZADA (12 COLUMNAS) -->
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('apellidos')" style="cursor:pointer">Apellidos <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable('nombre')" style="cursor:pointer">Nombre <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable('genero')" style="cursor:pointer">Género <i class="fa-solid fa-sort"></i></th>
+                        <th>DNI</th>
+                        <th onclick="sortTable('fecha_nacimiento')" style="cursor:pointer">Edad <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable('grado')" style="cursor:pointer">Grado <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable('horas_acumuladas')" style="cursor:pointer">Horas <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable('seguro_pagado')" style="cursor:pointer">Seguro <i class="fa-solid fa-sort"></i></th>
+                        <th>Teléfono</th>
+                        <th>Email</th>
+                        <th>Dirección / Población</th>
+                        <th onclick="sortTable('dojo')" style="cursor:pointer">Dojo <i class="fa-solid fa-sort"></i></th>
+                    </tr>
+                </thead>
                         <tbody id="lista-alumnos-body"></tbody>
                     </table>
                 </div>
@@ -293,7 +295,7 @@
                         &copy; <span id="year"></span> <strong>Arashi Group Aikido</strong>
                         <img src="img/logo-arashi.png" class="footer-logo-mini" alt="Logo">
                     </div>
-                    <span class="version">Sistema de Gestión de Alumnos v5.3</span>
+                    <span class="version">Sistema de Gestión de Alumnos</span>
                 </div>
             </footer>
         </main>
