@@ -183,69 +183,41 @@ function calculateAge(d) { if (!d) return 'NO DISP'; const t = new Date(), b = n
 function normalizePhone(t) { if (!t || t === "-") return 'NO DISP'; return t.toString().replace(/^(\+?34)/, '').trim(); }
 function togglePassword(i, icon) { const x = document.getElementById(i); if (x.type === "password") { x.type = "text"; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } else { x.type = "password"; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } }
 
-// --- CARGA ALUMNOS (Corrección Botón Borrar) ---
-// Carga optimizada con caché local para el Dashboard
+/* --- CARGA DE ALUMNOS (OPTIMIZADA PARA 12 COLUMNAS) --- */
 async function loadAlumnos(activos) {
     const tbody = document.getElementById(activos ? 'lista-alumnos-body' : 'lista-bajas-body');
-    const colCount = activos ? 9 : 8;
     const cacheKey = activos ? 'cache_alumnos_activos' : 'cache_alumnos_bajas';
     
-    // 1. INTELIGENCIA: Comprobamos si tenemos caché de menos de 1 hora (3600000 ms)
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-        try {
-            const { time, data } = JSON.parse(cached);
-            if ((Date.now() - time) < 1000 * 60 * 60) {
-                console.log(`📦 Arashi Cache: Cargando ${activos ? 'activos' : 'bajas'} desde memoria local.`);
-                renderTableAlumnos(data, tbody, activos);
-                return; // Salimos de la función, no hace falta ir al servidor
-            }
-        } catch (e) {
-            localStorage.removeItem(cacheKey); // Si el JSON está corrupto, lo limpiamos
-        }
-    }
-
-    // 2. Si no hay caché o ha expirado, pedimos datos a Render
-    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center; padding:20px;">
-        <i class="fa-solid fa-spinner fa-spin"></i> Sincronizando con el Dojo en Render...
+    // Mostramos cargando con ancho total
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px;">
+        <i class="fa-solid fa-spinner fa-spin"></i> Sincronizando Tatami con Neon...
     </td></tr>`;
 
-    const filter = `filters[activo][$eq]=${activos}`;
-    const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
-
     try {
+        const filter = `filters[activo][$eq]=${activos}`;
+        const sort = activos ? 'sort=apellidos:asc' : 'sort=fecha_baja:desc';
+        
         const res = await fetch(`${API_URL}/api/alumnos?populate=dojo&${filter}&${sort}&pagination[limit]=500`, { 
             headers: { 'Authorization': `Bearer ${jwtToken}` } 
         });
 
-        if (!res.ok) throw new Error("Error en la respuesta del servidor");
-
         const json = await res.json();
         const dataAlumnos = json.data || [];
         
-        // 3. Guardar en caché con el timestamp actual
-        localStorage.setItem(cacheKey, JSON.stringify({ 
-            time: Date.now(), 
-            data: dataAlumnos 
-        }));
-        
-        // 4. Pintar la tabla
+        localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), data: dataAlumnos }));
         renderTableAlumnos(dataAlumnos, tbody, activos);
 
     } catch (e) { 
-        console.error("Fallo al cargar alumnos:", e);
-        tbody.innerHTML = `<tr><td colspan="${colCount}" style="color:var(--accent); text-align:center; padding:20px;">
-            <i class="fa-solid fa-circle-exclamation"></i> Error de conexión con Render. Inténtalo de nuevo.
-        </td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="12" style="color:#ef4444; text-align:center; padding:20px;">Fallo de conexión.</td></tr>`; 
     }
 }
 
-/* --- RENDERIZADO DE TABLA (CON EDAD E INFORMACIÓN TOTAL) --- */
+/* --- RENDERIZADO DE TABLA (VERSION 12 COLUMNAS SINCRONIZADAS) --- */
 function renderTableAlumnos(data, tbody, activos) {
     tbody.innerHTML = '';
     
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:20px; opacity:0.5;">No hay registros.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:20px; opacity:0.5;">No hay registros disponibles.</td></tr>`;
         return;
     }
 
@@ -255,24 +227,26 @@ function renderTableAlumnos(data, tbody, activos) {
         const safeNombre = escapeQuotes(p.nombre || '');
         const safeApellidos = escapeQuotes(p.apellidos || '');
         
-        const tr = document.createElement('tr');
-        tr.id = `row-${id}`;
-        tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
-        
-        // Icono de Género
+        // 1. Icono de Género
         const genIcon = p.genero === 'MUJER' 
             ? ' <i class="fa-solid fa-venus" style="color:#f472b6; font-size:10px; margin-left:5px;"></i>' 
             : ' <i class="fa-solid fa-mars" style="color:#60a5fa; font-size:10px; margin-left:5px;"></i>';
 
-        // Cálculo de Edad en tiempo real
+        // 2. Cálculo de Edad
         const edadActual = calculateAge(p.fecha_nacimiento);
+        const edadDisplay = edadActual !== 'NO DISP' ? `${edadActual} años` : 'NO DISP';
 
+        const tr = document.createElement('tr');
+        tr.id = `row-${id}`;
+        tr.onclick = (e) => handleAlumnoSelection(id, safeNombre, safeApellidos, e, activos);
+        
+        // 3. Inyección de las 12 celdas en orden estricto
         tr.innerHTML = `
             <td><strong>${(p.apellidos || '').toUpperCase()}</strong></td>
             <td>${p.nombre || ''}${genIcon}</td>
             <td style="font-size:0.7rem; color:#94a3b8">${p.genero || 'HOMBRE'}</td>
             <td>${p.dni || ''}</td>
-            <td style="font-weight:600; color:#cbd5e1">${edadActual} años</td>
+            <td style="font-weight:600; color:#cbd5e1">${edadDisplay}</td>
             <td><span class="badge">${normalizeGrade(p.grado)}</span></td>
             <td style="font-weight:bold; color:var(--primary)">${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h</td>
             <td><span class="${p.seguro_pagado ? 'badge-ok' : 'badge-no'}">${p.seguro_pagado ? 'SÍ' : 'NO'}</span></td>
@@ -1304,11 +1278,12 @@ setInterval(() => {
         .catch(() => {});
 }, 1000 * 60 * 5); // Cada 5 minutos para que coincida con el robot
 
-/* --- SISTEMA DE ORDENACIÓN DINÁMICA POR CABECERA --- */
+/* --- SISTEMA DE ORDENACIÓN DINÁMICA (VERSION PREMIUM CON SOPORTE EDAD) --- */
 let currentSortCol = '';
 let isAsc = true;
 
 async function sortTable(colName) {
+    // 1. Detectar si estamos en la pestaña de Activos o Bajas para saber qué caché usar
     const actives = !document.getElementById('sec-alumnos').classList.contains('hidden');
     const cacheKey = actives ? 'cache_alumnos_activos' : 'cache_alumnos_bajas';
     const cached = JSON.parse(localStorage.getItem(cacheKey));
@@ -1316,21 +1291,42 @@ async function sortTable(colName) {
     if (!cached || !cached.data) return;
 
     let data = cached.data;
+    
+    // Cambiar dirección de orden si se pulsa la misma columna
     isAsc = (currentSortCol === colName) ? !isAsc : true;
     currentSortCol = colName;
 
+    console.log(`⚖️ Ordenando Tatami por: ${colName} | Dirección: ${isAsc ? 'ASC' : 'DESC'}`);
+
+    // 2. Motor de ordenación
     data.sort((a, b) => {
         const pA = a.attributes || a;
         const pB = b.attributes || b;
         
         let valA, valB;
 
-        // Lógica especial para Dojo (relación) y Horas (número)
+        // CASO A: Ordenar por DOJO (extraer nombre de la relación)
         if (colName === 'dojo') {
-            valA = getDojoName(pA.dojo); valB = getDojoName(pB.dojo);
-        } else if (colName === 'horas_acumuladas') {
-            valA = parseFloat(pA[colName] || 0); valB = parseFloat(pB[colName] || 0);
-        } else {
+            valA = getDojoName(pA.dojo); 
+            valB = getDojoName(pB.dojo);
+        } 
+        // CASO B: Ordenar por HORAS (comparación numérica)
+        else if (colName === 'horas_acumuladas') {
+            valA = parseFloat(pA[colName] || 0); 
+            valB = parseFloat(pB[colName] || 0);
+        } 
+        // CASO C: Ordenar por EDAD (basado en fecha_nacimiento)
+        else if (colName === 'fecha_nacimiento') {
+            // Convertimos a timestamp para comparar números de milisegundos
+            // Usamos una fecha lejana de 2100 para los que no tengan fecha definida (irán al final)
+            valA = new Date(pA.fecha_nacimiento || '2100-01-01').getTime();
+            valB = new Date(pB.fecha_nacimiento || '2100-01-01').getTime();
+            
+            // Si es ASC (A-Z), queremos los más jóvenes primero (fecha más grande/reciente)
+            return isAsc ? valB - valA : valA - valB;
+        }
+        // CASO D: Texto estándar (Nombres, Apellidos, DNI...)
+        else {
             valA = (pA[colName] || "").toString().toUpperCase();
             valB = (pB[colName] || "").toString().toUpperCase();
         }
@@ -1340,6 +1336,7 @@ async function sortTable(colName) {
         return 0;
     });
 
+    // 3. Pintar la tabla con los datos ya ordenados
     const tbody = document.getElementById(actives ? 'lista-alumnos-body' : 'lista-bajas-body');
     renderTableAlumnos(data, tbody, actives);
 }
