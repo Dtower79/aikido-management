@@ -2508,20 +2508,36 @@ async function loadMonthlyClasses(el) {
     listResults.innerHTML = html || "<p style='text-align:center; padding:40px; opacity:0.5;'>Sin clases programadas.</p>";
 }
 
-/* --- ASISTENCIA (FUNCIÓN INDEPENDIENTE) --- */
+/* --- ASISTENCIA (VERSION 10.1 - BLOQUEO DE DUPLICADOS) --- */
 async function confirmAttendance() {
     if (!claseHoyId || !alumnoGlobal) return;
     
+    const token = localStorage.getItem('aikido_jwt');
+    const aluId = getID(alumnoGlobal);
+
     try {
+        // 1. VERIFICACIÓN PREVIA: ¿Ya existe una fila para este alumno y esta clase?
+        const checkRes = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${claseHoyId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const checkJ = await checkRes.json();
+
+        if (checkJ.data && checkJ.data.length > 0) {
+            showModal("AVISO", "Ya estás inscrito en esta clase. No es necesario hacerlo de nuevo.");
+            checkTodayClass(); // Refrescamos el botón por si acaso
+            return;
+        }
+
+        // 2. CREACIÓN: Solo si no existe
         const res = await fetch(`${API_URL}/asistencias`, { 
             method: 'POST', 
             headers: { 
                 'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` 
+                'Authorization': `Bearer ${token}` 
             }, 
             body: JSON.stringify({ 
                 data: { 
-                    alumno: getID(alumnoGlobal), 
+                    alumno: aluId, 
                     clase: claseHoyId, 
                     Estado: 'Confirmado' 
                 } 
@@ -2529,14 +2545,12 @@ async function confirmAttendance() {
         });
 
         if (res.ok) {
-            // REGLA MAESTRA: Borramos la caché para que el Sensei vea al alumno YA
             localStorage.removeItem('cache_asistencias_sensei'); 
-            
-            await checkTodayClass(); // Actualiza el dashboard del alumno
+            await checkTodayClass(); 
             showModal("¡OSS!", "Asistencia confirmada. Aparecerás en el panel del Sensei ahora mismo.");
         }
     } catch (e) {
-        console.error("Error:", e);
+        console.error("Error en confirmación:", e);
     }
 }
 
@@ -2694,37 +2708,48 @@ async function startQRScanner() {
 } // <--- FIN DE LA FUNCIÓN
 
 
-/* --- CARGA DE FILTROS CON PRESELECCIÓN POR FICHA --- */
+/* --- CARGA DE FILTROS SENSEI (CON PRESELECCIÓN POR FICHA) --- */
 async function loadDojosFilter() {
     const select = document.getElementById('sensei-dojo-filter');
     if (!select) return;
 
-    // Zero Waste: Caché de 24h para la lista de sedes
-    const res = await fetchSmart('/dojos', 'lista_dojos_sensei', 24);
-    
-    if (res && res.data) {
-        // Limpiamos opciones previas pero mantenemos la de "Todos"
-        select.innerHTML = '<option value="all">-- TODOS LOS DOJOS --</option>';
-        
-        res.data.forEach(d => {
-            const info = d.attributes || d;
-            const opt = document.createElement('option');
-            const dId = getID(d);
-            
-            opt.value = dId;
-            opt.innerText = info.nombre.replace("Aikido Arashi ", "").toUpperCase();
-            
-            // LÓGICA MAESTRA: Si el ID coincide con el dojo del Sensei, lo preseleccionamos
-            if (dojoIdGlobal && dId == dojoIdGlobal) {
-                opt.selected = true;
-                console.log("📍 [SENSEI] Preseleccionado Dojo:", info.nombre);
-            }
-            
-            select.appendChild(opt);
-        });
+    console.log("📡 [SENSEI] Cargando lista de sedes para el panel...");
 
-        // Una vez cargados los filtros y preseleccionado el dojo, refrescamos el panel
-        loadSenseiPanel();
+    // 1. Limpieza inicial del selector
+    select.innerHTML = '<option value="all">-- TODOS LOS DOJOS --</option>';
+
+    try {
+        // 2. Fetch a la API (Usamos caché de 24h para no saturar Render)
+        const res = await fetchSmart('/dojos', 'lista_dojos_panel', 24);
+        
+        if (res && res.data) {
+            res.data.forEach(d => {
+                const info = d.attributes || d;
+                const dId = d.documentId || d.id;
+                
+                const opt = document.createElement('option');
+                opt.value = dId;
+                // Limpiamos el nombre para que quede corto y elegante
+                opt.innerText = info.nombre.toUpperCase().replace("AIKIDO ARASHI ", "");
+                
+                // --- 🥋 LÓGICA DE PRESELECCIÓN ---
+                // Si el ID de este dojo coincide con el de la ficha del Sensei, lo marcamos
+                if (dojoIdGlobal && String(dId) === String(dojoIdGlobal)) {
+                    opt.selected = true;
+                    console.log("📍 [SENSEI] Preseleccionado Dojo:", info.nombre);
+                }
+                
+                select.appendChild(opt);
+            });
+        }
+
+        // 3. Una vez cargados los Dojos, refrescamos el listado de alumnos 
+        // para que se aplique el filtro inmediatamente.
+        await loadSenseiPanel();
+
+    } catch (e) {
+        console.error("❌ [SENSEI] Error al cargar filtros de Dojo:", e);
+        select.innerHTML = '<option value="all">ERROR AL CARGAR SEDES</option>';
     }
 }
 
