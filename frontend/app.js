@@ -646,10 +646,10 @@ async function generateReport(type) {
                 const start = `${attendanceDate}T00:00:00.000Z`;
                 const end = `${attendanceDate}T23:59:59.999Z`;
                 
-                // 🥋 REGLA INVIOLABLE: Strapi v5 Populate Syntax (Dot Notation pura)
-                endpoint = `/api/asistencias?filters=${start}&filters=${end}&populate=alumno.dojo,clase.dojo&pagination=500`;
+                // 🥋 REGLA INVIOLABLE: Strapi v5 Populate Syntax (Dot Notation pura para evitar 400 Bad Request)
+                endpoint = `/api/asistencias?filters=${start}&filters=${end}&populate=alumno.dojo,clase&pagination=500`;
                 
-                // Si hay filtro de dojo, se aplica correctamente al Dojo de la Clase
+                // Si hay filtro de dojo, se aplica al Dojo del alumno
                 if (dojoFilterId) {
                     endpoint += `&filters=${dojoFilterId}`;
                 }
@@ -662,34 +662,34 @@ async function generateReport(type) {
                 }
             }
 
-            console.log("📡 URL Construida:", `${API_URL}${endpoint}`);
+            console.log("📡 Consultando Neon:", `${API_URL}${endpoint}`);
 
+            // Prevenimos el error api/api de la URL concatenando directamente
             const res = await fetch(`${API_URL}${endpoint}`, { 
                 headers: { 'Authorization': `Bearer ${jwtToken}` } 
             });
             
             if (!res.ok) {
-                const err = await res.json();
-                console.error("🔥 Error de Strapi v5:", err);
-                throw new Error(`Código ${res.status}: ${err.error?.message || 'Rechazo de PostgreSQL/Strapi'}`);
+                const errorData = await res.json();
+                throw new Error(`Error ${res.status}: ${errorData.error?.message || "Rechazado por PostgreSQL"}`);
             }
 
             const json = await res.json();
             let list = json.data ||[];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "El servidor PostgreSQL en Neon no ha devuelto registros para este día o Dojo.");
+                showModal("Sin Datos", "Neon no ha devuelto registros para esta consulta. Comprueba si hay datos reales ese día.");
                 return;
             }
 
-            // 2. PURGA DE DATOS Y PROTECCIÓN NULL
+            // 2. PURGA DE DATOS Y PROTECCIÓN NULL (Anti-Duplicados)
             if (type === 'attendance') {
                 const seen = new Set();
                 list = list.filter(item => {
                     const attrs = item.attributes || item;
-                    const alu = parseRelation(attrs.alumno);
-                    if (!alu) return false;
-                    const aluId = getID(alu) || alu.dni;
+                    if (!attrs.alumno) return false;
+                    const alu = attrs.alumno.data ? attrs.alumno.data : attrs.alumno;
+                    const aluId = alu.documentId || alu.id;
                     if (!aluId || seen.has(aluId)) return false;
                     seen.add(aluId);
                     return true;
@@ -700,43 +700,53 @@ async function generateReport(type) {
             list.sort((a, b) => {
                 const dA = a.attributes || a;
                 const dB = b.attributes || b;
-                const nA = (type === 'attendance' ? parseRelation(dA.alumno)?.apellidos : dA.apellidos) || "";
-                const nB = (type === 'attendance' ? parseRelation(dB.alumno)?.apellidos : dB.apellidos) || "";
+                
+                let nA = "";
+                let nB = "";
+                
+                if (type === 'attendance') {
+                    const aluA = dA.alumno?.data?.attributes || dA.alumno?.attributes || dA.alumno;
+                    const aluB = dB.alumno?.data?.attributes || dB.alumno?.attributes || dB.alumno;
+                    nA = aluA?.apellidos || "";
+                    nB = aluB?.apellidos || "";
+                } else {
+                    nA = dA.apellidos || "";
+                    nB = dB.apellidos || "";
+                }
                 return nA.toUpperCase().localeCompare(nB.toUpperCase());
             });
 
-            // 3. ESTRUCTURA MAESTRA (Regla de las 12 Columnas)
-            let headRow =[];
+            // 3. ESTRUCTURA MAESTRA (Las 12 Columnas jsPDF)
+            let headRow = [];
             if (type === 'attendance') {
                 headRow =;
+            } else if (isBaja) {
+                headRow =;
             } else {
-                headRow = isBaja 
-                    ?
-                    :;
+                headRow =;
             }
 
             const body = list.map((item, index) => {
                 const a = item.attributes || item;
                 if (type === 'attendance') {
-                    const alu = parseRelation(a.alumno);
-                    const cla = parseRelation(a.clase);
+                    const alu = a.alumno?.data?.attributes || a.alumno?.attributes || a.alumno;
+                    const cla = a.clase?.data?.attributes || a.clase?.attributes || a.clase;
                     
                     // 🥋 REGLA INVIOLABLE: Timezone Fix Literal
                     const horaStr = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T').substring(0, 5) + "h" : "--:--";
-                    let estadoNormal = (a.Estado || a.estado || 'CONFIRMADO').toString().replace(/_/g, ' ').toUpperCase();
+                    const dojoNom = alu?.dojo ? getDojoName(alu.dojo) : "ARASHI";
+                    const estadoVal = (a.Estado || 'Confirmado').replace(/_/g, ' ').toUpperCase();
                     
                     return;
                 } else {
-                    const edadActual = calculateAge(a.fecha_nacimiento);
-                    const edadDisplay = edadActual !== 'NO DISP' ? `${edadActual}` : '-';
-                    const gen = (a.genero || 'H').charAt(0);
-                    const seguroTxt = a.seguro_pagado ? 'SÍ' : 'NO';
-                    
-                    return;
+                    const edadDisplay = calculateAge(a.fecha_nacimiento);
+                    const row =;
+                    if (isBaja) row.splice(1, 0, formatDateDisplay(a.fecha_baja));
+                    return row;
                 }
             });
 
-            // 4. MOTOR RENDERIZADO jsPDF (Zero Waste API)
+            // 4. MOTOR RENDERIZADO jsPDF-AutoTable
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
@@ -750,18 +760,17 @@ async function generateReport(type) {
                     1: { cellWidth: 45 },
                     2: { cellWidth: 35 }
                 } : {
-                    0: { cellWidth: 6, halign: 'center' },
+                    0: { cellWidth: 7, halign: 'center' },
                     1: { cellWidth: 35 },
-                    2: { cellWidth: 25 },
-                    5: { halign: 'center' },
-                    7: { halign: 'center', textColor:, fontStyle: 'bold' },
-                    8: { halign: 'center' }
+                    2: { cellWidth: 25 }
                 },
                 didDrawPage: (data) => {
                     try { doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); } catch(e){} 
-                    doc.setFontSize(14); doc.setFont("helvetica", "bold");
+                    doc.setFontSize(14); 
+                    doc.setFont("helvetica", "bold");
                     doc.text("ARASHI GROUP AIKIDO - REPORTE OFICIAL", pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); doc.setFont("helvetica", "normal");
+                    doc.setFontSize(9); 
+                    doc.setFont("helvetica", "normal");
                     doc.text(`TIPO: ${type.toUpperCase()} | FECHA: ${attendanceDate || new Date().toLocaleDateString('es-ES')}`, pageWidth / 2, 18, { align: 'center' });
                 }
             });
@@ -773,8 +782,9 @@ async function generateReport(type) {
         }
     };
     
+    // Fallback de seguridad por si falla la imagen (no bloquea el PDF)
     logoImg.onerror = function() {
-        console.warn("⚠️ Imagen no cargada. Generando PDF en modo Fallback.");
+        console.warn("⚠️ Imagen de logo no encontrada, generando PDF sin logo...");
         logoImg.onload();
     };
 }
