@@ -308,16 +308,16 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
     if (event) event.stopPropagation();
 }
 
-/* --- GENERADOR DE INFORMES (VERSION 10.6 - FIX TOTAL RUTAS Y FECHAS) --- */
+/* --- GENERADOR DE INFORMES (VERSION 10.7 - FIX DOBLE API Y RANGO FECHAS) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect ? dojoSelect.value : "";
     const dojoFilterName = dojoSelect ? dojoSelect.options[dojoSelect.selectedIndex].text : "";
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
-    // 1. VALIDACIÓN
+    // 1. VALIDACIÓN PREVIA
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Fecha Requerida", "Por favor, selecciona una fecha en el calendario para generar el informe de asistencia.");
+        showModal("Fecha Requerida", "Por favor, selecciona una fecha en el calendario.");
         return;
     }
 
@@ -333,60 +333,65 @@ async function generateReport(type) {
         const isBaja = type.startsWith('bajas');
 
         try {
-            // 🥋 CORRECCIÓN DE RUTA: Eliminamos el '/api' manual porque ya está en API_URL
+            // 🥋 CONSTRUCCIÓN QUIRÚRGICA DEL ENDPOINT
+            // Eliminamos el '/api' inicial porque ya está en la constante API_URL
             let endpoint = "";
+            
             if (type === 'attendance') {
-                // Rango total del día para asegurar que Neon encuentre los registros
+                // ESTRATEGIA DE RANGO (00:00:00 a 23:59:59) para Neon/Postgres
                 const start = `${attendanceDate}T00:00:00.000Z`;
                 const end = `${attendanceDate}T23:59:59.999Z`;
                 endpoint = `/asistencias?filters[clase][Fecha_Hora][$gte]=${start}&filters[clase][Fecha_Hora][$lte]=${end}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
             } else {
-                endpoint = `/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
+                endpoint = `/alumnos?filters[activo][$eq]=${!isBaja}&populate=dojo&pagination[limit]=1000`;
             }
 
-            // Aplicar filtro de Dojo si existe
+            // Aplicar filtro de Dojo si no es "Todos"
             if (dojoFilterId) {
-                endpoint += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
+                // En asistencias el filtro va por el alumno, en alumnos va directo
+                const prefix = (type === 'attendance') ? 'filters[alumno]' : 'filters';
+                endpoint += `&${prefix}[dojo][documentId][$eq]=${dojoFilterId}`;
             }
 
-            console.log("📡 [REPORT] Solicitando datos a:", endpoint);
+            console.log("📡 [REPORT] Solicitando datos a Neon:", endpoint);
 
             const res = await fetch(`${API_URL}${endpoint}`, { 
                 headers: { 'Authorization': `Bearer ${jwtToken}` } 
             });
             
-            if (!res.ok) throw new Error(`Error Servidor: ${res.status}`);
+            if (!res.ok) throw new Error(`Fallo de Red: ${res.status}`);
 
             const json = await res.json();
             let list = json.data || [];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "No hay registros de asistencia para el día " + formatDateDisplay(attendanceDate));
+                showModal("Sin Datos", "No hay registros para la fecha o dojo seleccionados.");
                 return;
             }
 
-            // 2. ORDENACIÓN Y LIMPIEZA
+            // 2. LIMPIEZA Y ORDENACIÓN
             if (type === 'attendance') {
-                // Eliminar duplicados si los hubiera
+                // Evitamos duplicados por alumno en el mismo informe
                 const seen = new Set();
                 list = list.filter(item => {
                     const alu = parseRelation(item.attributes || item).alumno;
                     const aluId = getID(parseRelation(alu));
-                    if (seen.has(aluId)) return false;
+                    if (!aluId || seen.has(aluId)) return false;
                     seen.add(aluId);
                     return true;
                 });
-
-                list.sort((a, b) => {
-                    const aluA = parseRelation(a.attributes || a).alumno;
-                    const aluB = parseRelation(b.attributes || b).alumno;
-                    const nomA = (parseRelation(aluA).apellidos || "").toUpperCase();
-                    const nomB = (parseRelation(aluB).apellidos || "").toUpperCase();
-                    return nomA.localeCompare(nomB);
-                });
             }
 
-            // 3. MAPEO DE CABECERAS Y CUERPO
+            // Orden universal por apellidos
+            list.sort((a, b) => {
+                const dataA = a.attributes || a;
+                const dataB = b.attributes || b;
+                const nomA = (type === 'attendance' ? parseRelation(dataA.alumno).apellidos : dataA.apellidos) || "";
+                const nomB = (type === 'attendance' ? parseRelation(dataB.alumno).apellidos : dataB.apellidos) || "";
+                return nomA.toUpperCase().localeCompare(nomB.toUpperCase());
+            });
+
+            // 3. MAPEO DE TABLA (12 COLUMNAS)
             let headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora', 'Estado'];
             if (type !== 'attendance') {
                 headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'CP/Ciudad'];
@@ -398,49 +403,51 @@ async function generateReport(type) {
                 if (type === 'attendance') {
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    let horaStr = "--:--";
-                    if(cla?.Fecha_Hora) {
-                        // Timezone Fix Literal
-                        horaStr = cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h";
-                    }
+                    // Timezone Fix Literal para la hora del informe
+                    const horaStr = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--";
                     return [
                         `${index + 1}`,
                         (alu?.apellidos || '').toUpperCase(),
-                        (alu?.nombre || ''),
+                        alu?.nombre || '',
                         getDojoName(alu?.dojo),
                         cla?.Tipo || 'Keiko',
                         horaStr,
-                        (a.Estado || 'Confirmado').toUpperCase()
+                        (a.Estado || 'Confirmado').replace('_', ' ').toUpperCase()
                     ];
                 } else {
-                    const row = [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', a.dni || '', normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), a.email || '-', (a.direccion || '').substring(0, 20), `${a.cp || ''} ${a.poblacion || ''}`.trim()];
+                    const row = [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', a.dni || '', normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), a.email || '-', `${a.cp || ''} ${a.poblacion || ''}`.trim()];
                     if (isBaja) row.splice(1, 0, formatDateDisplay(a.fecha_baja));
                     return row;
                 }
             });
 
-            // 4. RENDERIZADO PDF
+            // 4. GENERACIÓN PDF (FontSize 5 Inviolable)
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
                 head: [headRow], 
                 body: body, 
                 theme: 'grid',
-                styles: { fontSize: 5, cellPadding: 0.8 },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
+                styles: { fontSize: 5, cellPadding: 0.8, overflow: 'linebreak' },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: 7, halign: 'center' },
+                    1: { cellWidth: 35 },
+                    2: { cellWidth: 25 }
+                },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.setFont("helvetica", "bold");
-                    doc.text(type === 'attendance' ? "REPORTE ASISTENCIA DIARIA" : "LISTADO ALUMNOS", pageWidth / 2, 12, { align: 'center' });
+                    doc.text("ARASHI GROUP AIKIDO - REPORTE OFICIAL", pageWidth / 2, 12, { align: 'center' });
                     doc.setFontSize(9); doc.setFont("helvetica", "normal");
-                    doc.text(`FECHA: ${attendanceDate || new Date().toLocaleDateString()}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.text(`TIPO: ${type.toUpperCase()} | FECHA: ${attendanceDate || new Date().toLocaleDateString()}`, pageWidth / 2, 18, { align: 'center' });
                 }
             });
 
-            doc.save(`Arashi_Informe_${type}.pdf`);
+            doc.save(`Arashi_Reporte_${type}_${Date.now()}.pdf`);
         } catch (e) { 
             console.error("🔥 Error PDF:", e);
-            showModal("Error", "Fallo al generar el PDF. Detalle: " + e.message); 
+            showModal("Error", "No se han podido procesar los datos: " + e.message); 
         }
     };
 }
