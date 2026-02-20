@@ -2709,57 +2709,50 @@ async function startQRScanner() {
 } // <--- FIN DE LA FUNCIÓN
 
 
-//* --- CARGA DE FILTROS SENSEI (VERSION 10.2 - BLINDAJE TOTAL) --- */
+/* --- CARGA DE FILTROS SENSEI (VERSION 10.3 - SINCRONIZACIÓN FORZADA) --- */
 async function loadDojosFilter() {
-    const select = document.getElementById('sensei-dojo-filter');
-    if (!select) {
-        console.error("❌ [SENSEI] No se encuentra el elemento 'sensei-dojo-filter' en el HTML.");
+    console.log("📡 [SENSEI] Iniciando carga de sedes...");
+    
+    // 1. OBTENCIÓN DE DATOS (Caché de 24h)
+    const res = await fetchSmart('/dojos', 'lista_dojos_archivo', 24);
+    
+    if (!res || !res.data) {
+        console.error("❌ [SENSEI] No se pudieron obtener los Dojos de Neon.");
         return;
     }
 
-    console.log("📡 [SENSEI] Solicitando sedes...");
-
-    try {
-        // Usamos la misma caché que el calendario para asegurar que si uno funciona, el otro también
-        const res = await fetchSmart('/dojos', 'lista_dojos_archivo', 24);
-        
-        if (!res || !res.data || res.data.length === 0) {
-            console.warn("⚠️ [SENSEI] La API de Dojos no devolvió datos.");
-            return;
-        }
-
-        // 1. Limpiamos el selector
-        select.innerHTML = "";
-        
-        // 2. Creamos la opción "Todos"
-        const optAll = document.createElement('option');
-        optAll.value = 'all';
-        optAll.innerText = '-- TODOS LOS DOJOS --';
-        select.appendChild(optAll);
-        
-        // 3. Rellenamos con los Dojos de Neon
-        res.data.forEach(d => {
-            const info = d.attributes || d;
-            const dId = d.documentId || d.id;
-            const opt = document.createElement('option');
-            opt.value = dId;
-            opt.innerText = info.nombre.toUpperCase().replace("AIKIDO ARASHI ", "");
-            
-            // Si el ID coincide con el del Sensei, lo marcamos
-            if (dojoIdGlobal && String(dId) === String(dojoIdGlobal)) {
-                opt.selected = true;
-            }
-            select.appendChild(opt);
-        });
-
-        console.log(`✅ [SENSEI] ${res.data.length} Dojos inyectados en el selector.`);
-        
-        // 4. Refrescamos el listado de alumnos
-        await loadSenseiPanel();
-
-    } catch (e) {
-        console.error("❌ [SENSEI] Error crítico cargando filtros:", e);
+    // 2. BUSCAMOS EL SELECTOR (Con reintento si es necesario)
+    let select = document.getElementById('sensei-dojo-filter');
+    
+    if (!select) {
+        console.warn("⚠️ [SENSEI] Selector no encontrado. Reintentando en 200ms...");
+        setTimeout(loadDojosFilter, 200);
+        return;
     }
+
+    // 3. RECONSTRUCCIÓN TOTAL DEL SELECTOR
+    // Limpiamos y aseguramos la opción raíz
+    select.innerHTML = '<option value="all">-- TODOS LOS DOJOS --</option>';
+
+    res.data.forEach(d => {
+        const info = d.attributes || d;
+        const dId = d.documentId || d.id;
+        
+        const opt = document.createElement('option');
+        opt.value = dId;
+        opt.innerText = info.nombre.toUpperCase().replace("AIKIDO ARASHI ", "");
+        
+        // Marcamos el dojo del Sensei si coincide
+        if (dojoIdGlobal && String(dId) === String(dojoIdGlobal)) {
+            opt.selected = true;
+        }
+        select.appendChild(opt);
+    });
+
+    console.log(`✅ [SENSEI] Selector poblado con ${select.options.length - 1} sedes.`);
+    
+    // Una vez poblado, cargamos los alumnos que correspondan
+    loadSenseiPanel();
 }
 
 /* --- PROCESADOR QR (VERSIÓN FINAL 7.7 - ACUMULATIVA Y SINCRONIZADA) --- */
@@ -2877,13 +2870,35 @@ function updateDashboardUI() {
 }
 
 
-        function showView(v, el) { 
-            ['dashboard', 'login', 'sensei', 'clases'].forEach(x => document.getElementById(x + '-view')?.classList.add('hidden')); 
-            document.getElementById(v + '-view').classList.remove('hidden');
-            if(el) { document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
-            if (v === 'dashboard') { refreshStudentData(); checkTodayClass(); }
-            if (v === 'sensei') loadSenseiPanel();
-        }
+/* --- NAVEGACIÓN DE VISTAS (GATEKEEPER) --- */
+function showView(v, el) { 
+    // 1. Ocultamos todas las secciones
+    ['dashboard', 'login', 'sensei', 'clases'].forEach(x => {
+        const view = document.getElementById(x + '-view');
+        if (view) view.classList.add('hidden');
+    }); 
+
+    // 2. Mostramos la sección elegida
+    const targetView = document.getElementById(v + '-view');
+    if (targetView) targetView.classList.remove('hidden');
+
+    // 3. Gestionamos el estado activo de la Nav Bar
+    if (el) { 
+        document.querySelectorAll('.nav-bar .nav-item').forEach(i => i.classList.remove('active')); 
+        el.classList.add('active'); 
+    }
+
+    // 4. DISPARADORES DE DATOS SEGÚN VISTA
+    if (v === 'dashboard') {
+        refreshStudentData();
+        checkTodayClass();
+    }
+    
+    if (v === 'sensei') {
+        // Al entrar en Sensei, forzamos recarga de filtros y panel
+        loadDojosFilter(); 
+    }
+}
         
         function logout() {
             console.log("🥋 Cerrando el Dojo...");
