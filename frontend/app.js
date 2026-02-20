@@ -615,75 +615,58 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     }
 }
 
-/* --- GENERADOR DE INFORMES (VERSION 11.0 - FIX NEON RANGE & PERMISSIONS) --- */
+/* --- GENERADOR DE INFORMES (VERSION 11.5 - FIX FECHA KEIKO DESTACADA) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect ? dojoSelect.value : "";
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
-    // 1. VALIDACIÓN PREVIA
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Fecha Requerida", "Selecciona una fecha para el informe de asistencia.");
+        showModal("Fecha Requerida", "Selecciona una fecha en el calendario para el informe de asistencia.");
         return;
     }
 
     document.getElementById('report-modal').classList.add('hidden');
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); // Horizontal para las 12 columnas
+    const doc = new jsPDF('l', 'mm', 'a4'); 
     const logoImg = new Image();
     logoImg.src = 'img/logo-arashi-informe.png';
 
     logoImg.onload = async function () {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const currentDate = new Date().toLocaleDateString('es-ES');
+        // Formateamos la fecha del Keiko de YYYY-MM-DD a DD/MM/YYYY
+        const classDateFormatted = attendanceDate ? formatDateDisplay(attendanceDate) : "";
+
         try {
             const isBaja = type.startsWith('bajas');
             let endpoint = "";
             
-            // 2. CONSTRUCCIÓN DE QUERY SEGÚN POSTGRESQL STRICT MODE
             if (type === 'attendance') {
-                // Rango exacto de 24h para Neon
                 const start = `${attendanceDate}T00:00:00.000Z`;
                 const end = `${attendanceDate}T23:59:59.999Z`;
-                
-                // Nota: En app.js API_URL no tiene /api, lo añadimos aquí
                 endpoint = `/api/asistencias?filters[clase][Fecha_Hora][$gte]=${start}&filters[clase][Fecha_Hora][$lte]=${end}&populate[alumno][populate][dojo]=true&populate[clase]=true&pagination[limit]=500`;
-                
-                if (dojoFilterId) {
-                    endpoint += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
-                }
             } else {
-                // Filtro de Alumnos Activos/Bajas
                 endpoint = `/api/alumnos?filters[activo][$eq]=${!isBaja}&populate=dojo&pagination[limit]=1000`;
-                
-                if (dojoFilterId) {
-                    endpoint += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
-                }
-
-                // Lógica de ordenación adicional para el informe
-                if (type === 'age') endpoint += `&sort=fecha_nacimiento:desc`;
-                if (type === 'grade') endpoint += `&sort=grado:desc`;
-                if (type === 'surname' || !type) endpoint += `&sort=apellidos:asc`;
             }
 
-            console.log("📡 [NEON QUERY]:", `${API_URL}${endpoint}`);
+            if (dojoFilterId) {
+                const filterPath = (type === 'attendance') ? 'filters[alumno][dojo]' : 'filters[dojo]';
+                endpoint += `&${filterPath}[documentId][$eq]=${dojoFilterId}`;
+            }
 
             const res = await fetch(`${API_URL}${endpoint}`, { 
                 headers: { 'Authorization': `Bearer ${jwtToken}` } 
             });
-            
-            if (!res.ok) {
-                if(res.status === 403) throw new Error("PERMISOS: El Rol Authenticated no tiene acceso a find en Asistencias o Alumnos.");
-                throw new Error(`Neon Error: ${res.status}`);
-            }
-
             const json = await res.json();
             let list = json.data || [];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "No hay registros para los filtros seleccionados.");
+                showModal("Sin Datos", "No hay registros para este día o Dojo.");
                 return;
             }
 
-            // 3. MAPEO DE COLUMNAS (REGLA DE LAS 12 COLUMNAS)
+            // Mapeo de columnas
             let headRow = [];
             let body = [];
 
@@ -701,57 +684,52 @@ async function generateReport(type) {
                         getDojoName(alu?.dojo),
                         cla?.Tipo || 'Keiko',
                         horaStr,
-                        (a.Estado || 'Confirmado').toUpperCase(),
-                        '' // Espacio para firma física
+                        (a.Estado || 'Confirmado').replace('_', ' ').toUpperCase(),
+                        ''
                     ];
                 });
             } else {
                 headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Edad', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Población', 'Dojo'];
                 body = list.map((item, index) => {
                     const a = item.attributes || item;
-                    return [
-                        `${index + 1}`,
-                        (a.apellidos || '').toUpperCase(),
-                        a.nombre || '',
-                        a.dni || '',
-                        calculateAge(a.fecha_nacimiento),
-                        normalizeGrade(a.grado),
-                        parseFloat(a.horas_acumuladas || 0).toFixed(1),
-                        a.seguro_pagado ? 'SÍ' : 'NO',
-                        normalizePhone(a.telefono),
-                        a.email || '-',
-                        (a.poblacion || '').toUpperCase(),
-                        getDojoName(a.dojo)
-                    ];
+                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', a.dni || '', calculateAge(a.fecha_nacimiento), normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1), a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), a.email || '-', (a.poblacion || '').toUpperCase(), getDojoName(a.dojo)];
                 });
             }
 
-            // 4. RENDERIZADO ZERO WASTE (FontSize 5 para integridad)
             doc.autoTable({
                 startY: 30,
-                margin: { left: 10, right: 10 },
                 head: [headRow], 
                 body: body, 
                 theme: 'grid',
                 styles: { fontSize: 6, cellPadding: 1 },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
                 didDrawPage: (data) => {
-                    // Cabecera Corporativa
                     doc.addImage(logoImg, 'PNG', 10, 5, 25, 18);
-                    doc.setFontSize(14); doc.setTextColor(40);
-                    doc.text("ARASHI GROUP AIKIDO - INFORME OFICIAL", 150, 12, { align: 'center' });
-                    doc.setFontSize(9);
-                    doc.text(`TIPO: ${type.toUpperCase()} | EMISIÓN: ${new Date().toLocaleDateString()}`, 150, 18, { align: 'center' });
-                    doc.setLineWidth(0.5); doc.setDrawColor(190, 0, 0);
-                    doc.line(10, 25, 287, 25);
+                    
+                    doc.setFontSize(14); doc.setFont("helvetica", "bold");
+                    doc.text("ARASHI GROUP AIKIDO - INFORME OFICIAL", pageWidth / 2, 12, { align: 'center' });
+                    
+                    doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                    
+                    // --- 🥋 LÓGICA DE FECHA DINÁMICA ---
+                    if (type === 'attendance') {
+                        // Si es asistencia, mostramos la fecha del Keiko en negrita y rojo
+                        doc.setTextColor(190, 0, 0); doc.setFont("helvetica", "bold");
+                        doc.text(`FECHA KEIKO: ${classDateFormatted}`, pageWidth / 2, 18, { align: 'center' });
+                        doc.setTextColor(100); doc.setFont("helvetica", "normal");
+                        doc.setFontSize(8);
+                        doc.text(`TIPO: ASISTENCIA | EMISIÓN: ${currentDate}`, pageWidth / 2, 23, { align: 'center' });
+                    } else {
+                        // Para el resto de informes (listados)
+                        doc.text(`TIPO: ${type.toUpperCase()} | EMISIÓN: ${currentDate}`, pageWidth / 2, 18, { align: 'center' });
+                    }
                 }
             });
 
-            doc.save(`Arashi_Report_${type}_${attendanceDate || 'Listado'}.pdf`);
-
+            doc.save(`Arashi_${type}_${attendanceDate || 'Report'}.pdf`);
         } catch (e) { 
-            console.error("🔥 Error PDF:", e);
-            showModal("Error Crítico", e.message); 
+            console.error(e);
+            showModal("Error", "Error al generar PDF."); 
         }
     };
 }
