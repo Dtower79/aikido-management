@@ -2709,26 +2709,35 @@ async function startQRScanner() {
 } // <--- FIN DE LA FUNCIÓN
 
 
-/* --- CARGA DE FILTROS SENSEI (VERSION 10.1 - CON DEBUG) --- */
+//* --- CARGA DE FILTROS SENSEI (VERSION 10.2 - BLINDAJE TOTAL) --- */
 async function loadDojosFilter() {
     const select = document.getElementById('sensei-dojo-filter');
-    if (!select) return;
+    if (!select) {
+        console.error("❌ [SENSEI] No se encuentra el elemento 'sensei-dojo-filter' en el HTML.");
+        return;
+    }
 
-    console.log("📡 [SENSEI] Solicitando lista de Dojos a Render...");
+    console.log("📡 [SENSEI] Solicitando sedes...");
 
     try {
-        // Forzamos duración 0 para esta prueba para saltarnos cualquier caché previa
-        const res = await fetchSmart('/dojos', 'lista_dojos_panel', 0);
+        // Usamos la misma caché que el calendario para asegurar que si uno funciona, el otro también
+        const res = await fetchSmart('/dojos', 'lista_dojos_archivo', 24);
         
         if (!res || !res.data || res.data.length === 0) {
-            console.error("⚠️ [SENSEI] La API devolvió una lista vacía.");
-            // Si sale esto en consola, es que no hay permisos 'find' en el rol Public o Authenticated
+            console.warn("⚠️ [SENSEI] La API de Dojos no devolvió datos.");
             return;
         }
 
-        // Limpiamos y rellenamos
-        select.innerHTML = '<option value="all">-- TODOS LOS DOJOS --</option>';
+        // 1. Limpiamos el selector
+        select.innerHTML = "";
         
+        // 2. Creamos la opción "Todos"
+        const optAll = document.createElement('option');
+        optAll.value = 'all';
+        optAll.innerText = '-- TODOS LOS DOJOS --';
+        select.appendChild(optAll);
+        
+        // 3. Rellenamos con los Dojos de Neon
         res.data.forEach(d => {
             const info = d.attributes || d;
             const dId = d.documentId || d.id;
@@ -2736,21 +2745,20 @@ async function loadDojosFilter() {
             opt.value = dId;
             opt.innerText = info.nombre.toUpperCase().replace("AIKIDO ARASHI ", "");
             
-            // Preselección por ficha de Sensei
+            // Si el ID coincide con el del Sensei, lo marcamos
             if (dojoIdGlobal && String(dId) === String(dojoIdGlobal)) {
                 opt.selected = true;
-                console.log("📍 [SENSEI] Preseleccionada tu sede:", info.nombre);
             }
             select.appendChild(opt);
         });
 
-        console.log(`✅ [SENSEI] ${res.data.length} sedes cargadas en el selector.`);
+        console.log(`✅ [SENSEI] ${res.data.length} Dojos inyectados en el selector.`);
         
-        // Disparamos la carga del panel con el dojo ya filtrado
+        // 4. Refrescamos el listado de alumnos
         await loadSenseiPanel();
 
     } catch (e) {
-        console.error("❌ [SENSEI] Error en la llamada a /dojos:", e);
+        console.error("❌ [SENSEI] Error crítico cargando filtros:", e);
     }
 }
 
