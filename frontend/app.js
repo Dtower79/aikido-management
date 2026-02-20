@@ -646,10 +646,9 @@ async function generateReport(type) {
                 const start = `${attendanceDate}T00:00:00.000Z`;
                 const end = `${attendanceDate}T23:59:59.999Z`;
                 
-                // 🥋 REGLA INVIOLABLE: Strapi v5 Población Segura
+                // Filtros estructurados para Strapi v5 y Populate correcto
                 endpoint = `/api/asistencias?filters=${start}&filters=${end}&populate=alumno.dojo,clase&pagination=500`;
                 
-                // Si hay filtro de dojo, se aplica al Dojo del alumno
                 if (dojoFilterId) {
                     endpoint += `&filters=${dojoFilterId}`;
                 }
@@ -664,7 +663,6 @@ async function generateReport(type) {
 
             console.log("📡 Consultando Neon:", `${API_URL}${endpoint}`);
 
-            // Fetch seguro evitando el doble /api/api
             const res = await fetch(`${API_URL}${endpoint}`, { 
                 headers: { 'Authorization': `Bearer ${jwtToken}` } 
             });
@@ -678,18 +676,17 @@ async function generateReport(type) {
             let list = json.data ||[];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "Neon no ha devuelto registros para esta consulta. Comprueba si hay datos reales en esa fecha y Dojo.");
+                showModal("Sin Datos", "Neon no ha devuelto registros. Comprueba si hay datos reales en esa fecha y Dojo.");
                 return;
             }
 
-            // 2. PURGA DE DATOS Y PROTECCIÓN NULL (Anti-Duplicados)
+            // 2. PURGA DE DATOS (Anti-Duplicados)
             if (type === 'attendance') {
                 const seen = new Set();
                 list = list.filter(item => {
                     const attrs = item.attributes || item;
                     if (!attrs.alumno) return false;
                     
-                    // Strapi v5 maneja 'data' dentro de relaciones
                     const alu = attrs.alumno.data ? attrs.alumno.data : attrs.alumno;
                     const aluId = alu.documentId || alu.id || alu.dni;
                     
@@ -708,10 +705,10 @@ async function generateReport(type) {
                 let nB = "";
                 
                 if (type === 'attendance') {
-                    const aluA = dA.alumno?.data?.attributes || dA.alumno?.attributes || dA.alumno;
-                    const aluB = dB.alumno?.data?.attributes || dB.alumno?.attributes || dB.alumno;
-                    nA = aluA?.apellidos || "";
-                    nB = aluB?.apellidos || "";
+                    const aluA = dA.alumno?.data?.attributes || dA.alumno?.attributes || dA.alumno || {};
+                    const aluB = dB.alumno?.data?.attributes || dB.alumno?.attributes || dB.alumno || {};
+                    nA = aluA.apellidos || "";
+                    nB = aluB.apellidos || "";
                 } else {
                     nA = dA.apellidos || "";
                     nB = dB.apellidos || "";
@@ -719,33 +716,41 @@ async function generateReport(type) {
                 return nA.toUpperCase().localeCompare(nB.toUpperCase());
             });
 
-            // 3. ESTRUCTURA MAESTRA (Las Columnas jsPDF Correctas)
+            // 3. ESTRUCTURA MAESTRA (Creación de Arrays seguras)
             let headRow =[];
+            
             if (type === 'attendance') {
                 headRow =;
             } else {
                 headRow =;
                 if (isBaja) {
-                    headRow.splice(1, 0, 'Baja'); // Inserta columna Baja dinámicamente
+                    headRow.splice(1, 0, 'Fecha Baja');
                 }
             }
 
             const body = list.map((item, index) => {
                 const a = item.attributes || item;
+                
                 if (type === 'attendance') {
                     const alu = a.alumno?.data?.attributes || a.alumno?.attributes || a.alumno || {};
                     const cla = a.clase?.data?.attributes || a.clase?.attributes || a.clase || {};
                     
-                    // 🥋 REGLA INVIOLABLE: Timezone Fix Literal (Tratamiento como String)
-                    const horaStr = cla.Fecha_Hora ? cla.Fecha_Hora.split('T').substring(0, 5) + "h" : "--:--";
-                    const dojoObj = alu.dojo?.data?.attributes || alu.dojo?.attributes || alu.dojo;
-                    const dojoNom = dojoObj?.nombre ? dojoObj.nombre.replace(/Aikido\s+/gi, '').trim() : "ARASHI";
+                    // 🥋 REGLA INVIOLABLE: Timezone Fix Literal (Tratamiento de string)
+                    let horaStr = "--:--";
+                    if (cla.Fecha_Hora) {
+                        const partesHora = cla.Fecha_Hora.split('T');
+                        if (partesHora.length > 1) {
+                            horaStr = partesHora.substring(0, 5) + "h";
+                        }
+                    }
+                    
+                    const dojoObj = alu.dojo?.data?.attributes || alu.dojo?.attributes || alu.dojo || {};
+                    const dojoNom = dojoObj.nombre ? dojoObj.nombre.replace(/Aikido\s+/gi, '').trim() : "ARASHI";
                     const estadoVal = (a.Estado || a.estado || 'Confirmado').replace(/_/g, ' ').toUpperCase();
                     
                     return;
+                    
                 } else {
-                    // Informe General o Bajas
-                    const edadDisplay = calculateAge(a.fecha_nacimiento);
                     const seguroTxt = a.seguro_pagado ? 'SÍ' : 'NO';
                     
                     const row =;
@@ -761,20 +766,11 @@ async function generateReport(type) {
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
-                head:, 
+                head:, // Array dentro de array, obligatorio para jsPDF
                 body: body, 
                 theme: 'grid',
                 styles: { fontSize: 5, cellPadding: 0.8 },
                 headStyles: { fillColor:, halign: 'center', fontStyle: 'bold' },
-                columnStyles: type === 'attendance' ? {
-                    0: { cellWidth: 7, halign: 'center' },
-                    1: { cellWidth: 45 },
-                    2: { cellWidth: 35 }
-                } : {
-                    0: { cellWidth: 7, halign: 'center' },
-                    1: { cellWidth: 35 },
-                    2: { cellWidth: 25 }
-                },
                 didDrawPage: (data) => {
                     try { doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); } catch(e){} 
                     doc.setFontSize(14); 
@@ -783,7 +779,6 @@ async function generateReport(type) {
                     doc.setFontSize(9); 
                     doc.setFont("helvetica", "normal");
                     
-                    // Parseo de fecha formato Español
                     let printDate = attendanceDate;
                     if (!printDate) {
                         const d = new Date();
@@ -804,7 +799,7 @@ async function generateReport(type) {
         }
     };
     
-    // Fallback de seguridad vital: Si el logo falla por caché local, genera el PDF igualmente sin bloquear la ejecución.
+    // Fallback de seguridad
     logoImg.onerror = function() {
         console.warn("⚠️ Imagen de logo no encontrada, generando PDF sin logo...");
         logoImg.onload();
