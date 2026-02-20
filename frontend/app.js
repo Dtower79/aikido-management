@@ -646,7 +646,7 @@ async function generateReport(type) {
                 const start = `${attendanceDate}T00:00:00.000Z`;
                 const end = `${attendanceDate}T23:59:59.999Z`;
                 
-                // 🥋 REGLA INVIOLABLE: Strapi v5 Populate Syntax (Dot Notation pura para evitar 400 Bad Request)
+                // 🥋 REGLA INVIOLABLE: Strapi v5 Población Segura
                 endpoint = `/api/asistencias?filters=${start}&filters=${end}&populate=alumno.dojo,clase&pagination=500`;
                 
                 // Si hay filtro de dojo, se aplica al Dojo del alumno
@@ -664,7 +664,7 @@ async function generateReport(type) {
 
             console.log("📡 Consultando Neon:", `${API_URL}${endpoint}`);
 
-            // Prevenimos el error api/api de la URL concatenando directamente
+            // Fetch seguro evitando el doble /api/api
             const res = await fetch(`${API_URL}${endpoint}`, { 
                 headers: { 'Authorization': `Bearer ${jwtToken}` } 
             });
@@ -678,7 +678,7 @@ async function generateReport(type) {
             let list = json.data ||[];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "Neon no ha devuelto registros para esta consulta. Comprueba si hay datos reales ese día.");
+                showModal("Sin Datos", "Neon no ha devuelto registros para esta consulta. Comprueba si hay datos reales en esa fecha y Dojo.");
                 return;
             }
 
@@ -688,8 +688,11 @@ async function generateReport(type) {
                 list = list.filter(item => {
                     const attrs = item.attributes || item;
                     if (!attrs.alumno) return false;
+                    
+                    // Strapi v5 maneja 'data' dentro de relaciones
                     const alu = attrs.alumno.data ? attrs.alumno.data : attrs.alumno;
-                    const aluId = alu.documentId || alu.id;
+                    const aluId = alu.documentId || alu.id || alu.dni;
+                    
                     if (!aluId || seen.has(aluId)) return false;
                     seen.add(aluId);
                     return true;
@@ -716,32 +719,40 @@ async function generateReport(type) {
                 return nA.toUpperCase().localeCompare(nB.toUpperCase());
             });
 
-            // 3. ESTRUCTURA MAESTRA (Las 12 Columnas jsPDF)
-            let headRow = [];
+            // 3. ESTRUCTURA MAESTRA (Las Columnas jsPDF Correctas)
+            let headRow =[];
             if (type === 'attendance') {
-                headRow =;
-            } else if (isBaja) {
                 headRow =;
             } else {
                 headRow =;
+                if (isBaja) {
+                    headRow.splice(1, 0, 'Baja'); // Inserta columna Baja dinámicamente
+                }
             }
 
             const body = list.map((item, index) => {
                 const a = item.attributes || item;
                 if (type === 'attendance') {
-                    const alu = a.alumno?.data?.attributes || a.alumno?.attributes || a.alumno;
-                    const cla = a.clase?.data?.attributes || a.clase?.attributes || a.clase;
+                    const alu = a.alumno?.data?.attributes || a.alumno?.attributes || a.alumno || {};
+                    const cla = a.clase?.data?.attributes || a.clase?.attributes || a.clase || {};
                     
-                    // 🥋 REGLA INVIOLABLE: Timezone Fix Literal
-                    const horaStr = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T').substring(0, 5) + "h" : "--:--";
-                    const dojoNom = alu?.dojo ? getDojoName(alu.dojo) : "ARASHI";
-                    const estadoVal = (a.Estado || 'Confirmado').replace(/_/g, ' ').toUpperCase();
+                    // 🥋 REGLA INVIOLABLE: Timezone Fix Literal (Tratamiento como String)
+                    const horaStr = cla.Fecha_Hora ? cla.Fecha_Hora.split('T').substring(0, 5) + "h" : "--:--";
+                    const dojoObj = alu.dojo?.data?.attributes || alu.dojo?.attributes || alu.dojo;
+                    const dojoNom = dojoObj?.nombre ? dojoObj.nombre.replace(/Aikido\s+/gi, '').trim() : "ARASHI";
+                    const estadoVal = (a.Estado || a.estado || 'Confirmado').replace(/_/g, ' ').toUpperCase();
                     
                     return;
                 } else {
+                    // Informe General o Bajas
                     const edadDisplay = calculateAge(a.fecha_nacimiento);
+                    const seguroTxt = a.seguro_pagado ? 'SÍ' : 'NO';
+                    
                     const row =;
-                    if (isBaja) row.splice(1, 0, formatDateDisplay(a.fecha_baja));
+                    
+                    if (isBaja) {
+                        row.splice(1, 0, formatDateDisplay(a.fecha_baja));
+                    }
                     return row;
                 }
             });
@@ -771,7 +782,18 @@ async function generateReport(type) {
                     doc.text("ARASHI GROUP AIKIDO - REPORTE OFICIAL", pageWidth / 2, 12, { align: 'center' });
                     doc.setFontSize(9); 
                     doc.setFont("helvetica", "normal");
-                    doc.text(`TIPO: ${type.toUpperCase()} | FECHA: ${attendanceDate || new Date().toLocaleDateString('es-ES')}`, pageWidth / 2, 18, { align: 'center' });
+                    
+                    // Parseo de fecha formato Español
+                    let printDate = attendanceDate;
+                    if (!printDate) {
+                        const d = new Date();
+                        printDate = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                    } else {
+                        const p = attendanceDate.split('-');
+                        if(p.length === 3) printDate = `${p}/${p}/${p}`;
+                    }
+                    
+                    doc.text(`TIPO: ${type.toUpperCase()} | FECHA: ${printDate}`, pageWidth / 2, 18, { align: 'center' });
                 }
             });
 
@@ -782,7 +804,7 @@ async function generateReport(type) {
         }
     };
     
-    // Fallback de seguridad por si falla la imagen (no bloquea el PDF)
+    // Fallback de seguridad vital: Si el logo falla por caché local, genera el PDF igualmente sin bloquear la ejecución.
     logoImg.onerror = function() {
         console.warn("⚠️ Imagen de logo no encontrada, generando PDF sin logo...");
         logoImg.onload();
