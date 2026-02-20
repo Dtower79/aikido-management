@@ -615,10 +615,11 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     }
 }
 
-/* --- GENERADOR DE INFORMES (EDICIÓN NEON & STRAPI v5 STRICT) --- */
+/* --- GENERADOR DE INFORMES (VERSION 10.8 - FIX NEON & DOBLE API) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect ? dojoSelect.value : "";
+    const dojoFilterName = dojoSelect ? dojoSelect.options[dojoSelect.selectedIndex].text : "";
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
     // 1. VALIDACIÓN
@@ -639,170 +640,120 @@ async function generateReport(type) {
         const isBaja = type.startsWith('bajas');
 
         try {
+            // 🥋 CONSTRUCCIÓN DE ENDPOINT PARA NEON/POSTGRES
+            // API_URL en app.js no tiene el /api al final, así que lo ponemos aquí una sola vez
             let endpoint = "";
             
             if (type === 'attendance') {
-                // 🥋 REGLA INVIOLABLE: PostgreSQL Strict Mode (Rango de 24h exacto para Neon)
+                // Rango de 24 horas: Única forma que Neon encuentre registros de un día
                 const start = `${attendanceDate}T00:00:00.000Z`;
                 const end = `${attendanceDate}T23:59:59.999Z`;
-                
-                // Filtros estructurados para Strapi v5 y Populate correcto
-                endpoint = `/api/asistencias?filters=${start}&filters=${end}&populate=alumno.dojo,clase&pagination=500`;
-                
-                if (dojoFilterId) {
-                    endpoint += `&filters=${dojoFilterId}`;
-                }
+                endpoint = `/api/asistencias?filters[clase][Fecha_Hora][$gte]=${start}&filters[clase][Fecha_Hora][$lte]=${end}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
             } else {
-                const activoFlag = isBaja ? 'false' : 'true';
-                endpoint = `/api/alumnos?filters=${activoFlag}&populate=dojo&pagination=1000`;
-                
-                if (dojoFilterId) {
-                    endpoint += `&filters=${dojoFilterId}`;
-                }
+                endpoint = `/api/alumnos?filters[activo][$eq]=${!isBaja}&populate=dojo&pagination[limit]=1000`;
             }
 
-            console.log("📡 Consultando Neon:", `${API_URL}${endpoint}`);
+            // Aplicar filtro de Dojo
+            if (dojoFilterId) {
+                const filterPath = (type === 'attendance') ? 'filters[alumno][dojo]' : 'filters[dojo]';
+                endpoint += `&${filterPath}[documentId][$eq]=${dojoFilterId}`;
+            }
+
+            console.log("📡 [REPORT] Consultando Neon:", endpoint);
 
             const res = await fetch(`${API_URL}${endpoint}`, { 
                 headers: { 'Authorization': `Bearer ${jwtToken}` } 
             });
             
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(`Error ${res.status}: ${errorData.error?.message || "Rechazado por PostgreSQL"}`);
-            }
+            if (!res.ok) throw new Error(`Status ${res.status}`);
 
             const json = await res.json();
-            let list = json.data ||[];
+            let list = json.data || [];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "Neon no ha devuelto registros. Comprueba si hay datos reales en esa fecha y Dojo.");
+                showModal("Sin Datos", "Neon no ha devuelto registros. Comprueba que el Dojo y la fecha tengan actividad.");
                 return;
             }
 
-            // 2. PURGA DE DATOS (Anti-Duplicados)
+            // 2. LIMPIEZA DE DATOS
             if (type === 'attendance') {
+                // Eliminar duplicados si Natalia se apuntó dos veces por error
                 const seen = new Set();
                 list = list.filter(item => {
-                    const attrs = item.attributes || item;
-                    if (!attrs.alumno) return false;
-                    
-                    const alu = attrs.alumno.data ? attrs.alumno.data : attrs.alumno;
-                    const aluId = alu.documentId || alu.id || alu.dni;
-                    
+                    const alu = parseRelation(item.attributes || item).alumno;
+                    const aluId = getID(parseRelation(alu));
                     if (!aluId || seen.has(aluId)) return false;
                     seen.add(aluId);
                     return true;
                 });
             }
 
-            // Ordenación Alfabética Sensei Logic
+            // Ordenación alfabética
             list.sort((a, b) => {
                 const dA = a.attributes || a;
                 const dB = b.attributes || b;
-                
-                let nA = "";
-                let nB = "";
-                
-                if (type === 'attendance') {
-                    const aluA = dA.alumno?.data?.attributes || dA.alumno?.attributes || dA.alumno || {};
-                    const aluB = dB.alumno?.data?.attributes || dB.alumno?.attributes || dB.alumno || {};
-                    nA = aluA.apellidos || "";
-                    nB = aluB.apellidos || "";
-                } else {
-                    nA = dA.apellidos || "";
-                    nB = dB.apellidos || "";
-                }
+                const nA = (type === 'attendance' ? parseRelation(dA.alumno).apellidos : dA.apellidos) || "";
+                const nB = (type === 'attendance' ? parseRelation(dB.alumno).apellidos : dB.apellidos) || "";
                 return nA.toUpperCase().localeCompare(nB.toUpperCase());
             });
 
-            // 3. ESTRUCTURA MAESTRA (Creación de Arrays seguras)
-            let headRow =[];
-            
-            if (type === 'attendance') {
-                headRow =;
-            } else {
-                headRow =;
-                if (isBaja) {
-                    headRow.splice(1, 0, 'Fecha Baja');
-                }
+            // 3. MAPEO DE COLUMNAS
+            let headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora', 'Estado'];
+            if (type !== 'attendance') {
+                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'CP/Ciudad'];
+                if (isBaja) headRow.splice(1, 0, 'Baja');
             }
 
             const body = list.map((item, index) => {
                 const a = item.attributes || item;
-                
                 if (type === 'attendance') {
-                    const alu = a.alumno?.data?.attributes || a.alumno?.attributes || a.alumno || {};
-                    const cla = a.clase?.data?.attributes || a.clase?.attributes || a.clase || {};
-                    
-                    // 🥋 REGLA INVIOLABLE: Timezone Fix Literal (Tratamiento de string)
-                    let horaStr = "--:--";
-                    if (cla.Fecha_Hora) {
-                        const partesHora = cla.Fecha_Hora.split('T');
-                        if (partesHora.length > 1) {
-                            horaStr = partesHora.substring(0, 5) + "h";
-                        }
-                    }
-                    
-                    const dojoObj = alu.dojo?.data?.attributes || alu.dojo?.attributes || alu.dojo || {};
-                    const dojoNom = dojoObj.nombre ? dojoObj.nombre.replace(/Aikido\s+/gi, '').trim() : "ARASHI";
-                    const estadoVal = (a.Estado || a.estado || 'Confirmado').replace(/_/g, ' ').toUpperCase();
-                    
-                    return;
-                    
+                    const alu = parseRelation(a.alumno);
+                    const cla = parseRelation(a.clase);
+                    const horaStr = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--";
+                    return [
+                        `${index + 1}`,
+                        (alu?.apellidos || '').toUpperCase(),
+                        (alu?.nombre || ''),
+                        getDojoName(alu?.dojo),
+                        cla?.Tipo || 'Keiko',
+                        horaStr,
+                        (a.Estado || 'Confirmado').replace('_', ' ').toUpperCase()
+                    ];
                 } else {
-                    const seguroTxt = a.seguro_pagado ? 'SÍ' : 'NO';
-                    
-                    const row =;
-                    
-                    if (isBaja) {
-                        row.splice(1, 0, formatDateDisplay(a.fecha_baja));
-                    }
+                    const row = [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', a.dni || '', normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), a.email || '-', (a.direccion || '').substring(0, 20), `${a.cp || ''} ${a.poblacion || ''}`.trim()];
+                    if (isBaja) row.splice(1, 0, formatDateDisplay(a.fecha_baja));
                     return row;
                 }
             });
 
-            // 4. MOTOR RENDERIZADO jsPDF-AutoTable
+            // 4. RENDERIZADO (FontSize 5)
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
-                head:, // Array dentro de array, obligatorio para jsPDF
+                head: [headRow], 
                 body: body, 
                 theme: 'grid',
                 styles: { fontSize: 5, cellPadding: 0.8 },
-                headStyles: { fillColor:, halign: 'center', fontStyle: 'bold' },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: 7, halign: 'center' },
+                    1: { cellWidth: 35 },
+                    2: { cellWidth: 25 }
+                },
                 didDrawPage: (data) => {
-                    try { doc.addImage(logoImg, 'PNG', 10, 5, 22, 15); } catch(e){} 
-                    doc.setFontSize(14); 
-                    doc.setFont("helvetica", "bold");
+                    doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                    doc.setFontSize(14); doc.setFont("helvetica", "bold");
                     doc.text("ARASHI GROUP AIKIDO - REPORTE OFICIAL", pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); 
-                    doc.setFont("helvetica", "normal");
-                    
-                    let printDate = attendanceDate;
-                    if (!printDate) {
-                        const d = new Date();
-                        printDate = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
-                    } else {
-                        const p = attendanceDate.split('-');
-                        if(p.length === 3) printDate = `${p}/${p}/${p}`;
-                    }
-                    
-                    doc.text(`TIPO: ${type.toUpperCase()} | FECHA: ${printDate}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.setFontSize(9); doc.setFont("helvetica", "normal");
+                    doc.text(`TIPO: ${type.toUpperCase()} | FECHA: ${attendanceDate || new Date().toLocaleDateString()}`, pageWidth / 2, 18, { align: 'center' });
                 }
             });
 
-            doc.save(`Reporte_Arashi_${type}_${attendanceDate || new Date().toISOString().split('T')}.pdf`);
+            doc.save(`Reporte_Arashi_${type}_${attendanceDate}.pdf`);
         } catch (e) { 
             console.error("🔥 Error PDF:", e);
-            showModal("Error Técnico", e.message); 
+            showModal("Error", "No se han podido procesar los datos: " + e.message); 
         }
-    };
-    
-    // Fallback de seguridad
-    logoImg.onerror = function() {
-        console.warn("⚠️ Imagen de logo no encontrada, generando PDF sin logo...");
-        logoImg.onload();
     };
 }
 
