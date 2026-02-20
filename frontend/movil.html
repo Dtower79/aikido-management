@@ -2509,7 +2509,7 @@ async function loadMonthlyClasses(el) {
     listResults.innerHTML = html || "<p style='text-align:center; padding:40px; opacity:0.5;'>Sin clases programadas.</p>";
 }
 
-/* --- ASISTENCIA (VERSION 10.1 - BLOQUEO DE DUPLICADOS) --- */
+/* --- ASISTENCIA (VERSION 10.5 - BLOQUEO DE DUPLICADOS) --- */
 async function confirmAttendance() {
     if (!claseHoyId || !alumnoGlobal) return;
     
@@ -2517,19 +2517,26 @@ async function confirmAttendance() {
     const aluId = getID(alumnoGlobal);
 
     try {
-        // 1. VERIFICACIÓN PREVIA: ¿Ya existe una fila para este alumno y esta clase?
+        const btn = document.getElementById('confirm-btn');
+        btn.innerText = "VERIFICANDO...";
+        btn.disabled = true;
+
+        // 1. ESCUDO: Comprobamos si ya existe el registro en Neon
         const checkRes = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${claseHoyId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const checkJ = await checkRes.json();
 
+        // Si ya hay datos, Natalia ya está inscrita. No permitimos el POST.
         if (checkJ.data && checkJ.data.length > 0) {
-            showModal("AVISO", "Ya estás inscrito en esta clase. No es necesario hacerlo de nuevo.");
-            checkTodayClass(); // Refrescamos el botón por si acaso
+            console.warn("⚠️ [AUTH] Intento de duplicado bloqueado.");
+            btn.innerText = "YA CONFIRMADO";
+            btn.style.background = "#1e293b";
+            showModal("AVISO", "Ya estabas inscrito en este Keiko. No se han creado duplicados.");
             return;
         }
 
-        // 2. CREACIÓN: Solo si no existe
+        // 2. CREACIÓN: Solo si la validación anterior es limpia
         const res = await fetch(`${API_URL}/asistencias`, { 
             method: 'POST', 
             headers: { 
@@ -2548,10 +2555,11 @@ async function confirmAttendance() {
         if (res.ok) {
             localStorage.removeItem('cache_asistencias_sensei'); 
             await checkTodayClass(); 
-            showModal("¡OSS!", "Asistencia confirmada. Aparecerás en el panel del Sensei ahora mismo.");
+            showModal("¡OSS!", "Inscripción confirmada con éxito.");
         }
     } catch (e) {
         console.error("Error en confirmación:", e);
+        showModal("Error", "No se pudo conectar con el Dojo.");
     }
 }
 
