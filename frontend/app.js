@@ -1,6 +1,6 @@
 const API_URL = "https://arashi-api.onrender.com";
 // Implementar en tu app.js o movil.html
-
+const APP_VERSION = "1.0.2";
 /* --- CONTROLADOR DE GÉNERO (HOMBRE / MUJER) --- */
 function setGender(val) {
     console.log("🥋 Cambio de categoría detectado:", val);
@@ -28,22 +28,32 @@ function setGender(val) {
     }
 }
 
-async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
+async function fetchSmart(endpoint, cacheKey, durationHours = 0.5) { // Bajado a 30 min (0.5h)
     const cached = localStorage.getItem(`cache_${cacheKey}`);
+    const savedVersion = localStorage.getItem('app_version');
+
+    // Si la versión ha cambiado, borramos TODA la caché antigua
+    if (savedVersion !== APP_VERSION) {
+        console.log("🔄 Nueva versión detectada. Limpiando tatami...");
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('cache_')) localStorage.removeItem(key);
+        });
+        localStorage.setItem('app_version', APP_VERSION);
+    }
+
     if (cached) {
         const { time, data } = JSON.parse(cached);
-        // Si la caché tiene menos de X horas, no molestamos al servidor
         if ((Date.now() - time) < (1000 * 60 * 60 * durationHours)) {
             return data;
         }
     }
     
+    // Si no hay caché o expiró, vamos al servidor...
     const res = await fetch(`${API_URL}${endpoint}`, { 
         headers: { 'Authorization': `Bearer ${jwtToken}` } 
     });
     const json = await res.json();
     
-    // Guardamos con timestamp
     localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({
         time: Date.now(),
         data: json
