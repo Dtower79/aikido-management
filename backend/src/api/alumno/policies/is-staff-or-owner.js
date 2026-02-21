@@ -5,7 +5,7 @@
  * Permite acceso total a SENSEI e INSTRUCTORES.
  * Los alumnos solo pueden ver o editar su propia ficha.
  */
-
+  
 module.exports = async (policyContext, config, { strapi }) => {
   const user = policyContext.state.user; // Usuario haciendo la petición
 
