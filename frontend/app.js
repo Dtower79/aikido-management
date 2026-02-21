@@ -190,14 +190,27 @@ function showDashboard() {
 }
 
 function showSection(id) {
-    // 1. Ocultar todas las secciones y limpiar clases de centrado
+    // 1. RE-VERIFICACIÓN DE SEGURIDAD
+    // Comprobamos si el usuario tiene permiso antes de cambiar de sección
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const esSensei = user && user.is_sensei === true;
+    const esInstructorAutorizado = user && user.authorized_to_manage === true;
+
+    if (!user || (!esSensei && !esInstructorAutorizado)) {
+        console.error("🚫 Intento de navegación no autorizada.");
+        logout();
+        return;
+    }
+
+    // 2. LÓGICA ORIGINAL DE NAVEGACIÓN
+    // Ocultar todas las secciones y limpiar clases de centrado
     document.querySelectorAll('.section').forEach(s => {
         s.classList.add('hidden');
         s.classList.remove('active', 'welcome-flex');
         s.style.display = "none"; 
     });
     
-    // 2. Mostrar la seleccionada
+    // Mostrar la sección seleccionada
     const targetSection = document.getElementById(`sec-${id}`);
     if (targetSection) {
         targetSection.classList.remove('hidden');
@@ -206,27 +219,27 @@ function showSection(id) {
         if (id === 'welcome') targetSection.classList.add('welcome-flex', 'active');
     }
     
-    // 3. Gestionar botones activos del menú
+    // Gestionar botones activos del menú
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     const activeBtn = document.getElementById(`btn-nav-${id}`);
     if(activeBtn) activeBtn.classList.add('active');
 
-    // 4. Cerrar menú en móvil y limpiar menús de acciones abiertos
+    // Cerrar menú en móvil y limpiar menús de acciones abiertos
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) sidebar.classList.remove('open');
     closeAlumnoActions();
 
-    // 5. Lógica de "Nuevo Alumno": Resetear si NO estamos editando
+    // Lógica de "Nuevo Alumno": Resetear si NO estamos editando
     if (id === 'nuevo-alumno') { 
         const isEditing = document.getElementById('edit-id').value !== ""; 
         if (!isEditing) resetForm(); 
     }
 
-    // 6. DISPARADORES DE CARGA (Funcionalidades intactas)
+    // DISPARADORES DE CARGA
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
-    if (id === 'status') runDiagnostics(); // Activa letras verdes
+    if (id === 'status') runDiagnostics();
 }
 
 // --- UTILS ---
