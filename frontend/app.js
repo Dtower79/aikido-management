@@ -83,15 +83,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- SISTEMA DE LOGIN CON FILTRO DE RANGO (SENSEI / INSTRUCTOR) ---
+// --- SISTEMA DE LOGIN PARA INSTRUCTORES (VERSIÓN ROBUSTA) ---
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const identifier = document.getElementById('dni-login').value;
     const password = document.getElementById('password').value;
     const errorMsg = document.getElementById('login-error');
 
+    errorMsg.innerText = "⏳ Verificando rango...";
+
     try {
-        // 1. Autenticación básica
         const res = await fetch(`${API_URL}/api/auth/local`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -103,38 +104,53 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
             const user = data.user;
             const token = data.jwt;
 
-            // 2. Comprobación inmediata: ¿Es Sensei?
+            console.log("👤 Usuario autenticado:", user.username);
+
+            // 1. ¿Es SENSEI? (Está en el objeto User)
             if (user.is_sensei === true) {
-                console.log("🥋 Acceso concedido: SENSEI detectado.");
+                console.log("🥋 Acceso: SENSEI confirmado.");
                 executeLogin(data);
                 return;
             }
 
-            // 3. Si no es Sensei, buscamos si es Instructor en su ficha de Alumno
-            // Consultamos la colección alumnos filtrando por el ID de este usuario
+            // 2. ¿Es INSTRUCTOR? (Buscamos en la ficha Alumno)
+            // IMPORTANTE: Asegúrate de que en Strapi la casilla 'find' de Alumno esté marcada para el rol Authenticated.
+            console.log("🔍 Buscando ficha de instructor para ID:", user.id);
+            
             const aluRes = await fetch(`${API_URL}/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const aluData = await aluRes.json();
-            
-            // Obtenemos los atributos de la ficha (Strapi v4/v5 usa .attributes o data directo)
-            const ficha = aluData.data[0]?.attributes || aluData.data[0];
 
-            if (ficha && ficha.es_instructor === true) {
-                console.log("🥋 Acceso concedido: INSTRUCTOR detectado.");
-                executeLogin(data);
+            // Strapi v4/v5 puede devolver los datos de varias formas. 
+            // Buscamos la ficha en el primer elemento del array.
+            const ficha = aluData.data && aluData.data[0];
+            
+            if (ficha) {
+                // Comprobamos el campo es_instructor (teniendo en cuenta si viene en .attributes o directo)
+                const esInstructor = ficha.es_instructor === true || (ficha.attributes && ficha.attributes.es_instructor === true);
+                
+                if (esInstructor) {
+                    console.log("🥋 Acceso: INSTRUCTOR confirmado.");
+                    executeLogin(data);
+                    return;
+                } else {
+                    console.warn("🚫 Ficha encontrada pero es_instructor está en FALSE.");
+                }
             } else {
-                // 4. No tiene rango suficiente
-                errorMsg.innerText = "🚫 Acceso restringido a Sensei o Instructores.";
-                console.warn("⚠️ Intento de acceso sin rango suficiente.");
+                console.warn("⚠️ No se encontró ninguna ficha de Alumno vinculada a este usuario.");
             }
+
+            // Si llegamos aquí, no tiene permisos
+            errorMsg.innerHTML = "🚫 Acceso restringido a Sensei o Instructores.";
+            localStorage.clear(); // Limpiamos por seguridad
 
         } else {
             errorMsg.innerText = "❌ DNI o contraseña incorrectos";
         }
     } catch (err) {
         errorMsg.innerText = "❌ Error de conexión con el Dojo";
-        console.error(err);
+        console.error("Fallo en login:", err);
     }
 });
 
