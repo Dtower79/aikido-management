@@ -83,32 +83,110 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- SESIÓN ---
+// --- SISTEMA DE LOGIN CON FILTRO DE RANGO (SENSEI / INSTRUCTOR) ---
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const identifier = document.getElementById('dni-login').value;
     const password = document.getElementById('password').value;
+    const errorMsg = document.getElementById('login-error');
+
     try {
+        // 1. Autenticación básica
         const res = await fetch(`${API_URL}/api/auth/local`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ identifier, password })
         });
         const data = await res.json();
+
         if (res.ok) {
-            jwtToken = data.jwt;
-            localStorage.setItem('aikido_jwt', jwtToken);
-            localStorage.setItem('aikido_user', JSON.stringify(data.user));
-            showDashboard();
-        } else { document.getElementById('login-error').innerText = "❌ Credenciales incorrectas"; }
-    } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
+            const user = data.user;
+            const token = data.jwt;
+
+            // 2. Comprobación inmediata: ¿Es Sensei?
+            if (user.is_sensei === true) {
+                console.log("🥋 Acceso concedido: SENSEI detectado.");
+                executeLogin(data);
+                return;
+            }
+
+            // 3. Si no es Sensei, buscamos si es Instructor en su ficha de Alumno
+            // Consultamos la colección alumnos filtrando por el ID de este usuario
+            const aluRes = await fetch(`${API_URL}/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const aluData = await aluRes.json();
+            
+            // Obtenemos los atributos de la ficha (Strapi v4/v5 usa .attributes o data directo)
+            const ficha = aluData.data[0]?.attributes || aluData.data[0];
+
+            if (ficha && ficha.es_instructor === true) {
+                console.log("🥋 Acceso concedido: INSTRUCTOR detectado.");
+                executeLogin(data);
+            } else {
+                // 4. No tiene rango suficiente
+                errorMsg.innerText = "🚫 Acceso restringido a Sensei o Instructores.";
+                console.warn("⚠️ Intento de acceso sin rango suficiente.");
+            }
+
+        } else {
+            errorMsg.innerText = "❌ DNI o contraseña incorrectos";
+        }
+    } catch (err) {
+        errorMsg.innerText = "❌ Error de conexión con el Dojo";
+        console.error(err);
+    }
 });
+
+// Función auxiliar para guardar datos y entrar
+function executeLogin(data) {
+    // 1. Obtenemos el usuario de la respuesta
+    const user = data.user;
+
+    // 2. Añadimos una marca de autorización específica para el panel de gestión.
+    // Esta propiedad permite que 'showDashboard' sepa que el usuario 
+    // ha pasado con éxito el filtro de SENSEI o INSTRUCTOR.
+    user.authorized_to_manage = true;
+
+    // 3. Actualizamos las variables globales del sistema
+    jwtToken = data.jwt;
+    userData = user;
+
+    // 4. Guardamos los datos de sesión en el almacenamiento local
+    localStorage.setItem('aikido_jwt', jwtToken);
+    localStorage.setItem('aikido_user', JSON.stringify(userData));
+
+    // 5. Iniciamos la carga del panel de control
+    showDashboard();
+}
 
 function logout() { localStorage.clear(); location.reload(); }
 
 function showDashboard() {
+    // 1. Recuperamos el usuario del almacenamiento local
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+
+    // 2. EL GUARDIÁN:
+    // Comprobamos si existe el usuario y si es SENSEI o tiene el permiso de GESTIÓN
+    const esSensei = user && user.is_sensei === true;
+    const esInstructorAutorizado = user && user.authorized_to_manage === true;
+
+    if (!user || (!esSensei && !esInstructorAutorizado)) {
+        console.warn("🛡️ Intento de acceso no autorizado al Dashboard.");
+        logout(); // Si no tiene permiso, lo mandamos al login de nuevo
+        return;
+    }
+
+    // 3. Si tiene permiso, mostramos el panel
+    console.log("✅ Acceso verificado. Bienvenido al panel de gestión.");
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
-    loadDojosSelect(); loadCiudades(); loadReportDojos(); showSection('welcome');
+    
+    // 4. Carga de datos habitual
+    loadDojosSelect(); 
+    loadCiudades(); 
+    loadReportDojos(); 
+    showSection('welcome');
 }
 
 function showSection(id) {
