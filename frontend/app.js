@@ -460,13 +460,14 @@ document.addEventListener('click', (e) => {
 });
 
 
-/* --- EVENTO SUBMIT: GUARDAR EN NEON + LIMPIEZA DE CACHÉ --- */
+/* --- EVENTO SUBMIT ACTUALIZADO CON DIAGNÓSTICO DE ERRORES --- */
 const formAlumno = document.getElementById('form-nuevo-alumno');
 if (formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
         
+        // 1. Recopilar seminarios
         const seminariosData = Array.from(document.querySelectorAll('[id^="sem-"]')).map(row => {
             const anyValue = parseInt(row.querySelector('.sem-any').value);
             return {
@@ -478,18 +479,21 @@ if (formAlumno) {
             };
         });
 
+        // 2. Limpieza de relación Dojo (Evita el error 400 si está vacío)
+        const dojoId = document.getElementById('new-dojo').value;
+
         const alumnoData = { 
-            nombre: document.getElementById('new-nombre').value, 
-            apellidos: document.getElementById('new-apellidos').value, 
-            dni: document.getElementById('new-dni').value, 
+            nombre: document.getElementById('new-nombre').value.trim(), 
+            apellidos: document.getElementById('new-apellidos').value.trim(), 
+            dni: document.getElementById('new-dni').value.trim().toUpperCase(), 
             fecha_nacimiento: document.getElementById('new-nacimiento').value || null, 
             fecha_inicio: document.getElementById('new-alta').value || null, 
-            email: document.getElementById('new-email').value, 
-            telefono: document.getElementById('new-telefono').value, 
-            direccion: document.getElementById('new-direccion').value, 
-            poblacion: document.getElementById('new-poblacion').value, 
-            cp: document.getElementById('new-cp').value, 
-            dojo: document.getElementById('new-dojo').value, 
+            email: document.getElementById('new-email').value.trim() || null, 
+            telefono: document.getElementById('new-telefono').value.trim(), 
+            direccion: document.getElementById('new-direccion').value.trim(), 
+            poblacion: document.getElementById('new-poblacion').value.trim(), 
+            cp: document.getElementById('new-cp').value.trim(), 
+            dojo: dojoId === "" ? null : dojoId, // <-- FIX: Si no hay dojo, enviamos null, no ""
             grupo: document.getElementById('new-grupo').value, 
             grado: document.getElementById('new-grado').value, 
             seguro_pagado: document.getElementById('new-seguro').checked,
@@ -502,6 +506,7 @@ if (formAlumno) {
         try {
             const method = id ? 'PUT' : 'POST'; 
             const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
+            
             const res = await fetch(url, { 
                 method: method, 
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, 
@@ -509,21 +514,31 @@ if (formAlumno) {
             });
             
             if (res.ok) {
-                // --- 🥋 EL CAMBIO QUIRÚRGICO AQUÍ ---
-                // Al guardar, borramos la caché local de activos y bajas
-                // Esto obliga a loadAlumnos() a pedir los datos nuevos a Neon
                 localStorage.removeItem('cache_alumnos_activos');
                 localStorage.removeItem('cache_alumnos_bajas');
-                console.log("♻️ Memoria local purificada. Sincronizando datos frescos...");
-
                 showModal("¡OSS!", id ? "Datos actualizados." : "Alumno registrado.", () => { 
                     resetForm(); 
-                    showSection('alumnos'); // Al entrar aquí, loadAlumnos() hará fetch real
+                    showSection('alumnos'); 
                 });
             } else { 
-                showModal("Error", "Fallo al guardar. Revisa los permisos de Strapi."); 
+                // --- 🥋 DIAGNÓSTICO PROFUNDO DE STRAPI ---
+                const errorData = await res.json();
+                console.error("❌ Detalles del error de Strapi:", errorData);
+                
+                let mensajeError = "Revisa los datos introducidos.";
+                
+                // Si Strapi nos da detalles (ej: DNI duplicado o campo obligatorio)
+                if (errorData.error && errorData.error.details && errorData.error.details.errors) {
+                    const detalles = errorData.error.details.errors.map(err => `${err.path.join('.')}: ${err.message}`).join("\n");
+                    mensajeError = detalles;
+                } else if (errorData.error && errorData.error.message) {
+                    mensajeError = errorData.error.message;
+                }
+
+                showModal("Fallo de Validación", mensajeError); 
             }
         } catch (error) { 
+            console.error("Fallo de conexión:", error);
             showModal("Error", "Fallo de conexión con Render."); 
         }
     });
