@@ -1,6 +1,6 @@
 const API_URL = "https://arashi-api.onrender.com";
 // Implementar en tu app.js o movil.html
-const APP_VERSION = "1.0.2";
+
 /* --- CONTROLADOR DE GÉNERO (HOMBRE / MUJER) --- */
 function setGender(val) {
     console.log("🥋 Cambio de categoría detectado:", val);
@@ -28,32 +28,22 @@ function setGender(val) {
     }
 }
 
-async function fetchSmart(endpoint, cacheKey, durationHours = 0.5) { // Bajado a 30 min (0.5h)
+async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
     const cached = localStorage.getItem(`cache_${cacheKey}`);
-    const savedVersion = localStorage.getItem('app_version');
-
-    // Si la versión ha cambiado, borramos TODA la caché antigua
-    if (savedVersion !== APP_VERSION) {
-        console.log("🔄 Nueva versión detectada. Limpiando tatami...");
-        Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('cache_')) localStorage.removeItem(key);
-        });
-        localStorage.setItem('app_version', APP_VERSION);
-    }
-
     if (cached) {
         const { time, data } = JSON.parse(cached);
+        // Si la caché tiene menos de X horas, no molestamos al servidor
         if ((Date.now() - time) < (1000 * 60 * 60 * durationHours)) {
             return data;
         }
     }
     
-    // Si no hay caché o expiró, vamos al servidor...
     const res = await fetch(`${API_URL}${endpoint}`, { 
         headers: { 'Authorization': `Bearer ${jwtToken}` } 
     });
     const json = await res.json();
     
+    // Guardamos con timestamp
     localStorage.setItem(`cache_${cacheKey}`, JSON.stringify({
         time: Date.now(),
         data: json
@@ -93,150 +83,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- SISTEMA DE LOGIN PARA INSTRUCTORES (VERSIÓN ROBUSTA) ---
+// --- SESIÓN ---
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const identifier = document.getElementById('dni-login').value;
     const password = document.getElementById('password').value;
-    const errorMsg = document.getElementById('login-error');
-
-    errorMsg.innerText = "⏳ Verificando rango...";
-
     try {
         const res = await fetch(`${API_URL}/api/auth/local`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ identifier, password })
         });
         const data = await res.json();
-
         if (res.ok) {
-            const user = data.user;
-            const token = data.jwt;
-
-            console.log("👤 Usuario autenticado:", user.username);
-
-            // 1. ¿Es SENSEI? (Está en el objeto User)
-            if (user.is_sensei === true) {
-                console.log("🥋 Acceso: SENSEI confirmado.");
-                executeLogin(data);
-                return;
-            }
-
-            // 2. ¿Es INSTRUCTOR? (Buscamos en la ficha Alumno)
-            // IMPORTANTE: Asegúrate de que en Strapi la casilla 'find' de Alumno esté marcada para el rol Authenticated.
-            console.log("🔍 Buscando ficha de instructor para ID:", user.id);
-            
-            const aluRes = await fetch(`${API_URL}/api/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const aluData = await aluRes.json();
-
-            // Strapi v4/v5 puede devolver los datos de varias formas. 
-            // Buscamos la ficha en el primer elemento del array.
-            const ficha = aluData.data && aluData.data[0];
-            
-            if (ficha) {
-                // Comprobamos el campo es_instructor (teniendo en cuenta si viene en .attributes o directo)
-                const esInstructor = ficha.es_instructor === true || (ficha.attributes && ficha.attributes.es_instructor === true);
-                
-                if (esInstructor) {
-                    console.log("🥋 Acceso: INSTRUCTOR confirmado.");
-                    executeLogin(data);
-                    return;
-                } else {
-                    console.warn("🚫 Ficha encontrada pero es_instructor está en FALSE.");
-                }
-            } else {
-                console.warn("⚠️ No se encontró ninguna ficha de Alumno vinculada a este usuario.");
-            }
-
-            // Si llegamos aquí, no tiene permisos
-            errorMsg.innerHTML = "🚫 Acceso restringido a Sensei o Instructores.";
-            localStorage.clear(); // Limpiamos por seguridad
-
-        } else {
-            errorMsg.innerText = "❌ DNI o contraseña incorrectos";
-        }
-    } catch (err) {
-        errorMsg.innerText = "❌ Error de conexión con el Dojo";
-        console.error("Fallo en login:", err);
-    }
+            jwtToken = data.jwt;
+            localStorage.setItem('aikido_jwt', jwtToken);
+            localStorage.setItem('aikido_user', JSON.stringify(data.user));
+            showDashboard();
+        } else { document.getElementById('login-error').innerText = "❌ Credenciales incorrectas"; }
+    } catch { document.getElementById('login-error').innerText = "❌ Error de conexión"; }
 });
-
-// Función auxiliar para guardar datos y entrar
-function executeLogin(data) {
-    // 1. Obtenemos el usuario de la respuesta
-    const user = data.user;
-
-    // 2. Añadimos una marca de autorización específica para el panel de gestión.
-    // Esta propiedad permite que 'showDashboard' sepa que el usuario 
-    // ha pasado con éxito el filtro de SENSEI o INSTRUCTOR.
-    user.authorized_to_manage = true;
-
-    // 3. Actualizamos las variables globales del sistema
-    jwtToken = data.jwt;
-    userData = user;
-
-    // 4. Guardamos los datos de sesión en el almacenamiento local
-    localStorage.setItem('aikido_jwt', jwtToken);
-    localStorage.setItem('aikido_user', JSON.stringify(userData));
-
-    // 5. Iniciamos la carga del panel de control
-    showDashboard();
-}
 
 function logout() { localStorage.clear(); location.reload(); }
 
 function showDashboard() {
-    // 1. Recuperamos el usuario del almacenamiento local
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-
-    // 2. EL GUARDIÁN:
-    // Comprobamos si existe el usuario y si es SENSEI o tiene el permiso de GESTIÓN
-    const esSensei = user && user.is_sensei === true;
-    const esInstructorAutorizado = user && user.authorized_to_manage === true;
-
-    if (!user || (!esSensei && !esInstructorAutorizado)) {
-        console.warn("🛡️ Intento de acceso no autorizado al Dashboard.");
-        logout(); // Si no tiene permiso, lo mandamos al login de nuevo
-        return;
-    }
-
-    // 3. Si tiene permiso, mostramos el panel
-    console.log("✅ Acceso verificado. Bienvenido al panel de gestión.");
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
-    
-    // 4. Carga de datos habitual
-    loadDojosSelect(); 
-    loadCiudades(); 
-    loadReportDojos(); 
-    showSection('welcome');
+    loadDojosSelect(); loadCiudades(); loadReportDojos(); showSection('welcome');
 }
 
 function showSection(id) {
-    // 1. RE-VERIFICACIÓN DE SEGURIDAD
-    // Comprobamos si el usuario tiene permiso antes de cambiar de sección
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    const esSensei = user && user.is_sensei === true;
-    const esInstructorAutorizado = user && user.authorized_to_manage === true;
-
-    if (!user || (!esSensei && !esInstructorAutorizado)) {
-        console.error("🚫 Intento de navegación no autorizada.");
-        logout();
-        return;
-    }
-
-    // 2. LÓGICA ORIGINAL DE NAVEGACIÓN
-    // Ocultar todas las secciones y limpiar clases de centrado
+    // 1. Ocultar todas las secciones y limpiar clases de centrado
     document.querySelectorAll('.section').forEach(s => {
         s.classList.add('hidden');
         s.classList.remove('active', 'welcome-flex');
         s.style.display = "none"; 
     });
     
-    // Mostrar la sección seleccionada
+    // 2. Mostrar la seleccionada
     const targetSection = document.getElementById(`sec-${id}`);
     if (targetSection) {
         targetSection.classList.remove('hidden');
@@ -245,27 +128,27 @@ function showSection(id) {
         if (id === 'welcome') targetSection.classList.add('welcome-flex', 'active');
     }
     
-    // Gestionar botones activos del menú
+    // 3. Gestionar botones activos del menú
     document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
     const activeBtn = document.getElementById(`btn-nav-${id}`);
     if(activeBtn) activeBtn.classList.add('active');
 
-    // Cerrar menú en móvil y limpiar menús de acciones abiertos
+    // 4. Cerrar menú en móvil y limpiar menús de acciones abiertos
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) sidebar.classList.remove('open');
     closeAlumnoActions();
 
-    // Lógica de "Nuevo Alumno": Resetear si NO estamos editando
+    // 5. Lógica de "Nuevo Alumno": Resetear si NO estamos editando
     if (id === 'nuevo-alumno') { 
         const isEditing = document.getElementById('edit-id').value !== ""; 
         if (!isEditing) resetForm(); 
     }
 
-    // DISPARADORES DE CARGA
+    // 6. DISPARADORES DE CARGA (Funcionalidades intactas)
     if (id === 'alumnos') loadAlumnos(true);
     if (id === 'bajas') loadAlumnos(false);
     if (id === 'dojos') loadDojosCards();
-    if (id === 'status') runDiagnostics();
+    if (id === 'status') runDiagnostics(); // Activa letras verdes
 }
 
 // --- UTILS ---
@@ -425,7 +308,108 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
     if (event) event.stopPropagation();
 }
 
+/* --- GENERADOR DE INFORMES PREMIUM V5: FIX RANGO DE FECHAS --- */
+async function generateReport(type) {
+    const dojoSelect = document.getElementById('report-dojo-filter');
+    const dojoFilterId = dojoSelect.value;
+    const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
+    const attendanceDate = document.getElementById('report-attendance-date').value;
 
+    if (type === 'attendance' && !attendanceDate) {
+        showModal("Fecha Requerida", "Por favor, selecciona una fecha en el calendario.");
+        return;
+    }
+
+    document.getElementById('report-modal').classList.add('hidden');
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); 
+    const logoImg = new Image();
+    logoImg.src = 'img/logo-arashi-informe.png';
+
+    logoImg.onload = async function () {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const isBaja = type.startsWith('bajas');
+
+        try {
+            let apiUrl = "";
+            if (type === 'attendance') {
+                // 🥋 TIMEZONE FIX: Filtramos por el rango total del día (00:00 a 23:59)
+                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${attendanceDate}T00:00:00.000Z&filters[clase][Fecha_Hora][$lte]=${attendanceDate}T23:59:59.999Z&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
+            } else {
+                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
+            }
+
+            if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+
+            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            const json = await res.json();
+            let list = json.data || [];
+
+            // 🥋 LIMPIEZA DE DUPLICADOS EN EL INFORME
+            if (type === 'attendance') {
+                const seen = new Set();
+                list = list.filter(item => {
+                    const a = item.attributes || item;
+                    const aluId = getID(parseRelation(a.alumno));
+                    const key = `${aluId}`;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+            }
+
+            // Ordenación
+            list.sort((a, b) => {
+                const pA = a.attributes || a; const pB = b.attributes || b;
+                return (pA.apellidos || "").localeCompare(pB.apellidos || "");
+            });
+
+            let headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
+            if (!type === 'attendance') headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'CP/Ciudad'];
+
+            const body = list.map((item, index) => {
+                const a = item.attributes || item;
+                const alu = parseRelation(a.alumno);
+                const cla = parseRelation(a.clase);
+                
+                if (type === 'attendance') {
+                    let horaStr = "--:--";
+                    if(cla?.Fecha_Hora) horaStr = cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h";
+                    return [
+                        `${index + 1}`,
+                        (alu?.apellidos || '').toUpperCase(),
+                        (alu?.nombre || ''),
+                        alu?.dni || '-',
+                        getDojoName(alu?.dojo),
+                        cla?.Tipo || 'General',
+                        horaStr,
+                        (a.Estado || 'Confirmado').toUpperCase()
+                    ];
+                } else {
+                    const p = a;
+                    return [`${index + 1}`, (p.apellidos || '').toUpperCase(), p.nombre || '', p.dni || '', normalizeGrade(p.grado), parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h', p.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(p.telefono), p.email || '-', (p.direccion || '').substring(0, 20), `${p.cp || ''} ${p.poblacion || ''}`.trim()];
+                }
+            });
+
+            doc.autoTable({
+                startY: 30, margin: { top: 30, left: 10, right: 10 },
+                head: [headRow], body: body, theme: 'grid',
+                styles: { fontSize: 5, cellPadding: 0.8 },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                didDrawPage: (data) => {
+                    doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                    doc.setFontSize(14); doc.text(type === 'attendance' ? "REPORTE ASISTENCIA DIARIA" : "LISTADO ALUMNOS", pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(9); doc.text(`${dojoFilterName} | FECHA: ${attendanceDate || new Date().toLocaleDateString()}`, pageWidth / 2, 18, { align: 'center' });
+                }
+            });
+            doc.save(`Arashi_Asistencia_${attendanceDate}.pdf`);
+        } catch (e) { 
+            console.error(e);
+            showModal("Error", "Fallo al generar el PDF."); 
+        }
+    };
+}
 
 // También actualizamos closeAlumnoActions para limpiar la barra
 function closeAlumnoActions() {
@@ -460,14 +444,13 @@ document.addEventListener('click', (e) => {
 });
 
 
-/* --- EVENTO SUBMIT ACTUALIZADO CON DIAGNÓSTICO DE ERRORES --- */
+/* --- EVENTO SUBMIT: GUARDAR EN NEON + LIMPIEZA DE CACHÉ --- */
 const formAlumno = document.getElementById('form-nuevo-alumno');
 if (formAlumno) {
     formAlumno.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-id').value;
         
-        // 1. Recopilar seminarios
         const seminariosData = Array.from(document.querySelectorAll('[id^="sem-"]')).map(row => {
             const anyValue = parseInt(row.querySelector('.sem-any').value);
             return {
@@ -479,21 +462,18 @@ if (formAlumno) {
             };
         });
 
-        // 2. Limpieza de relación Dojo (Evita el error 400 si está vacío)
-        const dojoId = document.getElementById('new-dojo').value;
-
         const alumnoData = { 
-            nombre: document.getElementById('new-nombre').value.trim(), 
-            apellidos: document.getElementById('new-apellidos').value.trim(), 
-            dni: document.getElementById('new-dni').value.trim().toUpperCase(), 
+            nombre: document.getElementById('new-nombre').value, 
+            apellidos: document.getElementById('new-apellidos').value, 
+            dni: document.getElementById('new-dni').value, 
             fecha_nacimiento: document.getElementById('new-nacimiento').value || null, 
             fecha_inicio: document.getElementById('new-alta').value || null, 
-            email: document.getElementById('new-email').value.trim() || null, 
-            telefono: document.getElementById('new-telefono').value.trim(), 
-            direccion: document.getElementById('new-direccion').value.trim(), 
-            poblacion: document.getElementById('new-poblacion').value.trim(), 
-            cp: document.getElementById('new-cp').value.trim(), 
-            dojo: dojoId === "" ? null : dojoId, // <-- FIX: Si no hay dojo, enviamos null, no ""
+            email: document.getElementById('new-email').value, 
+            telefono: document.getElementById('new-telefono').value, 
+            direccion: document.getElementById('new-direccion').value, 
+            poblacion: document.getElementById('new-poblacion').value, 
+            cp: document.getElementById('new-cp').value, 
+            dojo: document.getElementById('new-dojo').value, 
             grupo: document.getElementById('new-grupo').value, 
             grado: document.getElementById('new-grado').value, 
             seguro_pagado: document.getElementById('new-seguro').checked,
@@ -506,7 +486,6 @@ if (formAlumno) {
         try {
             const method = id ? 'PUT' : 'POST'; 
             const url = id ? `${API_URL}/api/alumnos/${id}` : `${API_URL}/api/alumnos`;
-            
             const res = await fetch(url, { 
                 method: method, 
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, 
@@ -514,31 +493,21 @@ if (formAlumno) {
             });
             
             if (res.ok) {
+                // --- 🥋 EL CAMBIO QUIRÚRGICO AQUÍ ---
+                // Al guardar, borramos la caché local de activos y bajas
+                // Esto obliga a loadAlumnos() a pedir los datos nuevos a Neon
                 localStorage.removeItem('cache_alumnos_activos');
                 localStorage.removeItem('cache_alumnos_bajas');
+                console.log("♻️ Memoria local purificada. Sincronizando datos frescos...");
+
                 showModal("¡OSS!", id ? "Datos actualizados." : "Alumno registrado.", () => { 
                     resetForm(); 
-                    showSection('alumnos'); 
+                    showSection('alumnos'); // Al entrar aquí, loadAlumnos() hará fetch real
                 });
             } else { 
-                // --- 🥋 DIAGNÓSTICO PROFUNDO DE STRAPI ---
-                const errorData = await res.json();
-                console.error("❌ Detalles del error de Strapi:", errorData);
-                
-                let mensajeError = "Revisa los datos introducidos.";
-                
-                // Si Strapi nos da detalles (ej: DNI duplicado o campo obligatorio)
-                if (errorData.error && errorData.error.details && errorData.error.details.errors) {
-                    const detalles = errorData.error.details.errors.map(err => `${err.path.join('.')}: ${err.message}`).join("\n");
-                    mensajeError = detalles;
-                } else if (errorData.error && errorData.error.message) {
-                    mensajeError = errorData.error.message;
-                }
-
-                showModal("Fallo de Validación", mensajeError); 
+                showModal("Error", "Fallo al guardar. Revisa los permisos de Strapi."); 
             }
         } catch (error) { 
-            console.error("Fallo de conexión:", error);
             showModal("Error", "Fallo de conexión con Render."); 
         }
     });
@@ -747,18 +716,20 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     }
 }
 
-/* --- GENERADOR DE INFORMES (VERSION 11.5 - FIX FECHA KEIKO DESTACADA) --- */
+/* --- GENERADOR DE INFORMES (VERSION 10.5 - FIX ASISTENCIA VACÍA) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
-    const dojoFilterId = dojoSelect ? dojoSelect.value : "";
+    const dojoFilterId = dojoSelect.value;
+    const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Fecha Requerida", "Selecciona una fecha en el calendario para el informe de asistencia.");
+        showModal("Aviso", "Selecciona una fecha en el calendario para el informe de asistencia.");
         return;
     }
 
     document.getElementById('report-modal').classList.add('hidden');
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4'); 
     const logoImg = new Image();
@@ -766,102 +737,78 @@ async function generateReport(type) {
 
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
-        const currentDate = new Date().toLocaleDateString('es-ES');
-        // Formateamos la fecha del Keiko de YYYY-MM-DD a DD/MM/YYYY
-        const classDateFormatted = attendanceDate ? formatDateDisplay(attendanceDate) : "";
+        const isBaja = type.startsWith('bajas');
 
         try {
-            const isBaja = type.startsWith('bajas');
-            let endpoint = "";
-            
+            let apiUrl = "";
             if (type === 'attendance') {
+                // 🥋 ESTRATEGIA DE RANGO: Buscamos todo el día de Neon (00:00:00 a 23:59:59)
                 const start = `${attendanceDate}T00:00:00.000Z`;
                 const end = `${attendanceDate}T23:59:59.999Z`;
-                endpoint = `/api/asistencias?filters[clase][Fecha_Hora][$gte]=${start}&filters[clase][Fecha_Hora][$lte]=${end}&populate[alumno][populate][dojo]=true&populate[clase]=true&pagination[limit]=500`;
+                
+                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${start}&filters[clase][Fecha_Hora][$lte]=${end}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
             } else {
-                endpoint = `/api/alumnos?filters[activo][$eq]=${!isBaja}&populate=dojo&pagination[limit]=1000`;
+                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
             }
 
-            if (dojoFilterId) {
-                const filterPath = (type === 'attendance') ? 'filters[alumno][dojo]' : 'filters[dojo]';
-                endpoint += `&${filterPath}[documentId][$eq]=${dojoFilterId}`;
-            }
+            if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
 
-            const res = await fetch(`${API_URL}${endpoint}`, { 
-                headers: { 'Authorization': `Bearer ${jwtToken}` } 
-            });
+            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
             const json = await res.json();
             let list = json.data || [];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "No hay registros para este día o Dojo.");
+                showModal("Sin Datos", "No se han encontrado registros para los criterios seleccionados.");
                 return;
             }
 
-            // Mapeo de columnas
-            let headRow = [];
-            let body = [];
+            // Ordenación por Apellidos
+            list.sort((a, b) => {
+                const itemA = a.attributes || a;
+                const itemB = b.attributes || b;
+                const nomA = (type === 'attendance' ? itemA.alumno?.data?.attributes?.apellidos : itemA.apellidos) || "";
+                const nomB = (type === 'attendance' ? itemB.alumno?.data?.attributes?.apellidos : itemB.apellidos) || "";
+                return nomA.localeCompare(nomB);
+            });
 
-            if (type === 'attendance') {
-                headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora Entrada', 'Estado', 'Firma'];
-                body = list.map((item, index) => {
-                    const a = item.attributes || item;
+            let headRow = (type === 'attendance') 
+                ? ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora', 'Estado']
+                : ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'CP/Ciudad'];
+
+            const body = list.map((item, index) => {
+                const a = item.attributes || item;
+                if (type === 'attendance') {
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    const horaStr = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--";
                     return [
                         `${index + 1}`,
                         (alu?.apellidos || '').toUpperCase(),
                         (alu?.nombre || ''),
                         getDojoName(alu?.dojo),
-                        cla?.Tipo || 'Keiko',
-                        horaStr,
-                        (a.Estado || 'Confirmado').replace('_', ' ').toUpperCase(),
-                        ''
+                        cla?.Tipo || 'Keiko General',
+                        cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
+                        (a.Estado || 'Confirmado').toUpperCase()
                     ];
-                });
-            } else {
-                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Edad', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'Población', 'Dojo'];
-                body = list.map((item, index) => {
-                    const a = item.attributes || item;
-                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', a.dni || '', calculateAge(a.fecha_nacimiento), normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1), a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), a.email || '-', (a.poblacion || '').toUpperCase(), getDojoName(a.dojo)];
-                });
-            }
-
-            doc.autoTable({
-                startY: 30,
-                head: [headRow], 
-                body: body, 
-                theme: 'grid',
-                styles: { fontSize: 6, cellPadding: 1 },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
-                didDrawPage: (data) => {
-                    doc.addImage(logoImg, 'PNG', 10, 5, 25, 18);
-                    
-                    doc.setFontSize(14); doc.setFont("helvetica", "bold");
-                    doc.text("ARASHI GROUP AIKIDO - INFORME OFICIAL", pageWidth / 2, 12, { align: 'center' });
-                    
-                    doc.setFontSize(10); doc.setFont("helvetica", "normal");
-                    
-                    // --- 🥋 LÓGICA DE FECHA DINÁMICA ---
-                    if (type === 'attendance') {
-                        // Si es asistencia, mostramos la fecha del Keiko en negrita y rojo
-                        doc.setTextColor(190, 0, 0); doc.setFont("helvetica", "bold");
-                        doc.text(`FECHA KEIKO: ${classDateFormatted}`, pageWidth / 2, 18, { align: 'center' });
-                        doc.setTextColor(100); doc.setFont("helvetica", "normal");
-                        doc.setFontSize(8);
-                        doc.text(`TIPO: ASISTENCIA | EMISIÓN: ${currentDate}`, pageWidth / 2, 23, { align: 'center' });
-                    } else {
-                        // Para el resto de informes (listados)
-                        doc.text(`TIPO: ${type.toUpperCase()} | EMISIÓN: ${currentDate}`, pageWidth / 2, 18, { align: 'center' });
-                    }
+                } else {
+                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', a.dni || '', normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), a.email || '-', (a.direccion || '').substring(0, 20), `${a.cp || ''} ${a.poblacion || ''}`.trim()];
                 }
             });
 
-            doc.save(`Arashi_${type}_${attendanceDate || 'Report'}.pdf`);
+            doc.autoTable({
+                startY: 30, margin: { top: 30, left: 10, right: 10 },
+                head: [headRow], body: body, theme: 'grid',
+                styles: { fontSize: 5, cellPadding: 1 },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
+                didDrawPage: (data) => {
+                    doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                    doc.setFontSize(14); doc.text(type === 'attendance' ? "ASISTENCIA DIARIA DOJO" : "LISTADO ALUMNOS", pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(9); doc.text(`FECHA: ${attendanceDate || new Date().toLocaleDateString()}`, pageWidth / 2, 18, { align: 'center' });
+                }
+            });
+            doc.save(`Arashi_Informe_${type}.pdf`);
         } catch (e) { 
-            console.error(e);
-            showModal("Error", "Error al generar PDF."); 
+            console.error("🔥 Error PDF:", e);
+            showModal("Error", "Fallo al generar el informe."); 
         }
     };
 }
@@ -1294,12 +1241,4 @@ async function sortTable(colName) {
     // 3. Pintar la tabla con los datos ya ordenados
     const tbody = document.getElementById(actives ? 'lista-alumnos-body' : 'lista-bajas-body');
     renderTableAlumnos(data, tbody, actives);
-}
-
-function normalize(g) {
-    if (!g) return "";
-    return g.toString().toUpperCase()
-        .replace(/[º°Oª]/g, '') // Quita el símbolo de grado
-        .replace(/\s+/g, '')    // Quita espacios
-        .trim();
 }
