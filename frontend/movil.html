@@ -1511,7 +1511,7 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         /* --- CORE INIT --- */
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 10.0 - ZERO FLICKER) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 11.0 - INTEGRIDAD TOTAL) --- */
 async function initApp() {
     console.log("🚀 [INIT] Iniciando sincronización secuencial Arashi...");
     const token = localStorage.getItem('aikido_jwt');
@@ -1531,22 +1531,23 @@ async function initApp() {
     }
 
     try {
-        // PASO 1: Carga y Mapeo de Requisitos (Bloqueante)
+        // PASO 1: Carga y Mapeo de Requisitos (BLOQUEANTE)
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
+        
+        // Mapeo robusto para Strapi v5 (Soporta campos en raíz o attributes)
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
             return {
-                // Mapeo robusto Strapi v5: raíz o attributes
                 NORM: normalize(attr.GRADO || attr.grado || ""),
                 HORAS: parseFloat(attr.HORAS_NECESARIAS || attr.Horas_necesarias || attr.horas_necesarias || 0)
             };
         });
-        console.log("📊 Requisitos de grado mapeados:", requisitosGradoGlobal);
+        console.log("📊 [SISTEMA] Requisitos de grado listos en memoria.");
 
-        // PASO 2: Carga de perfil (Ya tiene acceso a los requisitos mapeados)
+        // PASO 2: Carga de perfil del alumno (Ahora ya tiene los requisitos mapeados)
         await refreshStudentData();
 
-        // PASO 3: Carga de Keiko
+        // PASO 3: Carga de Keiko actual
         await checkTodayClass();
 
         showView('dashboard');
@@ -1558,7 +1559,6 @@ async function initApp() {
         setTimeout(() => {
             document.body.classList.add('app-ready');
             document.documentElement.classList.add('app-loaded');
-            console.log("✨ [INIT] Despliegue completado.");
         }, 150);
 
     } catch (error) {
@@ -1662,7 +1662,10 @@ async function refreshStudentData() {
             const pct = Math.min((horas / target) * 100, 100);
             bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
         }
+        document.getElementById('stat-hours').innerText = horas.toFixed(1);
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
+
+
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
