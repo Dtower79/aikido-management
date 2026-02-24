@@ -1295,3 +1295,11 @@ async function sortTable(colName) {
     const tbody = document.getElementById(actives ? 'lista-alumnos-body' : 'lista-bajas-body');
     renderTableAlumnos(data, tbody, actives);
 }
+
+function normalize(g) {
+    if (!g) return "";
+    return g.toString().toUpperCase()
+        .replace(/[º°Oª]/g, '') // Elimina símbolos de grado
+        .replace(/\s+/g, '')    // Elimina espacios
+        .trim();
+}
