@@ -1299,7 +1299,7 @@ async function sortTable(colName) {
 function normalize(g) {
     if (!g) return "";
     return g.toString().toUpperCase()
-        .replace(/[º°Oª]/g, '') // Elimina símbolos de grado
-        .replace(/\s+/g, '')    // Elimina espacios
+        .replace(/[º°Oª]/g, '') // Quita el símbolo de grado
+        .replace(/\s+/g, '')    // Quita espacios
         .trim();
 }

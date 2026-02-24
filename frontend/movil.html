@@ -1511,7 +1511,7 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         /* --- CORE INIT --- */
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 10.1 - FIX REQUISITOS) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 10.2 - FIX REQUISITOS) --- */
 async function initApp() {
     console.log("🚀 [INIT] Iniciando sincronización total...");
     const token = localStorage.getItem('aikido_jwt');
@@ -1531,19 +1531,22 @@ async function initApp() {
     }
 
     try {
-        // 1. CARGAMOS Y PROCESAMOS REQUISITOS
+        // 1. CARGAMOS REQUISITOS DE STRAPI
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         
-        // Mapeamos los datos de Strapi a nuestra variable global para que refreshStudentData pueda usarlos
+        // Procesamos la tabla para que refreshStudentData pueda buscar por nombre de grado
         requisitosGradoGlobal = (reqData.data || []).map(item => {
             const a = item.attributes || item;
             return {
-                NORM: normalize(a.grado || a.Grado), // Normalizamos para comparar (4º DAN -> 4DAN)
+                // Usamos normalize para que "5º DAN" se convierta en "5DAN" y no falle la comparación
+                NORM: normalize(a.grado || a.Grado), 
                 HORAS: parseFloat(a.horas_necesarias || a.Horas_necesarias || 0)
             };
         });
 
-        // 2. REFRESCAMOS DATOS DEL ALUMNO (Ya con requisitos cargados)
+        console.log("✅ Requisitos de horas sincronizados:", requisitosGradoGlobal);
+
+        // 2. REFRESCAMOS DATOS DEL ALUMNO
         await refreshStudentData();
 
         await checkTodayClass();
@@ -1557,7 +1560,6 @@ async function initApp() {
         setTimeout(() => {
             document.body.classList.add('app-ready');
             document.documentElement.classList.add('app-loaded');
-            console.log("✨ [INIT] Dojo listo.");
         }, 150);
 
     } catch (error) {
@@ -1583,22 +1585,24 @@ async function refreshStudentData() {
         return;
     }
 
-    // --- LÓGICA DE PROGRESO DE GRADO ---
+    // 1. HORAS ACTUALES DEL ALUMNO
     const horasActuales = parseFloat(p.horas_acumuladas || 0);
     document.getElementById('stat-hours').innerText = horasActuales.toFixed(1);
 
-    // Definir Meta: Usar grado_objetivo o en su defecto el grado actual
-    let meta = p.grado_objetivo || p.grado || "S/G";
+    // 2. DETERMINAR LA META (Grado al que quiere llegar)
+    // Importante: En Strapi, el campo 'grado_objetivo' debe ser "5º DAN" para que busque las 500h.
+    let meta = p.grado_objetivo || p.grado || "S/G"; 
     const normMeta = normalize(meta);
 
-    // BUSCAMOS EN LA LISTA PROCESADA EN INITAPP
+    // 3. BUSCAR HORAS NECESARIAS PARA ESA META EN LA TABLA DE STRAPI
     const req = requisitosGradoGlobal.find(r => r.NORM === normMeta);
     
-    // Si no existe en Strapi, usamos 100 como fallback para no mostrar errores
+    // Si lo encuentra usa el valor de Strapi (500 para 5º DAN), si no, 100 por defecto.
     let targetHoras = req ? req.HORAS : 100;
 
-    console.log(`📊 Comparando: ${normMeta} | Encontrado: ${req ? req.HORAS : 'NO'}`);
+    console.log(`🎯 Alumno: ${p.nombre} | Meta: ${meta} | Horas Requeridas: ${targetHoras}`);
 
+    // 4. ACTUALIZAR UI (Círculo de progreso y etiquetas)
     const bar = document.getElementById('progress-bar');
     if (bar) {
         const pct = Math.min((horasActuales / targetHoras) * 100, 100);
