@@ -1572,53 +1572,73 @@ async function initApp() {
     }
 }
   
-/* --- REFRESH DATA (VERSION 12.0 - LÓGICA DE ESCALAFÓN) --- */
+/* --- REFRESH DATA (VERSION 13.0 - BÚSQUEDA INTELIGENTE POR DNI) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
     
+    let dataAlu = null;
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
-    let dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 12);
 
-    alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
+    // 1. INTENTO A: Por DocumentID guardado
+    if (savedDocId && savedDocId !== "null") {
+        dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 1);
+    }
+
+    // 2. INTENTO B: Si falla el A, buscamos por DNI (Username)
+    if (!dataAlu || !dataAlu.data) {
+        console.log("🔍 Buscando ficha por DNI:", user.username);
+        const search = await fetchSmart(`/alumnos?filters[dni][$eq]=${user.username}&populate=*`, null, 0);
+        if (search && search.data && search.data.length > 0) {
+            dataAlu = { data: search.data[0] };
+            localStorage.setItem('aikido_student_doc_id', getID(search.data[0]));
+        }
+    }
+
+    alumnoGlobal = (dataAlu && dataAlu.data) ? dataAlu.data : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     
     if (p && p.dojo) dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
 
-    // UI Cabecera
-    const displayName = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
-    document.getElementById('user-display-name').innerText = displayName;
+    // --- RENDERIZADO DE CABECERA ---
+    // Si tenemos ficha, usamos tu nombre real. Si no, el del usuario.
+    const nombreReal = p ? p.nombre : (user.nombre || "SENSEI");
+    const apellidosReal = p ? p.apellidos : (user.apellidos || "");
     
+    document.getElementById('user-display-name').innerText = nombreReal.toUpperCase();
+    
+    // Iniciales (Para que no salga ??)
+    const iniciales = (nombreReal[0] + (apellidosReal[0] || "")).toUpperCase();
+    document.getElementById('user-initials').innerText = iniciales;
+
     const circle = document.getElementById('student-progress-circle');
     const nextGradeLabel = document.getElementById('next-grade-display');
 
+    // --- LÓGICA DE VISUALIZACIÓN ---
+    // Si eres el Sensei Francesc (is_sensei: true), ocultamos el progreso
     if (user.is_sensei === true) {
         document.body.classList.add('is-sensei-mode'); 
         if (circle) circle.classList.add('hidden');
         if (nextGradeLabel) nextGradeLabel.classList.add('hidden');
     } else if (p) {
+        // Eres Carlos o cualquier alumno: mostramos el progreso
         document.body.classList.remove('is-sensei-mode');
         if (circle) circle.classList.remove('hidden');
+        if (nextGradeLabel) nextGradeLabel.classList.remove('hidden');
         
         const horasActuales = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horasActuales.toFixed(1);
 
-        // --- 🥋 LÓGICA DE META ARASHI ---
-        let meta = p.grado_objetivo; // Intentamos leer meta manual de Strapi
-        
+        // Meta Arashi
+        let meta = p.grado_objetivo; 
         if (!meta) {
-            // Si no hay meta, Carlos (4º DAN) debe ir al 5º DAN.
             const gradoActual = (p.grado || "S/G").toUpperCase();
-            // Buscamos la posición actual en el orden oficial
             const idx = GRADOS_ORDER.indexOf(gradoActual);
-            // La meta es el siguiente en la lista (o el último si ya llegó al tope)
             meta = GRADOS_ORDER[idx + 1] || gradoActual;
         }
 
         const normMeta = normalize(meta);
         const req = requisitosGradoGlobal.find(r => r.NORM === normMeta);
-        
-        // Buscamos las horas (debería encontrar 500 para el 5º DAN)
         let target = req ? req.HORAS : 60;
         
         const bar = document.getElementById('progress-bar');
@@ -1628,12 +1648,56 @@ async function refreshStudentData() {
         }
 
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-        if (nextGradeLabel) {
-            nextGradeLabel.innerText = `CAMINO AL ${meta.toUpperCase()}`;
-            nextGradeLabel.classList.remove('hidden');
-        }
+        nextGradeLabel.innerText = `CAMINO AL ${meta.toUpperCase()}`;
     }
     return alumnoGlobal;
+}
+
+/* --- INIT APP REFORZADO --- */
+async function initApp() {
+    const token = localStorage.getItem('aikido_jwt');
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const mainNav = document.getElementById('main-nav');
+    
+    document.body.classList.remove('app-ready');
+    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+
+    if (!token || !user) {
+        showView('login');
+        document.body.classList.add('app-ready');
+        return;
+    }
+
+    try {
+        // 1. Requisitos primero (500h del 5º Dan, etc)
+        const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
+        requisitosGradoGlobal = (reqData.data || []).map(item => {
+            const a = item.attributes || item;
+            return {
+                NORM: normalize(a.grado || a.Grado),
+                HORAS: parseFloat(a.horas_necesarias || a.Horas_necesarias || 0)
+            };
+        });
+
+        // 2. Cargamos datos (Búsqueda por ID o DNI integrada)
+        await refreshStudentData();
+        await checkTodayClass();
+
+        showView('dashboard');
+        if (mainNav) {
+            mainNav.classList.remove('hidden');
+            mainNav.style.display = 'grid';
+        }
+
+        setTimeout(() => {
+            document.body.classList.add('app-ready');
+            document.documentElement.classList.add('app-loaded');
+        }, 150);
+
+    } catch (error) {
+        console.error("Fallo al iniciar:", error);
+        document.body.classList.add('app-ready');
+    }
 }
 
  
