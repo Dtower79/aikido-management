@@ -1524,56 +1524,53 @@ async function initApp() {
     console.log("🚀 [INIT] Iniciando sincronización secuencial Arashi...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
-    const mainNav = document.getElementById('main-nav');
     
+    // 1. Limpiamos visualmente
     document.body.classList.remove('app-ready');
-    document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
-            .forEach(v => v.classList.add('hidden'));
+    document.querySelectorAll('.section-view').forEach(v => v.classList.add('hidden'));
 
     if (!token || !user) {
-        if (mainNav) mainNav.classList.add('hidden');
         document.getElementById('login-view')?.classList.remove('hidden');
         document.body.classList.add('app-ready');
-        document.documentElement.classList.add('app-loaded');
         return;
     }
 
     try {
-        // PASO 1: Carga y Mapeo de Requisitos (BLOQUEANTE - SIN PROMISE.ALL)
+        // 🥋 OPERACIÓN DE CHOQUE: Forzamos refresco de requisitos para aplicar el nuevo mapeo
+        localStorage.removeItem('cache_requisitos'); 
+
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         
+        // Mapeo Ultra-Robusto para Strapi v5
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
-            // Mapeo robusto: busca el campo de horas en cualquier variante de nombre
-            const gradoRaw = attr.GRADO || attr.grado || attr.Grado || "";
-            const horasRaw = attr.HORAS_NECESARIAS || attr.Horas_necesarias || attr.horas_necesarias || attr.Horas_Necesarias || 0;
-            
-            return {
-                NORM: normalize(gradoRaw),
-                HORAS: parseFloat(horasRaw)
-            };
+            // Capturamos el grado
+            const g = attr.GRADO || attr.grado || attr.Grado || "";
+            // Capturamos las horas (buscamos cualquier campo que empiece por 'hora')
+            let h = 0;
+            for (let key in attr) {
+                if (key.toLowerCase().startsWith('hora')) {
+                    h = parseFloat(attr[key]);
+                    if (h > 0) break;
+                }
+            }
+            return { NORM: normalize(g), HORAS: h };
         });
-        console.log("📊 [SISTEMA] Requisitos de grado listos en memoria.");
+        
+        console.log("📊 [TABLA NEON] Requisitos cargados:", requisitosGradoGlobal);
 
-        // PASO 2: Carga de perfil (Ahora garantizamos que los requisitos existen)
+        // 2. Cargamos alumno (ahora ya tiene la tabla de horas lista)
         await refreshStudentData();
-
-        // PASO 3: Carga de Keiko
         await checkTodayClass();
 
         showView('dashboard');
-        if (mainNav) {
-            mainNav.classList.remove('hidden');
-            mainNav.style.display = 'grid';
-        }
+        document.getElementById('main-nav')?.classList.remove('hidden');
+        document.getElementById('main-nav').style.display = 'grid';
 
-        setTimeout(() => {
-            document.body.classList.add('app-ready');
-            document.documentElement.classList.add('app-loaded');
-        }, 150);
+        setTimeout(() => document.body.classList.add('app-ready'), 150);
 
     } catch (error) {
-        console.error("🔥 [INIT] Error en el despliegue:", error);
+        console.error("🔥 Error en despliegue:", error);
         document.body.classList.add('app-ready');
     }
 }
@@ -1583,109 +1580,69 @@ async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
     
+    const token = localStorage.getItem('aikido_jwt');
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // Obtención de datos del alumno (Escudo de Identidad)
+    // Obtención de datos
     if (savedDocId && savedDocId !== "null") {
         dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
     } else {
-        let endpoint = `/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+        const endpoint = `/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
         dataAlu = await fetchSmart(endpoint, null, 0); 
-        if (!dataAlu?.data || (Array.isArray(dataAlu.data) && dataAlu.data.length === 0)) {
-            endpoint = `/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
-            dataAlu = await fetchSmart(endpoint, null, 0);
-        }
         if (dataAlu?.data?.length) {
-            const foundId = dataAlu.data[0].documentId || dataAlu.data[0].id;
-            localStorage.setItem('aikido_student_doc_id', foundId);
+            localStorage.setItem('aikido_student_doc_id', dataAlu.data[0].documentId || dataAlu.data[0].id);
         }
     }
-
-    const circle = document.getElementById('student-progress-circle');
-    const nextGrade = document.getElementById('next-grade-display');
-    const zenCard = document.getElementById('zen-card');
-    const initialsCircle = document.getElementById('user-initials');
 
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-    
-    if (p && p.dojo) {
-        dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
-    }
+    if (p?.dojo) dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
 
-    // Cabecera e Iniciales
-    const displayName = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
-    const initials = ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
-    
-    document.getElementById('user-display-name').innerText = displayName;
-    
+    // 1. Iniciales y Vínculo de Management
+    const initialsCircle = document.getElementById('user-initials');
     if (initialsCircle) {
-        initialsCircle.innerText = initials;
-        
-        // --- 🥋 RESTAURACIÓN QUIRÚRGICA: VÍNCULO DE GESTIÓN ---
-        const esSenseiRango = (user.is_sensei === true || user.is_sensei === "true");
-        const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
-
-        if (esSenseiRango || esInstructorFicha) {
+        initialsCircle.innerText = ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
+        const esGestor = (user.is_sensei === true || user.is_sensei === "true" || (p && (p.es_instructor === true || p.es_instructor === "true")));
+        if (esGestor) {
             initialsCircle.style.cursor = 'pointer';
-            initialsCircle.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.6)'; // Brillo sutil para indicar click
-            initialsCircle.title = "Acceder a Gestión Arashi";
-            initialsCircle.onclick = () => { 
-                console.log("🛠️ Accediendo al Panel de Management...");
-                window.location.href = 'https://arashi-group.netlify.app/'; 
-            };
-        } else {
-            initialsCircle.style.cursor = 'default';
-            initialsCircle.style.boxShadow = 'none';
-            initialsCircle.onclick = null;
+            initialsCircle.onclick = () => { window.location.href = 'https://arashi-group.netlify.app/'; };
         }
     }
+    document.getElementById('user-display-name').innerText = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
 
-    // Lógica de visualización (Sensei vs Alumno)
-    const esSenseiModo = (user.is_sensei === true || user.is_sensei === "true");
-    
-    if (esSenseiModo) {
-        document.body.classList.add('is-sensei-mode'); 
+    // 2. Círculo de Progreso
+    const circle = document.getElementById('student-progress-circle');
+    const nextGrade = document.getElementById('next-grade-display');
+
+    if (user.is_sensei === true || user.is_sensei === "true") {
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
-        if (zenCard) zenCard.remove();
-
-        let dojoNom = p?.dojo ? parseRelation(p.dojo).nombre : "ARASHI GROUP";
-        const zenHTML = `
-            <div id="zen-card" class="zen-master-card">
-                <img src="img/logo_sin_fondo.png" class="zen-logo">
-                <h2 class="zen-title">SENSEI</h2>
-                <p class="zen-subtitle">${dojoNom.toUpperCase()}</p>
-            </div>`;
-        if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
-
     } else if (p) {
-        document.body.classList.remove('is-sensei-mode');
-        if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
-        
-        const horas = parseFloat(p.horas_acumuladas || 0);
-        document.getElementById('stat-hours').innerText = horas.toFixed(1);
+        const horasActuales = parseFloat(p.horas_acumuladas || 0);
+        document.getElementById('stat-hours').innerText = horasActuales.toFixed(1);
 
-        // Lógica de Meta y Grados
+        // Calcular Grado Objetivo (Meta)
         let meta = p.grado_objetivo;
         if (!meta) {
-            const gradoActual = (p.grado || "S/G").toUpperCase();
-            const idx = GRADOS_ORDER.indexOf(gradoActual);
+            const miGrado = (p.grado || "S/G").toUpperCase();
+            const idx = GRADOS_ORDER.indexOf(miGrado);
             meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "5º KYU";
         }
 
+        // 🥋 BUSQUEDA QUIRÚRGICA EN LA TABLA NEON
         const normMeta = normalize(meta);
-        const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;         
+        const registro = requisitosGradoGlobal.find(r => r.NORM === normMeta);
         
-        let target = (req && req.HORAS > 0) ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
+        // Si no está en Neon, usamos el fallback estático, y si no, 60.
+        let target = (registro && registro.HORAS > 0) ? registro.HORAS : (GRADOS_FALLBACK[meta] || 60);
         
-        console.log(`🎯 [META] ${meta} -> ${target}h`);
+        console.log(`🎯 [PROGRESS] Meta: ${meta} (${normMeta}) | Target Neon: ${target}h`);
 
         const bar = document.getElementById('progress-bar');
         if (bar) {
-            const pct = Math.min((horas / target) * 100, 100);
+            const pct = Math.min((horasActuales / target) * 100, 100);
             bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
         }
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
@@ -1695,18 +1652,13 @@ async function refreshStudentData() {
         }
     }
 
-    // Configuración de la Nav Bar (Sensei / Alumno)
+    // Configuración Nav
     const navSensei = document.getElementById('nav-sensei');
     if (navSensei) {
-        if (esSenseiModo || (p && (p.es_instructor === true || p.es_instructor === "true"))) {
-            navSensei.style.display = 'flex';
-            navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
-            navSensei.onclick = () => showView('sensei', navSensei);
-        } else {
-            navSensei.style.display = 'flex';
-            navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-            navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
-        }
+        const esSensei = (user.is_sensei === true || user.is_sensei === "true" || (p && (p.es_instructor === true || p.es_instructor === "true")));
+        navSensei.style.display = 'flex';
+        navSensei.innerHTML = esSensei ? '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>' : '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+        navSensei.onclick = esSensei ? () => showView('sensei', navSensei) : () => window.open('https://www.meetontatami.com/', '_blank');
     }
     
     return alumnoGlobal;
