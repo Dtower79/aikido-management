@@ -1363,7 +1363,7 @@ body.is-sensei-mode #confirm-btn {
 
     <script>
         const API_URL = "https://arashi-api.onrender.com/api";
-        console.log("🥋 Versión actual del script: 20 de Febrero - FIX SELECTOR");
+        console.log("🥋 Versión actual del script: 24 de Febrero - FIX SELECTOR");
         let isProcessingQR = false; // El escudo que evita el bucle
 
         // LOG DE AUDITORÍA ARASHI
@@ -1507,7 +1507,15 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
         const GRADOS_FALLBACK = { "5º KYU": 30, "4º KYU": 40, "3º KYU": 50, "2º KYU": 50, "1º KYU": 60, "1º DAN": 70 };
-        function normalize(g) { return (!g) ? "" : g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, ''); }
+        function normalize(g) { 
+            if (!g) return "";
+            return g.toString()
+                .toUpperCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quita acentos
+                .replace(/[º°Oª]/g, '')                          // Quita símbolos de grado
+                .replace(/\s+/g, '')                             // Quita todos los espacios
+                .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
+        }
 
         /* --- CORE INIT --- */
 
@@ -1531,23 +1539,26 @@ async function initApp() {
     }
 
     try {
-        // PASO 1: Carga y Mapeo de Requisitos (BLOQUEANTE)
+        // PASO 1: Carga y Mapeo de Requisitos (BLOQUEANTE - SIN PROMISE.ALL)
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         
-        // Mapeo robusto para Strapi v5 (Soporta campos en raíz o attributes)
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
+            // Mapeo robusto: busca el campo de horas en cualquier variante de nombre
+            const gradoRaw = attr.GRADO || attr.grado || attr.Grado || "";
+            const horasRaw = attr.HORAS_NECESARIAS || attr.Horas_necesarias || attr.horas_necesarias || attr.Horas_Necesarias || 0;
+            
             return {
-                NORM: normalize(attr.GRADO || attr.grado || ""),
-                HORAS: parseFloat(attr.HORAS_NECESARIAS || attr.Horas_necesarias || attr.horas_necesarias || 0)
+                NORM: normalize(gradoRaw),
+                HORAS: parseFloat(horasRaw)
             };
         });
         console.log("📊 [SISTEMA] Requisitos de grado listos en memoria.");
 
-        // PASO 2: Carga de perfil del alumno (Ahora ya tiene los requisitos mapeados)
+        // PASO 2: Carga de perfil (Ahora garantizamos que los requisitos existen)
         await refreshStudentData();
 
-        // PASO 3: Carga de Keiko actual
+        // PASO 3: Carga de Keiko
         await checkTodayClass();
 
         showView('dashboard');
@@ -1575,7 +1586,7 @@ async function refreshStudentData() {
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // Escudo de Identidad v5
+    // Obtención de datos del alumno (Escudo de Identidad)
     if (savedDocId && savedDocId !== "null") {
         dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
     } else {
@@ -1612,13 +1623,6 @@ async function refreshStudentData() {
     const esSenseiRango = (user.is_sensei === true);
     const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
 
-    if (initialsCircle) {
-        if (esSenseiRango || esInstructorFicha) {
-            initialsCircle.style.cursor = 'pointer';
-            initialsCircle.onclick = () => { window.location.href = 'https://arashi-group.netlify.app/'; };
-        }
-    }
-
     if (esSenseiRango) {
         document.body.classList.add('is-sensei-mode'); 
         if (circle) circle.classList.add('hidden');
@@ -1642,7 +1646,7 @@ async function refreshStudentData() {
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        // Lógica de Meta
+        // Lógica de cálculo de Meta
         let meta = p.grado_objetivo;
         if (!meta) {
             const gradoActual = (p.grado || "S/G").toUpperCase();
@@ -1650,22 +1654,21 @@ async function refreshStudentData() {
             meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "5º KYU";
         }
 
-        // Búsqueda quirúrgica en requisitos globales
+        // Búsqueda del denominador en la tabla de requisitos cargada
         const normMeta = normalize(meta);
         const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;         
         
-        // Prioridad: 1. DB Neon, 2. Fallback Arashi, 3. 60h por defecto
+        // Prioridad: 1. DB (500h) | 2. Fallback Arashi | 3. 60h por defecto
         let target = (req && req.HORAS > 0) ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
         
+        console.log(`🎯 [DEPURACIÓN] Meta: ${meta} (${normMeta}). Horas encontradas: ${target}`);
+
         const bar = document.getElementById('progress-bar');
         if (bar) {
             const pct = Math.min((horas / target) * 100, 100);
             bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
         }
-        document.getElementById('stat-hours').innerText = horas.toFixed(1);
         document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-
-
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
