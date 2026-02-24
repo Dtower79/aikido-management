@@ -1614,16 +1614,38 @@ async function refreshStudentData() {
         dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
     }
 
+    // Cabecera e Iniciales
     const displayName = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
     const initials = ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
     
     document.getElementById('user-display-name').innerText = displayName;
-    if (initialsCircle) initialsCircle.innerText = initials;
+    
+    if (initialsCircle) {
+        initialsCircle.innerText = initials;
+        
+        // --- 🥋 RESTAURACIÓN QUIRÚRGICA: VÍNCULO DE GESTIÓN ---
+        const esSenseiRango = (user.is_sensei === true || user.is_sensei === "true");
+        const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
 
-    const esSenseiRango = (user.is_sensei === true);
-    const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
+        if (esSenseiRango || esInstructorFicha) {
+            initialsCircle.style.cursor = 'pointer';
+            initialsCircle.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.6)'; // Brillo sutil para indicar click
+            initialsCircle.title = "Acceder a Gestión Arashi";
+            initialsCircle.onclick = () => { 
+                console.log("🛠️ Accediendo al Panel de Management...");
+                window.location.href = 'https://arashi-group.netlify.app/'; 
+            };
+        } else {
+            initialsCircle.style.cursor = 'default';
+            initialsCircle.style.boxShadow = 'none';
+            initialsCircle.onclick = null;
+        }
+    }
 
-    if (esSenseiRango) {
+    // Lógica de visualización (Sensei vs Alumno)
+    const esSenseiModo = (user.is_sensei === true || user.is_sensei === "true");
+    
+    if (esSenseiModo) {
         document.body.classList.add('is-sensei-mode'); 
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
@@ -1646,7 +1668,7 @@ async function refreshStudentData() {
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        // Lógica de cálculo de Meta
+        // Lógica de Meta y Grados
         let meta = p.grado_objetivo;
         if (!meta) {
             const gradoActual = (p.grado || "S/G").toUpperCase();
@@ -1654,14 +1676,12 @@ async function refreshStudentData() {
             meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "5º KYU";
         }
 
-        // Búsqueda del denominador en la tabla de requisitos cargada
         const normMeta = normalize(meta);
         const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;         
         
-        // Prioridad: 1. DB (500h) | 2. Fallback Arashi | 3. 60h por defecto
         let target = (req && req.HORAS > 0) ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
         
-        console.log(`🎯 [DEPURACIÓN] Meta: ${meta} (${normMeta}). Horas encontradas: ${target}`);
+        console.log(`🎯 [META] ${meta} -> ${target}h`);
 
         const bar = document.getElementById('progress-bar');
         if (bar) {
@@ -1675,9 +1695,10 @@ async function refreshStudentData() {
         }
     }
 
+    // Configuración de la Nav Bar (Sensei / Alumno)
     const navSensei = document.getElementById('nav-sensei');
     if (navSensei) {
-        if (esSenseiRango || esInstructorFicha) {
+        if (esSenseiModo || (p && (p.es_instructor === true || p.es_instructor === "true"))) {
             navSensei.style.display = 'flex';
             navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
             navSensei.onclick = () => showView('sensei', navSensei);
