@@ -1366,9 +1366,6 @@ body.is-sensei-mode #confirm-btn {
         console.log("🥋 Versión actual del script: 20 de Febrero - FIX SELECTOR");
         let isProcessingQR = false; // El escudo que evita el bucle
 
-
-        
-
         // LOG DE AUDITORÍA ARASHI
         console.log("🥋 [AUDITORÍA] API_URL actual:", API_URL);
         let selectedMonthsArray = [new Date().getMonth()]; // Empezamos con el mes actual por defecto
@@ -1424,16 +1421,8 @@ body.is-sensei-mode #confirm-btn {
             }
         })();
 
-        let alumnoGlobal = null;
-        let claseHoyId = null;
-        let dojoIdGlobal = null;
-        let requisitosGradoGlobal = []; 
-        const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
 
-
-        
-
-
+        let alumnoGlobal = null, claseHoyId = null, dojoIdGlobal = null, requisitosGradoGlobal = [];
         let selectedMonthGen = new Date().getMonth();
         let html5QrCode = null;
 
@@ -1441,16 +1430,9 @@ body.is-sensei-mode #confirm-btn {
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
         const getID = (o) => o.documentId || o.id;
-        
-/* --- NORMALIZADOR DE GRADOS (EL CORAZÓN DEL SISTEMA) --- */
-function normalize(g) {
-    if (!g) return "";
-    return g.toString().toUpperCase()
-        .replace(/[º°Oª]/g, '') // Quita símbolos
-        .replace(/\s+/g, '')    // Quita espacios
-        .trim();
-}
-       
+
+        /* --- SISTEMA DE CACHÉ Y DEBUG --- */
+        // Implementar en tu app.js o movil.html
 /* --- SISTEMA DE CACHÉ ZERO WASTE API --- */
 async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
     const url = `${API_URL}${endpoint}`;
@@ -1523,67 +1505,66 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
             };
         }
 
-        
+        const GRADOS_ORDER = ["S/G", "5º KYU", "4º KYU", "3º KYU", "2º KYU", "1º KYU", "1º DAN", "2º DAN", "3º DAN", "4º DAN", "5º DAN", "6º DAN", "7º DAN", "8º DAN"];
         const GRADOS_FALLBACK = { "5º KYU": 30, "4º KYU": 40, "3º KYU": 50, "2º KYU": 50, "1º KYU": 60, "1º DAN": 70 };
         function normalize(g) { return (!g) ? "" : g.toString().toUpperCase().replace(/[º°Oª]/g, '').replace(/\s+/g, '').replace(/[^0-9A-Z]/g, ''); }
 
         /* --- CORE INIT --- */
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 14.0 - RESTAURACIÓN TOTAL) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 10.0 - ZERO FLICKER) --- */
 async function initApp() {
     console.log("🚀 [INIT] Iniciando sincronización total...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     const mainNav = document.getElementById('main-nav');
     
+    // 1. Aseguramos estado invisible inicial
     document.body.classList.remove('app-ready');
-    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
+            .forEach(v => v.classList.add('hidden'));
 
+    // 2. CASO: LOGIN
     if (!token || !user) {
-        showView('login');
-        document.body.classList.add('app-ready');
+        if (mainNav) mainNav.classList.add('hidden');
+        document.getElementById('login-view')?.classList.remove('hidden');
+        document.body.classList.add('app-ready'); // El login se muestra directo
+        document.documentElement.classList.add('app-loaded');
         return;
     }
 
+    // 3. CASO: DOJO ACTIVO (Sincronización en la sombra)
     try {
-        // 1. CARGA DE REQUISITOS (Denominador de horas)
-        const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
-        if (reqData && reqData.data) {
-            requisitosGradoGlobal = reqData.data.map(item => {
-                const a = item.attributes || item;
-                // Soporte para Strapi v5 (horas_necesarias)
-                const h = a.horas_necesarias || a.Horas_necesarias || 0;
-                return {
-                    NORM: normalize(a.grado || a.Grado),
-                    HORAS: parseFloat(h)
-                };
-            });
-        }
+        // Ejecutamos carga de requisitos y ficha en paralelo para ganar velocidad
+        await Promise.all([
+            fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24),
+            refreshStudentData() // Esta función ahora configura la Nav Bar también
+        ]);
 
-        // 2. CARGA DE PERFIL (Con fallback de DNI para Carlos)
-        await refreshStudentData();
-
-        // 3. CARGA DE CLASE DEL DÍA
+        // Una vez sabemos quién es y su dojo, buscamos el Keiko
         await checkTodayClass();
 
+        // 4. PREPARACIÓN DE VISTA
         showView('dashboard');
         if (mainNav) {
             mainNav.classList.remove('hidden');
             mainNav.style.display = 'grid';
         }
 
+        // --- 🥋 EL LEVANTAMIENTO DEL TELÓN ---
+        // Esperamos un milisegundo extra para que el DOM se asiente
         setTimeout(() => {
             document.body.classList.add('app-ready');
             document.documentElement.classList.add('app-loaded');
+            console.log("✨ [INIT] Dojo listo. Mostrando interfaz sincronizada.");
         }, 150);
 
     } catch (error) {
-        console.error("🔥 Error en el despliegue:", error);
-        document.body.classList.add('app-ready');
+        console.error("🔥 [INIT] Error en el despliegue:", error);
+        document.body.classList.add('app-ready'); // Liberamos aunque haya error
     }
 }
   
-/* --- REFRESH DATA (VERSION 14.2 - QUIRÚRGICA) --- */
+/* --- REFRESH DATA (VERSION 9.3 - VISIBILIDAD SENSEI ASEGURADA) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1591,65 +1572,97 @@ async function refreshStudentData() {
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // 1. INTENTO POR ID (O FALLBACK POR DNI SI EL ID ES NULL)
-    if (savedDocId && savedDocId !== "null" && savedDocId !== "undefined") {
-        dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 1);
-    } 
-    
-    // Si no hay datos (el error 404 de tu consola), buscamos por DNI
-    if (!dataAlu || !dataAlu.data) {
-        console.log("🔍 Identidad perdida. Restaurando por DNI...");
-        const search = await fetchSmart(`/alumnos?filters[dni][$eq]=${user.username}&populate=*`, null, 0);
-        if (search && search.data && search.data.length > 0) {
-            dataAlu = { data: search.data[0] };
-            localStorage.setItem('aikido_student_doc_id', getID(search.data[0]));
+    // 1. OBTENCIÓN DE DATOS (Zero Waste Cache)
+    if (savedDocId && savedDocId !== "null") {
+        dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
+    } else {
+        let endpoint = `/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+        dataAlu = await fetchSmart(endpoint, null, 0); 
+        if (!dataAlu?.data || (Array.isArray(dataAlu.data) && dataAlu.data.length === 0)) {
+            endpoint = `/alumnos?filters[dni][$eq]=${user.username}&populate=*`;
+            dataAlu = await fetchSmart(endpoint, null, 0);
+        }
+        if (dataAlu?.data?.length) {
+            const foundId = dataAlu.data[0].documentId || dataAlu.data[0].id;
+            localStorage.setItem('aikido_student_doc_id', foundId);
         }
     }
 
     const circle = document.getElementById('student-progress-circle');
     const nextGrade = document.getElementById('next-grade-display');
+    const zenCard = document.getElementById('zen-card');
     const initialsCircle = document.getElementById('user-initials');
 
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     
-    if (p && p.dojo) dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
+    if (p && p.dojo) {
+        dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
+    }
 
-    // --- IDENTIDAD ---
+    // --- CABECERA (NOMBRE E INICIALES) ---
     const displayName = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
-    const iniciales = (p ? (p.nombre[0] + (p.apellidos ? p.apellidos[0] : "")) : "??").toUpperCase();
+    const initials = ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
     
     document.getElementById('user-display-name').innerText = displayName;
-    if (initialsCircle) initialsCircle.innerText = iniciales;
+    if (initialsCircle) initialsCircle.innerText = initials;
 
     const esSenseiRango = (user.is_sensei === true);
     const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
 
+    // --- 🚀 VÍNCULO AL PANEL DE GESTIÓN (SOLO GESTORES) ---
+    if (initialsCircle) {
+        if (esSenseiRango || esInstructorFicha) {
+            initialsCircle.style.cursor = 'pointer';
+            initialsCircle.title = "Acceder a Gestión Arashi";
+            initialsCircle.onclick = () => {
+                window.location.href = 'https://arashi-group.netlify.app/';
+            };
+        } else {
+            initialsCircle.style.cursor = 'default';
+            initialsCircle.onclick = null;
+        }
+    }
+
+    // --- 🥋 LÓGICA DE VISUALIZACIÓN POR RANGO ---
     if (esSenseiRango) {
         document.body.classList.add('is-sensei-mode'); 
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
+        if (zenCard) zenCard.remove();
+
+        let dojoNom = p?.dojo ? parseRelation(p.dojo).nombre : "ARASHI GROUP";
+        const zenHTML = `
+            <div id="zen-card" class="zen-master-card">
+                <img src="img/logo_sin_fondo.png" class="zen-logo">
+                <h2 class="zen-title">SENSEI</h2>
+                <p class="zen-subtitle">${dojoNom.toUpperCase()}</p>
+            </div>`;
+        if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
+
     } else if (p) {
         document.body.classList.remove('is-sensei-mode');
+        if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
         
         const horas = parseFloat(p.horas_acumuladas || 0);
         document.getElementById('stat-hours').innerText = horas.toFixed(1);
 
-        // --- CÁLCULO DE META (FIX 4º DAN -> 5º DAN) ---
         let meta = p.grado_objetivo;
         if (!meta) {
-            const actual = (p.grado || "S/G").toUpperCase();
-            // Buscamos el siguiente en la lista oficial
-            const idx = GRADOS_ORDER.indexOf(actual.replace(/[º°]/g, '')); 
-            meta = GRADOS_ORDER[idx + 1] || actual;
+            const gradoActual = (p.grado || "S/G").toUpperCase();
+            const num = parseInt(gradoActual.replace(/[^0-9]/g, ''));
+            if (gradoActual.includes("DAN")) {
+                meta = isNaN(num) ? "1º DAN" : `${num + 1}º DAN`;
+            } else if (gradoActual.includes("KYU")) {
+                if (!isNaN(num) && num > 1) meta = `${num - 1}º KYU`;
+                else meta = "1º DAN";
+            } else { meta = "5º KYU"; }
         }
 
         const normMeta = normalize(meta);
         const req = (Array.isArray(requisitosGradoGlobal)) ? requisitosGradoGlobal.find(r => r.NORM === normMeta) : null;         
-        
-        // Si es 5º Dan, target será 500. Si no lo encuentra, usamos 60 por seguridad.
-        let target = (req && req.HORAS > 0) ? req.HORAS : 60;
+        let target = req ? req.HORAS : (GRADOS_FALLBACK[meta] || 60);
         
         const bar = document.getElementById('progress-bar');
         if (bar) {
@@ -1662,59 +1675,22 @@ async function refreshStudentData() {
             nextGrade.classList.remove('hidden');
         }
     }
+
+    // --- 🥋 EL CAMBIO CRÍTICO: VISIBILIDAD DEL BOTÓN NAV-SENSEI ---
+    const navSensei = document.getElementById('nav-sensei');
+    if (navSensei) {
+        if (esSenseiRango || esInstructorFicha) {
+            navSensei.style.display = 'flex'; // Forzamos visibilidad
+            navSensei.innerHTML = '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>';
+            navSensei.onclick = () => showView('sensei', navSensei);
+        } else {
+            navSensei.style.display = 'flex'; // También se ve, pero con otra función
+            navSensei.innerHTML = '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
+            navSensei.onclick = (e) => { e.preventDefault(); window.open('https://www.meetontatami.com/', '_blank'); };
+        }
+    }
     
     return alumnoGlobal;
-}
-
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 14.2 - SECUENCIAL) --- */
-async function initApp() {
-    console.log("🚀 [INIT] Sincronizando Tatami...");
-    const token = localStorage.getItem('aikido_jwt');
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    const mainNav = document.getElementById('main-nav');
-    
-    document.body.classList.remove('app-ready');
-    document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view').forEach(v => v.classList.add('hidden'));
-
-    if (!token || !user) {
-        if (mainNav) mainNav.classList.add('hidden');
-        document.getElementById('login-view')?.classList.remove('hidden');
-        document.body.classList.add('app-ready');
-        return;
-    }
-
-    try {
-        // 1. CARGAMOS REQUISITOS PRIMERO (Importante para el denominador)
-        const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
-        if (reqData && reqData.data) {
-            requisitosGradoGlobal = reqData.data.map(item => {
-                const a = item.attributes || item;
-                return {
-                    NORM: normalize(a.grado || a.Grado),
-                    HORAS: parseFloat(a.horas_necesarias || a.Horas_necesarias || 0)
-                };
-            });
-        }
-
-        // 2. REFRESCAMOS PERFIL (Ahora con búsqueda por DNI si falla el ID)
-        await refreshStudentData();
-        await checkTodayClass();
-
-        showView('dashboard');
-        if (mainNav) {
-            mainNav.classList.remove('hidden');
-            mainNav.style.display = 'grid';
-        }
-
-        setTimeout(() => {
-            document.body.classList.add('app-ready');
-            document.documentElement.classList.add('app-loaded');
-        }, 150);
-
-    } catch (error) {
-        console.error("🔥 Error en el despliegue:", error);
-        document.body.classList.add('app-ready'); 
-    }
 }
 
  
