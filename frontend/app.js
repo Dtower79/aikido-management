@@ -615,7 +615,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     }
 }
 
-/* --- GENERADOR DE INFORMES ARASHI V16.0 (FIX: EXTRACCIÓN ATRIBUTOS + JUEZ DE PAZ) --- */
+/* --- GENERADOR DE INFORMES ARASHI V16.5 (FIX 400 ERROR & TIMEZONE) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -623,7 +623,7 @@ async function generateReport(type) {
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Aviso", "Selecciona una fecha para el informe de asistencia.");
+        showModal("Aviso", "Selecciona una fecha en el calendario para el informe de asistencia.");
         return;
     }
 
@@ -640,95 +640,89 @@ async function generateReport(type) {
 
         try {
             let apiUrl = "";
+            
             if (type === 'attendance') {
-                const start = `${attendanceDate}T00:00:00.000Z`;
-                const end = `${attendanceDate}T23:59:59.999Z`;
-                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${start}&filters[clase][Fecha_Hora][$lte]=${end}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
-                if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
+                // 🥋 FIX QUIRÚRGICO: Usamos $startsWith para evitar errores 400 y desfases horarios
+                // Esto busca cualquier registro cuya Fecha_Hora empiece por "AAAA-MM-DD"
+                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$startsWith]=${attendanceDate}&populate[alumno][populate][dojo]=*&populate[clase]=*&pagination[limit]=500`;
+                
+                // Si hay filtro de Dojo, lo aplicamos a través de la relación del alumno
+                if (dojoFilterId) {
+                    apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
+                }
             } else {
+                // Informes de Alumnos Activos / Bajas
                 apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
                 if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
             }
 
+            console.log("📡 Consultando Tatami:", apiUrl);
+
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            if (!res.ok) throw new Error(`Error API: ${res.status}`);
+            
             const json = await res.json();
             let list = json.data || [];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "No hay registros para este criterio.");
+                showModal("Sin Datos", `No se han encontrado registros para el día ${attendanceDate}.`);
                 return;
             }
 
-            // 🥋 MOTOR DE ORDENACIÓN BLINDADO
+            // 🥋 MOTOR DE ORDENACIÓN (Detección de atributos Strapi v5)
             list.sort((a, b) => {
-                // 1. EXTRACCIÓN CORRECTA DE ATRIBUTOS (STRAPI V5)
                 const attrA = a.attributes || a;
                 const attrB = b.attributes || b;
-                
                 const pA = (type === 'attendance') ? (attrA.alumno?.data?.attributes || {}) : attrA;
                 const pB = (type === 'attendance') ? (attrB.alumno?.data?.attributes || {}) : attrB;
 
-                const apellidosA = (pA.apellidos || "").toUpperCase();
-                const apellidosB = (pB.apellidos || "").toUpperCase();
-
-                // 2. APLICACIÓN DE CRITERIOS PRINCIPALES
-                if (type === 'insurance') {
-                    const statusA = pA.seguro_pagado ? 1 : 0;
-                    const statusB = pB.seguro_pagado ? 1 : 0;
-                    if (statusA !== statusB) return statusA - statusB;
-                }
+                const nomA = (pA.apellidos || "").toUpperCase();
+                const nomB = (pB.apellidos || "").toUpperCase();
 
                 if (type === 'gender') {
                     const genA = (pA.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
                     const genB = (pB.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
                     if (genA !== genB) return genA - genB;
                 }
-
                 if (type === 'grade') {
-                    const weightA = getGradeWeight(pA.grado);
-                    const weightB = getGradeWeight(pB.grado);
-                    if (weightA !== weightB) return weightB - weightA;
+                    const wA = getGradeWeight(pA.grado);
+                    const wB = getGradeWeight(pB.grado);
+                    if (wA !== wB) return wB - wA;
                 }
-
                 if (type === 'age') {
-                    // Comparamos por años enteros para permitir el empate y pasar al apellido
-                    const edadA = calculateAge(pA.fecha_nacimiento);
-                    const edadB = calculateAge(pB.fecha_nacimiento);
-                    const valA = isNaN(edadA) ? 999 : edadA;
-                    const valB = isNaN(edadB) ? 999 : edadB;
-                    if (valA !== valB) return valA - valB;
+                    const eA = calculateAge(pA.fecha_nacimiento);
+                    const eB = calculateAge(pB.fecha_nacimiento);
+                    if (eA !== eB) return (isNaN(eA) ? 999 : eA) - (isNaN(eB) ? 999 : eB);
                 }
-
-                if (type === 'bajas_date') {
-                    const dateA = new Date(attrA.fecha_baja || '1900-01-01').getTime();
-                    const dateB = new Date(attrB.fecha_baja || '1900-01-01').getTime();
-                    if (dateA !== dateB) return dateB - dateA;
-                }
-
-                // 🥋 JUEZ DE PAZ: ORDEN ALFABÉTICO (Siempre se ejecuta en caso de empate)
-                return apellidosA.localeCompare(apellidosB, 'es', { sensitivity: 'base' });
+                return nomA.localeCompare(nomB, 'es');
             });
 
-            const criteriosES = { 'surname': 'APELLIDOS', 'grade': 'GRADOS', 'age': 'EDAD', 'gender': 'GÉNERO', 'insurance': 'SEGUROS', 'attendance': 'ASISTENCIA', 'bajas_surname': 'BAJAS POR APELLIDO', 'bajas_date': 'BAJAS POR FECHA' };
+            const criteriosES = { 'surname': 'APELLIDOS', 'grade': 'GRADOS', 'age': 'EDAD', 'gender': 'GÉNERO', 'insurance': 'SEGUROS', 'attendance': 'ASISTENCIA' };
 
-            let headRow;
-            if (type === 'attendance') {
-                headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora', 'Estado'];
-            } else if (type === 'gender') {
-                headRow = ['Nº', 'Apellidos', 'Nombre', 'Género', 'Edad', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Dojo'];
-            } else {
-                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Edad', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Dojo'];
-            }
+            const headRow = (type === 'attendance') 
+                ? ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora', 'Estado']
+                : ['Nº', 'Apellidos', 'Nombre', (type === 'gender' ? 'Género' : 'DNI'), 'Edad', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Dojo'];
 
             const body = list.map((item, index) => {
                 const a = item.attributes || item;
                 if (type === 'attendance') {
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    return [`${index + 1}`, (alu?.apellidos || '').toUpperCase(), alu?.nombre || '', getDojoName(alu?.dojo), cla?.Tipo || 'Keiko', cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--", (a.Estado || 'Confirmado').toUpperCase()];
+                    let hora = "--:--";
+                    if (cla?.Fecha_Hora) hora = cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h";
+                    
+                    return [
+                        `${index + 1}`,
+                        (alu?.apellidos || '').toUpperCase(),
+                        (alu?.nombre || ''),
+                        getDojoName(alu?.dojo),
+                        cla?.Tipo || 'Keiko',
+                        hora,
+                        (a.Estado || a.estado || 'Confirmado').toUpperCase()
+                    ];
                 } else {
-                    const dniOGenero = (type === 'gender') ? (a.genero || 'HOMBRE') : (a.dni || '-');
-                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', dniOGenero, calculateAge(a.fecha_nacimiento), normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), getDojoName(a.dojo)];
+                    const extraCol = (type === 'gender') ? (a.genero || 'HOMBRE') : (a.dni || '');
+                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', extraCol, calculateAge(a.fecha_nacimiento), normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), getDojoName(a.dojo)];
                 }
             });
 
@@ -739,14 +733,14 @@ async function generateReport(type) {
                 headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-                    doc.setFontSize(14); doc.text("INFORME OFICIAL ALUMNOS", pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | CRITERIO: ${criteriosES[type] || type.toUpperCase()}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.setFontSize(14); doc.text("INFORME OFICIAL ARASHI", pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | FECHA: ${attendanceDate || '---'} | CRITERIO: ${criteriosES[type] || type.toUpperCase()}`, pageWidth / 2, 18, { align: 'center' });
                 }
             });
-            doc.save(`Arashi_Informe_${criteriosES[type] || type}.pdf`);
+            doc.save(`Arashi_${criteriosES[type] || 'Informe'}_${attendanceDate || 'Listado'}.pdf`);
         } catch (e) { 
             console.error("🔥 Error PDF:", e);
-            showModal("Error", "Fallo al generar el informe."); 
+            showModal("Error", "No se pudo conectar con el servidor para este informe."); 
         }
     };
 }
