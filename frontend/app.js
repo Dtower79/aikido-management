@@ -615,7 +615,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     }
 }
 
-/* --- GENERADOR DE INFORMES ARASHI V13.0 (EDICIÓN CASTELLANO Y REGLAS TATAMI) --- */
+/* --- GENERADOR DE INFORMES ARASHI V14.0 (ORDENACIÓN SEGUROS + BLINDAJE) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -659,35 +659,23 @@ async function generateReport(type) {
                 return;
             }
 
-            // 🥋 MOTOR DE ORDENACIÓN CON REGLAS DE NEGOCIO (MUJERES PRIMERO / GRADOS / ALFABÉTICO)
+            // 🥋 MOTOR DE ORDENACIÓN (SEGUROS: NO ANTES QUE SÍ + APELLIDOS)
             list.sort((a, b) => {
                 const itemA = a.attributes || a;
                 const itemB = b.attributes || b;
-                
-                // Extraer el perfil para comparar (sea asistencia o alumno)
                 const pA = (type === 'attendance') ? parseRelation(itemA.alumno) : itemA;
                 const pB = (type === 'attendance') ? parseRelation(itemB.alumno) : itemB;
-
                 const nomA = (pA.apellidos || "").toUpperCase();
                 const nomB = (pB.apellidos || "").toUpperCase();
 
-                // 2. ORDENACIÓN POR GRADO (Jerarquía Dan/Kyu + Apellidos)
-                if (type === 'grade') {
-                    const weightA = getGradeWeight(pA.grado);
-                    const weightB = getGradeWeight(pB.grado);
-                    if (weightB !== weightA) return weightB - weightA;
+                // 1. REGLA DE SEGUROS (Punto solicitado: NO pagados arriba)
+                if (type === 'insurance') {
+                    const statusA = pA.seguro_pagado ? 1 : 0;
+                    const statusB = pB.seguro_pagado ? 1 : 0;
+                    if (statusA !== statusB) return statusA - statusB; // 0 (falso) va antes que 1 (verdadero)
                     return nomA.localeCompare(nomB);
                 }
 
-                // 3. ORDENACIÓN POR EDAD (Fecha nacimiento + Apellidos)
-                if (type === 'age') {
-                    const dateA = new Date(pA.fecha_nacimiento || '1900-01-01').getTime();
-                    const dateB = new Date(pB.fecha_nacimiento || '1900-01-01').getTime();
-                    if (dateA !== dateB) return dateA - dateB;
-                    return nomA.localeCompare(nomB);
-                }
-
-                // 4. ORDENACIÓN POR GÉNERO (Mujeres primero + Apellidos)
                 if (type === 'gender') {
                     const genA = (pA.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
                     const genB = (pB.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
@@ -695,47 +683,48 @@ async function generateReport(type) {
                     return nomA.localeCompare(nomB);
                 }
 
-                if (type === 'bajas_date') {
-                    const dateA = new Date(itemA.fecha_baja || '1900-01-01');
-                    const dateB = new Date(itemB.fecha_baja || '1900-01-01');
-                    return dateB - dateA;
+                if (type === 'grade') {
+                    const weightA = getGradeWeight(pA.grado);
+                    const weightB = getGradeWeight(pB.grado);
+                    if (weightB !== weightA) return weightB - weightA;
+                    return nomA.localeCompare(nomB);
+                }
+
+                if (type === 'age') {
+                    const dateA = new Date(pA.fecha_nacimiento || '1900-01-01').getTime();
+                    const dateB = new Date(pB.fecha_nacimiento || '1900-01-01').getTime();
+                    if (dateA !== dateB) return dateA - dateB;
+                    return nomA.localeCompare(nomB);
                 }
 
                 return nomA.localeCompare(nomB);
             });
 
-            // TRADUCCIÓN DE CRITERIOS PARA CABECERA
-            const criteriosES = {
-                'surname': 'APELLIDOS', 'grade': 'GRADOS', 'age': 'EDAD', 
-                'gender': 'GÉNERO', 'insurance': 'SEGUROS', 'attendance': 'ASISTENCIA',
-                'bajas_surname': 'BAJAS POR APELLIDO', 'bajas_date': 'BAJAS POR FECHA'
-            };
+            const criteriosES = { 'surname': 'APELLIDOS', 'grade': 'GRADOS', 'age': 'EDAD', 'gender': 'GÉNERO', 'insurance': 'SEGUROS', 'attendance': 'ASISTENCIA' };
 
-            const headRow = (type === 'attendance') 
-                ? ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora', 'Estado']
-                : ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Edad', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Dojo'];
+            let headRow;
+            if (type === 'attendance') {
+                headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora', 'Estado'];
+            } else if (type === 'gender') {
+                headRow = ['Nº', 'Apellidos', 'Nombre', 'Género', 'Edad', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Dojo'];
+            } else {
+                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Edad', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Dojo'];
+            }
 
             const body = list.map((item, index) => {
                 const a = item.attributes || item;
                 if (type === 'attendance') {
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    return [
-                        `${index + 1}`,
-                        (alu?.apellidos || '').toUpperCase(),
-                        alu?.nombre || '',
-                        getDojoName(alu?.dojo),
-                        cla?.Tipo || 'Keiko',
-                        cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
-                        (a.Estado || 'Confirmado').toUpperCase()
-                    ];
+                    return [`${index + 1}`, (alu?.apellidos || '').toUpperCase(), alu?.nombre || '', getDojoName(alu?.dojo), cla?.Tipo || 'Keiko', cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--", (a.Estado || 'Confirmado').toUpperCase()];
                 } else {
+                    const rowData = (type === 'gender') ? (a.genero || 'HOMBRE') : (a.dni || '');
                     return [
                         `${index + 1}`, 
                         (a.apellidos || '').toUpperCase(), 
                         a.nombre || '', 
-                        a.dni || '', 
-                        calculateAge(a.fecha_nacimiento), // Punto 3: Edad en números
+                        rowData, 
+                        calculateAge(a.fecha_nacimiento), 
                         normalizeGrade(a.grado), 
                         parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', 
                         a.seguro_pagado ? 'SÍ' : 'NO', 
