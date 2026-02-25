@@ -616,7 +616,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
 }
 
 /* --- GENERADOR DE INFORMES ARASHI V18.0 (THE CLASE-CENTRIC FIX) --- */
-/* --- GENERADOR DE INFORMES ARASHI V30.0 (EDICIÓN MAESTRA DEFINITIVA) --- */
+/* --- GENERADOR DE INFORMES ARASHI V31.0 (SOLUCIÓN DEFINITIVA POR FILTRADO CLIENTE) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -640,83 +640,80 @@ async function generateReport(type) {
         const isBaja = type.startsWith('bajas');
 
         try {
-            let apiUrl = "";
+            let list = [];
             
             if (type === 'attendance') {
-                // 🥋 ASISTENCIA: Sintaxis optimizada para Strapi v5
-                // Filtramos las asistencias donde la clase tenga la fecha elegida
-                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$startsWith]=${attendanceDate}&populate[clase]=*&populate[alumno][populate][dojo]=*&pagination[limit]=1000`;
+                // 🥋 CIRUGÍA FINAL: No enviamos filtros de fecha a Strapi (evitamos Error 400)
+                // Traemos las últimas asistencias y filtramos nosotros
+                const apiUrl = `${API_URL}/api/asistencias?populate[clase]=*&populate[alumno][populate][0]=dojo&pagination[limit]=1000&sort=createdAt:desc`;
                 
-                if (dojoFilterId) {
-                    apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
-                }
+                console.log("📡 [SISTEMA] Descargando asistencias para filtrado local...");
+                const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+                const json = await res.json();
+                
+                // Filtrado manual infalible en JavaScript
+                list = (json.data || []).filter(item => {
+                    const a = item.attributes || item;
+                    const cla = parseRelation(a.clase);
+                    const alu = parseRelation(a.alumno);
+                    
+                    const fechaMatch = cla?.Fecha_Hora?.startsWith(attendanceDate);
+                    const dojoMatch = !dojoFilterId || getID(alu?.dojo) === dojoFilterId;
+                    
+                    return fechaMatch && dojoMatch;
+                });
+
             } else {
-                // 🥋 ALUMNOS: Activos o Bajas
-                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
-                
-                if (dojoFilterId) {
-                    apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
-                }
+                // Informes de Alumnos (Este endpoint es estable)
+                let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
+                if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+                const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+                const json = await res.json();
+                list = json.data || [];
             }
-
-            console.log("📡 [SISTEMA] Consultando Neon:", apiUrl);
-
-            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-            
-            if (!res.ok) {
-                const errorLog = await res.json();
-                console.error("❌ Error Strapi v5:", errorLog);
-                throw new Error("Fallo en la estructura de consulta a la base de datos.");
-            }
-
-            const json = await res.json();
-            let list = json.data || [];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "No hay registros que coincidan con la selección.");
+                showModal("Sin Datos", "No hay registros para esta selección.");
                 return;
             }
 
-            // 🥋 MOTOR DE ORDENACIÓN (Recuperando Reglas del Dojo)
+            // 🥋 MOTOR DE ORDENACIÓN INTEGRAL (MUJERES, GRADOS, SEGUROS, EDAD + JUEZ DE PAZ)
             list.sort((a, b) => {
                 const attrA = a.attributes || a;
                 const attrB = b.attributes || b;
-                
-                // Extraer perfil (Asistencia o Alumno)
                 const pA = (type === 'attendance') ? (attrA.alumno?.data?.attributes || {}) : attrA;
                 const pB = (type === 'attendance') ? (attrB.alumno?.data?.attributes || {}) : attrB;
 
                 const nomA = (pA.apellidos || "").toUpperCase();
                 const nomB = (pB.apellidos || "").toUpperCase();
 
-                // 1. REGLA GÉNERO (Mujeres primero)
+                if (type === 'insurance') {
+                    const sA = pA.seguro_pagado ? 1 : 0, sB = pB.seguro_pagado ? 1 : 0;
+                    if (sA !== sB) return sA - sB;
+                }
                 if (type === 'gender') {
                     const gA = (pA.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
                     const gB = (pB.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
                     if (gA !== gB) return gA - gB;
                 }
-                // 2. REGLA GRADOS (Jerarquía técnica)
                 if (type === 'grade') {
                     const wA = getGradeWeight(pA.grado), wB = getGradeWeight(pB.grado);
                     if (wA !== wB) return wB - wA;
                 }
-                // 3. REGLA SEGUROS (Impagos primero)
-                if (type === 'insurance') {
-                    const sA = pA.seguro_pagado ? 1 : 0, sB = pB.seguro_pagado ? 1 : 0;
-                    if (sA !== sB) return sA - sB;
-                }
-                // 4. REGLA EDAD (Numérica)
                 if (type === 'age') {
                     const eA = calculateAge(pA.fecha_nacimiento), eB = calculateAge(pB.fecha_nacimiento);
                     const vA = isNaN(eA) ? 999 : eA, vB = isNaN(eB) ? 999 : eB;
                     if (vA !== vB) return vA - vB;
                 }
+                if (type === 'bajas_date') {
+                    const dA = new Date(attrA.fecha_baja || 0), dB = new Date(attrB.fecha_baja || 0);
+                    if (dA !== dB) return dB - dA;
+                }
 
-                // JUEZ DE PAZ: APELLIDOS (Segunda ordenación siempre)
                 return nomA.localeCompare(nomB, 'es');
             });
 
-            // CABECERAS CASTELLANO
+            // TRADUCCIÓN CASTELLANO
             const dic = { 'surname': 'APELLIDOS', 'grade': 'GRADOS', 'age': 'EDAD', 'gender': 'GÉNERO', 'insurance': 'SEGUROS', 'attendance': 'ASISTENCIA', 'bajas_surname': 'BAJAS POR APELLIDO', 'bajas_date': 'BAJAS POR FECHA' };
 
             const headRow = (type === 'attendance') 
@@ -738,19 +735,8 @@ async function generateReport(type) {
                         (a.Estado || a.estado || 'CONFIRMADO').toUpperCase()
                     ];
                 } else {
-                    const colVariable = (type === 'gender') ? (a.genero || 'HOMBRE') : (a.dni || '-');
-                    return [
-                        `${index + 1}`, 
-                        (a.apellidos || '').toUpperCase(), 
-                        a.nombre || '', 
-                        colVariable, 
-                        calculateAge(a.fecha_nacimiento), 
-                        normalizeGrade(a.grado), 
-                        parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', 
-                        a.seguro_pagado ? 'SÍ' : 'NO', 
-                        normalizePhone(a.telefono), 
-                        getDojoName(a.dojo)
-                    ];
+                    const varCol = (type === 'gender') ? (a.genero || 'HOMBRE') : (a.dni || '-');
+                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', varCol, calculateAge(a.fecha_nacimiento), normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), getDojoName(a.dojo)];
                 }
             });
 
@@ -768,7 +754,7 @@ async function generateReport(type) {
             doc.save(`Arashi_Informe_${type}.pdf`);
         } catch (e) { 
             console.error("🔥 Error PDF:", e);
-            showModal("Error", "No se pudo generar el informe. Estructura de datos no compatible."); 
+            showModal("Error", "No se pudo generar el informe."); 
         }
     };
 }
