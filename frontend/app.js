@@ -616,7 +616,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
 }
 
 /* --- GENERADOR DE INFORMES ARASHI V18.0 (THE CLASE-CENTRIC FIX) --- */
-/* --- GENERADOR DE INFORMES ARASHI V19.0 (FIX: SINTAXIS URL & ERROR 400) --- */
+/* --- GENERADOR DE INFORMES ARASHI V20.0 (EL ROMPE-BUCLES) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -640,78 +640,46 @@ async function generateReport(type) {
         const isBaja = type.startsWith('bajas');
 
         try {
-            let list = [];
+            let apiUrl = "";
             
             if (type === 'attendance') {
-                // 🥋 CORRECCIÓN QUIRÚRGICA DE URL: Eliminamos el prefijo [clase] erróneo
-                const start = `${attendanceDate}T00:00:00.000Z`;
-                const end = `${attendanceDate}T23:59:59.999Z`;
+                // 🥋 ESTRATEGIA V20: Usamos $contains para matchear la fecha "AAAA-MM-DD"
+                // Simplificamos populate al máximo para evitar el Error 400
+                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$contains]=${attendanceDate}&populate[clase]=*&populate[alumno][populate]=dojo&pagination[limit]=500`;
                 
-                // Construimos la URL con filtros correctos para el endpoint /clases
-                let apiUrl = `${API_URL}/api/clases?filters[Fecha_Hora][$gte]=${start}&filters[Fecha_Hora][$lte]=${end}&populate[asistencias][populate][alumno][populate][dojo]=*&populate[dojo]=*`;
-                
-                // Si el sensei filtra por Dojo, lo aplicamos a la clase directamente
                 if (dojoFilterId) {
-                    apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
+                    apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
                 }
-
-                console.log("📡 Consultando Tatami (V19):", apiUrl);
-                const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-                
-                if (!res.ok) {
-                    const err = await res.json();
-                    console.error("❌ Fallo Strapi:", err);
-                    throw new Error("Parámetros de consulta inválidos.");
-                }
-
-                const json = await res.json();
-                
-                // APLANADO DE ASISTENCIAS (Flattening)
-                (json.data || []).forEach(clase => {
-                    const cAttr = clase.attributes || clase;
-                    const asistencias = cAttr.asistencias?.data || [];
-                    
-                    asistencias.forEach(asist => {
-                        const aAttr = asist.attributes || asist;
-                        list.push({
-                            id: asist.documentId || asist.id,
-                            attributes: {
-                                ...aAttr,
-                                clase: { data: clase } 
-                            }
-                        });
-                    });
-                });
             } else {
-                // Informes de Alumnos (Activos/Bajas)
-                let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
+                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
                 if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
-                
-                const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-                const json = await res.json();
-                list = json.data || [];
             }
 
+            console.log("📡 [V20] Intentando fetch a:", apiUrl);
+
+            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            
+            if (!res.ok) {
+                const errorJson = await res.json();
+                console.error("❌ [DIAGNÓSTICO STRAPI]:", JSON.stringify(errorJson, null, 2));
+                throw new Error(`Error ${res.status}: Revisa la consola para el detalle técnico.`);
+            }
+
+            const json = await res.json();
+            let list = json.data || [];
+
             if (list.length === 0) {
-                showModal("Sin Datos", "No hay registros que coincidan con la selección.");
+                showModal("Sin Datos", `No hay registros para la fecha: ${attendanceDate}`);
                 return;
             }
 
-            // 🥋 ORDENACIÓN: 1º CRITERIO SEGÚN BOTÓN | 2º CRITERIO APELLIDOS (JUEZ DE PAZ)
+            // 🥋 ORDENACIÓN (JUEZ DE PAZ: APELLIDOS)
             list.sort((a, b) => {
                 const attrA = a.attributes || a;
                 const attrB = b.attributes || b;
                 const pA = (type === 'attendance') ? (attrA.alumno?.data?.attributes || {}) : attrA;
                 const pB = (type === 'attendance') ? (attrB.alumno?.data?.attributes || {}) : attrB;
 
-                if (type === 'insurance') {
-                    const sA = pA.seguro_pagado ? 1 : 0, sB = pB.seguro_pagado ? 1 : 0;
-                    if (sA !== sB) return sA - sB;
-                }
-                if (type === 'gender') {
-                    const gA = (pA.genero || 'HOMBRE') === 'MUJER' ? 0 : 1, gB = (pB.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
-                    if (gA !== gB) return gA - gB;
-                }
                 if (type === 'grade') {
                     const wA = getGradeWeight(pA.grado), wB = getGradeWeight(pB.grado);
                     if (wA !== wB) return wB - wA;
@@ -720,11 +688,11 @@ async function generateReport(type) {
                     const eA = calculateAge(pA.fecha_nacimiento), eB = calculateAge(pB.fecha_nacimiento);
                     if (eA !== eB) return (isNaN(eA) ? 999 : eA) - (isNaN(eB) ? 999 : eB);
                 }
-
                 return (pA.apellidos || "").localeCompare((pB.apellidos || ""), 'es');
             });
 
-            // CABECERAS Y CONTENIDO
+            const criteriosES = { 'surname': 'APELLIDOS', 'grade': 'GRADOS', 'age': 'EDAD', 'gender': 'GÉNERO', 'insurance': 'SEGUROS', 'attendance': 'ASISTENCIA' };
+
             const headRow = (type === 'attendance') 
                 ? ['Nº', 'Apellidos', 'Nombre', 'Dojo Sede', 'Tipo', 'Hora', 'Estado']
                 : ['Nº', 'Apellidos', 'Nombre', (type === 'gender' ? 'Género' : 'DNI'), 'Edad', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Dojo'];
@@ -734,10 +702,13 @@ async function generateReport(type) {
                 if (type === 'attendance') {
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    return [`${index + 1}`, (alu?.apellidos || '').toUpperCase(), alu?.nombre || '', getDojoName(cla?.dojo), cla?.Tipo || 'Aikido', cla?.Fecha_Hora?.split('T')[1].substring(0, 5) + "h", (a.Estado || 'Confirmado').toUpperCase()];
+                    let hora = "--:--";
+                    if (cla?.Fecha_Hora) hora = cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h";
+                    
+                    return [`${index + 1}`, (alu?.apellidos || '').toUpperCase(), alu?.nombre || '', getDojoName(cla?.dojo), cla?.Tipo || 'Keiko', hora, (a.Estado || a.estado || 'Confirmado').toUpperCase()];
                 } else {
-                    const colVar = (type === 'gender') ? (a.genero || 'HOMBRE') : (a.dni || '');
-                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', colVar, calculateAge(a.fecha_nacimiento), normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), getDojoName(a.dojo)];
+                    const varCol = (type === 'gender') ? (a.genero || 'HOMBRE') : (a.dni || '');
+                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', varCol, calculateAge(a.fecha_nacimiento), normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), getDojoName(a.dojo)];
                 }
             });
 
@@ -749,13 +720,13 @@ async function generateReport(type) {
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.text("INFORME OFICIAL ARASHI", pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | CRITERIO: ${type.toUpperCase()} | FECHA: ${attendanceDate || '---'}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.setFontSize(9); doc.text(`FILTRO: ${dojoFilterName} | FECHA: ${attendanceDate || '---'} | CRITERIO: ${criteriosES[type] || type.toUpperCase()}`, pageWidth / 2, 18, { align: 'center' });
                 }
             });
             doc.save(`Arashi_Informe_${attendanceDate || 'Listado'}.pdf`);
         } catch (e) { 
-            console.error("🔥 Error PDF:", e);
-            showModal("Error", "Error de comunicación con Neon/Strapi."); 
+            console.error("🔥 [ERROR CRÍTICO]:", e.message);
+            showModal("Error", e.message); 
         }
     };
 }
