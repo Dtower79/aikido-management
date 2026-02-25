@@ -1830,44 +1830,56 @@ async function validateAttendance(asistId, asiste, aluId, dur) {
     }
 }
 
-        /* --- GENERADOR DE QR PARA EL TATAMI --- */
-        function generateClassQR(classId) {
-            console.log("🎫 Generando QR para Clase ID:", classId);
-            
-            // 1. Abrimos el modal con el diseño corregido
-            showModal("CÓDIGO DE ASISTENCIA", `
-                <div style="margin-top:10px;">
-                    <div class="qr-display-container">
-                        <div id="qr-gen"></div>
-                    </div>
-                    <p style="font-size:12px; color:var(--text-muted); margin-top:15px; font-weight:400; text-transform:none; line-height:1.4;">
-                        Muestra este código a los alumnos.<br>Deben usar el escáner de su App para registrarse.
-                    </p>
-                </div>
-            `, true);
+        /* --- GENERADOR DE QR CON CIERRE SINCRONIZADO --- */
+function generateClassQR(classId) {
+    console.log("🎫 Generando QR para Clase ID:", classId);
+    
+    // Mostramos el modal pero con un botón personalizado para cerrar y refrescar
+    showModal("CÓDIGO DE ASISTENCIA", `
+        <div style="margin-top:10px;">
+            <div class="qr-display-container">
+                <div id="qr-gen"></div>
+            </div>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:15px; font-weight:400; text-transform:none; line-height:1.4;">
+                Muestra este código a los alumnos.<br>Deben usar el escáner de su App para registrarse.
+            </p>
+            <button class="action-btn primary" style="margin-top:20px; width:100%;" onclick="closeQRAndRefresh()">
+                FINALIZAR Y ACTUALIZAR LISTA
+            </button>
+        </div>
+    `, false); // 'false' para ocultar el botón cerrar genérico y usar el nuestro
 
-            // 2. Esperamos un instante a que el modal se dibuje para pintar el QR
-            setTimeout(() => {
-                const container = document.getElementById('qr-gen');
-                if (container && typeof QRCode !== 'undefined') {
-                    container.innerHTML = ""; // Limpieza
-                    new QRCode(container, {
-                        text: classId,
-                        width: 200,
-                        height: 200,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
-                    });
-                    console.log("✅ QR Dibujado con éxito.");
-                } else {
-                    console.error("❌ Error: No se encontró qr-gen o la librería QRCode no está cargada.");
-                    if (typeof QRCode === 'undefined') {
-                        alert("Error crítico: Librería QRCode no cargada. Avisa al desarrollador.");
-                    }
-                }
-            }, 200);
+    setTimeout(() => {
+        const container = document.getElementById('qr-gen');
+        if (container && typeof QRCode !== 'undefined') {
+            container.innerHTML = ""; 
+            new QRCode(container, {
+                text: classId,
+                width: 200,
+                height: 200,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
         }
+    }, 200);
+}
+
+/* --- CIERRE DE QR Y RECARGA FORZADA DE TATAMI --- */
+async function closeQRAndRefresh() {
+    console.log("♻️ Cerrando QR y sincronizando alumnos validados...");
+    
+    // 1. Borramos la caché de asistencias para obligar a fetchSmart a ir a Neon
+    localStorage.removeItem('cache_asistencias_sensei');
+    
+    // 2. Cerramos el modal
+    closeModal();
+    
+    // 3. Recargamos el panel del sensei (ahora descargará los datos nuevos)
+    await loadSenseiPanel();
+    
+    console.log("✅ Tatami actualizado.");
+}
 
 /* --- PRÓXIMO KEIKO (VERSION 7.0 - SIN BOTÓN PARA SENSEI) --- */
 async function checkTodayClass(forcedDojoId = null) {
@@ -2901,11 +2913,23 @@ function showView(v, el) {
         /* --- PWA LOGIC --- */
         /* --- PWA LOGIC (Arquitectura Arashi) --- */
 
-// 1. Registro del Service Worker cuando la página carga
+// 1. Registro del Service Worker con Forzado de Actualización
 if ('serviceWorker' in navigator) {
+    // CIRUGÍA: Detectar cambio de versión y recargar automáticamente
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
+
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('🥋 SW: Sistema de defensa activo'))
+            .then(reg => {
+                console.log('🥋 SW: Sistema de defensa activo');
+                // Opcional: comprueba si hay actualizaciones al cargar
+                reg.update();
+            })
             .catch(err => console.log('❌ SW: Fallo de despliegue', err));
     });
 }
@@ -3111,72 +3135,77 @@ function setEnrollmentGender(val) {
 }
 
 // 3. Procesar el alta completa (Ficha + Usuario)
-/* --- PROCESO DE ALTA COMPLETA (FIX: RUTAS Y CAMPOS FALTANTES) --- */
+/* --- PROCESO DE ALTA CON ESCUDO ANTI-DUPLICADOS --- */
 async function handleEnrollmentSubmit(event) {
     event.preventDefault();
     
-    // 1. CAPTURA DE DATOS
+    const dni = document.getElementById('ins-dni').value.toUpperCase().trim();
+    const apellidos = document.getElementById('ins-apellidos').value.trim();
+    const nombre = document.getElementById('ins-nombre').value.trim();
     const p1 = document.getElementById('ins-pass').value;
     const p2 = document.getElementById('ins-pass-confirm').value;
-    const nombre = document.getElementById('ins-nombre').value.trim();
-    const apellidos = document.getElementById('ins-apellidos').value.trim();
-    const dni = document.getElementById('ins-dni').value.toUpperCase();
-    const email = document.getElementById('ins-email').value.toLowerCase();
-    
-    // 2. VALIDACIONES DE SEGURIDAD
+
     if (p1 !== p2) return showModal("Error", "Las contraseñas no coinciden.");
     if (p1.length < 6) return showModal("Error", "La contraseña debe tener al menos 6 caracteres.");
 
     const btn = document.getElementById('btn-ins-submit');
     const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CREANDO CUENTA...'; 
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> COMPROBANDO TATAMI...'; 
     btn.disabled = true;
 
     try {
-        // PASO A: REGISTRO EN STRAPI (Ruta corregida sin doble /api)
+        // 🛡️ PASO 0: ESCUDO ANTI-DUPLICADOS
+        // Buscamos si el DNI ya existe O si coinciden Nombre y Apellidos exactamente
+        const checkUrl = `${API_URL}/alumnos?filters[$or][0][dni][$eq]=${dni}&filters[$or][1][$and][0][nombre][$eqi]=${nombre}&filters[$or][1][$and][1][apellidos][$eqi]=${apellidos}`;
+        
+        const resCheck = await fetch(checkUrl);
+        const dataCheck = await resCheck.json();
+
+        if (dataCheck.data && dataCheck.data.length > 0) {
+            // Hemos encontrado una coincidencia
+            const existente = dataCheck.data[0].attributes || dataCheck.data[0];
+            const motivo = (existente.dni === dni) ? `DNI (${dni})` : "Nombre y Apellidos";
+            
+            showModal("⚠️ ALUMNO YA REGISTRADO", 
+                `Hemos detectado que ya existe una ficha por ${motivo}.<br><br>` +
+                `Para evitar duplicados, por favor vuelve atrás y selecciona la opción <br><b>'YA SOY ALUMNO'</b> <br>para activar tu acceso.`
+            );
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return; // Detenemos el proceso aquí
+        }
+
+        // Si el escudo no detecta nada, procedemos con el alta normal...
+        
+        // PASO A: REGISTRO EN STRAPI
         const regRes = await fetch(`${API_URL}/auth/local/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                username: dni, 
-                email: email, 
-                password: p1 
-            })
+            body: JSON.stringify({ username: dni, email: document.getElementById('ins-email').value.toLowerCase(), password: p1 })
         });
         
         const regData = await regRes.json();
-        if (!regRes.ok) throw new Error(regData.error?.message || "DNI o Email ya registrados.");
+        if (!regRes.ok) throw new Error(regData.error?.message || "Error al crear cuenta.");
 
         const userJwt = regData.jwt;
         const userId = regData.user.id;
 
-        // PASO B: ACTUALIZAR PERFIL (Ruta corregida /users/me)
-        await fetch(`${API_URL}/users/me`, {
-            method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${userJwt}` 
-            },
-            body: JSON.stringify({ nombre, apellidos })
-        });
-
-        // PASO C: CREAR FICHA EN NEON (Ruta corregida /alumnos e INTEGRIDAD TOTAL)
+        // PASO B: CREAR FICHA EN NEON
         const alumnoData = {
             nombre: nombre,
             apellidos: apellidos,
             dni: dni,
-            email: email,
+            email: document.getElementById('ins-email').value.toLowerCase(),
             fecha_nacimiento: document.getElementById('ins-nacimiento').value,
             fecha_inicio: new Date().toISOString().split('T')[0],
             telefono: document.getElementById('ins-telefono').value,
             genero: document.getElementById('ins-genero').value,
             dojo: document.getElementById('ins-dojo').value,
             grupo: document.getElementById('ins-grupo').value,
-            // --- FIX: CAMPOS DE DIRECCIÓN RECUPERADOS ---
             direccion: document.getElementById('ins-direccion').value,
             poblacion: document.getElementById('ins-poblacion').value,
             cp: document.getElementById('ins-cp').value,
-            // --------------------------------------------
             grado: "S/G",
             activo: true,
             cuenta_usuario: userId
@@ -3184,23 +3213,17 @@ async function handleEnrollmentSubmit(event) {
 
         const aluRes = await fetch(`${API_URL}/alumnos`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userJwt}` 
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userJwt}` },
             body: JSON.stringify({ data: alumnoData })
         });
 
         if (aluRes.ok) {
             document.getElementById('enrollment-modal').classList.add('hidden');
-            showModal("¡BIENVENIDO!", `Hola ${nombre}, tu ficha ha sido creada con éxito. Ya puedes entrar al Dojo con tu DNI.`);
+            showModal("¡BIENVENIDO!", `Hola ${nombre}, tu ficha ha sido creada con éxito.`);
             event.target.reset();
-        } else {
-            throw new Error("Usuario creado pero error al generar ficha técnica. Avisa al Sensei.");
         }
 
     } catch (err) {
-        console.error("❌ Fallo en Inscripción:", err);
         showModal("Error de Registro", err.message);
     } finally {
         btn.innerHTML = originalText; btn.disabled = false;
