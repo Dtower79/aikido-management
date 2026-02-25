@@ -308,108 +308,7 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
     if (event) event.stopPropagation();
 }
 
-/* --- GENERADOR DE INFORMES PREMIUM V5: FIX RANGO DE FECHAS --- */
-async function generateReport(type) {
-    const dojoSelect = document.getElementById('report-dojo-filter');
-    const dojoFilterId = dojoSelect.value;
-    const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
-    const attendanceDate = document.getElementById('report-attendance-date').value;
 
-    if (type === 'attendance' && !attendanceDate) {
-        showModal("Fecha Requerida", "Por favor, selecciona una fecha en el calendario.");
-        return;
-    }
-
-    document.getElementById('report-modal').classList.add('hidden');
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); 
-    const logoImg = new Image();
-    logoImg.src = 'img/logo-arashi-informe.png';
-
-    logoImg.onload = async function () {
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const isBaja = type.startsWith('bajas');
-
-        try {
-            let apiUrl = "";
-            if (type === 'attendance') {
-                // 🥋 TIMEZONE FIX: Filtramos por el rango total del día (00:00 a 23:59)
-                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${attendanceDate}T00:00:00.000Z&filters[clase][Fecha_Hora][$lte]=${attendanceDate}T23:59:59.999Z&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
-            } else {
-                apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
-            }
-
-            if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
-
-            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-            const json = await res.json();
-            let list = json.data || [];
-
-            // 🥋 LIMPIEZA DE DUPLICADOS EN EL INFORME
-            if (type === 'attendance') {
-                const seen = new Set();
-                list = list.filter(item => {
-                    const a = item.attributes || item;
-                    const aluId = getID(parseRelation(a.alumno));
-                    const key = `${aluId}`;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
-            }
-
-            // Ordenación
-            list.sort((a, b) => {
-                const pA = a.attributes || a; const pB = b.attributes || b;
-                return (pA.apellidos || "").localeCompare(pB.apellidos || "");
-            });
-
-            let headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Clase', 'Hora', 'Estado'];
-            if (!type === 'attendance') headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'CP/Ciudad'];
-
-            const body = list.map((item, index) => {
-                const a = item.attributes || item;
-                const alu = parseRelation(a.alumno);
-                const cla = parseRelation(a.clase);
-                
-                if (type === 'attendance') {
-                    let horaStr = "--:--";
-                    if(cla?.Fecha_Hora) horaStr = cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h";
-                    return [
-                        `${index + 1}`,
-                        (alu?.apellidos || '').toUpperCase(),
-                        (alu?.nombre || ''),
-                        alu?.dni || '-',
-                        getDojoName(alu?.dojo),
-                        cla?.Tipo || 'General',
-                        horaStr,
-                        (a.Estado || 'Confirmado').toUpperCase()
-                    ];
-                } else {
-                    const p = a;
-                    return [`${index + 1}`, (p.apellidos || '').toUpperCase(), p.nombre || '', p.dni || '', normalizeGrade(p.grado), parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'h', p.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(p.telefono), p.email || '-', (p.direccion || '').substring(0, 20), `${p.cp || ''} ${p.poblacion || ''}`.trim()];
-                }
-            });
-
-            doc.autoTable({
-                startY: 30, margin: { top: 30, left: 10, right: 10 },
-                head: [headRow], body: body, theme: 'grid',
-                styles: { fontSize: 5, cellPadding: 0.8 },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
-                didDrawPage: (data) => {
-                    doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-                    doc.setFontSize(14); doc.text(type === 'attendance' ? "REPORTE ASISTENCIA DIARIA" : "LISTADO ALUMNOS", pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); doc.text(`${dojoFilterName} | FECHA: ${attendanceDate || new Date().toLocaleDateString()}`, pageWidth / 2, 18, { align: 'center' });
-                }
-            });
-            doc.save(`Arashi_Asistencia_${attendanceDate}.pdf`);
-        } catch (e) { 
-            console.error(e);
-            showModal("Error", "Fallo al generar el PDF."); 
-        }
-    };
-}
 
 // También actualizamos closeAlumnoActions para limpiar la barra
 function closeAlumnoActions() {
@@ -716,7 +615,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     }
 }
 
-/* --- GENERADOR DE INFORMES (VERSION 10.5 - FIX ASISTENCIA VACÍA) --- */
+/* --- GENERADOR DE INFORMES ARASHI V12.0 (UNIFICADO Y BLINDADO) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -724,7 +623,7 @@ async function generateReport(type) {
     const attendanceDate = document.getElementById('report-attendance-date').value;
 
     if (type === 'attendance' && !attendanceDate) {
-        showModal("Aviso", "Selecciona una fecha en el calendario para el informe de asistencia.");
+        showModal("Aviso", "Selecciona una fecha para el informe de asistencia.");
         return;
     }
 
@@ -741,39 +640,59 @@ async function generateReport(type) {
 
         try {
             let apiUrl = "";
+            
             if (type === 'attendance') {
-                // 🥋 ESTRATEGIA DE RANGO: Buscamos todo el día de Neon (00:00:00 a 23:59:59)
+                // 🥋 ASISTENCIA: Filtrado por rango de día completo
                 const start = `${attendanceDate}T00:00:00.000Z`;
                 const end = `${attendanceDate}T23:59:59.999Z`;
-                
                 apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${start}&filters[clase][Fecha_Hora][$lte]=${end}&populate[alumno][populate]=dojo&populate[clase]=*&pagination[limit]=500`;
+                if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
             } else {
+                // 🥋 ALUMNOS: Activos o Bajas
                 apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
+                if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
             }
-
-            if (dojoFilterId) apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
 
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
             const json = await res.json();
             let list = json.data || [];
 
             if (list.length === 0) {
-                showModal("Sin Datos", "No se han encontrado registros para los criterios seleccionados.");
+                showModal("Sin Datos", "No hay registros para este criterio.");
                 return;
             }
 
-            // Ordenación por Apellidos
+            // 🥋 MOTOR DE ORDENACIÓN DINÁMICA SEGÚN EL BOTÓN PULSADO
             list.sort((a, b) => {
                 const itemA = a.attributes || a;
                 const itemB = b.attributes || b;
-                const nomA = (type === 'attendance' ? itemA.alumno?.data?.attributes?.apellidos : itemA.apellidos) || "";
-                const nomB = (type === 'attendance' ? itemB.alumno?.data?.attributes?.apellidos : itemB.apellidos) || "";
+                
+                // Extraer datos para ordenar (maneja anidación de asistencia)
+                const getVal = (obj, key) => (type === 'attendance') ? obj.alumno.data.attributes[key] : obj[key];
+
+                if (type === 'grade') {
+                    return getGradeWeight(itemB.grado) - getGradeWeight(itemA.grado); // Mayor grado primero
+                }
+                if (type === 'age' || type === 'bajas_date') {
+                    const dateA = new Date(itemA.fecha_nacimiento || itemA.fecha_baja || '1900-01-01');
+                    const dateB = new Date(itemB.fecha_nacimiento || itemB.fecha_baja || '1900-01-01');
+                    return dateA - dateB;
+                }
+                // Por defecto: Apellidos
+                const nomA = (getVal(itemA, 'apellidos') || "").toUpperCase();
+                const nomB = (getVal(itemB, 'apellidos') || "").toUpperCase();
                 return nomA.localeCompare(nomB);
             });
 
-            let headRow = (type === 'attendance') 
-                ? ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora', 'Estado']
-                : ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'CP/Ciudad'];
+            // 🥋 DEFINICIÓN DE COLUMNAS SEGÚN CONTEXTO
+            let headRow;
+            if (type === 'attendance') {
+                headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo', 'Clase', 'Hora', 'Estado'];
+            } else if (type === 'insurance') {
+                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Dojo', 'Seguro Pagado', 'Teléfono'];
+            } else {
+                headRow = ['Nº', 'Apellidos', 'Nombre', 'DNI', 'Grado', 'Horas', 'Seguro', 'Teléfono', 'Email', 'CP/Ciudad'];
+            }
 
             const body = list.map((item, index) => {
                 const a = item.attributes || item;
@@ -789,6 +708,8 @@ async function generateReport(type) {
                         cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
                         (a.Estado || 'Confirmado').toUpperCase()
                     ];
+                } else if (type === 'insurance') {
+                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre, a.dni, getDojoName(a.dojo), a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono)];
                 } else {
                     return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', a.dni || '', normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), a.email || '-', (a.direccion || '').substring(0, 20), `${a.cp || ''} ${a.poblacion || ''}`.trim()];
                 }
@@ -797,18 +718,19 @@ async function generateReport(type) {
             doc.autoTable({
                 startY: 30, margin: { top: 30, left: 10, right: 10 },
                 head: [headRow], body: body, theme: 'grid',
-                styles: { fontSize: 5, cellPadding: 1 },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
+                styles: { fontSize: 6, cellPadding: 1.2 },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-                    doc.setFontSize(14); doc.text(type === 'attendance' ? "ASISTENCIA DIARIA DOJO" : "LISTADO ALUMNOS", pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); doc.text(`FECHA: ${attendanceDate || new Date().toLocaleDateString()}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.setFontSize(14); doc.text(type === 'attendance' ? "REPORTE ASISTENCIA DIARIA" : "INFORME OFICIAL ALUMNOS", pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | CRITERIO: ${type.toUpperCase()}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.setFontSize(7); doc.text(`Generado el: ${new Date().toLocaleString()}`, 10, pageWidth - 10, { angle: 90 });
                 }
             });
-            doc.save(`Arashi_Informe_${type}.pdf`);
+            doc.save(`Arashi_Reporte_${type}_${attendanceDate || 'Listado'}.pdf`);
         } catch (e) { 
             console.error("🔥 Error PDF:", e);
-            showModal("Error", "Fallo al generar el informe."); 
+            showModal("Error", "Fallo al generar el PDF. Revisa la consola."); 
         }
     };
 }
