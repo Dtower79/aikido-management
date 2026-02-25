@@ -615,7 +615,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     }
 }
 
-/* --- GENERADOR DE INFORMES ARASHI V16.5 (FIX 400 ERROR & TIMEZONE) --- */
+/* --- GENERADOR DE INFORMES ARASHI V17.0 (FIX 400: COMPATIBILIDAD DateTime) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -642,16 +642,17 @@ async function generateReport(type) {
             let apiUrl = "";
             
             if (type === 'attendance') {
-                // 🥋 FIX QUIRÚRGICO: Usamos $startsWith para evitar errores 400 y desfases horarios
-                // Esto busca cualquier registro cuya Fecha_Hora empiece por "AAAA-MM-DD"
-                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$startsWith]=${attendanceDate}&populate[alumno][populate][dojo]=*&populate[clase]=*&pagination[limit]=500`;
+                // 🥋 CIRUGÍA: Volvemos al rango ISO pero con sintaxis robusta para Strapi v5
+                const start = `${attendanceDate}T00:00:00.000Z`;
+                const end = `${attendanceDate}T23:59:59.999Z`;
                 
-                // Si hay filtro de Dojo, lo aplicamos a través de la relación del alumno
+                // Simplificamos populate para evitar que la URL sea demasiado larga (causa de errores 400)
+                apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$gte]=${start}&filters[clase][Fecha_Hora][$lte]=${end}&populate[alumno][populate][0]=dojo&populate[clase]=*&pagination[limit]=500`;
+                
                 if (dojoFilterId) {
                     apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
                 }
             } else {
-                // Informes de Alumnos Activos / Bajas
                 apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
                 if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
             }
@@ -659,13 +660,19 @@ async function generateReport(type) {
             console.log("📡 Consultando Tatami:", apiUrl);
 
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-            if (!res.ok) throw new Error(`Error API: ${res.status}`);
+            
+            // Si Strapi devuelve error, lo capturamos aquí para depurar
+            if (!res.ok) {
+                const errorDetail = await res.json();
+                console.error("❌ Detalle Error Strapi:", errorDetail);
+                throw new Error(`Error API: ${res.status}`);
+            }
             
             const json = await res.json();
             let list = json.data || [];
 
             if (list.length === 0) {
-                showModal("Sin Datos", `No se han encontrado registros para el día ${attendanceDate}.`);
+                showModal("Sin Datos", `No se han encontrado registros para los criterios seleccionados.`);
                 return;
             }
 
@@ -709,6 +716,7 @@ async function generateReport(type) {
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
                     let hora = "--:--";
+                    // Extraemos hora de la cadena ISO: 2026-02-24T19:00:00 -> 19:00
                     if (cla?.Fecha_Hora) hora = cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h";
                     
                     return [
@@ -739,8 +747,8 @@ async function generateReport(type) {
             });
             doc.save(`Arashi_${criteriosES[type] || 'Informe'}_${attendanceDate || 'Listado'}.pdf`);
         } catch (e) { 
-            console.error("🔥 Error PDF:", e);
-            showModal("Error", "No se pudo conectar con el servidor para este informe."); 
+            console.error("🔥 Error Crítico PDF:", e);
+            showModal("Error", "Fallo de conexión o parámetros inválidos en el servidor."); 
         }
     };
 }
