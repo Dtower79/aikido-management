@@ -615,7 +615,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     }
 }
 
-/* --- GENERADOR DE INFORMES ARASHI V15.0 (ORDENACIÓN SECUNDARIA POR APELLIDOS) --- */
+/* --- GENERADOR DE INFORMES ARASHI V16.0 (FIX: EXTRACCIÓN ATRIBUTOS + JUEZ DE PAZ) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -659,55 +659,54 @@ async function generateReport(type) {
                 return;
             }
 
-            // 🥋 MOTOR DE ORDENACIÓN (CRITERIO 1: VARIABLE | CRITERIO 2: APELLIDOS)
+            // 🥋 MOTOR DE ORDENACIÓN BLINDADO
             list.sort((a, b) => {
-                const itemA = a.attributes || a;
-                const itemB = b.attributes || b;
+                // 1. EXTRACCIÓN CORRECTA DE ATRIBUTOS (STRAPI V5)
+                const attrA = a.attributes || a;
+                const attrB = b.attributes || b;
                 
-                // Extraer el perfil para comparar (maneja anidación de asistencia o alumno directo)
-                const pA = (type === 'attendance') ? parseRelation(itemA.alumno) : itemA;
-                const pB = (type === 'attendance') ? parseRelation(itemB.alumno) : itemB;
+                const pA = (type === 'attendance') ? (attrA.alumno?.data?.attributes || {}) : attrA;
+                const pB = (type === 'attendance') ? (attrB.alumno?.data?.attributes || {}) : attrB;
 
-                const nomA = (pA.apellidos || "").toUpperCase();
-                const nomB = (pB.apellidos || "").toUpperCase();
+                const apellidosA = (pA.apellidos || "").toUpperCase();
+                const apellidosB = (pB.apellidos || "").toUpperCase();
 
-                // REGLA A: SEGUROS (NO pagados primero)
+                // 2. APLICACIÓN DE CRITERIOS PRINCIPALES
                 if (type === 'insurance') {
                     const statusA = pA.seguro_pagado ? 1 : 0;
                     const statusB = pB.seguro_pagado ? 1 : 0;
                     if (statusA !== statusB) return statusA - statusB;
                 }
 
-                // REGLA B: GÉNERO (MUJER primero)
                 if (type === 'gender') {
                     const genA = (pA.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
                     const genB = (pB.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
                     if (genA !== genB) return genA - genB;
                 }
 
-                // REGLA C: GRADO (Jerarquía técnica)
                 if (type === 'grade') {
                     const weightA = getGradeWeight(pA.grado);
                     const weightB = getGradeWeight(pB.grado);
                     if (weightA !== weightB) return weightB - weightA;
                 }
 
-                // REGLA D: EDAD (Más jóvenes primero o por fecha nacimiento)
                 if (type === 'age') {
-                    const dateA = new Date(pA.fecha_nacimiento || '1900-01-01').getTime();
-                    const dateB = new Date(pB.fecha_nacimiento || '1900-01-01').getTime();
-                    if (dateA !== dateB) return dateA - dateB;
+                    // Comparamos por años enteros para permitir el empate y pasar al apellido
+                    const edadA = calculateAge(pA.fecha_nacimiento);
+                    const edadB = calculateAge(pB.fecha_nacimiento);
+                    const valA = isNaN(edadA) ? 999 : edadA;
+                    const valB = isNaN(edadB) ? 999 : edadB;
+                    if (valA !== valB) return valA - valB;
                 }
 
-                // REGLA E: FECHA BAJA
                 if (type === 'bajas_date') {
-                    const dateA = new Date(itemA.fecha_baja || '1900-01-01').getTime();
-                    const dateB = new Date(itemB.fecha_baja || '1900-01-01').getTime();
+                    const dateA = new Date(attrA.fecha_baja || '1900-01-01').getTime();
+                    const dateB = new Date(attrB.fecha_baja || '1900-01-01').getTime();
                     if (dateA !== dateB) return dateB - dateA;
                 }
 
-                // SIEMPRE: EL SEGUNDO CRITERIO (O ÚNICO) ES EL APELLIDO
-                return nomA.localeCompare(nomB);
+                // 🥋 JUEZ DE PAZ: ORDEN ALFABÉTICO (Siempre se ejecuta en caso de empate)
+                return apellidosA.localeCompare(apellidosB, 'es', { sensitivity: 'base' });
             });
 
             const criteriosES = { 'surname': 'APELLIDOS', 'grade': 'GRADOS', 'age': 'EDAD', 'gender': 'GÉNERO', 'insurance': 'SEGUROS', 'attendance': 'ASISTENCIA', 'bajas_surname': 'BAJAS POR APELLIDO', 'bajas_date': 'BAJAS POR FECHA' };
@@ -726,29 +725,10 @@ async function generateReport(type) {
                 if (type === 'attendance') {
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    return [
-                        `${index + 1}`,
-                        (alu?.apellidos || '').toUpperCase(),
-                        alu?.nombre || '',
-                        getDojoName(alu?.dojo),
-                        cla?.Tipo || 'Keiko',
-                        cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
-                        (a.Estado || 'Confirmado').toUpperCase()
-                    ];
+                    return [`${index + 1}`, (alu?.apellidos || '').toUpperCase(), alu?.nombre || '', getDojoName(alu?.dojo), cla?.Tipo || 'Keiko', cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--", (a.Estado || 'Confirmado').toUpperCase()];
                 } else {
                     const dniOGenero = (type === 'gender') ? (a.genero || 'HOMBRE') : (a.dni || '-');
-                    return [
-                        `${index + 1}`, 
-                        (a.apellidos || '').toUpperCase(), 
-                        a.nombre || '', 
-                        dniOGenero, 
-                        calculateAge(a.fecha_nacimiento), 
-                        normalizeGrade(a.grado), 
-                        parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', 
-                        a.seguro_pagado ? 'SÍ' : 'NO', 
-                        normalizePhone(a.telefono), 
-                        getDojoName(a.dojo)
-                    ];
+                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', dniOGenero, calculateAge(a.fecha_nacimiento), normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), getDojoName(a.dojo)];
                 }
             });
 
