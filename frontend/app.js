@@ -1189,7 +1189,7 @@ async function sortTable(colName) {
     renderTableAlumnos(data, tbody, actives);
 }
 
-/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V23.0 - FIX POSTGRES 500) --- */
+/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V24.0 - ESTRATEGIA DE CARGA INVERSA) --- */
 async function generateAttendanceReport() {
     const attendanceDate = document.getElementById('report-attendance-date').value;
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -1212,61 +1212,65 @@ async function generateAttendanceReport() {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         try {
-            // 🥋 ESTRATEGIA DEFINITIVA: Usamos el rango ISO que Postgres entiende perfectamente
-            // Buscamos desde las 00:00:00 hasta las 23:59:59 de ese día exacto
+            // 🥋 CIRUGÍA V24: Atacamos el endpoint /CLASES (Filtro raíz = Cero Errores)
             const start = `${attendanceDate}T00:00:00.000Z`;
             const end = `${attendanceDate}T23:59:59.999Z`;
 
-            // Construimos la URL atacando Asistencias pero con un filtro de fecha sobre la Clase
-            let apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$between][0]=${start}&filters[clase][Fecha_Hora][$between][1]=${end}&populate[clase]=*&populate[alumno][populate][0]=dojo&pagination[limit]=500`;
+            // Filtramos las clases del día y populamos sus asistencias y alumnos
+            let apiUrl = `${API_URL}/api/clases?filters[Fecha_Hora][$between][0]=${start}&filters[Fecha_Hora][$between][1]=${end}&populate[asistencias][populate][alumno][populate][0]=dojo&populate[dojo]=*`;
 
+            // Si hay filtro de Dojo, filtramos la clase por su sede
             if (dojoFilterId) {
-                apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
+                apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
             }
 
-            console.log("📡 [V23] Consultando Neon con rango ISO:", apiUrl);
+            console.log("📡 [V24] Consultando Clases del día:", apiUrl);
 
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-            
-            if (!res.ok) {
-                const errLog = await res.json();
-                console.error("❌ Error Strapi:", errLog);
-                throw new Error("Error interno del servidor.");
-            }
-            
+            if (!res.ok) throw new Error("Error en la consulta de clases");
             const json = await res.json();
-            let list = json.data || [];
+            
+            // --- PROCESAMIENTO DE DATOS (FLATTENING) ---
+            let listadoAsistencia = [];
 
-            if (list.length === 0) {
-                showModal("Sin Datos", `No hay asistencias registradas para el ${formatDateDisplay(attendanceDate)}.`);
+            (json.data || []).forEach(clase => {
+                const c = clase.attributes || clase;
+                const asistencias = c.asistencias?.data || [];
+                
+                asistencias.forEach(asist => {
+                    const a = asist.attributes || asist;
+                    const alu = parseRelation(a.alumno);
+                    
+                    listadoAsistencia.push({
+                        apellidos: alu?.apellidos || '',
+                        nombre: alu?.nombre || '',
+                        dojoAlumno: getDojoName(alu?.dojo),
+                        tipoClase: c.Tipo || 'Keiko',
+                        hora: c.Fecha_Hora ? c.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
+                        estado: (a.Estado || a.estado || 'Confirmado').toUpperCase()
+                    });
+                });
+            });
+
+            if (listadoAsistencia.length === 0) {
+                showModal("Sin Datos", `No se han encontrado alumnos registrados en las clases del día ${formatDateDisplay(attendanceDate)}.`);
                 return;
             }
 
-            // Ordenación por Apellidos
-            list.sort((a, b) => {
-                const pA = parseRelation(a.attributes?.alumno || a.alumno);
-                const pB = parseRelation(b.attributes?.alumno || b.alumno);
-                return (pA.apellidos || "").localeCompare((pB.apellidos || ""), 'es');
-            });
+            // Ordenación alfabética por apellidos
+            listadoAsistencia.sort((a, b) => a.apellidos.localeCompare(b.apellidos, 'es'));
 
+            // Construcción del PDF
             const headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora Keiko', 'Estado'];
-            const body = list.map((item, index) => {
-                const a = item.attributes || item;
-                const alu = parseRelation(a.alumno);
-                const cla = parseRelation(a.clase);
-                // Extraemos solo la hora (HH:mm) del campo Fecha_Hora
-                const hora = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--";
-
-                return [
-                    `${index + 1}`,
-                    (alu?.apellidos || '').toUpperCase(),
-                    alu?.nombre || '',
-                    getDojoName(alu?.dojo),
-                    cla?.Tipo || 'Keiko',
-                    hora,
-                    (a.Estado || a.estado || 'CONFIRMADO').toUpperCase()
-                ];
-            });
+            const body = listadoAsistencia.map((item, index) => [
+                `${index + 1}`,
+                item.apellidos.toUpperCase(),
+                item.nombre,
+                item.dojoAlumno,
+                item.tipoClase,
+                item.hora,
+                item.estado
+            ]);
 
             doc.autoTable({
                 startY: 30,
@@ -1275,7 +1279,7 @@ async function generateAttendanceReport() {
                 body: body,
                 theme: 'grid',
                 styles: { fontSize: 7, cellPadding: 1.5 },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14);
@@ -1288,8 +1292,8 @@ async function generateAttendanceReport() {
             doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
 
         } catch (e) {
-            console.error("🔥 Error V23:", e);
-            showModal("Error", "Fallo al conectar con el servidor. Revisa los permisos de la API.");
+            console.error("🔥 Error V24:", e);
+            showModal("Error de Datos", "No se pudo recuperar la información de ayer. Revisa la consola.");
         }
     };
 }
