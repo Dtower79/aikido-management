@@ -69,7 +69,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('search-alumno')?.addEventListener('keyup', () => filtrarTabla('table-alumnos', 'search-alumno'));
     document.getElementById('search-baja')?.addEventListener('keyup', () => filtrarTabla('table-bajas', 'search-baja'));
     setupDragScroll();
-    
+    // Detectar si el usuario viene desde un email de recuperación
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetCode = urlParams.get('code');
+
+    if (resetCode) {
+        console.log("🔑 Código de recuperación detectado. Abriendo Reset Modal...");
+        openResetPasswordModal(resetCode);
+    }
+
     const yearLabel = document.getElementById('current-year-lbl');
     if (yearLabel) yearLabel.textContent = new Date().getFullYear();
 
@@ -1187,6 +1195,115 @@ async function sortTable(colName) {
     // 3. Pintar la tabla con los datos ya ordenados
     const tbody = document.getElementById(actives ? 'lista-alumnos-body' : 'lista-bajas-body');
     renderTableAlumnos(data, tbody, actives);
+}
+
+/* --- GESTIÓN DE RECUPERACIÓN DE CONTRASEÑA --- */
+
+// A. Abrir el modal de nueva contraseña (inyectando el código del mail)
+function openResetPasswordModal(code) {
+    showModal("NUEVA CONTRASEÑA", `
+        <div style="text-align:left; margin-top:10px;">
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Introduce tu nueva clave de acceso.</p>
+            <input type="password" id="reset-p1" class="modal-field" placeholder="Nueva contraseña">
+            <input type="password" id="reset-p2" class="modal-field" placeholder="Confirmar contraseña">
+            <button class="action-btn primary" onclick="processPasswordReset('${code}')" style="margin-top:10px;">
+                CAMBIAR CONTRASEÑA
+            </button>
+        </div>
+    `, false);
+}
+
+// B. Enviar la nueva contraseña a Strapi
+async function processPasswordReset(code) {
+    const p1 = document.getElementById('reset-p1').value;
+    const p2 = document.getElementById('reset-p2').value;
+
+    if (p1 !== p2) { alert("Las contraseñas no coinciden"); return; }
+    if (p1.length < 6) { alert("Mínimo 6 caracteres"); return; }
+
+    try {
+        const res = await fetch(`${API_URL}/api/auth/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                code: code, // El token que venía en el email
+                password: p1,
+                passwordConfirmation: p2
+            })
+        });
+
+        if (res.ok) {
+            showModal("¡ÉXITO!", "Contraseña actualizada. Ya puedes entrar al Dojo.", () => {
+                window.location.href = 'movil.html'; // Limpiamos la URL del código
+            });
+        } else {
+            showModal("Error", "El enlace ha expirado o ya ha sido utilizado.");
+        }
+    } catch (e) {
+        showModal("Error", "No se pudo conectar con el servidor.");
+    }
+}
+
+/* --- GESTIÓN TÉCNICA DE RECUPERACIÓN (RESET) --- */
+
+// A. Abrir interfaz de nueva contraseña
+function openResetPasswordModal(code) {
+    showModal("NUEVA CONTRASEÑA", `
+        <div style="text-align:left; margin-top:10px;">
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">
+                Crea una nueva clave para acceder al Dojo.
+            </p>
+            <span class="modal-label">NUEVA CLAVE:</span>
+            <input type="password" id="reset-p1" class="modal-field" placeholder="Mínimo 6 caracteres">
+            <span class="modal-label">REPETIR CLAVE:</span>
+            <input type="password" id="reset-p2" class="modal-field" placeholder="Confirma tu clave">
+            
+            <button class="action-btn primary" onclick="processPasswordReset('${code}')" style="margin-top:20px; width:100%; height:55px;">
+                ACTUALIZAR Y ENTRAR
+            </button>
+        </div>
+    `, false);
+}
+
+// B. Comunicación definitiva con Strapi
+async function processPasswordReset(code) {
+    const p1 = document.getElementById('reset-p1').value;
+    const p2 = document.getElementById('reset-p2').value;
+
+    if (p1 !== p2) { alert("⚠️ Las contraseñas no coinciden."); return; }
+    if (p1.length < 6) { alert("⚠️ La clave debe tener al menos 6 caracteres."); return; }
+
+    const btn = document.querySelector('#custom-modal .action-btn.primary');
+    btn.innerText = "SINCRONIZANDO..."; btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/auth/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                code: code, // El token recibido por email
+                password: p1,
+                passwordConfirmation: p2
+            })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            // Si el reset es OK, Strapi nos devuelve el JWT y el User directamente
+            localStorage.setItem('aikido_jwt', data.jwt);
+            localStorage.setItem('aikido_user', JSON.stringify(data.user));
+            
+            showModal("¡OSS!", "Tu contraseña ha sido actualizada. Entrando al Dojo...", () => {
+                location.reload(); // Recargamos para que entre al Dashboard normal
+            });
+        } else {
+            showModal("Token Caducado", "El enlace de recuperación ha expirado. Pide uno nuevo.");
+        }
+    } catch (e) {
+        showModal("Error", "No hay conexión con el Tatami.");
+    } finally {
+        btn.innerText = "ACTUALIZAR Y ENTRAR"; btn.disabled = false;
+    }
 }
 
 /* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V35.0 - CROSS-REFERENCE PASSPORT STYLE) --- */

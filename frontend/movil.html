@@ -1521,6 +1521,19 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
 /* --- NÚCLEO DE INICIALIZACIÓN (VERSION 11.0 - INTEGRIDAD TOTAL) --- */
 async function initApp() {
+    /* --- DETECTOR QUIRÚRGICO DE RESET PASSWORD --- */
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetCode = urlParams.get('code');
+
+    if (resetCode) {
+        console.log("🔑 [SISTEMA] Token de recuperación detectado. Bloqueando inicio normal...");
+        // Eliminamos el código de la URL para que no moleste al recargar
+        window.history.replaceState({}, document.title, window.location.pathname);
+        // Abrimos el modal de reset
+        openResetPasswordModal(resetCode);
+        return; // Detenemos la carga normal de la app
+    }
+
     console.log("🚀 [INIT] Iniciando sincronización secuencial Arashi...");
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
