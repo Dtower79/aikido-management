@@ -1189,7 +1189,7 @@ async function sortTable(colName) {
     renderTableAlumnos(data, tbody, actives);
 }
 
-/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V33.0 - ROOT CLASES) --- */
+/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V34.0 - TOTAL RELIABILITY) --- */
 async function generateAttendanceReport() {
     const attendanceDate = document.getElementById('report-attendance-date').value;
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -1197,7 +1197,7 @@ async function generateAttendanceReport() {
     const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
 
     if (!attendanceDate) {
-        showModal("Aviso", "Selecciona una fecha en el calendario.");
+        showModal("Aviso", "Por favor, selecciona una fecha en el calendario.");
         return;
     }
 
@@ -1212,55 +1212,62 @@ async function generateAttendanceReport() {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         try {
-            // 🥋 ESTRATEGIA DEFINITIVA: Entramos por /api/clases
-            // El filtro de fecha es directo sobre la raíz, Strapi v5 NO puede fallar aquí.
-            const apiUrl = `${API_URL}/api/clases?filters[Fecha_Hora][$startsWith]=${attendanceDate}&populate[asistencias][populate][alumno][populate][0]=dojo&populate[dojo]=*`;
+            // 🥋 ESTRATEGIA DEFINITIVA: 
+            // No usamos filtros de fecha en la URL para evitar el Error 400/500 de Postgres/Strapi.
+            // Usamos la población simple que SI funciona en el Pasaporte.
+            const apiUrl = `${API_URL}/api/asistencias?populate[clase]=*&populate[alumno][populate][dojo]=*&pagination[limit]=1000`;
             
-            console.log("📡 [SISTEMA] Atacando por Clases (Estrategia Pasaporte Colectivo)...");
+            console.log("📡 [SISTEMA] Descargando bloque de asistencias para procesado local...");
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            
+            if (!res.ok) throw new Error("Error de comunicación con el servidor.");
             const json = await res.json();
             
-            if (!res.ok) throw new Error("Error de comunicación con el Tatami.");
-
-            // --- PROCESAMIENTO QUIRÚRGICO DE DATOS ---
-            let listadoFinal = [];
-
-            // Recorremos las clases encontradas ese día (mañana, tarde, etc.)
-            (json.data || []).forEach(clase => {
-                const c = clase.attributes || clase;
-                const asistencias = c.asistencias?.data || [];
+            // --- FILTRADO QUIRÚRGICO EN EL FRONTEND ---
+            const listadoFinal = (json.data || []).filter(item => {
+                const a = item.attributes || item;
+                const cla = parseRelation(a.clase);
+                const alu = parseRelation(a.alumno);
                 
-                asistencias.forEach(asist => {
-                    const a = asist.attributes || asist;
-                    const alu = parseRelation(a.alumno);
-                    
-                    // Aplicamos el filtro de Dojo si el Sensei lo seleccionó en el modal
-                    if (dojoFilterId && getID(alu?.dojo) !== dojoFilterId) return;
-
-                    listadoFinal.push({
-                        apellidos: (alu?.apellidos || "").toUpperCase(),
-                        nombre: alu?.nombre || "",
-                        dojoAlumno: getDojoName(alu?.dojo),
-                        tipo: c.Tipo || "Keiko",
-                        hora: c.Fecha_Hora ? c.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
-                        estado: (a.Estado || "Asistió").toUpperCase()
-                    });
-                });
+                // Filtramos por fecha: ¿La clase empieza por "2026-02-24"?
+                const matchFecha = cla?.Fecha_Hora?.startsWith(attendanceDate);
+                
+                // Filtramos por Dojo si el Sensei puso el filtro
+                const matchDojo = !dojoFilterId || getID(alu?.dojo) === dojoFilterId;
+                
+                return matchFecha && matchDojo;
             });
 
             if (listadoFinal.length === 0) {
-                showModal("Sin Datos", `No hay alumnos registrados para las clases del día ${attendanceDate}.`);
+                showModal("Sin Datos", `No se han encontrado alumnos registrados para el día ${formatDateDisplay(attendanceDate)}.`);
                 return;
             }
 
-            // 🥋 JUEZ DE PAZ: Ordenamos por Apellidos
-            listadoFinal.sort((a, b) => a.apellidos.localeCompare(b.apellidos, 'es'));
+            // 🥋 ORDENACIÓN: Por Apellidos (Criterio del Dojo)
+            listadoFinal.sort((a, b) => {
+                const aluA = parseRelation(a.attributes?.alumno || a.alumno);
+                const aluB = parseRelation(b.attributes?.alumno || b.alumno);
+                return (aluA?.apellidos || "").localeCompare((aluB?.apellidos || ""), 'es');
+            });
 
-            // --- GENERACIÓN DEL PDF ---
+            // --- CONSTRUCCIÓN DEL PDF ---
             const headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora', 'Estado'];
-            const body = listadoFinal.map((it, idx) => [
-                `${idx + 1}`, it.apellidos, it.nombre, it.dojoAlumno, it.tipo, it.hora, it.estado
-            ]);
+            const body = listadoFinal.map((item, index) => {
+                const a = item.attributes || item;
+                const alu = parseRelation(a.alumno);
+                const cla = parseRelation(a.clase);
+                const hora = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--";
+
+                return [
+                    `${index + 1}`,
+                    (alu?.apellidos || '').toUpperCase(),
+                    alu?.nombre || '',
+                    getDojoName(alu?.dojo),
+                    cla?.Tipo || 'Keiko',
+                    hora,
+                    (a.Estado || a.estado || 'Confirmado').toUpperCase()
+                ];
+            });
 
             doc.autoTable({
                 startY: 30,
@@ -1275,15 +1282,15 @@ async function generateAttendanceReport() {
                     doc.setFontSize(14);
                     doc.text("REPORTE DE ASISTENCIA DIARIA", pageWidth / 2, 12, { align: 'center' });
                     doc.setFontSize(9);
-                    doc.text(`DOJO: ${dojoFilterName} | FECHA: ${attendanceDate}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.text(`DOJO: ${dojoFilterName} | FECHA: ${formatDateDisplay(attendanceDate)}`, pageWidth / 2, 18, { align: 'center' });
                 }
             });
 
             doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
 
         } catch (e) {
-            console.error("🔥 Error Final:", e);
-            showModal("Error", "No se pudo recuperar la asistencia.");
+            console.error("🔥 Fallo en Informe:", e);
+            showModal("Error", "No se pudo recuperar la información del Tatami.");
         }
     };
 }
