@@ -1,23 +1,22 @@
 {
   "name": "Arashi Group Aikido",
   "short_name": "Arashi",
-  "description": "Gestión Arashi",
-  "id": "arashi-group-aikido-v1",
-  "start_url": "/movil.html",
-  "scope": "/",
+  "description": "Gestión de Grados y Asistencia - Arashi Group",
+  "start_url": "./movil.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "orientation": "portrait",
+  "scope": "./",
   "icons": [
     {
-      "src": "/img/logo-arashi.png",
+      "src": "img/logo-arashi2.jpeg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "/img/logo-arashi.png",
+      "src": "img/logo-arashi22.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

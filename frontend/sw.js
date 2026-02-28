@@ -1,55 +1,61 @@
-const CACHE_NAME = 'arashi-v7.0-universal'; // Subimos versión para forzar limpieza
+const CACHE_NAME = 'arashi-v5.31-update';
 
-// 🥋 CIRUGÍA: Solo cacheamos lo interno para garantizar la instalación.
-// Los archivos externos (Fuentes/Icons) se cargarán por red normalmente.
+// Activos críticos para que la UI cargue en el tatami sin internet
 const ASSETS_TO_CACHE = [
+  './',
   './movil.html',
   './manifest.json',
   './img/logo-arashi.png',
-  './img/kanjis.jpg'
+  './img/logo-arashi-movil.png',
+  './img/kanjis.jpg', // Crítico para la Zen Master Card de Senseis
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap'
 ];
 
-// 1. INSTALACIÓN: Captura de activos esenciales
+// 1. INSTALACIÓN: Captura de activos estáticos
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('🥋 [SW] Blindando interfaz esencial...');
-      // Usamos un bucle para que si un archivo falla, no mate la instalación de los demás
-      return Promise.all(
-        ASSETS_TO_CACHE.map(url => {
-          return cache.add(url).catch(err => console.warn(`⚠️ Falló cache de: ${url}`));
-        })
-      );
+      console.log('🥋 [SW] Blindando interfaz en caché...');
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
-// 2. ACTIVACIÓN: Limpieza radical (Mantenemos tu lógica original)
+// 2. ACTIVACIÓN: Limpieza de versiones antiguas (Zero Waste Storage)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       );
-    }).then(() => self.clients.claim())
+    })
   );
-  console.log('🥋 [SW] Sistema Arashi Activado.');
+  console.log('🥋 [SW] Sistema Arashi Activado y Limpio.');
 });
 
-// 3. ESTRATEGIA DE CARGA (Tu Regla de Oro intacta)
+// 3. ESTRATEGIA DE CARGA: Cache-First para UI, Network-Only para API
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // REGLA DE ORO: No cachear llamadas a la API de Render/Neon
-  if (url.pathname.startsWith('/api/') || url.href.includes('onrender.com')) {
-    return; 
+  // REGLA DE ORO: No cachear llamadas a la API de Render
+  // La integridad de los datos de Neon depende de que el fetch sea real o use LocalStorage
+  if (url.pathname.startsWith('/api/')) {
+    return; // Dejamos que movil.html y fetchSmart gestionen esto
   }
 
+  // Para el resto (HTML, CSS, Imágenes, Fuentes)
   event.respondWith(
     caches.match(event.request).then((response) => {
-      // Devuelve caché si existe, si no, busca en red
+      // Si está en caché, lo devolvemos (Velocidad instantánea)
+      // Si no, lo buscamos en la red
       return response || fetch(event.request);
+    }).catch(() => {
+      // Si todo falla (Sin offline y sin caché), podrías devolver una página offline.
+      if (event.request.mode === 'navigate') {
+        return caches.match('./movil.html');
+      }
     })
   );
 });
