@@ -2963,29 +2963,55 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// 2. Lógica de Instalación (MANTENER para tu Muro de Instalación)
+/* --- PWA LOGIC V8.0 - ESPECIAL TABLETS --- */
 let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => { 
-    // Evita que Chrome muestre su propio aviso para usar el tuyo personalizado
-    e.preventDefault(); 
-    deferredPrompt = e; 
-    // Muestra tu botón de instalar
-    const b = document.getElementById('android-btn-area'); 
-    if (b) b.style.display = 'block'; 
+
+// 1. Capturamos el evento de instalación
+window.addEventListener('beforeinstallprompt', (e) => {
+    console.log('✅ Llave de instalación recibida del sistema');
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Mostramos el botón rojo solo cuando Chrome nos da permiso
+    const bArea = document.getElementById('android-btn-area');
+    if (bArea) bArea.style.display = 'block';
 });
 
-async function handleAndroidInstall() {
-    console.log("🖱️ Botón 'INSTALAR AHORA' pulsado"); // <--- Esto DEBE salir siempre
+// 2. Registro del Service Worker con "Bypass" para tablets
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => {
+                console.log('🥋 SW: Activo');
+                // Forzamos actualización si hay cambios
+                reg.update();
+            });
+    });
+}
 
+// 3. Función del botón rojo (handleAndroidInstall) corregida
+async function handleAndroidInstall() {
+    console.log("🖱️ Botón pulsar");
+    
     if (deferredPrompt) {
-        console.log("✅ Llave de instalación detectada. Lanzando ventana...");
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        console.log(`👤 Respuesta del usuario: ${outcome}`);
-        deferredPrompt = null; 
-    } else { 
-        console.warn("⚠️ No hay 'llave' (deferredPrompt). El navegador ha bloqueado la instalación automática.");
-        showModal("Instalación en PC", "En ordenador, si el botón no reacciona, busca el icono de 'Instalar' (una pantalla con un +) que aparece arriba a la derecha, en la barra de la URL."); 
+        console.log(`👤 Usuario eligió: ${outcome}`);
+        deferredPrompt = null;
+    } else {
+        // 🥋 TRUCO MAESTRO PARA ALCATEL:
+        // Si el botón no va, es que Chrome no ha lanzado el evento.
+        // Le damos instrucciones visuales al alumno.
+        showModal("INSTALACIÓN MANUAL", `
+            <div style="text-align:left; font-size:14px;">
+                <p>Tu tablet Alcatel requiere un paso manual:</p>
+                <ol>
+                    <li>Pulsa los <b>3 puntos</b> de Chrome (arriba).</li>
+                    <li>Busca <b>'Añadir a pantalla de inicio'</b>.</li>
+                </ol>
+                <p style="color:var(--accent); font-size:12px;">Si no aparece, espera 10 segundos y desliza la pantalla hacia abajo para refrescar.</p>
+            </div>
+        `);
     }
 }
 

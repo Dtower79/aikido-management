@@ -1,26 +1,26 @@
 {
   "name": "Arashi Group Aikido",
   "short_name": "Arashi",
-  "description": "Gestión de Grados y Asistencia - Arashi Group",
-  "id": "/arashi-app",
-  "start_url": "./movil.html",
+  "description": "Gestión Arashi",
+  "id": "arashi-pwa-v1",
+  "start_url": "movil.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "orientation": "portrait",
-  "scope": "./",
   "icons": [
     {
       "src": "img/logo-arashi.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "img/logo-arashi.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ]
 }
