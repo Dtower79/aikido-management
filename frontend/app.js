@@ -1306,6 +1306,43 @@ async function processPasswordReset(code) {
     }
 }
 
+document.getElementById('forgot-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value.trim();
+    const btn = document.getElementById('btn-forgot-submit');
+    btn.innerText = "PROCESANDO...";
+    btn.disabled = true;
+
+    console.log("📡 [SISTEMA] Solicitando recuperación para:", email);
+
+    try {
+        // REGLA STRAPI V5: El endpoint es /api/auth/forgot-password
+        const res = await fetch(`${API_URL}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            console.log("✅ [SISTEMA] Strapi ha aceptado la petición.");
+            document.getElementById('forgot-modal').classList.add('hidden');
+            showModal("¡EMAIL ENVIADO!", "Si el email existe, recibirás un enlace de recuperación pronto.");
+        } else {
+            console.error("❌ [SISTEMA] Error de Strapi:", data);
+            // Si Strapi devuelve error, el email no saldrá nunca.
+            showModal("Aviso", data.error?.message || "No se pudo procesar.");
+        }
+    } catch (err) {
+        console.error("🔥 [SISTEMA] Error de conexión:", err);
+        showModal("Error", "Fallo de conexión con el servidor.");
+    } finally {
+        btn.innerText = "ENVIAR ENLACE";
+        btn.disabled = false;
+    }
+});
+
 /* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V35.0 - CROSS-REFERENCE PASSPORT STYLE) --- */
 async function generateAttendanceReport() {
     const attendanceDate = document.getElementById('report-attendance-date').value;
