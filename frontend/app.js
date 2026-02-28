@@ -1189,7 +1189,7 @@ async function sortTable(colName) {
     renderTableAlumnos(data, tbody, actives);
 }
 
-/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V24.0 - ESTRATEGIA DE CARGA INVERSA) --- */
+/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V25.0 - ESTRATEGIA PASAPORTE) --- */
 async function generateAttendanceReport() {
     const attendanceDate = document.getElementById('report-attendance-date').value;
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -1197,7 +1197,7 @@ async function generateAttendanceReport() {
     const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
 
     if (!attendanceDate) {
-        showModal("Fecha Requerida", "Selecciona una fecha en el calendario.");
+        showModal("Aviso", "Por favor, selecciona una fecha en el calendario.");
         return;
     }
 
@@ -1212,66 +1212,64 @@ async function generateAttendanceReport() {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         try {
-            // 🥋 CIRUGÍA V24: Atacamos el endpoint /CLASES (Filtro raíz = Cero Errores)
-            const start = `${attendanceDate}T00:00:00.000Z`;
-            const end = `${attendanceDate}T23:59:59.999Z`;
-
-            // Filtramos las clases del día y populamos sus asistencias y alumnos
-            let apiUrl = `${API_URL}/api/clases?filters[Fecha_Hora][$between][0]=${start}&filters[Fecha_Hora][$between][1]=${end}&populate[asistencias][populate][alumno][populate][0]=dojo&populate[dojo]=*`;
-
-            // Si hay filtro de Dojo, filtramos la clase por su sede
-            if (dojoFilterId) {
-                apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
-            }
-
-            console.log("📡 [V24] Consultando Clases del día:", apiUrl);
-
+            // 🥋 ESTRATEGIA PASAPORTE: Usamos la sintaxis que Strapi v5 no puede rechazar
+            // No filtramos por fecha en la URL, lo haremos en JavaScript
+            const apiUrl = `${API_URL}/api/asistencias?populate=clase,alumno.dojo&pagination[limit]=1000&sort=createdAt:desc`;
+            
+            console.log("📡 [SISTEMA] Descargando bloque de asistencias (Sintaxis Pasaporte)...");
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-            if (!res.ok) throw new Error("Error en la consulta de clases");
+            
+            if (!res.ok) throw new Error("Error en la conexión con Strapi");
             const json = await res.json();
             
-            // --- PROCESAMIENTO DE DATOS (FLATTENING) ---
-            let listadoAsistencia = [];
-
-            (json.data || []).forEach(clase => {
-                const c = clase.attributes || clase;
-                const asistencias = c.asistencias?.data || [];
+            // --- FILTRADO MANUAL QUIRÚRGICO (JS) ---
+            // Buscamos los registros que coincidan con la fecha (YYYY-MM-DD) y el Dojo (si hay filtro)
+            const listadoFiltrado = (json.data || []).filter(item => {
+                const a = item.attributes || item;
+                const cla = parseRelation(a.clase);
+                const alu = parseRelation(a.alumno);
                 
-                asistencias.forEach(asist => {
-                    const a = asist.attributes || asist;
-                    const alu = parseRelation(a.alumno);
-                    
-                    listadoAsistencia.push({
-                        apellidos: alu?.apellidos || '',
-                        nombre: alu?.nombre || '',
-                        dojoAlumno: getDojoName(alu?.dojo),
-                        tipoClase: c.Tipo || 'Keiko',
-                        hora: c.Fecha_Hora ? c.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
-                        estado: (a.Estado || a.estado || 'Confirmado').toUpperCase()
-                    });
-                });
+                // 1. Validamos Fecha: el campo Fecha_Hora empieza por YYYY-MM-DD
+                const matchFecha = cla?.Fecha_Hora?.startsWith(attendanceDate);
+                
+                // 2. Validamos Dojo: si el sensei eligió uno, comprobamos el dojo del alumno
+                const matchDojo = !dojoFilterId || getID(alu?.dojo) === dojoFilterId;
+                
+                return matchFecha && matchDojo;
             });
 
-            if (listadoAsistencia.length === 0) {
-                showModal("Sin Datos", `No se han encontrado alumnos registrados en las clases del día ${formatDateDisplay(attendanceDate)}.`);
+            if (listadoFiltrado.length === 0) {
+                showModal("Sin Datos", `No se han encontrado asistencias grabadas para el día ${formatDateDisplay(attendanceDate)}.`);
                 return;
             }
 
-            // Ordenación alfabética por apellidos
-            listadoAsistencia.sort((a, b) => a.apellidos.localeCompare(b.apellidos, 'es'));
+            // 3. Ordenación por Apellidos (Juez de Paz)
+            listadoFiltrado.sort((a, b) => {
+                const pA = parseRelation(a.attributes?.alumno || a.alumno);
+                const pB = parseRelation(b.attributes?.alumno || b.alumno);
+                return (pA.apellidos || "").localeCompare((pB.apellidos || ""), 'es');
+            });
 
-            // Construcción del PDF
+            // 4. Mapeo para el PDF
             const headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora Keiko', 'Estado'];
-            const body = listadoAsistencia.map((item, index) => [
-                `${index + 1}`,
-                item.apellidos.toUpperCase(),
-                item.nombre,
-                item.dojoAlumno,
-                item.tipoClase,
-                item.hora,
-                item.estado
-            ]);
+            const body = listadoFiltrado.map((item, index) => {
+                const a = item.attributes || item;
+                const alu = parseRelation(a.alumno);
+                const cla = parseRelation(a.clase);
+                const hora = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--";
 
+                return [
+                    `${index + 1}`,
+                    (alu?.apellidos || '').toUpperCase(),
+                    alu?.nombre || '',
+                    getDojoName(alu?.dojo),
+                    cla?.Tipo || 'Keiko',
+                    hora,
+                    (a.Estado || a.estado || 'Asistió').toUpperCase()
+                ];
+            });
+
+            // 5. Generación del PDF
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
@@ -1292,8 +1290,8 @@ async function generateAttendanceReport() {
             doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
 
         } catch (e) {
-            console.error("🔥 Error V24:", e);
-            showModal("Error de Datos", "No se pudo recuperar la información de ayer. Revisa la consola.");
+            console.error("🔥 Error Informe:", e);
+            showModal("Error", "No se pudo recuperar la información del servidor.");
         }
     };
 }
