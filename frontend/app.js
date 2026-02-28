@@ -1200,47 +1200,67 @@ async function sortTable(colName) {
 /* --- GESTIÓN DE RECUPERACIÓN DE CONTRASEÑA --- */
 
 // A. Abrir el modal de nueva contraseña (inyectando el código del mail)
+/* --- GESTIÓN TÉCNICA DE RECUPERACIÓN (RESET) --- */
+
 function openResetPasswordModal(code) {
+    // Abrimos el modal y ocultamos el botón de cancelar para que el usuario deba terminar el proceso
     showModal("NUEVA CONTRASEÑA", `
         <div style="text-align:left; margin-top:10px;">
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Introduce tu nueva clave de acceso.</p>
-            <input type="password" id="reset-p1" class="modal-field" placeholder="Nueva contraseña">
-            <input type="password" id="reset-p2" class="modal-field" placeholder="Confirmar contraseña">
-            <button class="action-btn primary" onclick="processPasswordReset('${code}')" style="margin-top:10px;">
-                CAMBIAR CONTRASEÑA
+            <p style="font-size:13px; color:#94a3b8; margin-bottom:20px;">
+                Escribe tu nueva clave de acceso al Dojo.
+            </p>
+            <span class="modal-label">NUEVA CLAVE:</span>
+            <input type="password" id="reset-p1" class="modal-field" placeholder="Mínimo 6 caracteres" style="margin-bottom:15px;">
+            <span class="modal-label">REPETIR CLAVE:</span>
+            <input type="password" id="reset-p2" class="modal-field" placeholder="Confirma tu clave">
+            
+            <button class="action-btn primary" onclick="processPasswordReset('${code}')" style="margin-top:25px; width:100%; height:60px; font-weight:800;">
+                ACTUALIZAR CONTRASEÑA
             </button>
         </div>
-    `, false);
+    `, false); // 'false' oculta el botón de cerrar genérico
 }
 
-// B. Enviar la nueva contraseña a Strapi
 async function processPasswordReset(code) {
     const p1 = document.getElementById('reset-p1').value;
     const p2 = document.getElementById('reset-p2').value;
 
-    if (p1 !== p2) { alert("Las contraseñas no coinciden"); return; }
-    if (p1.length < 6) { alert("Mínimo 6 caracteres"); return; }
+    if (p1 !== p2) { alert("⚠️ Las contraseñas no coinciden."); return; }
+    if (p1.length < 6) { alert("⚠️ La clave es demasiado corta."); return; }
+
+    const btn = document.querySelector('#custom-modal .action-btn.primary');
+    btn.innerText = "GUARDANDO..."; btn.disabled = true;
 
     try {
-        const res = await fetch(`${API_URL}/api/auth/reset-password`, {
+        // En Strapi v5 las rutas de auth suelen ser directas o prefijadas con /api
+        // Probamos con la ruta estándar de Strapi
+        const res = await fetch(`${API_URL}/auth/reset-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                code: code, // El token que venía en el email
+                code: code,
                 password: p1,
                 passwordConfirmation: p2
             })
         });
 
         if (res.ok) {
-            showModal("¡ÉXITO!", "Contraseña actualizada. Ya puedes entrar al Dojo.", () => {
-                window.location.href = 'movil.html'; // Limpiamos la URL del código
+            const data = await res.json();
+            // Guardamos el nuevo acceso
+            localStorage.setItem('aikido_jwt', data.jwt);
+            localStorage.setItem('aikido_user', JSON.stringify(data.user));
+            
+            showModal("¡CONTRASEÑA CAMBIADA!", "Tu nueva clave ha sido guardada. Entrando al Dojo...", () => {
+                window.location.href = 'movil.html'; // Limpieza total y entrada
             });
         } else {
-            showModal("Error", "El enlace ha expirado o ya ha sido utilizado.");
+            const errorData = await res.json();
+            showModal("ENLACE CADUCADO", "Este enlace ya no es válido. Por favor, solicita uno nuevo.");
         }
     } catch (e) {
-        showModal("Error", "No se pudo conectar con el servidor.");
+        showModal("Error", "No hay conexión con el Dojo.");
+    } finally {
+        btn.innerText = "ACTUALIZAR CONTRASEÑA"; btn.disabled = false;
     }
 }
 

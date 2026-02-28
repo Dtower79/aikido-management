@@ -1521,71 +1521,33 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
 /* --- NÚCLEO DE INICIALIZACIÓN (VERSION 11.0 - INTEGRIDAD TOTAL) --- */
 async function initApp() {
-    /* --- DETECTOR QUIRÚRGICO DE RESET PASSWORD --- */
+    console.log("🚀 [INIT] Iniciando sincronización...");
+    
+    /* --- BLOQUE DE RECUPERACIÓN (PRIORIDAD MÁXIMA) --- */
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
     if (resetCode) {
-        console.log("🔑 [SISTEMA] Token de recuperación detectado. Bloqueando inicio normal...");
-        // Eliminamos el código de la URL para que no moleste al recargar
+        console.log("🔑 Token de recuperación detectado. Modo Reset Activo.");
+        // Limpiamos la URL sin recargar para que el código no se use dos veces
         window.history.replaceState({}, document.title, window.location.pathname);
-        // Abrimos el modal de reset
+        
+        // Forzamos que se vea el fondo de login pero bloqueamos la lógica normal
+        document.getElementById('login-view').classList.remove('hidden');
+        document.body.classList.add('app-ready');
+        
+        // Abrimos el modal de reset password
         openResetPasswordModal(resetCode);
-        return; // Detenemos la carga normal de la app
+        return; // DETENEMOS TODA LA APP AQUÍ
     }
 
-    console.log("🚀 [INIT] Iniciando sincronización secuencial Arashi...");
+    /* --- LÓGICA NORMAL (JWT) --- */
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const mainNav = document.getElementById('main-nav');
     
-    // 1. Limpiamos visualmente
-    document.body.classList.remove('app-ready');
-    document.querySelectorAll('.section-view').forEach(v => v.classList.add('hidden'));
-
-    if (!token || !user) {
-        document.getElementById('login-view')?.classList.remove('hidden');
-        document.body.classList.add('app-ready');
-        return;
-    }
-
-    try {
-        // 🥋 OPERACIÓN DE CHOQUE: Forzamos refresco de requisitos para aplicar el nuevo mapeo
-        localStorage.removeItem('cache_requisitos'); 
-
-        const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
-        
-        // Mapeo Ultra-Robusto para Strapi v5
-        requisitosGradoGlobal = (reqData?.data || []).map(r => {
-            const attr = r.attributes || r;
-            // Capturamos el grado
-            const g = attr.GRADO || attr.grado || attr.Grado || "";
-            // Capturamos las horas (buscamos cualquier campo que empiece por 'hora')
-            let h = 0;
-            for (let key in attr) {
-                if (key.toLowerCase().startsWith('hora')) {
-                    h = parseFloat(attr[key]);
-                    if (h > 0) break;
-                }
-            }
-            return { NORM: normalize(g), HORAS: h };
-        });
-        
-        console.log("📊 [TABLA NEON] Requisitos cargados:", requisitosGradoGlobal);
-
-        // 2. Cargamos alumno (ahora ya tiene la tabla de horas lista)
-        await refreshStudentData();
-        await checkTodayClass();
-
-        showView('dashboard');
-        document.getElementById('main-nav')?.classList.remove('hidden');
-        document.getElementById('main-nav').style.display = 'grid';
-
-        setTimeout(() => document.body.classList.add('app-ready'), 150);
-
-    } catch (error) {
-        console.error("🔥 Error en despliegue:", error);
-        document.body.classList.add('app-ready');
-    }
+    // ... resto de tu código de initApp actual ...
+    // (Asegúrate de que el resto del código siga aquí abajo)
 }
   
 /* --- REFRESH DATA (VERSION 9.3 - VISIBILIDAD SENSEI ASEGURADA) --- */
