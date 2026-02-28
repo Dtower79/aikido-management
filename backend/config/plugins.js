@@ -1,11 +1,15 @@
 module.exports = ({ env }) => ({
-  upload: {
+  // ... otros plugins si los tienes
+  email: {
     config: {
-      provider: 'local',
+      provider: 'sendgrid',
       providerOptions: {
-        sizeLimit: 10000000, // 10MB
-        basePath: 'public/uploads'
-      }
-    }
-  }
+        apiKey: env('SENDGRID_API_KEY'),
+      },
+      settings: {
+        defaultFrom: 'raulnicolas79@gmail.com', // ⚠️ DEBE ser el que verificaste en SendGrid
+        defaultReplyTo: 'raulnicolas79@gmail.com',
+      },
+    },
+  },
 });
