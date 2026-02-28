@@ -615,8 +615,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
     }
 }
 
-/* --- GENERADOR DE INFORMES ARASHI V18.0 (THE CLASE-CENTRIC FIX) --- */
-/* --- GENERADOR DE INFORMES ARASHI V32.0 (FORMATO PASAPORTE - MÁXIMA COMPATIBILIDAD) --- */
+/* --- GENERADOR DE INFORMES ARASHI V34.0 (EDICIÓN ESTADÍSTICA: EDAD MEDIA) --- */
 async function generateReport(type) {
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
@@ -643,30 +642,18 @@ async function generateReport(type) {
             let list = [];
             
             if (type === 'attendance') {
-                // 🥋 ESTRATEGIA PASAPORTE: Usamos la sintaxis de texto plano (comma-separated)
-                // Es la que Strapi v5 acepta con mayor estabilidad.
                 const apiUrl = `${API_URL}/api/asistencias?populate=clase,alumno.dojo&pagination[limit]=1000&sort=createdAt:desc`;
-                
-                console.log("📡 [V32] Descargando asistencias (Sintaxis Pasaporte)...");
                 const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
                 const json = await res.json();
-                
-                // Filtrado manual infalible en JS
                 list = (json.data || []).filter(item => {
                     const a = item.attributes || item;
                     const cla = parseRelation(a.clase);
                     const alu = parseRelation(a.alumno);
-                    
-                    // Solo los de la fecha seleccionada
                     const matchFecha = cla?.Fecha_Hora?.startsWith(attendanceDate);
-                    // Solo los del Dojo seleccionado (si hay filtro)
                     const matchDojo = !dojoFilterId || getID(alu?.dojo) === dojoFilterId;
-                    
                     return matchFecha && matchDojo;
                 });
-
             } else {
-                // Informes de Alumnos Activos/Bajas
                 let apiUrl = `${API_URL}/api/alumnos?filters[activo][$eq]=${isBaja ? 'false' : 'true'}&populate=dojo&pagination[limit]=1000`;
                 if (dojoFilterId) apiUrl += `&filters[dojo][documentId][$eq]=${dojoFilterId}`;
                 const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
@@ -679,50 +666,55 @@ async function generateReport(type) {
                 return;
             }
 
-            // 🥋 MOTOR DE ORDENACIÓN INTEGRAL (Recuperado al 100%)
+            // 🥋 CÁLCULO ESTADÍSTICO: EDAD MEDIA (Quirúrgico para criterio Edad)
+            let edadMediaStr = "";
+            if (type === 'age') {
+                let sumaEdades = 0;
+                let validos = 0;
+                list.forEach(item => {
+                    const p = item.attributes || item;
+                    const edad = calculateAge(p.fecha_nacimiento);
+                    if (typeof edad === 'number' && !isNaN(edad)) {
+                        sumaEdades += edad;
+                        validos++;
+                    }
+                });
+                const media = validos > 0 ? (sumaEdades / validos).toFixed(1) : 0;
+                edadMediaStr = `EDAD MEDIA DEL GRUPO: ${media} AÑOS`;
+            }
+
+            // 🥋 MOTOR DE ORDENACIÓN INTEGRAL
             list.sort((a, b) => {
                 const attrA = a.attributes || a;
                 const attrB = b.attributes || b;
                 const pA = (type === 'attendance') ? (attrA.alumno?.data?.attributes || {}) : attrA;
                 const pB = (type === 'attendance') ? (attrB.alumno?.data?.attributes || {}) : attrB;
-
                 const nomA = (pA.apellidos || "").toUpperCase();
                 const nomB = (pB.apellidos || "").toUpperCase();
 
-                // 1. Prioridad Seguros (No pagados primero)
                 if (type === 'insurance') {
-                    const statusA = pA.seguro_pagado ? 1 : 0, statusB = pB.seguro_pagado ? 1 : 0;
-                    if (statusA !== statusB) return statusA - statusB;
+                    const sA = pA.seguro_pagado ? 1 : 0, sB = pB.seguro_pagado ? 1 : 0;
+                    if (sA !== sB) return sA - sB;
                 }
-                // 2. Prioridad Género (Mujeres primero)
                 if (type === 'gender') {
                     const gA = (pA.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
                     const gB = (pB.genero || 'HOMBRE') === 'MUJER' ? 0 : 1;
-                    if (gA !== gB) return gA - gB;
+                    if (genA !== genB) return gA - gB;
                 }
-                // 3. Prioridad Grados (Peso técnico)
                 if (type === 'grade') {
                     const wA = getGradeWeight(pA.grado), wB = getGradeWeight(pB.grado);
                     if (wA !== wB) return wB - wA;
                 }
-                // 4. Prioridad Edad (Cifra numérica)
                 if (type === 'age') {
                     const eA = calculateAge(pA.fecha_nacimiento), eB = calculateAge(pB.fecha_nacimiento);
                     const vA = isNaN(eA) ? 999 : eA, vB = isNaN(eB) ? 999 : eB;
                     if (vA !== vB) return vA - vB;
                 }
-                // 5. Prioridad Bajas
-                if (type === 'bajas_date') {
-                    const dA = new Date(attrA.fecha_baja || 0), dB = new Date(attrB.fecha_baja || 0);
-                    if (dA !== dB) return dB - dA;
-                }
-
-                // JUEZ DE PAZ: APELLIDOS (Segunda ordenación siempre)
                 return nomA.localeCompare(nomB, 'es');
             });
 
-            // DICCIONARIO CASTELLANO
-            const dic = { 'surname': 'APELLIDOS', 'grade': 'GRADOS', 'age': 'EDAD', 'gender': 'GÉNERO', 'insurance': 'SEGUROS', 'attendance': 'ASISTENCIA', 'bajas_surname': 'BAJAS POR APELLIDO', 'bajas_date': 'BAJAS POR FECHA' };
+            const dic = { 'surname': 'APELLIDOS', 'grade': 'GRADOS', 'age': 'EDAD', 'gender': 'GÉNERO', 'insurance': 'SEGUROS', 'attendance': 'ASISTENCIA' };
+            const displayDate = attendanceDate ? formatDateDisplay(attendanceDate) : new Date().toLocaleDateString('es-ES');
 
             const headRow = (type === 'attendance') 
                 ? ['Nº', 'Apellidos', 'Nombre', 'Dojo Sede', 'Tipo Clase', 'Hora', 'Estado']
@@ -733,41 +725,30 @@ async function generateReport(type) {
                 if (type === 'attendance') {
                     const alu = parseRelation(a.alumno);
                     const cla = parseRelation(a.clase);
-                    return [
-                        `${index + 1}`,
-                        (alu?.apellidos || '').toUpperCase(),
-                        alu?.nombre || '',
-                        getDojoName(alu?.dojo),
-                        cla?.Tipo || 'Keiko',
-                        cla?.Fecha_Hora?.split('T')[1].substring(0, 5) + "h",
-                        (a.Estado || a.estado || 'CONFIRMADO').toUpperCase()
-                    ];
+                    return [`${index + 1}`, (alu?.apellidos || '').toUpperCase(), alu?.nombre || '', getDojoName(alu?.dojo), cla?.Tipo || 'Keiko', cla?.Fecha_Hora?.split('T')[1].substring(0, 5) + "h", (a.Estado || a.estado || 'CONFIRMADO').toUpperCase()];
                 } else {
                     const colVar = (type === 'gender') ? (a.genero || 'HOMBRE') : (a.dni || '-');
-                    return [
-                        `${index + 1}`, 
-                        (a.apellidos || '').toUpperCase(), 
-                        a.nombre || '', 
-                        colVar, 
-                        calculateAge(a.fecha_nacimiento), 
-                        normalizeGrade(a.grado), 
-                        parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', 
-                        a.seguro_pagado ? 'SÍ' : 'NO', 
-                        normalizePhone(a.telefono), 
-                        getDojoName(a.dojo)
-                    ];
+                    return [`${index + 1}`, (a.apellidos || '').toUpperCase(), a.nombre || '', colVar, calculateAge(a.fecha_nacimiento), normalizeGrade(a.grado), parseFloat(a.horas_acumuladas || 0).toFixed(1) + 'h', a.seguro_pagado ? 'SÍ' : 'NO', normalizePhone(a.telefono), getDojoName(a.dojo)];
                 }
             });
 
             doc.autoTable({
-                startY: 30, margin: { top: 30, left: 10, right: 10 },
+                startY: 32, margin: { top: 32, left: 10, right: 10 },
                 head: [headRow], body: body, theme: 'grid',
                 styles: { fontSize: 7, cellPadding: 1.5 },
                 headStyles: { fillColor: [190, 0, 0], halign: 'center' },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14); doc.text("INFORME OFICIAL ARASHI", pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | CRITERIO: ${dic[type] || type.toUpperCase()} | FECHA: ${attendanceDate || 'Listado'}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | CRITERIO: ${dic[type] || type.toUpperCase()} | FECHA: ${displayDate}`, pageWidth / 2, 18, { align: 'center' });
+                    
+                    // INYECCIÓN DE EDAD MEDIA (Sólo si type es age)
+                    if (type === 'age' && edadMediaStr) {
+                        doc.setFontSize(10);
+                        doc.setTextColor(190, 0, 0); // Rojo Arashi para resaltar el dato
+                        doc.text(edadMediaStr, pageWidth / 2, 25, { align: 'center' });
+                        doc.setTextColor(0, 0, 0); // Reset color
+                    }
                 }
             });
             doc.save(`Arashi_Informe_${type}.pdf`);
