@@ -1188,3 +1188,111 @@ async function sortTable(colName) {
     const tbody = document.getElementById(actives ? 'lista-alumnos-body' : 'lista-bajas-body');
     renderTableAlumnos(data, tbody, actives);
 }
+
+/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V1.0 - AISLADO) --- */
+async function generateAttendanceReport() {
+    const attendanceDate = document.getElementById('report-attendance-date').value;
+    const dojoSelect = document.getElementById('report-dojo-filter');
+    const dojoFilterId = dojoSelect.value;
+    const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
+
+    // 1. Validación de seguridad
+    if (!attendanceDate) {
+        showModal("Fecha Requerida", "Por favor, selecciona una fecha para consultar la asistencia.");
+        return;
+    }
+
+    document.getElementById('report-modal').classList.add('hidden');
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // Horizontal para que quepa todo
+    const logoImg = new Image();
+    logoImg.src = 'img/logo-arashi-informe.png';
+
+    logoImg.onload = async function () {
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        try {
+            // 2. Construcción de rango de tiempo para evitar errores de zona horaria (Timezone)
+            const startDay = `${attendanceDate}T00:00:00.000Z`;
+            const endDay = `${attendanceDate}T23:59:59.999Z`;
+
+            // 3. Query técnica para Strapi v5 (Asistencia -> Clase -> Alumno -> Dojo)
+            // Filtramos por el rango de la clase y populamos todas las relaciones necesarias
+            let apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$between][0]=${startDay}&filters[clase][Fecha_Hora][$between][1]=${endDay}&populate[clase]=*&populate[alumno][populate][0]=dojo&pagination[limit]=500`;
+
+            // Si hay filtro de Dojo, lo aplicamos al alumno
+            if (dojoFilterId) {
+                apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
+            }
+
+            console.log("📡 [ASISTENCIA] Consultando Neon:", apiUrl);
+
+            const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            if (!res.ok) throw new Error("Fallo en la respuesta de Strapi");
+            
+            const json = await res.json();
+            let list = json.data || [];
+
+            if (list.length === 0) {
+                showModal("Sin Datos", `No se han encontrado registros de asistencia para el día ${formatDateDisplay(attendanceDate)}.`);
+                return;
+            }
+
+            // 4. Ordenación por Apellidos (Juez de Paz)
+            list.sort((a, b) => {
+                const pA = parseRelation(a.attributes?.alumno || a.alumno);
+                const pB = parseRelation(b.attributes?.alumno || b.alumno);
+                return (pA.apellidos || "").localeCompare((pB.apellidos || ""), 'es');
+            });
+
+            // 5. Mapeo de datos para el PDF
+            const headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora Keiko', 'Estado'];
+            
+            const body = list.map((item, index) => {
+                const a = item.attributes || item;
+                const alu = parseRelation(a.alumno);
+                const cla = parseRelation(a.clase);
+                
+                // Extraer hora limpia: 2026-02-28T19:00:00.000Z -> 19:00
+                const horaKeiko = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--";
+
+                return [
+                    `${index + 1}`,
+                    (alu?.apellidos || '').toUpperCase(),
+                    alu?.nombre || '',
+                    getDojoName(alu?.dojo),
+                    cla?.Tipo || 'Aikido',
+                    horaKeiko,
+                    (a.Estado || 'Confirmado').toUpperCase()
+                ];
+            });
+
+            // 6. Dibujado de Tabla
+            doc.autoTable({
+                startY: 30,
+                margin: { top: 30, left: 10, right: 10 },
+                head: [headRow],
+                body: body,
+                theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 1.5 },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                didDrawPage: (data) => {
+                    doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                    doc.setFontSize(14);
+                    doc.text("REPORTE DE ASISTENCIA DIARIA", pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(9);
+                    doc.text(`DOJO: ${dojoFilterName} | FECHA: ${formatDateDisplay(attendanceDate)}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.setFontSize(7);
+                    doc.text(`Generado el: ${new Date().toLocaleString()}`, 10, 205);
+                }
+            });
+
+            doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
+
+        } catch (e) {
+            console.error("🔥 Error Informe Asistencia:", e);
+            showModal("Error", "No se pudo generar el reporte. Revisa la conexión con el servidor.");
+        }
+    };
+}
