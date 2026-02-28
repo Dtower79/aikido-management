@@ -1189,23 +1189,22 @@ async function sortTable(colName) {
     renderTableAlumnos(data, tbody, actives);
 }
 
-/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V1.0 - AISLADO) --- */
+/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V2.0 - ESTRATEGIA DOBLE SALTO) --- */
 async function generateAttendanceReport() {
     const attendanceDate = document.getElementById('report-attendance-date').value;
     const dojoSelect = document.getElementById('report-dojo-filter');
     const dojoFilterId = dojoSelect.value;
     const dojoFilterName = dojoSelect.options[dojoSelect.selectedIndex].text;
 
-    // 1. Validación de seguridad
     if (!attendanceDate) {
-        showModal("Fecha Requerida", "Por favor, selecciona una fecha para consultar la asistencia.");
+        showModal("Fecha Requerida", "Por favor, selecciona una fecha.");
         return;
     }
 
     document.getElementById('report-modal').classList.add('hidden');
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); // Horizontal para que quepa todo
+    const doc = new jsPDF('l', 'mm', 'a4');
     const logoImg = new Image();
     logoImg.src = 'img/logo-arashi-informe.png';
 
@@ -1213,62 +1212,65 @@ async function generateAttendanceReport() {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         try {
-            // 2. Construcción de rango de tiempo para evitar errores de zona horaria (Timezone)
-            const startDay = `${attendanceDate}T00:00:00.000Z`;
-            const endDay = `${attendanceDate}T23:59:59.999Z`;
+            // --- 🥋 PASO 1: OBTENER LAS CLASES DEL DÍA ---
+            // Usamos $startsWith porque la fecha en la DB es ISO (2026-02-28T...)
+            const classUrl = `${API_URL}/api/clases?filters[Fecha_Hora][$startsWith]=${attendanceDate}&fields[0]=id`;
+            const classRes = await fetch(classUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+            const classJson = await classRes.json();
+            
+            const classIds = (classJson.data || []).map(c => c.id || c.documentId);
 
-            // 3. Query técnica para Strapi v5 (Asistencia -> Clase -> Alumno -> Dojo)
-            // Filtramos por el rango de la clase y populamos todas las relaciones necesarias
-            let apiUrl = `${API_URL}/api/asistencias?filters[clase][Fecha_Hora][$between][0]=${startDay}&filters[clase][Fecha_Hora][$between][1]=${endDay}&populate[clase]=*&populate[alumno][populate][0]=dojo&pagination[limit]=500`;
+            if (classIds.length === 0) {
+                showModal("Sin Datos", `No se encontraron Keikos programados para el día ${formatDateDisplay(attendanceDate)}.`);
+                return;
+            }
 
-            // Si hay filtro de Dojo, lo aplicamos al alumno
+            // --- 🥋 PASO 2: OBTENER ASISTENCIAS DE ESAS CLASES ---
+            // Filtramos por el array de IDs obtenidos. Esto es 100% compatible con Strapi v5.
+            let apiUrl = `${API_URL}/api/asistencias?filters[clase][id][$in]=${classIds.join(',')}&populate=clase&populate=alumno.dojo&pagination[limit]=500`;
+
             if (dojoFilterId) {
                 apiUrl += `&filters[alumno][dojo][documentId][$eq]=${dojoFilterId}`;
             }
 
-            console.log("📡 [ASISTENCIA] Consultando Neon:", apiUrl);
-
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-            if (!res.ok) throw new Error("Fallo en la respuesta de Strapi");
+            if (!res.ok) throw new Error("Error en la consulta de asistencias");
             
             const json = await res.json();
             let list = json.data || [];
 
             if (list.length === 0) {
-                showModal("Sin Datos", `No se han encontrado registros de asistencia para el día ${formatDateDisplay(attendanceDate)}.`);
+                showModal("Sin Datos", "No hay registros de asistencia confirmados para los Keikos de este día.");
                 return;
             }
 
-            // 4. Ordenación por Apellidos (Juez de Paz)
+            // 3. Ordenación por Apellidos
             list.sort((a, b) => {
                 const pA = parseRelation(a.attributes?.alumno || a.alumno);
                 const pB = parseRelation(b.attributes?.alumno || b.alumno);
                 return (pA.apellidos || "").localeCompare((pB.apellidos || ""), 'es');
             });
 
-            // 5. Mapeo de datos para el PDF
+            // 4. Mapeo para el PDF
             const headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora Keiko', 'Estado'];
-            
             const body = list.map((item, index) => {
                 const a = item.attributes || item;
                 const alu = parseRelation(a.alumno);
                 const cla = parseRelation(a.clase);
-                
-                // Extraer hora limpia: 2026-02-28T19:00:00.000Z -> 19:00
-                const horaKeiko = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--";
+                const hora = cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--";
 
                 return [
                     `${index + 1}`,
                     (alu?.apellidos || '').toUpperCase(),
                     alu?.nombre || '',
                     getDojoName(alu?.dojo),
-                    cla?.Tipo || 'Aikido',
-                    horaKeiko,
-                    (a.Estado || 'Confirmado').toUpperCase()
+                    cla?.Tipo || 'General',
+                    hora,
+                    (a.Estado || a.estado || 'Confirmado').toUpperCase()
                 ];
             });
 
-            // 6. Dibujado de Tabla
+            // 5. Generación del PDF
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
@@ -1276,23 +1278,21 @@ async function generateAttendanceReport() {
                 body: body,
                 theme: 'grid',
                 styles: { fontSize: 7, cellPadding: 1.5 },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                headStyles: { fillColor: [190, 0, 0], halign: 'center' },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
                     doc.setFontSize(14);
                     doc.text("REPORTE DE ASISTENCIA DIARIA", pageWidth / 2, 12, { align: 'center' });
                     doc.setFontSize(9);
                     doc.text(`DOJO: ${dojoFilterName} | FECHA: ${formatDateDisplay(attendanceDate)}`, pageWidth / 2, 18, { align: 'center' });
-                    doc.setFontSize(7);
-                    doc.text(`Generado el: ${new Date().toLocaleString()}`, 10, 205);
                 }
             });
 
-            doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
+            doc.save(`Asistencia_${attendanceDate}.pdf`);
 
         } catch (e) {
-            console.error("🔥 Error Informe Asistencia:", e);
-            showModal("Error", "No se pudo generar el reporte. Revisa la conexión con el servidor.");
+            console.error("🔥 Error Crítico:", e);
+            showModal("Error de Servidor", "Strapi ha rechazado la consulta. Intenta filtrar por un Dojo específico.");
         }
     };
 }
