@@ -1519,37 +1519,91 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         /* --- CORE INIT --- */
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 11.0 - INTEGRIDAD TOTAL) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 12.0 - INTEGRIDAD Y RESET BLINDADO) --- */
 async function initApp() {
-    console.log("🚀 [INIT] Iniciando sincronización...");
-    
-    /* --- BLOQUE DE RECUPERACIÓN (PRIORIDAD MÁXIMA) --- */
+    console.log("🚀 [INIT] Iniciando sincronización secuencial Arashi...");
+    const token = localStorage.getItem('aikido_jwt');
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const mainNav = document.getElementById('main-nav');
+
+    /* --- 1. BLOQUE DE RECUPERACIÓN (PRIORIDAD MÁXIMA) --- */
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
     if (resetCode) {
-        console.log("🔑 Token de recuperación detectado. Modo Reset Activo.");
-        // Limpiamos la URL sin recargar para que el código no se use dos veces
+        console.log("🔑 Token de recuperación detectado. Liberando interfaz para Reset...");
+        // Limpiamos la URL para evitar re-usos del token
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Forzamos que se vea el fondo de login pero bloqueamos la lógica normal
-        document.getElementById('login-view').classList.remove('hidden');
+        // DESBLOQUEO CRÍTICO: Activamos las clases que permiten interacción y visibilidad
         document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+
+        // Mostramos el fondo de login (estética) y lanzamos el modal
+        document.getElementById('login-view').classList.remove('hidden');
         
-        // Abrimos el modal de reset password
-        openResetPasswordModal(resetCode);
-        return; // DETENEMOS TODA LA APP AQUÍ
+        // Pequeño delay para asegurar que el DOM ha procesado el desbloqueo anterior
+        setTimeout(() => {
+            openResetPasswordModal(resetCode);
+        }, 200);
+        
+        return; // DETENEMOS TODA LA CARGA NORMAL AQUÍ
     }
 
-    /* --- LÓGICA NORMAL (JWT) --- */
-    const token = localStorage.getItem('aikido_jwt');
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    const mainNav = document.getElementById('main-nav');
-    
-    // ... resto de tu código de initApp actual ...
-    // (Asegúrate de que el resto del código siga aquí abajo)
-}
-  
+    /* --- 2. LIMPIEZA INICIAL DE VISTAS --- */
+    document.body.classList.remove('app-ready');
+    document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
+            .forEach(v => v.classList.add('hidden'));
+
+    /* --- 3. CASO: USUARIO NO LOGUEADO --- */
+    if (!token || !user) {
+        if (mainNav) mainNav.classList.add('hidden');
+        document.getElementById('login-view')?.classList.remove('hidden');
+        document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+        return;
+    }
+
+    /* --- 4. CASO: DOJO ACTIVO (SINCRONIZACIÓN SECUENCIAL) --- */
+    try {
+        // PASO A: Carga y Mapeo de Requisitos (Prioridad técnica para evitar el bug de las 60h)
+        const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
+        
+        // Mapeo robusto Strapi v5 (Grado y Horas_Necesarias según tus capturas)
+        requisitosGradoGlobal = (reqData?.data || []).map(r => {
+            const attr = r.attributes || r;
+            return {
+                NORM: normalize(attr.Grado || attr.grado || ""),
+                HORAS: parseFloat(attr.Horas_Necesarias || attr.horas_necesarias || 0)
+            };
+        });
+        console.log("📊 [SISTEMA] Requisitos de grado mapeados.");
+
+        // PASO B: Carga de perfil del alumno (Ahora ya tiene los requisitos mapeados en memoria)
+        await refreshStudentData();
+
+        // PASO C: Búsqueda del Keiko de hoy
+        await checkTodayClass();
+
+        // PASO D: Despliegue de Interfaz
+        showView('dashboard');
+        if (mainNav) {
+            mainNav.classList.remove('hidden');
+            mainNav.style.display = 'grid';
+        }
+
+        // TELÓN ARRIBA: Liberamos la App para el usuario
+        setTimeout(() => {
+            document.body.classList.add('app-ready');
+            document.documentElement.classList.add('app-loaded');
+            console.log("✨ [INIT] Sincronización completada con éxito.");
+        }, 150);
+
+    } catch (error) {
+        console.error("🔥 [INIT] Error crítico en el despliegue:", error);
+        document.body.classList.add('app-ready'); // Liberamos aunque haya error para no dejar pantalla en negro
+    }
+}  
 /* --- REFRESH DATA (VERSION 9.3 - VISIBILIDAD SENSEI ASEGURADA) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
