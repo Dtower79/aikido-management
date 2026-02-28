@@ -1189,7 +1189,7 @@ async function sortTable(colName) {
     renderTableAlumnos(data, tbody, actives);
 }
 
-/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V25.0 - ESTRATEGIA PASAPORTE) --- */
+/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V26.0 - FIX POBLACIÓN PROFUNDA) --- */
 async function generateAttendanceReport() {
     const attendanceDate = document.getElementById('report-attendance-date').value;
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -1212,46 +1212,55 @@ async function generateAttendanceReport() {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         try {
-            // 🥋 ESTRATEGIA PASAPORTE: Usamos la sintaxis que Strapi v5 no puede rechazar
-            // No filtramos por fecha en la URL, lo haremos en JavaScript
-            const apiUrl = `${API_URL}/api/asistencias?populate=clase,alumno.dojo&pagination[limit]=1000&sort=createdAt:desc`;
+            // 🥋 CIRUGÍA V26: Sintaxis de población por objetos (Obligatoria en Strapi v5 para profundidad)
+            // Traemos las asistencias y filtramos nosotros en JS para evitar el error 400 de fecha.
+            const params = new URLSearchParams();
+            params.append('populate[clase]', '*');
+            params.append('populate[alumno][populate][dojo]', '*');
+            params.append('pagination[limit]', '1000');
+
+            const apiUrl = `${API_URL}/api/asistencias?${params.toString()}`;
             
-            console.log("📡 [SISTEMA] Descargando bloque de asistencias (Sintaxis Pasaporte)...");
+            console.log("📡 [SISTEMA] Consultando Neon con Sintaxis V26...");
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
             
-            if (!res.ok) throw new Error("Error en la conexión con Strapi");
+            if (!res.ok) {
+                const errorData = await res.json();
+                console.error("❌ Error Strapi v5:", errorData);
+                throw new Error("Fallo en la estructura de población de Strapi.");
+            }
+
             const json = await res.json();
             
-            // --- FILTRADO MANUAL QUIRÚRGICO (JS) ---
-            // Buscamos los registros que coincidan con la fecha (YYYY-MM-DD) y el Dojo (si hay filtro)
+            // --- FILTRADO MANUAL EN MEMORIA ---
             const listadoFiltrado = (json.data || []).filter(item => {
                 const a = item.attributes || item;
                 const cla = parseRelation(a.clase);
                 const alu = parseRelation(a.alumno);
                 
-                // 1. Validamos Fecha: el campo Fecha_Hora empieza por YYYY-MM-DD
+                // Filtro 1: Fecha (El input date da YYYY-MM-DD, que coincide con el inicio de Fecha_Hora)
                 const matchFecha = cla?.Fecha_Hora?.startsWith(attendanceDate);
                 
-                // 2. Validamos Dojo: si el sensei eligió uno, comprobamos el dojo del alumno
+                // Filtro 2: Dojo (Si hay filtro seleccionado, miramos el dojo del alumno)
                 const matchDojo = !dojoFilterId || getID(alu?.dojo) === dojoFilterId;
                 
                 return matchFecha && matchDojo;
             });
 
             if (listadoFiltrado.length === 0) {
-                showModal("Sin Datos", `No se han encontrado asistencias grabadas para el día ${formatDateDisplay(attendanceDate)}.`);
+                showModal("Sin Datos", `No hay asistencias registradas el día ${formatDateDisplay(attendanceDate)}.`);
                 return;
             }
 
-            // 3. Ordenación por Apellidos (Juez de Paz)
+            // 🥋 ORDENACIÓN POR APELLIDOS
             listadoFiltrado.sort((a, b) => {
-                const pA = parseRelation(a.attributes?.alumno || a.alumno);
-                const pB = parseRelation(b.attributes?.alumno || b.alumno);
-                return (pA.apellidos || "").localeCompare((pB.apellidos || ""), 'es');
+                const aluA = parseRelation(a.attributes?.alumno || a.alumno);
+                const aluB = parseRelation(b.attributes?.alumno || b.alumno);
+                return (aluA?.apellidos || "").localeCompare((aluB?.apellidos || ""), 'es');
             });
 
-            // 4. Mapeo para el PDF
-            const headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora Keiko', 'Estado'];
+            // Mapeo para PDF
+            const headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora', 'Estado'];
             const body = listadoFiltrado.map((item, index) => {
                 const a = item.attributes || item;
                 const alu = parseRelation(a.alumno);
@@ -1269,7 +1278,6 @@ async function generateAttendanceReport() {
                 ];
             });
 
-            // 5. Generación del PDF
             doc.autoTable({
                 startY: 30,
                 margin: { top: 30, left: 10, right: 10 },
@@ -1287,11 +1295,11 @@ async function generateAttendanceReport() {
                 }
             });
 
-            doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
+            doc.save(`Asistencia_${attendanceDate}.pdf`);
 
         } catch (e) {
-            console.error("🔥 Error Informe:", e);
-            showModal("Error", "No se pudo recuperar la información del servidor.");
+            console.error("🔥 Error V26:", e.message);
+            showModal("Error", "Strapi v5 ha rechazado la consulta profunda. Revisa la consola.");
         }
     };
 }
