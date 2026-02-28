@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arashi-v5.31-update';
+const CACHE_NAME = 'arashi-v5.43-update';
 
 // Activos críticos para que la UI cargue en el tatami sin internet
 const ASSETS_TO_CACHE = [
@@ -30,7 +30,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       );
-    })
+    }).then(() => self.clients.claim()) // <--- CIRUGÍA: Reclamar control inmediato
   );
   console.log('🥋 [SW] Sistema Arashi Activado y Limpio.');
 });
