@@ -2975,17 +2975,31 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 async function handleAndroidInstall() {
-    console.log("🖱️ Botón 'INSTALAR AHORA' pulsado"); // <--- Esto DEBE salir siempre
+    console.log("🖱️ Botón 'INSTALAR AHORA' pulsado");
 
     if (deferredPrompt) {
-        console.log("✅ Llave de instalación detectada. Lanzando ventana...");
+        console.log("✅ Llave detectada. Lanzando ventana...");
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        console.log(`👤 Respuesta del usuario: ${outcome}`);
+        console.log(`👤 Respuesta: ${outcome}`);
         deferredPrompt = null; 
     } else { 
-        console.warn("⚠️ No hay 'llave' (deferredPrompt). El navegador ha bloqueado la instalación automática.");
-        showModal("Instalación en PC", "En ordenador, si el botón no reacciona, busca el icono de 'Instalar' (una pantalla con un +) que aparece arriba a la derecha, en la barra de la URL."); 
+        // 🥋 SI NO HAY LLAVE, LANZAMOS INSTRUCCIONES PARA TABLET LENTA
+        console.warn("⚠️ Llave bloqueada por el sistema. Mostrando tutorial manual.");
+        
+        showModal("INSTALACIÓN EN TABLET", `
+            <div style="text-align:left; font-size:14px; line-height:1.6;">
+                <p>El sistema de tu tablet ha bloqueado la instalación automática. Sigue estos pasos:</p>
+                <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:15px; border:1px solid var(--accent);">
+                    1. Pulsa los <b>3 puntos (⋮)</b> de Chrome arriba.<br>
+                    2. Busca y pulsa en <b>'Compartir...'</b>.<br>
+                    3. Desliza hacia arriba y selecciona <b>'Añadir a pantalla de inicio'</b>.
+                </div>
+                <p style="color:var(--accent); font-size:12px; margin-top:10px; font-weight:800;">
+                    <i class="fa-solid fa-circle-info"></i> Si no ves la opción, refresca la página deslizando hacia abajo.
+                </p>
+            </div>
+        `);
     }
 }
 
