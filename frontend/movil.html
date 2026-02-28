@@ -3208,6 +3208,46 @@ async function handleEnrollmentSubmit(event) {
 // Vinculamos el evento
 document.getElementById('enrollment-form').addEventListener('submit', handleEnrollmentSubmit);
 
+/* --- FUNCIONES DE RECUPERACIÓN (INYECTADAS EN HTML PARA EVITAR ERRORES) --- */
+function openResetPasswordModal(code) {
+    showModal("NUEVA CONTRASEÑA", `
+        <div style="text-align:left; margin-top:10px;">
+            <p style="font-size:13px; color:#94a3b8; margin-bottom:20px;">Escribe tu nueva clave de acceso al Dojo.</p>
+            <span class="modal-label">NUEVA CLAVE:</span>
+            <input type="password" id="reset-p1" class="modal-field" placeholder="Mínimo 6 caracteres" style="margin-bottom:15px;">
+            <span class="modal-label">REPETIR CLAVE:</span>
+            <input type="password" id="reset-p2" class="modal-field" placeholder="Confirma tu clave">
+            <button class="action-btn primary" onclick="processPasswordReset('${code}')" style="margin-top:25px; width:100%; height:60px; font-weight:800;">
+                ACTUALIZAR CONTRASEÑA
+            </button>
+        </div>
+    `, false);
+}
+
+async function processPasswordReset(code) {
+    const p1 = document.getElementById('reset-p1').value;
+    const p2 = document.getElementById('reset-p2').value;
+    if (p1 !== p2) { alert("⚠️ Las contraseñas no coinciden."); return; }
+    if (p1.length < 6) { alert("⚠️ La clave es demasiado corta."); return; }
+    const btn = document.querySelector('#custom-modal .action-btn.primary');
+    btn.innerText = "GUARDANDO..."; btn.disabled = true;
+    try {
+        const res = await fetch(`${API_URL}/auth/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code, password: p1, passwordConfirmation: p2 })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('aikido_jwt', data.jwt);
+            localStorage.setItem('aikido_user', JSON.stringify(data.user));
+            showModal("¡HECHO!", "Contraseña cambiada. Entrando...", () => { window.location.href = 'movil.html'; });
+        } else {
+            showModal("ERROR", "El enlace ha caducado. Pide uno nuevo.");
+        }
+    } catch (e) { alert("Error de conexión"); } finally { btn.innerText = "ACTUALIZAR CONTRASEÑA"; btn.disabled = false; }
+}
+
     </script>
 </body>
 </html>
