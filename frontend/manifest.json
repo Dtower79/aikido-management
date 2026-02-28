@@ -2,8 +2,8 @@
   "name": "Arashi Group Aikido",
   "short_name": "Arashi",
   "description": "Gestión Arashi",
-  "id": "arashi-pwa-v1",
-  "start_url": "movil.html",
+  "id": "arashi-group-aikido-v1",
+  "start_url": "/movil.html",
   "scope": "/",
   "display": "standalone",
   "background_color": "#000000",
@@ -11,13 +11,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "img/logo-arashi.png",
+      "src": "/img/logo-arashi.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "img/logo-arashi.png",
+      "src": "/img/logo-arashi.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
