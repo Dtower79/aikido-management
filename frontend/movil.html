@@ -1044,12 +1044,13 @@ body.is-sensei-mode #confirm-btn {
 #initial-mask {
     position: fixed;
     inset: 0;
-    background: #05080f; /* Negro Dojo */
-    z-index: 30000; /* Por encima de TODO */
+    background: #05080f; /* Negro profundo */
+    z-index: 30000;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.6s ease-in-out;
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: all;
 }
 
@@ -1058,14 +1059,27 @@ body.is-sensei-mode #confirm-btn {
     pointer-events: none;
 }
 
+/* Ocultamos el contenido de la App por defecto para evitar el parpadeo */
+#app-content {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* Solo cuando la App esté lista, permitimos que el contenido respire */
+body.app-ready #app-content {
+    opacity: 1;
+}
+
+
 /* Spinner sutil para el velo */
 .arashi-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(239, 68, 68, 0.1);
-    border-top-color: var(--accent);
+    width: 30px;
+    height: 30px;
+    border: 2px solid rgba(239, 68, 68, 0.1);
+    border-top-color: #ef4444;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin 0.8s linear infinite;
+    margin-top: 20px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -1074,11 +1088,14 @@ body.is-sensei-mode #confirm-btn {
 <body>
     <body class="">
     <!-- EL VELO: Se quita por código cuando todo esté listo -->
-    <div id="initial-mask"><div class="arashi-spinner"></div></div>
+        <div id="initial-mask">
+        <img src="img/logo-arashi.png" style="width: 80px; opacity: 0.8;" alt="Cargando...">
+        <div class="arashi-spinner"></div>
+    </div>
 
     <div id="app-content">
         <!-- ... resto de tu contenido ... -->
-    
+
     <!-- MURO DE INSTALACIÓN -->
         <div id="install-wall">
             <img src="img/logo-arashi.png" class="logo-img">
@@ -1568,50 +1585,55 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 16.0 - THE VELVET TRANSITION) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 17.0 - SMOOTH RESET TRANSITION) --- */
 async function initApp() {
     const mask = document.getElementById('initial-mask');
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
-    // Función interna para levantar el velo con suavidad
-    const liftVeil = () => {
+    // Función unificada para levantar el velo con suavidad
+    const completeDeployment = () => {
         setTimeout(() => {
-            if (mask) mask.classList.add('fade-out');
+            // 1. Desbloqueamos el ratón
             document.body.classList.add('app-ready');
             document.documentElement.classList.add('app-loaded');
-        }, 400); // 400ms de elegancia para asegurar que el modal esté ahí
+            // 2. Retiramos el velo con fundido
+            if (mask) mask.classList.add('fade-out');
+            console.log("✨ [SISTEMA] Velo levantado. Tatami operativo.");
+        }, 600); // 600ms de elegancia visual
     };
 
-    // --- 1. MODO RECUPERACIÓN (MÁXIMA PRIORIDAD) ---
+    // --- A. FLUJO DE RECUPERACIÓN (RESET PASSWORD) ---
     if (resetCode) {
-        console.log("🔑 [RESET] Preparando escenario tras el velo...");
+        console.log("🔑 [RESET] Configurando modal de seguridad...");
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Limpieza previa
+        // Limpiamos el muro de instalación para que no estorbe al fondo
         const splash = document.getElementById('install-wall');
         if (splash) splash.style.display = 'none';
 
-        // Mostramos el fondo de login y abrimos el modal "en la oscuridad"
+        // Preparamos el escenario: Fondo de login activo
         document.getElementById('login-view').classList.remove('hidden');
+        
+        // Inyectamos el modal (todavía no es visible por el velo)
         openResetPasswordModal(resetCode);
         
-        liftVeil();
-        return;
+        completeDeployment();
+        return; 
     }
 
-    // --- 2. CARGA NORMAL ---
+    // --- B. FLUJO NORMAL (USUARIO / LOGIN) ---
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
     if (!token || !user) {
         document.getElementById('login-view')?.classList.remove('hidden');
-        liftVeil();
+        completeDeployment();
         return;
     }
 
     try {
-        // Carga secuencial para evitar el error de las 60h
+        // Carga secuencial de datos técnicos
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
@@ -1625,14 +1647,17 @@ async function initApp() {
         await checkTodayClass();
 
         showView('dashboard');
-        document.getElementById('main-nav')?.classList.remove('hidden');
-        document.getElementById('main-nav').style.display = 'grid';
+        const nav = document.getElementById('main-nav');
+        if (nav) {
+            nav.classList.remove('hidden');
+            nav.style.display = 'grid';
+        }
 
-        liftVeil();
+        completeDeployment();
 
     } catch (error) {
-        console.error("🔥 Error despliegue:", error);
-        liftVeil(); // Siempre levantamos el velo aunque falle el server
+        console.error("🔥 [ERROR] Fallo en carga:", error);
+        completeDeployment(); 
     }
 }
 
