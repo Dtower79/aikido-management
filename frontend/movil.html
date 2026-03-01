@@ -1670,7 +1670,7 @@ async function initApp() {
     } catch (error) { forceRelease("ERROR"); }
 }
 
-/* --- REFRESH DATA V10.1 (EDICIÓN TABLET DOJO) --- */
+/* --- REFRESH DATA V10.2 (VÍNCULO DE MANDO RESTAURADO) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1678,7 +1678,7 @@ async function refreshStudentData() {
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // 1. INTENTO DE CARGA DE FICHA (Excepto para el usuario TABLET)
+    // 1. CARGA DE FICHA (Excepto para el usuario TABLET)
     if (user.username !== 'TABLET') {
         if (savedDocId && savedDocId !== "null") {
             dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
@@ -1696,22 +1696,37 @@ async function refreshStudentData() {
     const initialsCircle = document.getElementById('user-initials');
     const zenCard = document.getElementById('zen-card');
 
-    // 2. PROCESAMIENTO DE DATOS
+    // 2. PROCESAMIENTO
     alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-    
-    if (p && p.dojo) {
-        dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
-    }
+    if (p && p.dojo) dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
 
-    // 3. INTERFAZ: NOMBRE E INICIALES (MODIFICADO A TABLET DOJO)
+    // 3. IDENTIDAD (TABLET DOJO)
     const displayName = user.username === 'TABLET' ? "TABLET DOJO" : (p?.nombre || user.nombre || "SENSEI").toUpperCase();
     const initials = user.username === 'TABLET' ? "TD" : ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
     
     document.getElementById('user-display-name').innerText = displayName;
-    if (initialsCircle) initialsCircle.innerText = initials;
 
-    // 4. LÓGICA DE SENSEI (is_sensei en tabla User)
+    // --- 🥋 CIRUGÍA: RESTAURACIÓN DEL CLIC DE GESTIÓN ---
+    if (initialsCircle) {
+        initialsCircle.innerText = initials;
+        
+        // El usuario TABLET es sensei por tabla User, así que 'esGestor' será true
+        const esGestor = (user.is_sensei === true || user.is_sensei === "true" || (p && (p.es_instructor === true || p.es_instructor === "true")));
+
+        if (esGestor) {
+            initialsCircle.style.cursor = 'pointer';
+            initialsCircle.title = "Acceder a Gestión Arashi";
+            initialsCircle.onclick = () => { 
+                window.location.href = 'https://arashi-group.netlify.app/'; 
+            };
+        } else {
+            initialsCircle.style.cursor = 'default';
+            initialsCircle.onclick = null;
+        }
+    }
+
+    // 4. LÓGICA DE SENSEI
     const esSenseiRango = (user.is_sensei === true || user.is_sensei === "true");
 
     if (esSenseiRango) {
@@ -1720,15 +1735,8 @@ async function refreshStudentData() {
         if (nextGrade) nextGrade.classList.add('hidden');
         if (zenCard) zenCard.remove();
 
-        // Si es la Tablet, mostramos genérico para gestión de clases
         let dojoNom = p?.dojo ? parseRelation(p.dojo).nombre : "GESTIÓN DE CLASES";
-        
-        const zenHTML = `
-            <div id="zen-card" class="zen-master-card">
-                <img src="img/logo-arashi.png" class="zen-logo">
-                <h2 class="zen-title" style="font-size:30px !important;">SENSEI</h2>
-                <p class="zen-subtitle">${dojoNom.toUpperCase()}</p>
-            </div>`;
+        const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title" style="font-size:30px !important;">SENSEI</h2><p class="zen-subtitle">${dojoNom.toUpperCase()}</p></div>`;
         if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
 
     } else if (p) {
@@ -1769,7 +1777,6 @@ async function refreshStudentData() {
             navSensei.onclick = () => { showView('sensei', navSensei); loadSenseiPanel(); };
         }
     }
-    
     return alumnoGlobal;
 }
 
