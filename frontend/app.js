@@ -1379,95 +1379,129 @@ async function generateAttendanceReport() {
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
+    
+    // 🥋 SISTEMA ANTI-FALLO DE IMÁGENES
     const logoImg = new Image();
-    logoImg.src = 'img/logo-arashi-informe.png';
+    logoImg.crossOrigin = "Anonymous"; // Previene el error de Canvas Tainted (CORS)
+    
+    // Usamos una URL estable en ibb.co (Regla Inviolable)
+    logoImg.src = 'https://i.ibb.co/zXn2wKV/logo-arashi.png'; 
+
+    // Si por algún motivo la URL externa falla, que no se bloquee el informe:
+    logoImg.onerror = function() {
+        console.warn("⚠️ URL externa de logo bloqueada. Usando ruta local segura.");
+        logoImg.src = 'img/logo-arashi.png'; // Fallback a la imagen estándar del login
+        // Desactivamos el onerror para no crear un bucle infinito si la local también falla
+        logoImg.onerror = null; 
+    };
 
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         try {
-            // 🥋 PASO 1: Descargar los alumnos para tener sus Dojos (Caché inteligente)
-            // Esta consulta es simple y Strapi v5 NO la rechaza (es la que usa la tabla principal)
-            console.log("📡 [SISTEMA] Paso 1: Obteniendo base de datos de alumnos...");
+            // 🥋 PASO 1: Obtener el censo completo para mapear los Dojos (Caché 12 horas)
+            console.log("📡 [SISTEMA] Paso 1: Mapeando sedes de alumnos...");
             const aluData = await fetchSmart('/api/alumnos?populate=dojo&pagination[limit]=1000', 'alumnos_report_cache', 12);
             
-            // Creamos un mapa rápido: ID de Alumno -> Nombre del Dojo
-            const dojoMap = {};
-            (aluData.data || []).forEach(alu => {
-                const id = alu.documentId || alu.id;
+            // Creamos un diccionario cruzado para encontrar el Dojo de cada alumno rápidamente
+            const dojoNameMap = {};
+            const dojoIdMap = {};
+            
+            (aluData.data ||[]).forEach(alu => {
+                const id = getID(alu);
                 const attr = alu.attributes || alu;
-                dojoMap[id] = getDojoName(attr.dojo);
+                dojoNameMap[id] = getDojoName(attr.dojo);
+                dojoIdMap[id] = attr.dojo ? getID(attr.dojo) : null; // Guardamos el ID real de la sede
             });
 
-            // 🥋 PASO 2: Descargar asistencias con población simple (Estilo Pasaporte)
-            // Usamos EXACTAMENTE la misma sintaxis que el Pasaporte del alumno: populate=clase,alumno
+            // 🥋 PASO 2: Descargar asistencias (Estilo Pasaporte)
             const apiUrl = `${API_URL}/api/asistencias?populate=clase,alumno&pagination[limit]=1000&sort=createdAt:desc`;
             
-            console.log("📡 [SISTEMA] Paso 2: Descargando asistencias (Sintaxis Pasaporte)...");
+            console.log("📡[SISTEMA] Paso 2: Descargando registros de Tatami...");
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
             if (!res.ok) throw new Error("Fallo de comunicación con Strapi v5");
             const json = await res.json();
             
-            // 🥋 PASO 3: Filtrado y Cruce de datos en JavaScript
-            const listadoFinal = (json.data || []).filter(item => {
+            // 🥋 PASO 3: Filtrado Inteligente en JavaScript
+            const listadoFinal = (json.data ||[]).filter(item => {
                 const a = item.attributes || item;
                 const cla = parseRelation(a.clase);
                 const alu = parseRelation(a.alumno);
+                
+                if (!cla || !alu || !cla.Fecha_Hora) return false; // Escudo contra registros fantasma
+                
                 const aluId = getID(alu);
                 
-                // Filtro de fecha: ¿La clase coincide con el calendario?
-                const matchFecha = cla?.Fecha_Hora?.startsWith(attendanceDate);
+                // A. Filtro de Fecha (Aislamos el día exacto de la cadena ISO de Strapi)
+                const classDatePart = cla.Fecha_Hora.split('T')[0];
+                const matchFecha = (classDatePart === attendanceDate);
                 
-                // Filtro de Dojo: ¿El dojo del alumno coincide con el filtro?
-                // Buscamos el dojo del alumno en nuestro Mapa del Paso 1
-                const aluDojoDocId = alu?.dojo?.documentId || alu?.dojo?.data?.documentId;
-                const matchDojo = !dojoFilterId || aluDojoDocId === dojoFilterId;
+                // B. Filtro de Dojo (Usando nuestro diccionario cruzado para que no falle)
+                const aluDojoDocId = dojoIdMap[aluId];
+                const matchDojo = (!dojoFilterId || dojoFilterId === "all" || aluDojoDocId === dojoFilterId);
                 
-                return matchFecha && matchDojo;
+                // C. Filtro de ESTADO (SOLO Confirmados o Asistidos)
+                const estadoClean = (a.Estado || a.estado || "").toLowerCase().trim();
+                const matchEstado = ['confirmado', 'asistio', 'asistió'].includes(estadoClean);
+                
+                return matchFecha && matchDojo && matchEstado;
+                
             }).map(item => {
-                // Preparamos el objeto para el PDF
+                // Preparación de datos para la tabla
                 const a = item.attributes || item;
                 const alu = parseRelation(a.alumno);
                 const cla = parseRelation(a.clase);
                 const aluId = getID(alu);
+                
+                // Extraemos la hora de forma segura para la zona horaria del Sensei
+                const d = new Date(cla.Fecha_Hora);
+                const horaLocal = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + "h";
                 
                 return {
-                    apellidos: (alu?.apellidos || "").toUpperCase(),
-                    nombre: alu?.nombre || "",
-                    dojo: dojoMap[aluId] || "NO DISP",
-                    tipo: cla?.Tipo || "Keiko",
-                    hora: cla?.Fecha_Hora ? cla.Fecha_Hora.split('T')[1].substring(0, 5) + "h" : "--:--",
-                    estado: (a.Estado || a.estado || "Asistió").toUpperCase()
+                    apellidos: (alu.apellidos || "").toUpperCase(),
+                    nombre: alu.nombre || "",
+                    dojo: dojoNameMap[aluId] || "NO DISP",
+                    tipo: cla.Tipo || "Keiko",
+                    hora: horaLocal,
+                    estado: (a.Estado || a.estado || "CONFIRMADO").toUpperCase()
                 };
             });
 
             if (listadoFinal.length === 0) {
-                showModal("Sin Datos", `No se han encontrado registros para el día ${formatDateDisplay(attendanceDate)}.`);
+                showModal("Tatami Vacío", `No hay alumnos confirmados para el día ${formatDateDisplay(attendanceDate)} en esta sede.`);
                 return;
             }
 
-            // 🥋 ORDENACIÓN POR APELLIDO (Juez de Paz)
+            // 🥋 ORDENACIÓN: Juez de Paz (Alfabético)
             listadoFinal.sort((a, b) => a.apellidos.localeCompare(b.apellidos, 'es'));
 
-            // 🥋 CONSTRUCCIÓN DEL PDF
-            const headRow = ['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora', 'Estado'];
-            const body = listadoFinal.map((it, idx) => [
+            // 🥋 CONSTRUCCIÓN ESTADÍSTICA DEL PDF
+            const headRow =['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora', 'Estado'];
+            const body = listadoFinal.map((it, idx) =>[
                 `${idx + 1}`, it.apellidos, it.nombre, it.dojo, it.tipo, it.hora, it.estado
             ]);
 
             doc.autoTable({
                 startY: 30, margin: { top: 30, left: 10, right: 10 },
                 head: [headRow], body: body, theme: 'grid',
-                styles: { fontSize: 7, cellPadding: 1.5 },
+                styles: { fontSize: 8, cellPadding: 2 },
                 headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 10 },
+                    4: { halign: 'center' },
+                    5: { halign: 'center', textColor: [34, 197, 94], fontStyle: 'bold' }, // Hora en verde
+                    6: { halign: 'center', fontStyle: 'bold' } // Estado resaltado
+                },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-                    doc.setFontSize(14); doc.text("REPORTE DE ASISTENCIA DIARIA", pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | FECHA: ${formatDateDisplay(attendanceDate)}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.setFontSize(14); doc.text("LISTADO DE ASISTENCIA CONFIRMADA", pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | FECHA DEL KEIKO: ${formatDateDisplay(attendanceDate)}`, pageWidth / 2, 18, { align: 'center' });
+                    doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+                    doc.text(`Total inscritos: ${listadoFinal.length}`, pageWidth - 10, 18, { align: 'right' });
                 }
             });
 
-            doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
+            doc.save(`Asistencia_Confirmada_${attendanceDate}.pdf`);
 
         } catch (e) {
             console.error("🔥 Error V35:", e);
