@@ -7,8 +7,8 @@ module.exports = ({ env }) => ({
         apiKey: env('SENDGRID_API_KEY'),
       },
       settings: {
-        defaultFrom: 'raulnicolas79@gmail.com', // ⚠️ DEBE ser el que verificaste en SendGrid
-        defaultReplyTo: 'raulnicolas79@gmail.com',
+        defaultFrom: 'arashi_app@aikidobadalona.com', // ⚠️ DEBE ser el que verificaste en SendGrid
+        defaultReplyTo: 'arashi_app@aikidobadalona.com',
       },
     },
   },
