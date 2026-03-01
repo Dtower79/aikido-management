@@ -1380,30 +1380,24 @@ async function generateAttendanceReport() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
     
-    // 🥋 SISTEMA ANTI-FALLO DE IMÁGENES
+    // 🥋 SISTEMA ANTI-CORS: Usamos el logo local 100% seguro para limpiar tu consola
     const logoImg = new Image();
-    logoImg.crossOrigin = "Anonymous"; // Previene el error de Canvas Tainted (CORS)
-    
-    // Usamos una URL estable en ibb.co (Regla Inviolable)
-    logoImg.src = 'https://i.ibb.co/zXn2wKV/logo-arashi.png'; 
+    logoImg.src = 'img/logo-arashi.png'; 
 
-    // Si por algún motivo la URL externa falla, que no se bloquee el informe:
+    // Si por algún motivo se borrara la imagen de tu carpeta, evitamos que la app se cuelgue
     logoImg.onerror = function() {
-        console.warn("⚠️ URL externa de logo bloqueada. Usando ruta local segura.");
-        logoImg.src = 'img/logo-arashi.png'; // Fallback a la imagen estándar del login
-        // Desactivamos el onerror para no crear un bucle infinito si la local también falla
-        logoImg.onerror = null; 
+        console.error("❌ No se encontró el logo local.");
+        showModal("Error", "Falta la imagen del logo (img/logo-arashi.png).");
     };
 
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         try {
-            // 🥋 PASO 1: Obtener el censo completo para mapear los Dojos (Caché 12 horas)
+            // 🥋 PASO 1: Mapeo de Dojos
             console.log("📡 [SISTEMA] Paso 1: Mapeando sedes de alumnos...");
             const aluData = await fetchSmart('/api/alumnos?populate=dojo&pagination[limit]=1000', 'alumnos_report_cache', 12);
             
-            // Creamos un diccionario cruzado para encontrar el Dojo de cada alumno rápidamente
             const dojoNameMap = {};
             const dojoIdMap = {};
             
@@ -1411,15 +1405,23 @@ async function generateAttendanceReport() {
                 const id = getID(alu);
                 const attr = alu.attributes || alu;
                 dojoNameMap[id] = getDojoName(attr.dojo);
-                dojoIdMap[id] = attr.dojo ? getID(attr.dojo) : null; // Guardamos el ID real de la sede
+                dojoIdMap[id] = attr.dojo ? getID(attr.dojo) : null; 
             });
 
-            // 🥋 PASO 2: Descargar asistencias (Estilo Pasaporte)
-            const apiUrl = `${API_URL}/api/asistencias?populate=clase,alumno&pagination[limit]=1000&sort=createdAt:desc`;
+            // 🥋 PASO 2: SINTAXIS STRAPI V5 ESTRICTA (¡El fix del error 400!)
+            // Cambiamos "populate=clase,alumno" por "populate[0]=clase&populate[1]=alumno"
+            const apiUrl = `${API_URL}/api/asistencias?populate[0]=clase&populate[1]=alumno&pagination[limit]=1000&sort=createdAt:desc`;
             
-            console.log("📡[SISTEMA] Paso 2: Descargando registros de Tatami...");
+            console.log("📡 [SISTEMA] Paso 2: Descargando registros de Tatami...");
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
-            if (!res.ok) throw new Error("Fallo de comunicación con Strapi v5");
+            
+            // Verificación extra para saber si Render/Strapi nos rechaza
+            if (!res.ok) {
+                const errData = await res.json();
+                console.error("🔥 Error devuelto por Strapi:", errData);
+                throw new Error(`Fallo V5 (Status: ${res.status})`);
+            }
+            
             const json = await res.json();
             
             // 🥋 PASO 3: Filtrado Inteligente en JavaScript
@@ -1428,15 +1430,15 @@ async function generateAttendanceReport() {
                 const cla = parseRelation(a.clase);
                 const alu = parseRelation(a.alumno);
                 
-                if (!cla || !alu || !cla.Fecha_Hora) return false; // Escudo contra registros fantasma
+                if (!cla || !alu || !cla.Fecha_Hora) return false; // Escudo
                 
                 const aluId = getID(alu);
                 
-                // A. Filtro de Fecha (Aislamos el día exacto de la cadena ISO de Strapi)
+                // A. Filtro de Fecha 
                 const classDatePart = cla.Fecha_Hora.split('T')[0];
                 const matchFecha = (classDatePart === attendanceDate);
                 
-                // B. Filtro de Dojo (Usando nuestro diccionario cruzado para que no falle)
+                // B. Filtro de Dojo 
                 const aluDojoDocId = dojoIdMap[aluId];
                 const matchDojo = (!dojoFilterId || dojoFilterId === "all" || aluDojoDocId === dojoFilterId);
                 
@@ -1447,13 +1449,11 @@ async function generateAttendanceReport() {
                 return matchFecha && matchDojo && matchEstado;
                 
             }).map(item => {
-                // Preparación de datos para la tabla
                 const a = item.attributes || item;
                 const alu = parseRelation(a.alumno);
                 const cla = parseRelation(a.clase);
                 const aluId = getID(alu);
                 
-                // Extraemos la hora de forma segura para la zona horaria del Sensei
                 const d = new Date(cla.Fecha_Hora);
                 const horaLocal = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + "h";
                 
@@ -1489,23 +1489,23 @@ async function generateAttendanceReport() {
                 columnStyles: {
                     0: { halign: 'center', cellWidth: 10 },
                     4: { halign: 'center' },
-                    5: { halign: 'center', textColor: [34, 197, 94], fontStyle: 'bold' }, // Hora en verde
-                    6: { halign: 'center', fontStyle: 'bold' } // Estado resaltado
+                    5: { halign: 'center', textColor: [34, 197, 94], fontStyle: 'bold' }, // Hora verde
+                    6: { halign: 'center', fontStyle: 'bold' } 
                 },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-                    doc.setFontSize(14); doc.text("LISTADO DE ASISTENCIA CONFIRMADA", pageWidth / 2, 12, { align: 'center' });
+                    doc.setFontSize(14); doc.text("LISTADO DE ASISTENCIA", pageWidth / 2, 12, { align: 'center' });
                     doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | FECHA DEL KEIKO: ${formatDateDisplay(attendanceDate)}`, pageWidth / 2, 18, { align: 'center' });
                     doc.setFontSize(8); doc.setTextColor(150, 150, 150);
                     doc.text(`Total inscritos: ${listadoFinal.length}`, pageWidth - 10, 18, { align: 'right' });
                 }
             });
 
-            doc.save(`Asistencia_Confirmada_${attendanceDate}.pdf`);
+            doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
 
         } catch (e) {
             console.error("🔥 Error V35:", e);
-            showModal("Error", "No se pudo recuperar la información del Tatami.");
+            showModal("Error", "No se pudo generar el informe. Revisa la consola.");
         }
     };
 }
