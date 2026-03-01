@@ -1600,52 +1600,59 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
         }
 
 /* --- NÚCLEO DE INICIALIZACIÓN (VERSION 23.0 - CON RADAR DE DIAGNÓSTICO) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 24.0 - ANTI-ZOMBI) --- */
 async function initApp() {
     console.log("🚀 [RADAR] Iniciando initApp...");
+    
     const html = document.documentElement;
     const body = document.body;
     const mask = document.getElementById('initial-mask');
     const wall = document.getElementById('install-wall');
     const appContent = document.getElementById('app-content');
+
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
+    // FUNCIÓN DE LIBERACIÓN TOTAL (Blindada contra el bloqueo de ratón)
     const forceRelease = (mode) => {
         console.log(`🔓 [SISTEMA] Liberando UI en modo: ${mode}`);
         body.classList.add('app-ready');
         html.classList.add('app-loaded');
+        
+        // Eliminamos bloqueos de pointer-events
+        body.style.pointerEvents = 'auto';
+        
         if (mask) mask.style.display = 'none';
+        
         if (appContent) {
-            // CIRUGÍA: Forzamos al padre a existir para que el muro sea visible
-            appContent.style.setProperty('display', 'flex', 'important');
+            appContent.style.display = 'flex';
             appContent.style.opacity = '1';
             appContent.style.pointerEvents = 'auto';
         }
     };
 
-    // 1. CASO: INSTALACIÓN (Si Chrome ha marcado la clase)
+    // --- 1. CASO: INSTALACIÓN PRIORITARIA ---
     if (html.classList.contains('show-install-wall')) {
-        console.log("🎯 DETECTADO: Modo Instalación.");
         forceRelease("INSTALL");
         if (wall) {
             wall.style.setProperty('display', 'flex', 'important');
-            wall.style.opacity = '1';
+            wall.style.setProperty('opacity', '1', 'important');
+            wall.style.setProperty('z-index', '99999', 'important');
         }
         return; 
     }
 
-    // 2. CASO: RECUPERACIÓN (RESET)
+    // --- 2. CASO: RECUPERACIÓN (RESET) ---
     if (resetCode) {
         window.history.replaceState({}, document.title, window.location.pathname);
-        forceRelease("RESET");
-        const installWall = document.getElementById('install-wall');
-        if (installWall) installWall.style.display = 'none';
+        if (wall) wall.style.display = 'none';
         document.getElementById('login-view')?.classList.remove('hidden');
-        if (typeof openResetPasswordModal === 'function') openResetPasswordModal(resetCode);
+        forceRelease("RESET");
+        if (typeof openResetPasswordModal === 'function') setTimeout(() => openResetPasswordModal(resetCode), 100);
         return; 
     }
 
-    // 3. CARGA NORMAL
+    // --- 3. CARGA NORMAL ---
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
@@ -1656,18 +1663,32 @@ async function initApp() {
     }
 
     try {
+        // Carga de requisitos
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
-            return { NORM: normalize(attr.Grado || attr.grado || ""), HORAS: parseFloat(attr.Horas_Necesarias || 0) };
+            return {
+                NORM: normalize(attr.Grado || attr.grado || ""),
+                HORAS: parseFloat(attr.Horas_Necesarias || attr.horas_necesarias || 0)
+            };
         });
+
         await refreshStudentData();
         await checkTodayClass();
+
         showView('dashboard');
         const nav = document.getElementById('main-nav');
-        if (nav) { nav.classList.remove('hidden'); nav.style.display = 'grid'; }
+        if (nav) {
+            nav.classList.remove('hidden');
+            nav.style.display = 'grid';
+        }
+        
         forceRelease("DASHBOARD");
-    } catch (error) { forceRelease("ERROR"); }
+
+    } catch (error) {
+        console.error("🔥 Error en despliegue:", error);
+        forceRelease("ERROR_FALLBACK");
+    }
 }
 
 /* --- REFRESH DATA V10.2 (VÍNCULO DE MANDO RESTAURADO) --- */
@@ -3450,6 +3471,28 @@ async function processPasswordReset(code) {
         }
     } catch (e) { alert("Error de conexión"); } finally { btn.innerText = "ACTUALIZAR CONTRASEÑA"; btn.disabled = false; }
 }
+
+/* --- MONITOR DE NAVEGACIÓN (SOLUCIÓN AL VOLVER ATRÁS) --- */
+window.addEventListener('pageshow', (event) => {
+    // Si event.persisted es true, significa que el navegador ha restaurado la página de la caché (atrás/adelante)
+    if (event.persisted) {
+        console.log("♻️ [SISTEMA] Regreso detectado. Reiniciando Tatami...");
+        // Forzamos un refresco total para limpiar estados zombis
+        window.location.reload();
+    }
+});
+
+// Sanity check: Si el body no tiene app-ready tras 3 segundos, lo forzamos
+setTimeout(() => {
+    if (!document.body.classList.contains('app-ready')) {
+        console.warn("⚠️ Failsafe activado: Desbloqueando UI manualmente.");
+        document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+        const mask = document.getElementById('initial-mask');
+        if (mask) mask.style.display = 'none';
+    }
+}, 3000);
+
 
     </script>
 </body>
