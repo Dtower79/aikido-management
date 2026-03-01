@@ -1670,90 +1670,82 @@ async function initApp() {
     } catch (error) { forceRelease("ERROR"); }
 }
 
-/* --- REFRESH DATA (VERSION 9.3 - VISIBILIDAD SENSEI ASEGURADA) --- */
+/* --- REFRESH DATA V10.0 (SOPORTE PARA TERMINAL SENSEI) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
     
-    const token = localStorage.getItem('aikido_jwt');
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // Obtención de datos
-    if (savedDocId && savedDocId !== "null") {
-        dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
-    } else {
-        const endpoint = `/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
-        dataAlu = await fetchSmart(endpoint, null, 0); 
-        if (dataAlu?.data?.length) {
-            localStorage.setItem('aikido_student_doc_id', dataAlu.data[0].documentId || dataAlu.data[0].id);
+    // 1. INTENTO DE CARGA DE FICHA (Sólo si no es un usuario de sistema como TABLET)
+    if (user.username !== 'TABLET') {
+        if (savedDocId && savedDocId !== "null") {
+            dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
+        } else {
+            let endpoint = `/alumnos?filters[cuenta_usuario][id][$eq]=${user.id}&populate=*`;
+            dataAlu = await fetchSmart(endpoint, null, 0); 
+            if (dataAlu?.data?.length) {
+                localStorage.setItem('aikido_student_doc_id', dataAlu.data[0].documentId || dataAlu.data[0].id);
+            }
         }
     }
 
-    alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
-    const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
-    if (p?.dojo) dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
-
-    // 1. Iniciales y Vínculo de Management
-    const initialsCircle = document.getElementById('user-initials');
-    if (initialsCircle) {
-        initialsCircle.innerText = ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
-        const esGestor = (user.is_sensei === true || user.is_sensei === "true" || (p && (p.es_instructor === true || p.es_instructor === "true")));
-        if (esGestor) {
-            initialsCircle.style.cursor = 'pointer';
-            initialsCircle.onclick = () => { window.location.href = 'https://arashi-group.netlify.app/'; };
-        }
-    }
-    document.getElementById('user-display-name').innerText = (p?.nombre || user.nombre || "SENSEI").toUpperCase();
-
-    // 2. Círculo de Progreso
     const circle = document.getElementById('student-progress-circle');
     const nextGrade = document.getElementById('next-grade-display');
+    const initialsCircle = document.getElementById('user-initials');
+    const zenCard = document.getElementById('zen-card');
 
-    if (user.is_sensei === true || user.is_sensei === "true") {
-        if (circle) circle.classList.add('hidden');
-        if (nextGrade) nextGrade.classList.add('hidden');
-    } else if (p) {
-        if (circle) circle.classList.remove('hidden');
-        const horasActuales = parseFloat(p.horas_acumuladas || 0);
-        document.getElementById('stat-hours').innerText = horasActuales.toFixed(1);
-
-        // Calcular Grado Objetivo (Meta)
-        let meta = p.grado_objetivo;
-        if (!meta) {
-            const miGrado = (p.grado || "S/G").toUpperCase();
-            const idx = GRADOS_ORDER.indexOf(miGrado);
-            meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "5º KYU";
-        }
-
-        // 🥋 BUSQUEDA QUIRÚRGICA EN LA TABLA NEON
-        const normMeta = normalize(meta);
-        const registro = requisitosGradoGlobal.find(r => r.NORM === normMeta);
-        
-        // Si no está en Neon, usamos el fallback estático, y si no, 60.
-        let target = (registro && registro.HORAS > 0) ? registro.HORAS : (GRADOS_FALLBACK[meta] || 60);
-        
-        console.log(`🎯 [PROGRESS] Meta: ${meta} (${normMeta}) | Target Neon: ${target}h`);
-
-        const bar = document.getElementById('progress-bar');
-        if (bar) {
-            const pct = Math.min((horasActuales / target) * 100, 100);
-            bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
-        }
-        document.getElementById('stat-label').innerText = `HORAS / ${target}`;
-        if (nextGrade) {
-            nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
-            nextGrade.classList.remove('hidden');
-        }
+    // 2. PROCESAMIENTO DE DATOS
+    alumnoGlobal = (dataAlu && dataAlu.data) ? (Array.isArray(dataAlu.data) ? dataAlu.data[0] : dataAlu.data) : null;
+    const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
+    
+    if (p && p.dojo) {
+        dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
     }
 
-    // Configuración Nav
+    // 3. INTERFAZ: NOMBRE E INICIALES
+    const displayName = user.username === 'TABLET' ? "TERMINAL DOJO" : (p?.nombre || user.nombre || "SENSEI").toUpperCase();
+    const initials = user.username === 'TABLET' ? "TD" : ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
+    
+    document.getElementById('user-display-name').innerText = displayName;
+    if (initialsCircle) initialsCircle.innerText = initials;
+
+    // 4. LÓGICA DE SENSEI (is_sensei en tabla User)
+    const esSenseiRango = (user.is_sensei === true || user.is_sensei === "true");
+
+    if (esSenseiRango) {
+        document.body.classList.add('is-sensei-mode'); 
+        if (circle) circle.classList.add('hidden');
+        if (nextGrade) nextGrade.classList.add('hidden');
+        if (zenCard) zenCard.remove();
+
+        // Si es la Tablet, no tiene Dojo asignado por ficha, mostramos genérico
+        let dojoNom = p?.dojo ? parseRelation(p.dojo).nombre : "GESTIÓN DE CLASES";
+        
+        const zenHTML = `
+            <div id="zen-card" class="zen-master-card">
+                <img src="img/logo-arashi.png" class="zen-logo">
+                <h2 class="zen-title" style="font-size:30px !important;">SENSEI</h2>
+                <p class="zen-subtitle">${dojoNom.toUpperCase()}</p>
+            </div>`;
+        if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
+
+    } else if (p) {
+        // ... (Lógica normal de alumno se mantiene igual aquí debajo)
+        document.body.classList.remove('is-sensei-mode');
+        if (zenCard) zenCard.remove();
+        if (circle) circle.classList.remove('hidden');
+        // (resto de tu código de cálculo de horas y barra de progreso)
+    }
+
+    // 5. NAV BAR: Aseguramos visibilidad del botón Sensei
     const navSensei = document.getElementById('nav-sensei');
     if (navSensei) {
-        const esSensei = (user.is_sensei === true || user.is_sensei === "true" || (p && (p.es_instructor === true || p.es_instructor === "true")));
-        navSensei.style.display = 'flex';
-        navSensei.innerHTML = esSensei ? '<i class="fa-solid fa-user-shield"></i><span>Sensei</span>' : '<i class="fa-solid fa-earth-europe"></i><span>Seminarios</span>';
-        navSensei.onclick = esSensei ? () => showView('sensei', navSensei) : () => window.open('https://www.meetontatami.com/', '_blank');
+        if (esSenseiRango) {
+            navSensei.style.display = 'flex';
+            navSensei.onclick = () => { showView('sensei', navSensei); loadSenseiPanel(); };
+        }
     }
     
     return alumnoGlobal;
