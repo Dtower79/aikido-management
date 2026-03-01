@@ -924,32 +924,55 @@ button[onclick="addSeminarioRow()"]:hover {
 }
 
 /* 🥋 =========================================================
-   MEJORA UX: EXPANSIÓN TOTAL DE LAS TABLAS (TATAMI COMPLETO)
+   MEJORA UX: COMPRESIÓN MÁXIMA PARA TABLA DE ALUMNOS
    ========================================================= */
 
-/* 1. Eliminamos el hueco muerto inferior de la caja de la tabla */
+/* 1. Eliminamos el padding interno muerto de la caja de la tabla */
 .table-container {
     padding-bottom: 0 !important; 
 }
 
-/* 2. Activamos la Inteligencia Flexbox (Solo para Escritorio) */
+/* 2. Eliminamos el enorme margen superior del footer que robaba espacio abajo */
+.main-footer {
+    margin-top: 0 !important;
+}
+
 @media (min-width: 901px) {
     
-    /* Convertimos las secciones en un "túnel" que calcula su propia altura */
-    #sec-alumnos:not(.hidden),
-    #sec-bajas:not(.hidden) {
-        display: flex !important; /* Fuerza el modo Flex ignorando el JS */
+    /* 3. Reducimos el padding para subir el título hacia el techo */
+    #sec-alumnos.section,
+    #sec-bajas.section {
+        padding-top: 15px !important; /* Antes 30px */
+        padding-bottom: 0 !important; /* Antes 30px */
+        display: flex !important;
         flex-direction: column;
-        overflow: hidden; /* Fija la página exterior: Ahora SOLO la tabla hará scroll */
-        padding-bottom: 20px; /* Estira la sección hasta casi tocar la base de la pantalla */
+        overflow: hidden; 
     }
 
-    /* La tabla se traga el 100% del espacio restante automáticamente */
+    /* 4. Comprimimos el espacio entre el Título y la Barra de herramientas */
+    #sec-alumnos .section-header,
+    #sec-bajas .section-header {
+        margin-bottom: 10px !important; /* Antes 25px */
+        padding-bottom: 10px !important; /* Antes 15px */
+    }
+
+    /* 5. Comprimimos el espacio entre la Barra de herramientas y la Tabla */
+    #sec-alumnos .toolbar,
+    #sec-bajas .toolbar {
+        margin-bottom: 10px !important; /* Antes 20px */
+    }
+
+    /* 6. Hacemos que la tabla estire hasta tocar exactamente el footer */
     #sec-alumnos .table-container,
     #sec-bajas .table-container {
-        flex: 1;          /* ¡La Magia! Absorbe el hueco milimétricamente */
-        min-height: 0;    /* Requisito técnico para que funcione el scroll interno */
-        max-height: none; /* Fulminamos la antigua restricción de 70vh */
+        flex: 1;          
+        min-height: 0;    
+        max-height: none; 
         height: auto;
+        /* Anclamos visualmente la tabla al fondo poniéndola recta abajo */
+        border-bottom-left-radius: 0 !important; 
+        border-bottom-right-radius: 0 !important;
+        border-bottom: none !important; 
+        margin-bottom: 0 !important;
     }
 }
