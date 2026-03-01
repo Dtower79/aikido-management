@@ -1034,6 +1034,11 @@ body.is-sensei-mode #confirm-btn {
         padding-bottom: 150px !important; 
     }
 }
+/* Bloqueo preventivo del Splash Screen en modo recuperación */
+[data-mode="reset"] #install-wall, 
+[data-mode="reset"] .logo-img {
+    display: none !important;
+}
 
     </style>
 </head>
@@ -1517,92 +1522,44 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-        /* --- CORE INIT --- */
-
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 12.0 - INTEGRIDAD Y RESET BLINDADO) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 13.0 - ZERO FLICKER RESET) --- */
 async function initApp() {
-    console.log("🚀 [INIT] Iniciando sincronización secuencial Arashi...");
-    const token = localStorage.getItem('aikido_jwt');
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    const mainNav = document.getElementById('main-nav');
-
-    /* --- 1. BLOQUE DE RECUPERACIÓN (PRIORIDAD MÁXIMA) --- */
+    // 1. DETECCIÓN INSTANTÁNEA
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
     if (resetCode) {
-        console.log("🔑 Token de recuperación detectado. Liberando interfaz para Reset...");
-        // Limpiamos la URL para evitar re-usos del token
+        // Marcamos el HTML para que el CSS oculte el logo de Arashi al instante
+        document.documentElement.setAttribute('data-mode', 'reset');
+        
+        // Ocultamos físicamente el splash screen antes de nada
+        const splash = document.getElementById('install-wall');
+        if (splash) splash.style.display = 'none';
+
+        // Preparamos el contenedor principal
+        const appContent = document.getElementById('app-content');
+        appContent.style.display = 'flex';
+        appContent.style.opacity = '1';
+
+        // Liberamos clases de interacción
+        document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+
+        // Limpiamos la URL (estética)
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // DESBLOQUEO CRÍTICO: Activamos las clases que permiten interacción y visibilidad
-        document.body.classList.add('app-ready');
-        document.documentElement.classList.add('app-loaded');
-
-        // Mostramos el fondo de login (estética) y lanzamos el modal
-        document.getElementById('login-view').classList.remove('hidden');
-        
-        // Pequeño delay para asegurar que el DOM ha procesado el desbloqueo anterior
-        setTimeout(() => {
-            openResetPasswordModal(resetCode);
-        }, 200);
-        
-        return; // DETENEMOS TODA LA CARGA NORMAL AQUÍ
+        // Lanzamos el modal
+        openResetPasswordModal(resetCode);
+        return; // BLOQUEO TOTAL: No se carga nada más del sistema
     }
 
-    /* --- 2. LIMPIEZA INICIAL DE VISTAS --- */
-    document.body.classList.remove('app-ready');
-    document.querySelectorAll('#dashboard-view, #login-view, #clases-view, #sensei-view')
-            .forEach(v => v.classList.add('hidden'));
-
-    /* --- 3. CASO: USUARIO NO LOGUEADO --- */
-    if (!token || !user) {
-        if (mainNav) mainNav.classList.add('hidden');
-        document.getElementById('login-view')?.classList.remove('hidden');
-        document.body.classList.add('app-ready');
-        document.documentElement.classList.add('app-loaded');
-        return;
-    }
-
-    /* --- 4. CASO: DOJO ACTIVO (SINCRONIZACIÓN SECUENCIAL) --- */
-    try {
-        // PASO A: Carga y Mapeo de Requisitos (Prioridad técnica para evitar el bug de las 60h)
-        const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
-        
-        // Mapeo robusto Strapi v5 (Grado y Horas_Necesarias según tus capturas)
-        requisitosGradoGlobal = (reqData?.data || []).map(r => {
-            const attr = r.attributes || r;
-            return {
-                NORM: normalize(attr.Grado || attr.grado || ""),
-                HORAS: parseFloat(attr.Horas_Necesarias || attr.horas_necesarias || 0)
-            };
-        });
-        console.log("📊 [SISTEMA] Requisitos de grado mapeados.");
-
-        // PASO B: Carga de perfil del alumno (Ahora ya tiene los requisitos mapeados en memoria)
-        await refreshStudentData();
-
-        // PASO C: Búsqueda del Keiko de hoy
-        await checkTodayClass();
-
-        // PASO D: Despliegue de Interfaz
-        showView('dashboard');
-        if (mainNav) {
-            mainNav.classList.remove('hidden');
-            mainNav.style.display = 'grid';
-        }
-
-        // TELÓN ARRIBA: Liberamos la App para el usuario
-        setTimeout(() => {
-            document.body.classList.add('app-ready');
-            document.documentElement.classList.add('app-loaded');
-            console.log("✨ [INIT] Sincronización completada con éxito.");
-        }, 150);
-
-    } catch (error) {
-        console.error("🔥 [INIT] Error crítico en el despliegue:", error);
-        document.body.classList.add('app-ready'); // Liberamos aunque haya error para no dejar pantalla en negro
-    }
+    // --- LÓGICA NORMAL (Si no hay código de recuperación) ---
+    console.log("🚀 [INIT] Carga normal del Dojo...");
+    const token = localStorage.getItem('aikido_jwt');
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    
+    // ... (aquí sigue el resto de tu código normal de initApp)
+    // Asegúrate de que los bloques de limpieza de vistas y carga de requisitos estén debajo.
 }  
 /* --- REFRESH DATA (VERSION 9.3 - VISIBILIDAD SENSEI ASEGURADA) --- */
 async function refreshStudentData() {
@@ -2599,6 +2556,70 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     }
 });
 
+/* --- BLOQUE DE ACTIVACIÓN BLINDADO (SINCRONIZACIÓN DE EMAIL REAL) --- */
+document.getElementById('activate-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const dni = document.getElementById('act-dni').value.trim().toUpperCase();
+    const p1 = document.getElementById('act-pass').value.trim();
+    const btn = document.getElementById('btn-activate-submit');
+
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> SINCRONIZANDO...';
+    btn.disabled = true;
+
+    try {
+        // 1. Buscamos al alumno para obtener su email REAL de la ficha técnica
+        const resSearch = await fetch(`${API_URL}/alumnos?filters[dni][$eq]=${dni}`);
+        const dataSearch = await resSearch.json();
+
+        if (!dataSearch.data || dataSearch.data.length === 0) {
+            throw new Error("DNI no encontrado en el sistema.");
+        }
+
+        const alu = dataSearch.data[0];
+        const p = alu.attributes || alu;
+        const emailFicha = p.email; // 🥋 EXTRAEMOS EL EMAIL REAL
+
+        if (!emailFicha) {
+            throw new Error("Tu ficha no tiene email. Contacta con el Sensei.");
+        }
+
+        // 2. Creamos el usuario en Strapi usando el email de la ficha
+        const regRes = await fetch(`${API_URL}/auth/local/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: dni,
+                email: emailFicha, // 🥋 AHORA SE TRASLADA CORRECTAMENTE
+                password: p1
+            })
+        });
+
+        const regData = await regRes.json();
+        if (!regRes.ok) throw new Error(regData.error?.message || "Fallo al crear acceso.");
+
+        // 3. Vinculamos la ficha con el nuevo usuario
+        await fetch(`${API_URL}/alumnos/${alu.documentId || alu.id}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${regData.jwt}` 
+            },
+            body: JSON.stringify({ data: { cuenta_usuario: regData.user.id } })
+        });
+
+        document.getElementById('activate-modal').classList.add('hidden');
+        showModal("¡ACCESO ACTIVADO!", `OSS ${p.nombre.toUpperCase()}, ya puedes entrar con tu DNI y contraseña.`);
+        e.target.reset();
+
+    } catch (err) {
+        showModal("Error de Activación", err.message);
+    } finally {
+        btn.innerText = "ACTIVAR";
+        btn.disabled = false;
+    }
+});
+
+
 /* --- FUNCIÓN RESTAURADA: ACTIVACIÓN DE ALUMNOS EXISTENTES --- */
 const formActiva = document.getElementById('activate-form');
 if (formActiva) {
@@ -3278,6 +3299,11 @@ document.getElementById('enrollment-form').addEventListener('submit', handleEnro
 
 /* --- FUNCIONES DE RECUPERACIÓN (INYECTADAS EN HTML PARA EVITAR ERRORES) --- */
 function openResetPasswordModal(code) {
+    // Aseguramos visibilidad del contenedor de modales
+    const modalOverlay = document.getElementById('custom-modal');
+    modalOverlay.classList.remove('hidden');
+    modalOverlay.style.zIndex = "20000"; // Por encima de cualquier logo
+
     showModal("NUEVA CONTRASEÑA", `
         <div style="text-align:left; margin-top:10px;">
             <p style="font-size:13px; color:#94a3b8; margin-bottom:20px;">Escribe tu nueva clave de acceso al Dojo.</p>
