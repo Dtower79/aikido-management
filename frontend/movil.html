@@ -90,18 +90,17 @@
         }
 
         #install-wall {
-            display: none;
+            display: none; /* Por defecto oculto */
             position: fixed;
             inset: 0;
             width: 100vw;
             height: 100vh;
-            background: #000000 !important; /* Negro absoluto */
-            z-index: 26000;
+            background: #000000 !important;
+            z-index: 40000 !important; /* Por encima de todo */
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            opacity: 1;
         }
 
         #install-wall .logo-img {
@@ -119,11 +118,16 @@
         .ready-to-show #install-wall {
             display: none !important;
         }
-        /* Si no está instalada, mostramos el muro */
+         /* Si el navegador detecta que hay que instalar, forzamos el flex */
         .show-install-wall #install-wall {
             display: flex !important;
             opacity: 1 !important;
-            z-index: 31000; /* Por encima de la máscara */
+            visibility: visible !important;
+        }
+
+        /* Ocultar el velo si el muro de instalación está activo para evitar conflictos */
+        .show-install-wall #initial-mask {
+            display: none !important;
         }
 
         .app-loaded #app-content {
@@ -1587,62 +1591,67 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 20.0 - FAILSAFE MOBILE) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 21.0 - FORCE INSTALL VISIBILITY) --- */
 async function initApp() {
     const mask = document.getElementById('initial-mask');
+    const appContent = document.getElementById('app-content');
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
-    // Función maestra para liberar la pantalla
+    // Función para liberar la pantalla
     const liftVeil = () => {
-        console.log("🔓 Liberando interfaz...");
         if (mask) mask.classList.add('fade-out');
         document.body.classList.add('app-ready');
         document.documentElement.classList.add('app-loaded');
-        
-        // Aseguramos que el contenido sea visible y acepte clics
-        const appContent = document.getElementById('app-content');
         if (appContent) {
             appContent.style.display = 'flex';
             appContent.style.opacity = '1';
-            appContent.style.pointerEvents = 'auto';
         }
     };
 
-    // --- 1. DETECCIÓN DE MURO DE INSTALACIÓN (Prioridad en Móvil/Simulación) ---
-    // Si el HTML tiene la clase de instalación, levantamos el velo ya.
+    // --- 1. PRIORIDAD: MODO INSTALACIÓN (Chrome Simulation) ---
     if (document.documentElement.classList.contains('show-install-wall')) {
-        console.log("📱 Modo Instalación detectado. Levantando velo...");
-        liftVeil();
-        return; 
+        console.log("📱 [SISTEMA] Muro de instalación detectado. Forzando visibilidad.");
+        
+        // Desbloqueamos el muro físicamente
+        const wall = document.getElementById('install-wall');
+        if (wall) {
+            wall.style.display = 'flex';
+            wall.style.opacity = '1';
+        }
+        
+        liftVeil(); 
+        return; // IMPORTANTE: Cortamos aquí para que no cargue nada más
     }
 
-    // --- 2. MODO RECUPERACIÓN (SI HAY CÓDIGO) ---
+    // --- 2. PRIORIDAD: MODO RECUPERACIÓN (Reset Password) ---
     if (resetCode) {
-        console.log("🔑 Modo Recuperación. Preparando modal...");
-        liftVeil();
+        console.log("🔑 [SISTEMA] Token de recuperación detectado.");
         window.history.replaceState({}, document.title, window.location.pathname);
-        const splash = document.getElementById('install-wall');
-        if (splash) splash.style.display = 'none';
+        const wall = document.getElementById('install-wall');
+        if (wall) wall.style.display = 'none';
+        
         document.getElementById('login-view').classList.remove('hidden');
-        if (typeof openResetPasswordModal === 'function') openResetPasswordModal(resetCode);
+        liftVeil();
+        
+        if (typeof openResetPasswordModal === 'function') {
+            setTimeout(() => openResetPasswordModal(resetCode), 100);
+        }
         return; 
     }
 
-    // --- 3. CARGA NORMAL (LOGIN / DASHBOARD) ---
+    // --- 3. CARGA NORMAL (DASHBOARD) ---
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
     if (!token || !user) {
-        console.log("👤 No hay sesión. Mostrando Login.");
-        const loginView = document.getElementById('login-view');
-        if (loginView) loginView.classList.remove('hidden');
+        document.getElementById('login-view')?.classList.remove('hidden');
         liftVeil();
         return;
     }
 
     try {
-        // Carga secuencial de requisitos
+        // Carga secuencial de requisitos técnica
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
@@ -1661,12 +1670,11 @@ async function initApp() {
             nav.classList.remove('hidden');
             nav.style.display = 'grid';
         }
-
         liftVeil();
 
     } catch (error) {
-        console.error("🔥 Error en despliegue:", error);
-        liftVeil(); // Liberamos pase lo que pase
+        console.error("🔥 Error despliegue:", error);
+        liftVeil();
     }
 }
 
