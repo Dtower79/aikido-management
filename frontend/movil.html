@@ -122,6 +122,8 @@
         /* Si no está instalada, mostramos el muro */
         .show-install-wall #install-wall {
             display: flex !important;
+            opacity: 1 !important;
+            z-index: 31000; /* Por encima de la máscara */
         }
 
         .app-loaded #app-content {
@@ -1585,60 +1587,54 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 19.0 - ANTI-BLOQUEO) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 20.0 - FAILSAFE MOBILE) --- */
 async function initApp() {
     const mask = document.getElementById('initial-mask');
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
-    // Función interna de seguridad para liberar la pantalla siempre
+    // Función maestra para liberar la pantalla
     const liftVeil = () => {
+        console.log("🔓 Liberando interfaz...");
         if (mask) mask.classList.add('fade-out');
         document.body.classList.add('app-ready');
         document.documentElement.classList.add('app-loaded');
+        
+        // Aseguramos que el contenido sea visible y acepte clics
         const appContent = document.getElementById('app-content');
         if (appContent) {
             appContent.style.display = 'flex';
             appContent.style.opacity = '1';
+            appContent.style.pointerEvents = 'auto';
         }
     };
 
-    // --- A. MODO RECUPERACIÓN (SI HAY CÓDIGO EN LA URL) ---
-    if (resetCode) {
-        console.log("🔑 [SISTEMA] Iniciando recuperación tras el velo...");
-        
-        // Desbloqueamos la interfaz ANTES de nada para evitar pantalla negra
+    // --- 1. DETECCIÓN DE MURO DE INSTALACIÓN (Prioridad en Móvil/Simulación) ---
+    // Si el HTML tiene la clase de instalación, levantamos el velo ya.
+    if (document.documentElement.classList.contains('show-install-wall')) {
+        console.log("📱 Modo Instalación detectado. Levantando velo...");
         liftVeil();
+        return; 
+    }
 
-        // Limpiamos la URL (estética)
+    // --- 2. MODO RECUPERACIÓN (SI HAY CÓDIGO) ---
+    if (resetCode) {
+        console.log("🔑 Modo Recuperación. Preparando modal...");
+        liftVeil();
         window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Preparamos el fondo
         const splash = document.getElementById('install-wall');
         if (splash) splash.style.display = 'none';
-        const loginView = document.getElementById('login-view');
-        if (loginView) loginView.classList.remove('hidden');
-
-        // Lanzamos el modal (Asegúrate de que la función existe abajo)
-        if (typeof openResetPasswordModal === 'function') {
-            openResetPasswordModal(resetCode);
-        } else {
-            console.error("❌ Error: openResetPasswordModal no encontrada.");
-        }
+        document.getElementById('login-view').classList.remove('hidden');
+        if (typeof openResetPasswordModal === 'function') openResetPasswordModal(resetCode);
         return; 
     }
 
-    // --- B. SI EL NAVEGADOR PIDE INSTALACIÓN ---
-    if (document.documentElement.classList.contains('show-install-wall')) {
-        liftVeil();
-        return; 
-    }
-
-    // --- C. CARGA NORMAL (LOGIN / DASHBOARD) ---
+    // --- 3. CARGA NORMAL (LOGIN / DASHBOARD) ---
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
     if (!token || !user) {
+        console.log("👤 No hay sesión. Mostrando Login.");
         const loginView = document.getElementById('login-view');
         if (loginView) loginView.classList.remove('hidden');
         liftVeil();
@@ -1646,7 +1642,7 @@ async function initApp() {
     }
 
     try {
-        // Carga secuencial de requisitos para el círculo de grados
+        // Carga secuencial de requisitos
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
@@ -1669,8 +1665,8 @@ async function initApp() {
         liftVeil();
 
     } catch (error) {
-        console.error("🔥 [ERROR] Fallo en despliegue:", error);
-        liftVeil(); // Failsafe: levantamos el velo aunque el servidor falle
+        console.error("🔥 Error en despliegue:", error);
+        liftVeil(); // Liberamos pase lo que pase
     }
 }
 
