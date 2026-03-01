@@ -1670,7 +1670,7 @@ async function initApp() {
     } catch (error) { forceRelease("ERROR"); }
 }
 
-/* --- REFRESH DATA V10.0 (SOPORTE PARA TERMINAL SENSEI) --- */
+/* --- REFRESH DATA V10.1 (EDICIÓN TABLET DOJO) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1678,7 +1678,7 @@ async function refreshStudentData() {
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // 1. INTENTO DE CARGA DE FICHA (Sólo si no es un usuario de sistema como TABLET)
+    // 1. INTENTO DE CARGA DE FICHA (Excepto para el usuario TABLET)
     if (user.username !== 'TABLET') {
         if (savedDocId && savedDocId !== "null") {
             dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
@@ -1704,8 +1704,8 @@ async function refreshStudentData() {
         dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
     }
 
-    // 3. INTERFAZ: NOMBRE E INICIALES
-    const displayName = user.username === 'TABLET' ? "TERMINAL DOJO" : (p?.nombre || user.nombre || "SENSEI").toUpperCase();
+    // 3. INTERFAZ: NOMBRE E INICIALES (MODIFICADO A TABLET DOJO)
+    const displayName = user.username === 'TABLET' ? "TABLET DOJO" : (p?.nombre || user.nombre || "SENSEI").toUpperCase();
     const initials = user.username === 'TABLET' ? "TD" : ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
     
     document.getElementById('user-display-name').innerText = displayName;
@@ -1720,7 +1720,7 @@ async function refreshStudentData() {
         if (nextGrade) nextGrade.classList.add('hidden');
         if (zenCard) zenCard.remove();
 
-        // Si es la Tablet, no tiene Dojo asignado por ficha, mostramos genérico
+        // Si es la Tablet, mostramos genérico para gestión de clases
         let dojoNom = p?.dojo ? parseRelation(p.dojo).nombre : "GESTIÓN DE CLASES";
         
         const zenHTML = `
@@ -1732,14 +1732,36 @@ async function refreshStudentData() {
         if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
 
     } else if (p) {
-        // ... (Lógica normal de alumno se mantiene igual aquí debajo)
         document.body.classList.remove('is-sensei-mode');
         if (zenCard) zenCard.remove();
         if (circle) circle.classList.remove('hidden');
-        // (resto de tu código de cálculo de horas y barra de progreso)
+        
+        const horas = parseFloat(p.horas_acumuladas || 0);
+        document.getElementById('stat-hours').innerText = horas.toFixed(1);
+
+        let meta = p.grado_objetivo;
+        if (!meta) {
+            const miGrado = (p.grado || "S/G").toUpperCase();
+            const idx = GRADOS_ORDER.indexOf(miGrado);
+            meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "5º KYU";
+        }
+
+        const normMeta = normalize(meta);
+        const registro = requisitosGradoGlobal.find(r => r.NORM === normMeta);
+        let target = (registro && registro.HORAS > 0) ? registro.HORAS : (GRADOS_FALLBACK[meta] || 60);
+        
+        const bar = document.getElementById('progress-bar');
+        if (bar) {
+            const pct = Math.min((horas / target) * 100, 100);
+            bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
+        }
+        document.getElementById('stat-label').innerText = `HORAS / ${target}`;
+        if (nextGrade) {
+            nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
+            nextGrade.classList.remove('hidden');
+        }
     }
 
-    // 5. NAV BAR: Aseguramos visibilidad del botón Sensei
     const navSensei = document.getElementById('nav-sensei');
     if (navSensei) {
         if (esSenseiRango) {
