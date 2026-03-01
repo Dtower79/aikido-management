@@ -1363,7 +1363,7 @@ document.getElementById('forgot-form')?.addEventListener('submit', async (e) => 
     }
 });
 
-/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V36.1 - NOTA HORAS Y MULTI-TABLA) --- */
+/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V36.2 - CONTROL DE FALTAS Y COLORES DINÁMICOS) --- */
 async function generateAttendanceReport() {
     const attendanceDate = document.getElementById('report-attendance-date').value;
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -1427,8 +1427,9 @@ async function generateAttendanceReport() {
                 const aluDojoDocId = dojoIdMap[aluId];
                 const matchDojo = (!dojoFilterId || dojoFilterId === "all" || aluDojoDocId === dojoFilterId);
                 
+                // 🥋 FIX: Ahora permitimos a los que tienen la cruz del Sensei ("No_asistio")
                 const estadoClean = (a.Estado || a.estado || "").toLowerCase().trim();
-                const matchEstado =['confirmado', 'asistio', 'asistió'].includes(estadoClean);
+                const matchEstado =['confirmado', 'asistio', 'asistió', 'no_asistio', 'no_asistió'].includes(estadoClean);
                 
                 return matchFecha && matchDojo && matchEstado;
                 
@@ -1440,6 +1441,16 @@ async function generateAttendanceReport() {
                 
                 const horaLiteral = cla.Fecha_Hora.split('T')[1].substring(0, 5);
                 const duracion = parseFloat(cla.Duracion || 1.5).toFixed(1);
+
+                // 🥋 Lógica de etiquetas limpias para el PDF
+                const estadoClean = (a.Estado || a.estado || "").toLowerCase().trim();
+                let estadoLabel = "CONFIRMADO"; // Por defecto (Apuntado pero sin validar)
+                
+                if (estadoClean.includes('no_asistio') || estadoClean.includes('no_asistió')) {
+                    estadoLabel = "FALTA"; // El Sensei le dio a la X
+                } else if (estadoClean.includes('asistio') || estadoClean.includes('asistió')) {
+                    estadoLabel = "ASISTIÓ"; // El Sensei le dio a OK
+                }
                 
                 return {
                     apellidos: (alu.apellidos || "").toUpperCase(),
@@ -1449,12 +1460,12 @@ async function generateAttendanceReport() {
                     horasAcum: parseFloat(alu.horas_acumuladas || 0).toFixed(1) + "h",
                     horaMinutos: horaLiteral,
                     duracion: duracion,
-                    estado: (a.Estado || a.estado || "CONFIRMADO").toUpperCase()
+                    estado: estadoLabel // "FALTA", "ASISTIÓ" o "CONFIRMADO"
                 };
             });
 
             if (listadoFinal.length === 0) {
-                showModal("Tatami Vacío", `No hay alumnos confirmados para el día ${formatDateDisplay(attendanceDate)}.`);
+                showModal("Tatami Vacío", `No hay registros en el tatami para el día ${formatDateDisplay(attendanceDate)}.`);
                 return;
             }
 
@@ -1466,12 +1477,12 @@ async function generateAttendanceReport() {
 
             const keikosAgrupados = {};
             listadoFinal.forEach(it => {
-                if(!keikosAgrupados[it.horaMinutos]) keikosAgrupados[it.horaMinutos] = [];
+                if(!keikosAgrupados[it.horaMinutos]) keikosAgrupados[it.horaMinutos] =[];
                 keikosAgrupados[it.horaMinutos].push(it);
             });
 
             // 🥋 DIBUJO DEL PDF
-            let currentY = 36; // Bajamos el inicio para dar aire al nuevo texto
+            let currentY = 36; 
             const pagesDrawn = new Set(); 
 
             const drawMainHeader = (data) => {
@@ -1489,15 +1500,14 @@ async function generateAttendanceReport() {
                 doc.setFont("helvetica", "normal");
                 doc.text(`DOJO: ${dojoFilterName} | FECHA: ${formatDateDisplay(attendanceDate)}`, pageWidth / 2, 17, { align: 'center' });
                 
-                // 🥋 NUEVO: NOTA ACLARATORIA DE HORAS
                 doc.setFontSize(7.5); 
-                doc.setTextColor(130, 130, 130); // Gris técnico elegante
+                doc.setTextColor(130, 130, 130); 
                 const fechaEmision = new Date().toLocaleDateString('es-ES');
                 doc.text(`* IMPORTANTE: La columna 'Horas Acum.' refleja el cómputo total a fecha de emisión del informe (${fechaEmision}).`, pageWidth / 2, 22, { align: 'center' });
 
                 doc.setFontSize(8); 
                 doc.setTextColor(150, 150, 150);
-                doc.text(`Total general: ${listadoFinal.length} alumnos`, pageWidth - 10, 17, { align: 'right' });
+                doc.text(`Total inscritos: ${listadoFinal.length}`, pageWidth - 10, 17, { align: 'right' });
             };
 
             Object.keys(keikosAgrupados).sort().forEach((horaKey, index) => {
@@ -1534,8 +1544,20 @@ async function generateAttendanceReport() {
                     columnStyles: {
                         0: { halign: 'center', cellWidth: 10 },
                         4: { halign: 'center', fontStyle: 'bold' },
-                        5: { halign: 'center', textColor:[34, 197, 94], fontStyle: 'bold' }, // Verde
+                        5: { halign: 'center', textColor:[34, 197, 94], fontStyle: 'bold' }, 
                         6: { halign: 'center', fontStyle: 'bold' } 
+                    },
+                    // 🥋 MAGIA APLICADA: Pintamos la celda según su texto exacto
+                    didParseCell: function(data) {
+                        if (data.section === 'body' && data.column.index === 6) {
+                            if (data.cell.raw === 'FALTA') {
+                                data.cell.styles.textColor =[239, 68, 68]; // Rojo Arashi
+                            } else if (data.cell.raw === 'ASISTIÓ') {
+                                data.cell.styles.textColor =[34, 197, 94]; // Verde OK
+                            } else {
+                                data.cell.styles.textColor =[203, 166, 23]; // Mostaza para CONFIRMADO
+                            }
+                        }
                     },
                     didDrawPage: drawMainHeader
                 });
@@ -1546,7 +1568,7 @@ async function generateAttendanceReport() {
             doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
 
         } catch (e) {
-            console.error("🔥 Error V36.1:", e);
+            console.error("🔥 Error V36.2:", e);
             showModal("Error", "No se pudo generar el informe. Revisa la consola.");
         }
     };
