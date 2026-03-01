@@ -89,20 +89,19 @@
             animation-delay: 4s; /* Si en 4 segundos el JS no responde, la App aparece sí o sí */
         }
 
-        #install-wall {
-            display: none;
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #000000 !important; /* Negro absoluto */
-            z-index: 99999;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            opacity: 1;
-        }
+#install-wall {
+    display: none; /* Oculto por defecto */
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000000 !important; /* Negro absoluto */
+    z-index: 99999 !important; /* NIVEL MAESTRO: Encima de todo */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
 
         #install-wall .logo-img {
             width: 150px; /* Tamaño controlado */
@@ -122,6 +121,9 @@
         /* Si no está instalada, mostramos el muro */
         .show-install-wall #install-wall {
             display: flex !important;
+        }
+        .show-install-wall #initial-mask {
+            display: none !important; /* Desaparece físicamente */
         }
 
         .app-loaded #app-content {
@@ -1044,14 +1046,13 @@ body.is-sensei-mode #confirm-btn {
 #initial-mask {
     position: fixed;
     inset: 0;
-    background: #05080f; /* Negro profundo */
+    background: #05080f;
     z-index: 30000;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: all;
+    transition: opacity 0.6s ease-out;
 }
 
 #initial-mask.fade-out {
@@ -1585,55 +1586,55 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 17.0 - SMOOTH RESET TRANSITION) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 22.0 - BYPASS TOTAL) --- */
 async function initApp() {
+    const html = document.documentElement;
     const mask = document.getElementById('initial-mask');
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
-    // Función unificada para levantar el velo con suavidad
-    const completeDeployment = () => {
-        setTimeout(() => {
-            // 1. Desbloqueamos el ratón
-            document.body.classList.add('app-ready');
-            document.documentElement.classList.add('app-loaded');
-            // 2. Retiramos el velo con fundido
-            if (mask) mask.classList.add('fade-out');
-            console.log("✨ [SISTEMA] Velo levantado. Tatami operativo.");
-        }, 600); // 600ms de elegancia visual
+    // Función rápida para liberar el ratón y la vista
+    const releaseUI = () => {
+        document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+        if (mask) mask.classList.add('fade-out');
     };
 
-    // --- A. FLUJO DE RECUPERACIÓN (RESET PASSWORD) ---
-    if (resetCode) {
-        console.log("🔑 [RESET] Configurando modal de seguridad...");
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Limpiamos el muro de instalación para que no estorbe al fondo
-        const splash = document.getElementById('install-wall');
-        if (splash) splash.style.display = 'none';
-
-        // Preparamos el escenario: Fondo de login activo
-        document.getElementById('login-view').classList.remove('hidden');
-        
-        // Inyectamos el modal (todavía no es visible por el velo)
-        openResetPasswordModal(resetCode);
-        
-        completeDeployment();
+    // --- 1. DETECCIÓN DE INSTALACIÓN (MODO MÓVIL CHROME) ---
+    // Si el HTML ya tiene la clase porque Chrome lo ha decidido, paramos todo.
+    if (html.classList.contains('show-install-wall')) {
+        console.log("🚀 [SISTEMA] Muro de instalación prioritario. Abortando carga normal.");
+        releaseUI();
+        // Forzamos visibilidad manual por si el CSS tarda
+        const wall = document.getElementById('install-wall');
+        if (wall) wall.style.display = 'flex';
         return; 
     }
 
-    // --- B. FLUJO NORMAL (USUARIO / LOGIN) ---
+    // --- 2. MODO RECUPERACIÓN ---
+    if (resetCode) {
+        console.log("🔑 [SISTEMA] Iniciando Recuperación.");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        document.getElementById('login-view').classList.remove('hidden');
+        releaseUI();
+        if (typeof openResetPasswordModal === 'function') {
+            setTimeout(() => openResetPasswordModal(resetCode), 100);
+        }
+        return; 
+    }
+
+    // --- 3. CARGA NORMAL (DASHBOARD) ---
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
     if (!token || !user) {
         document.getElementById('login-view')?.classList.remove('hidden');
-        completeDeployment();
+        releaseUI();
         return;
     }
 
     try {
-        // Carga secuencial de datos técnicos
+        // Carga de requisitos Neon
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
@@ -1652,15 +1653,13 @@ async function initApp() {
             nav.classList.remove('hidden');
             nav.style.display = 'grid';
         }
-
-        completeDeployment();
+        releaseUI();
 
     } catch (error) {
-        console.error("🔥 [ERROR] Fallo en carga:", error);
-        completeDeployment(); 
+        console.error("🔥 Fallo en despliegue:", error);
+        releaseUI();
     }
 }
-
 
 /* --- REFRESH DATA (VERSION 9.3 - VISIBILIDAD SENSEI ASEGURADA) --- */
 async function refreshStudentData() {
