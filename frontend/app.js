@@ -1363,7 +1363,7 @@ document.getElementById('forgot-form')?.addEventListener('submit', async (e) => 
     }
 });
 
-/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V35.0 - CROSS-REFERENCE PASSPORT STYLE) --- */
+/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V35.1 - DOBLE ORDENACIÓN Y DURACIÓN) --- */
 async function generateAttendanceReport() {
     const attendanceDate = document.getElementById('report-attendance-date').value;
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -1380,22 +1380,22 @@ async function generateAttendanceReport() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
     
-    // 🥋 SISTEMA ANTI-CORS: Usamos el logo local 100% seguro para limpiar tu consola
+    // 🥋 LOGO ESPECÍFICO DEL INFORME
     const logoImg = new Image();
-    logoImg.src = 'img/logo-arashi.png'; 
+    logoImg.src = 'img/logo-arashi-informe.png'; 
 
-    // Si por algún motivo se borrara la imagen de tu carpeta, evitamos que la app se cuelgue
     logoImg.onerror = function() {
-        console.error("❌ No se encontró el logo local.");
-        showModal("Error", "Falta la imagen del logo (img/logo-arashi.png).");
+        console.warn("⚠️ No se encontró logo-arashi-informe.png. Usando logo estándar.");
+        logoImg.src = 'img/logo-arashi.png'; 
+        logoImg.onerror = null; 
     };
 
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         try {
-            // 🥋 PASO 1: Mapeo de Dojos
-            console.log("📡 [SISTEMA] Paso 1: Mapeando sedes de alumnos...");
+            // 🥋 PASO 1: Mapeo de Dojos (Caché inteligente)
+            console.log("📡 [SISTEMA] Paso 1: Mapeando sedes...");
             const aluData = await fetchSmart('/api/alumnos?populate=dojo&pagination[limit]=1000', 'alumnos_report_cache', 12);
             
             const dojoNameMap = {};
@@ -1408,41 +1408,33 @@ async function generateAttendanceReport() {
                 dojoIdMap[id] = attr.dojo ? getID(attr.dojo) : null; 
             });
 
-            // 🥋 PASO 2: SINTAXIS STRAPI V5 ESTRICTA (¡El fix del error 400!)
-            // Cambiamos "populate=clase,alumno" por "populate[0]=clase&populate[1]=alumno"
+            // 🥋 PASO 2: SINTAXIS STRAPI V5 ESTRICTA
             const apiUrl = `${API_URL}/api/asistencias?populate[0]=clase&populate[1]=alumno&pagination[limit]=1000&sort=createdAt:desc`;
             
-            console.log("📡 [SISTEMA] Paso 2: Descargando registros de Tatami...");
+            console.log("📡[SISTEMA] Paso 2: Descargando registros de Tatami...");
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
             
-            // Verificación extra para saber si Render/Strapi nos rechaza
-            if (!res.ok) {
-                const errData = await res.json();
-                console.error("🔥 Error devuelto por Strapi:", errData);
-                throw new Error(`Fallo V5 (Status: ${res.status})`);
-            }
+            if (!res.ok) throw new Error(`Fallo V5 (Status: ${res.status})`);
             
             const json = await res.json();
             
-            // 🥋 PASO 3: Filtrado Inteligente en JavaScript
+            // 🥋 PASO 3: Filtrado e Inyección de Datos
             const listadoFinal = (json.data ||[]).filter(item => {
                 const a = item.attributes || item;
                 const cla = parseRelation(a.clase);
                 const alu = parseRelation(a.alumno);
                 
-                if (!cla || !alu || !cla.Fecha_Hora) return false; // Escudo
+                if (!cla || !alu || !cla.Fecha_Hora) return false; 
                 
                 const aluId = getID(alu);
                 
-                // A. Filtro de Fecha 
+                // Filtros de Cruce (Fecha, Dojo, Estado)
                 const classDatePart = cla.Fecha_Hora.split('T')[0];
                 const matchFecha = (classDatePart === attendanceDate);
                 
-                // B. Filtro de Dojo 
                 const aluDojoDocId = dojoIdMap[aluId];
                 const matchDojo = (!dojoFilterId || dojoFilterId === "all" || aluDojoDocId === dojoFilterId);
                 
-                // C. Filtro de ESTADO (SOLO Confirmados o Asistidos)
                 const estadoClean = (a.Estado || a.estado || "").toLowerCase().trim();
                 const matchEstado = ['confirmado', 'asistio', 'asistió'].includes(estadoClean);
                 
@@ -1454,15 +1446,19 @@ async function generateAttendanceReport() {
                 const cla = parseRelation(a.clase);
                 const aluId = getID(alu);
                 
-                const d = new Date(cla.Fecha_Hora);
-                const horaLocal = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + "h";
+                // 🥋 FIX TIMEZONE: Extracción literal (Corta el string sin aplicar husos horarios)
+                // Ej: "2026-02-24T10:00:00.000Z" -> "10:00"
+                const horaLiteral = cla.Fecha_Hora.split('T')[1].substring(0, 5);
+                const duracion = parseFloat(cla.Duracion || 1.5).toFixed(1);
                 
                 return {
                     apellidos: (alu.apellidos || "").toUpperCase(),
                     nombre: alu.nombre || "",
                     dojo: dojoNameMap[aluId] || "NO DISP",
                     tipo: cla.Tipo || "Keiko",
-                    hora: horaLocal,
+                    horaMinutos: horaLiteral, // Usado para ordenar matemáticamente
+                    horaVisual: `${horaLiteral}h`, // Usado para pintar en el PDF
+                    duracion: `${duracion}h`,
                     estado: (a.Estado || a.estado || "CONFIRMADO").toUpperCase()
                 };
             });
@@ -1472,25 +1468,33 @@ async function generateAttendanceReport() {
                 return;
             }
 
-            // 🥋 ORDENACIÓN: Juez de Paz (Alfabético)
-            listadoFinal.sort((a, b) => a.apellidos.localeCompare(b.apellidos, 'es'));
+            // 🥋 ORDENACIÓN MAESTRA (DOBLE CRITERIO)
+            listadoFinal.sort((a, b) => {
+                // 1. Primero ordenamos por la Hora del Keiko (Mañana primero, Tarde después)
+                if (a.horaMinutos !== b.horaMinutos) {
+                    return a.horaMinutos.localeCompare(b.horaMinutos);
+                }
+                // 2. Si están en el mismo Keiko, ordenamos alfabéticamente por Apellidos
+                return a.apellidos.localeCompare(b.apellidos, 'es');
+            });
 
-            // 🥋 CONSTRUCCIÓN ESTADÍSTICA DEL PDF
-            const headRow =['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora', 'Estado'];
+            // 🥋 CONSTRUCCIÓN DEL PDF (NUEVA COLUMNA: DURACIÓN)
+            const headRow =['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora', 'Dur.', 'Estado'];
             const body = listadoFinal.map((it, idx) =>[
-                `${idx + 1}`, it.apellidos, it.nombre, it.dojo, it.tipo, it.hora, it.estado
+                `${idx + 1}`, it.apellidos, it.nombre, it.dojo, it.tipo, it.horaVisual, it.duracion, it.estado
             ]);
 
             doc.autoTable({
                 startY: 30, margin: { top: 30, left: 10, right: 10 },
                 head: [headRow], body: body, theme: 'grid',
                 styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: [190, 0, 0], halign: 'center', fontStyle: 'bold' },
+                headStyles: { fillColor:[190, 0, 0], halign: 'center', fontStyle: 'bold' },
                 columnStyles: {
                     0: { halign: 'center', cellWidth: 10 },
                     4: { halign: 'center' },
-                    5: { halign: 'center', textColor: [34, 197, 94], fontStyle: 'bold' }, // Hora verde
-                    6: { halign: 'center', fontStyle: 'bold' } 
+                    5: { halign: 'center', textColor:[34, 197, 94], fontStyle: 'bold' }, // Hora verde
+                    6: { halign: 'center', textColor: [59, 130, 246], fontStyle: 'bold' }, // Duración Azul
+                    7: { halign: 'center', fontStyle: 'bold' } 
                 },
                 didDrawPage: (data) => {
                     doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
