@@ -90,17 +90,18 @@
         }
 
         #install-wall {
-            display: none; /* Por defecto oculto */
+            display: none;
             position: fixed;
             inset: 0;
             width: 100vw;
             height: 100vh;
-            background: #000000 !important;
-            z-index: 40000 !important; /* Por encima de todo */
+            background: #000000 !important; /* Negro absoluto */
+            z-index: 99999;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
+            opacity: 1;
         }
 
         #install-wall .logo-img {
@@ -118,16 +119,9 @@
         .ready-to-show #install-wall {
             display: none !important;
         }
-         /* Si el navegador detecta que hay que instalar, forzamos el flex */
+        /* Si no está instalada, mostramos el muro */
         .show-install-wall #install-wall {
             display: flex !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-        }
-
-        /* Ocultar el velo si el muro de instalación está activo para evitar conflictos */
-        .show-install-wall #initial-mask {
-            display: none !important;
         }
 
         .app-loaded #app-content {
@@ -1051,7 +1045,7 @@ body.is-sensei-mode #confirm-btn {
     position: fixed;
     inset: 0;
     background: #05080f; /* Negro profundo */
-    z-index: 25000;
+    z-index: 30000;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1591,67 +1585,55 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 21.0 - FORCE INSTALL VISIBILITY) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 17.0 - SMOOTH RESET TRANSITION) --- */
 async function initApp() {
     const mask = document.getElementById('initial-mask');
-    const appContent = document.getElementById('app-content');
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
-    // Función para liberar la pantalla
-    const liftVeil = () => {
-        if (mask) mask.classList.add('fade-out');
-        document.body.classList.add('app-ready');
-        document.documentElement.classList.add('app-loaded');
-        if (appContent) {
-            appContent.style.display = 'flex';
-            appContent.style.opacity = '1';
-        }
+    // Función unificada para levantar el velo con suavidad
+    const completeDeployment = () => {
+        setTimeout(() => {
+            // 1. Desbloqueamos el ratón
+            document.body.classList.add('app-ready');
+            document.documentElement.classList.add('app-loaded');
+            // 2. Retiramos el velo con fundido
+            if (mask) mask.classList.add('fade-out');
+            console.log("✨ [SISTEMA] Velo levantado. Tatami operativo.");
+        }, 600); // 600ms de elegancia visual
     };
 
-    // --- 1. PRIORIDAD: MODO INSTALACIÓN (Chrome Simulation) ---
-    if (document.documentElement.classList.contains('show-install-wall')) {
-        console.log("📱 [SISTEMA] Muro de instalación detectado. Forzando visibilidad.");
-        
-        // Desbloqueamos el muro físicamente
-        const wall = document.getElementById('install-wall');
-        if (wall) {
-            wall.style.display = 'flex';
-            wall.style.opacity = '1';
-        }
-        
-        liftVeil(); 
-        return; // IMPORTANTE: Cortamos aquí para que no cargue nada más
-    }
-
-    // --- 2. PRIORIDAD: MODO RECUPERACIÓN (Reset Password) ---
+    // --- A. FLUJO DE RECUPERACIÓN (RESET PASSWORD) ---
     if (resetCode) {
-        console.log("🔑 [SISTEMA] Token de recuperación detectado.");
+        console.log("🔑 [RESET] Configurando modal de seguridad...");
         window.history.replaceState({}, document.title, window.location.pathname);
-        const wall = document.getElementById('install-wall');
-        if (wall) wall.style.display = 'none';
         
+        // Limpiamos el muro de instalación para que no estorbe al fondo
+        const splash = document.getElementById('install-wall');
+        if (splash) splash.style.display = 'none';
+
+        // Preparamos el escenario: Fondo de login activo
         document.getElementById('login-view').classList.remove('hidden');
-        liftVeil();
         
-        if (typeof openResetPasswordModal === 'function') {
-            setTimeout(() => openResetPasswordModal(resetCode), 100);
-        }
+        // Inyectamos el modal (todavía no es visible por el velo)
+        openResetPasswordModal(resetCode);
+        
+        completeDeployment();
         return; 
     }
 
-    // --- 3. CARGA NORMAL (DASHBOARD) ---
+    // --- B. FLUJO NORMAL (USUARIO / LOGIN) ---
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
     if (!token || !user) {
         document.getElementById('login-view')?.classList.remove('hidden');
-        liftVeil();
+        completeDeployment();
         return;
     }
 
     try {
-        // Carga secuencial de requisitos técnica
+        // Carga secuencial de datos técnicos
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
@@ -1670,11 +1652,12 @@ async function initApp() {
             nav.classList.remove('hidden');
             nav.style.display = 'grid';
         }
-        liftVeil();
+
+        completeDeployment();
 
     } catch (error) {
-        console.error("🔥 Error despliegue:", error);
-        liftVeil();
+        console.error("🔥 [ERROR] Fallo en carga:", error);
+        completeDeployment(); 
     }
 }
 
@@ -3107,8 +3090,7 @@ let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => { 
     // Evita que Chrome muestre su propio aviso para usar el tuyo personalizado
     e.preventDefault(); 
-    deferredPrompt = e;
-    console.log("✅ [SISTEMA] Llave de instalación capturada y lista."); 
+    deferredPrompt = e; 
     // Muestra tu botón de instalar
     const b = document.getElementById('android-btn-area'); 
     if (b) b.style.display = 'block'; 
