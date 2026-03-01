@@ -90,16 +90,18 @@
         }
 
 #install-wall {
-    display: none; /* Oculto por defecto */
+    display: none;
     position: fixed;
     inset: 0;
     width: 100vw;
     height: 100vh;
-    background: #000000 !important; /* Negro absoluto */
-    z-index: 99999 !important; /* NIVEL MAESTRO: Encima de todo */
+    background: #000000 !important;
+    z-index: 99999 !important;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    opacity: 1 !important; /* Forzado */
+    visibility: visible !important; /* Forzado */
 }
 
 
@@ -1586,55 +1588,86 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 22.0 - BYPASS TOTAL) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 23.0 - CON RADAR DE DIAGNÓSTICO) --- */
 async function initApp() {
+    console.log("🚀 [RADAR] Iniciando initApp...");
+    
     const html = document.documentElement;
+    const body = document.body;
     const mask = document.getElementById('initial-mask');
+    const wall = document.getElementById('install-wall');
+    const appContent = document.getElementById('app-content');
+
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
-    // Función rápida para liberar el ratón y la vista
-    const releaseUI = () => {
-        document.body.classList.add('app-ready');
-        document.documentElement.classList.add('app-loaded');
-        if (mask) mask.classList.add('fade-out');
+    // FUNCIÓN DE LIBERACIÓN TOTAL
+    const forceRelease = (mode) => {
+        console.log(`🔓 [SISTEMA] Liberando UI en modo: ${mode}`);
+        body.classList.add('app-ready');
+        html.classList.add('app-loaded');
+        
+        if (mask) {
+            mask.style.display = 'none'; // Fulminamos la máscara
+            console.log("✅ Máscara eliminada.");
+        }
+        
+        if (appContent) {
+            appContent.style.display = 'flex';
+            appContent.style.opacity = '1';
+            appContent.style.pointerEvents = 'auto';
+            console.log("✅ Contenedor principal activado.");
+        }
     };
 
-    // --- 1. DETECCIÓN DE INSTALACIÓN (MODO MÓVIL CHROME) ---
-    // Si el HTML ya tiene la clase porque Chrome lo ha decidido, paramos todo.
+    // --- 🔍 DIAGNÓSTICO DE INICIO ---
+    console.log("📋 Clases en HTML:", html.className);
+    console.log("📋 ¿Existe Muro?:", wall ? "SÍ" : "NO");
+
+    // --- 1. CASO: INSTALACIÓN PRIORITARIA (EL MURO) ---
     if (html.classList.contains('show-install-wall')) {
-        console.log("🚀 [SISTEMA] Muro de instalación prioritario. Abortando carga normal.");
-        releaseUI();
-        // Forzamos visibilidad manual por si el CSS tarda
-        const wall = document.getElementById('install-wall');
-        if (wall) wall.style.display = 'flex';
+        console.log("🎯 DETECTADO: Modo Instalación. Forzando Muro...");
+        
+        if (wall) {
+            wall.style.setProperty('display', 'flex', 'important');
+            wall.style.setProperty('opacity', '1', 'important');
+            wall.style.setProperty('z-index', '99999', 'important');
+            console.log("✅ Muro forzado a DISPLAY FLEX.");
+        }
+        
+        forceRelease("INSTALL");
         return; 
     }
 
-    // --- 2. MODO RECUPERACIÓN ---
+    // --- 2. CASO: RECUPERACIÓN (RESET) ---
     if (resetCode) {
-        console.log("🔑 [SISTEMA] Iniciando Recuperación.");
+        console.log("🔑 DETECTADO: Modo Recuperación.");
         window.history.replaceState({}, document.title, window.location.pathname);
-        document.getElementById('login-view').classList.remove('hidden');
-        releaseUI();
+        
+        if (wall) wall.style.display = 'none';
+        document.getElementById('login-view')?.classList.remove('hidden');
+        
+        forceRelease("RESET");
+        
         if (typeof openResetPasswordModal === 'function') {
             setTimeout(() => openResetPasswordModal(resetCode), 100);
         }
         return; 
     }
 
-    // --- 3. CARGA NORMAL (DASHBOARD) ---
+    // --- 3. CARGA NORMAL ---
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
     if (!token || !user) {
+        console.log("👤 Modo: Login.");
         document.getElementById('login-view')?.classList.remove('hidden');
-        releaseUI();
+        forceRelease("LOGIN");
         return;
     }
 
     try {
-        // Carga de requisitos Neon
+        console.log("📡 Cargando datos de Neon...");
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
@@ -1653,11 +1686,12 @@ async function initApp() {
             nav.classList.remove('hidden');
             nav.style.display = 'grid';
         }
-        releaseUI();
+        
+        forceRelease("DASHBOARD");
 
     } catch (error) {
-        console.error("🔥 Fallo en despliegue:", error);
-        releaseUI();
+        console.error("🔥 Error en despliegue:", error);
+        forceRelease("ERROR_FALLBACK");
     }
 }
 
