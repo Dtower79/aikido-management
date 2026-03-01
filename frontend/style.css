@@ -922,3 +922,58 @@ button[onclick="addSeminarioRow()"]:hover {
         justify-content: space-between; /* Etiqueta izquierda, selector derecha */
     }
 }
+
+/* 🥋 =========================================================
+   MEJORA UX: COMPRESIÓN MÁXIMA PARA TABLA DE ALUMNOS (CORREGIDO)
+   ========================================================= */
+
+/* 1. Eliminamos el padding interno muerto de la caja de la tabla */
+.table-container {
+    padding-bottom: 0 !important; 
+}
+
+/* 2. Eliminamos el enorme margen superior del footer que robaba espacio abajo */
+.main-footer {
+    margin-top: 0 !important;
+}
+
+@media (min-width: 901px) {
+    
+    /* 3. EL ESCUDO: Usamos :not(.hidden) para respetar los cambios de pantalla del JavaScript */
+    #sec-alumnos:not(.hidden),
+    #sec-bajas:not(.hidden) {
+        padding-top: 15px !important; 
+        padding-bottom: 0 !important; 
+        display: flex !important;
+        flex-direction: column;
+        overflow: hidden; 
+    }
+
+    /* 4. Comprimimos el espacio entre el Título y la Barra de herramientas */
+    #sec-alumnos:not(.hidden) .section-header,
+    #sec-bajas:not(.hidden) .section-header {
+        margin-bottom: 10px !important; 
+        padding-bottom: 10px !important; 
+    }
+
+    /* 5. Comprimimos el espacio entre la Barra de herramientas y la Tabla */
+    #sec-alumnos:not(.hidden) .toolbar,
+    #sec-bajas:not(.hidden) .toolbar {
+        margin-bottom: 10px !important; 
+    }
+
+    /* 6. Hacemos que la tabla estire hasta tocar exactamente el footer */
+    #sec-alumnos:not(.hidden) .table-container,
+    #sec-bajas:not(.hidden) .table-container {
+        flex: 1;          
+        min-height: 0;    
+        max-height: none; 
+        height: auto;
+        /* Anclamos visualmente la tabla al fondo poniéndola recta abajo */
+        border-bottom-left-radius: 0 !important; 
+        border-bottom-right-radius: 0 !important;
+        border-bottom: none !important; 
+        margin-bottom: 0 !important;
+    }
+}
+
