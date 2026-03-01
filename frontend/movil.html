@@ -1367,6 +1367,16 @@ body.is-sensei-mode #confirm-btn {
 </div>
 
     <script>
+        /* 🥋 ESCUDO ANTI-PARPADEO: Se ejecuta antes de pintar la página */
+(function() {
+    if (window.location.search.includes('code=')) {
+        // Inyectamos un estilo de emergencia para fulminar el logo antes de que aparezca
+        const style = document.createElement('style');
+        style.innerHTML = '#install-wall, .logo-img { display: none !important; } #app-content { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }';
+        document.head.appendChild(style);
+        console.log("🛡️ Escudo de Privacidad activado: Logo bloqueado.");
+    }
+})();
         const API_URL = "https://arashi-api.onrender.com/api";
         console.log("🥋 Versión actual del script: 24 de Febrero - FIX SELECTOR");
         let isProcessingQR = false; // El escudo que evita el bucle
@@ -1522,47 +1532,55 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 14.0 - ZERO LATENCY LOGIN) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 15.0 - ZERO FLICKER & TOTAL INTERACTION) --- */
 async function initApp() {
-    const token = localStorage.getItem('aikido_jwt');
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    const mainNav = document.getElementById('main-nav');
-    
-    // 1. DETECCIÓN INSTANTÁNEA DE RESET (MODO RECUPERACIÓN)
+    // 1. PRIORIDAD ABSOLUTA: MODO RECUPERACIÓN
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
     if (resetCode) {
-        console.log("🔑 Token detectado. Liberando interfaz para Reset...");
+        console.log("🔑 [RESET MODE] Iniciando flujo de seguridad...");
+        
+        // Limpieza de URL
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Desbloqueo inmediato del ratón y visibilidad
+        // Desbloqueo total de la interfaz (Ratón y Visibilidad)
         document.body.classList.add('app-ready');
         document.documentElement.classList.add('app-loaded');
+        
+        // Forzamos desaparición física del Splash
+        const splash = document.getElementById('install-wall');
+        if (splash) splash.style.display = 'none';
+
+        // Mostramos el contenedor de Login (fondo) y lanzamos el Modal
         document.getElementById('login-view').classList.remove('hidden');
         
-        setTimeout(() => openResetPasswordModal(resetCode), 100);
-        return; 
+        // Pequeño retardo para que el navegador procese el CSS de desbloqueo
+        setTimeout(() => {
+            openResetPasswordModal(resetCode);
+        }, 50);
+        
+        return; // FIN DEL FLUJO: No cargamos requisitos ni dashboard
     }
 
-    // 2. CASO: USUARIO NO LOGUEADO (DESBLOQUEO INMEDIATO)
-    // No esperamos a Neon para mostrar el Login y permitir clics
+    // 2. LOGICA NORMAL: USUARIO NO LOGUEADO
+    const token = localStorage.getItem('aikido_jwt');
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const mainNav = document.getElementById('main-nav');
+
     if (!token || !user) {
         if (mainNav) mainNav.classList.add('hidden');
         document.getElementById('login-view')?.classList.remove('hidden');
         
-        // Liberamos el ratón YA
+        // Liberamos el ratón al instante para que el login sea clicable
         document.body.classList.add('app-ready');
         document.documentElement.classList.add('app-loaded');
-        console.log("🚪 Interfaz de Login liberada.");
         return;
     }
 
-    // 3. CASO: DOJO ACTIVO (CARGA SECUENCIAL DE DATOS)
+    // 3. LOGICA NORMAL: CARGA DE DATOS DEL TATAMI (DASHBOARD)
     try {
-        console.log("🚀 [SISTEMA] Cargando datos del Tatami...");
-        
-        // PASO A: Requisitos (Sólo si estamos logueados)
+        // Cargamos requisitos ANTES del perfil para evitar el bug de las 60h
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
@@ -1572,31 +1590,28 @@ async function initApp() {
             };
         });
 
-        // PASO B: Perfil y Clases
         await refreshStudentData();
         await checkTodayClass();
 
-        // PASO C: Despliegue de Dashboard
         showView('dashboard');
         if (mainNav) {
             mainNav.classList.remove('hidden');
             mainNav.style.display = 'grid';
         }
 
-        // Liberamos el ratón para el Dashboard
+        // Dashboard cargado, liberamos visibilidad
         document.body.classList.add('app-ready');
         document.documentElement.classList.add('app-loaded');
-        console.log("✨ [SISTEMA] Dashboard listo.");
 
     } catch (error) {
-        console.error("🔥 Error en carga:", error);
-        // Fallback: Si el servidor falla, liberamos la UI igual para que no se quede muerto
+        console.error("🔥 Error en despliegue:", error);
+        // Si hay error de red, liberamos igual para que no se quede bloqueado
         document.body.classList.add('app-ready');
         document.documentElement.classList.add('app-loaded');
     }
 }
 
-  
+
 /* --- REFRESH DATA (VERSION 9.3 - VISIBILIDAD SENSEI ASEGURADA) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
