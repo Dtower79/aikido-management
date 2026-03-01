@@ -1522,45 +1522,81 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 13.0 - ZERO FLICKER RESET) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 14.0 - ZERO LATENCY LOGIN) --- */
 async function initApp() {
-    // 1. DETECCIÓN INSTANTÁNEA
+    const token = localStorage.getItem('aikido_jwt');
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const mainNav = document.getElementById('main-nav');
+    
+    // 1. DETECCIÓN INSTANTÁNEA DE RESET (MODO RECUPERACIÓN)
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
     if (resetCode) {
-        // Marcamos el HTML para que el CSS oculte el logo de Arashi al instante
-        document.documentElement.setAttribute('data-mode', 'reset');
-        
-        // Ocultamos físicamente el splash screen antes de nada
-        const splash = document.getElementById('install-wall');
-        if (splash) splash.style.display = 'none';
-
-        // Preparamos el contenedor principal
-        const appContent = document.getElementById('app-content');
-        appContent.style.display = 'flex';
-        appContent.style.opacity = '1';
-
-        // Liberamos clases de interacción
-        document.body.classList.add('app-ready');
-        document.documentElement.classList.add('app-loaded');
-
-        // Limpiamos la URL (estética)
+        console.log("🔑 Token detectado. Liberando interfaz para Reset...");
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Lanzamos el modal
-        openResetPasswordModal(resetCode);
-        return; // BLOQUEO TOTAL: No se carga nada más del sistema
+        // Desbloqueo inmediato del ratón y visibilidad
+        document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+        document.getElementById('login-view').classList.remove('hidden');
+        
+        setTimeout(() => openResetPasswordModal(resetCode), 100);
+        return; 
     }
 
-    // --- LÓGICA NORMAL (Si no hay código de recuperación) ---
-    console.log("🚀 [INIT] Carga normal del Dojo...");
-    const token = localStorage.getItem('aikido_jwt');
-    const user = JSON.parse(localStorage.getItem('aikido_user'));
-    
-    // ... (aquí sigue el resto de tu código normal de initApp)
-    // Asegúrate de que los bloques de limpieza de vistas y carga de requisitos estén debajo.
-}  
+    // 2. CASO: USUARIO NO LOGUEADO (DESBLOQUEO INMEDIATO)
+    // No esperamos a Neon para mostrar el Login y permitir clics
+    if (!token || !user) {
+        if (mainNav) mainNav.classList.add('hidden');
+        document.getElementById('login-view')?.classList.remove('hidden');
+        
+        // Liberamos el ratón YA
+        document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+        console.log("🚪 Interfaz de Login liberada.");
+        return;
+    }
+
+    // 3. CASO: DOJO ACTIVO (CARGA SECUENCIAL DE DATOS)
+    try {
+        console.log("🚀 [SISTEMA] Cargando datos del Tatami...");
+        
+        // PASO A: Requisitos (Sólo si estamos logueados)
+        const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
+        requisitosGradoGlobal = (reqData?.data || []).map(r => {
+            const attr = r.attributes || r;
+            return {
+                NORM: normalize(attr.Grado || attr.grado || ""),
+                HORAS: parseFloat(attr.Horas_Necesarias || attr.horas_necesarias || 0)
+            };
+        });
+
+        // PASO B: Perfil y Clases
+        await refreshStudentData();
+        await checkTodayClass();
+
+        // PASO C: Despliegue de Dashboard
+        showView('dashboard');
+        if (mainNav) {
+            mainNav.classList.remove('hidden');
+            mainNav.style.display = 'grid';
+        }
+
+        // Liberamos el ratón para el Dashboard
+        document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+        console.log("✨ [SISTEMA] Dashboard listo.");
+
+    } catch (error) {
+        console.error("🔥 Error en carga:", error);
+        // Fallback: Si el servidor falla, liberamos la UI igual para que no se quede muerto
+        document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+    }
+}
+
+  
 /* --- REFRESH DATA (VERSION 9.3 - VISIBILIDAD SENSEI ASEGURADA) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
