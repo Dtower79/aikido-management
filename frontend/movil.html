@@ -1423,16 +1423,27 @@ body.app-ready #app-content {
 </div>
 
     <script>
-        /* 🥋 ESCUDO ANTI-PARPADEO: Se ejecuta antes de pintar la página */
-(function() {
-    if (window.location.search.includes('code=')) {
-        // Inyectamos un estilo de emergencia para fulminar el logo antes de que aparezca
-        const style = document.createElement('style');
-        style.innerHTML = '#install-wall, .logo-img { display: none !important; } #app-content { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }';
-        document.head.appendChild(style);
-        console.log("🛡️ Escudo de Privacidad activado: Logo bloqueado.");
-    }
-})();
+            /* 🥋 ESCUDO ANTI-PARPADEO: Se ejecuta antes de pintar la página */
+    (function() {
+        if (window.location.search.includes('code=')) {
+            // Inyectamos un estilo de emergencia para fulminar el logo antes de que aparezca
+            const style = document.createElement('style');
+            style.innerHTML = '#install-wall, .logo-img { display: none !important; } #app-content { display: flex !important; opacity: 1 !important; pointer-events: auto !important; }';
+            document.head.appendChild(style);
+            console.log("🛡️ Escudo de Privacidad activado: Logo bloqueado.");
+        }
+    })();
+
+    /* --- PWA: CAPTURA DE LLAVE (UBICACIÓN PRIORITARIA) --- */
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        console.log("✅ [SISTEMA] Llave de instalación capturada.");
+        e.preventDefault();
+        deferredPrompt = e;
+        // Mostramos el área del botón si existe
+        const btnArea = document.getElementById('android-btn-area');
+        if (btnArea) btnArea.style.display = 'block';
+    });
         const API_URL = "https://arashi-api.onrender.com/api";
         console.log("🥋 Versión actual del script: 24 de Febrero - FIX SELECTOR");
         let isProcessingQR = false; // El escudo que evita el bucle
@@ -1591,108 +1602,72 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 /* --- NÚCLEO DE INICIALIZACIÓN (VERSION 23.0 - CON RADAR DE DIAGNÓSTICO) --- */
 async function initApp() {
     console.log("🚀 [RADAR] Iniciando initApp...");
-    
     const html = document.documentElement;
     const body = document.body;
     const mask = document.getElementById('initial-mask');
     const wall = document.getElementById('install-wall');
     const appContent = document.getElementById('app-content');
-
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
-    // FUNCIÓN DE LIBERACIÓN TOTAL
     const forceRelease = (mode) => {
         console.log(`🔓 [SISTEMA] Liberando UI en modo: ${mode}`);
         body.classList.add('app-ready');
         html.classList.add('app-loaded');
-        
-        if (mask) {
-            mask.style.display = 'none'; // Fulminamos la máscara
-            console.log("✅ Máscara eliminada.");
-        }
-        
+        if (mask) mask.style.display = 'none';
         if (appContent) {
-            appContent.style.display = 'flex';
+            // CIRUGÍA: Forzamos al padre a existir para que el muro sea visible
+            appContent.style.setProperty('display', 'flex', 'important');
             appContent.style.opacity = '1';
             appContent.style.pointerEvents = 'auto';
-            console.log("✅ Contenedor principal activado.");
         }
     };
 
-    // --- 🔍 DIAGNÓSTICO DE INICIO ---
-    console.log("📋 Clases en HTML:", html.className);
-    console.log("📋 ¿Existe Muro?:", wall ? "SÍ" : "NO");
-
-    // --- 1. CASO: INSTALACIÓN PRIORITARIA (EL MURO) ---
+    // 1. CASO: INSTALACIÓN (Si Chrome ha marcado la clase)
     if (html.classList.contains('show-install-wall')) {
-        console.log("🎯 DETECTADO: Modo Instalación. Forzando Muro...");
-        
+        console.log("🎯 DETECTADO: Modo Instalación.");
+        forceRelease("INSTALL");
         if (wall) {
             wall.style.setProperty('display', 'flex', 'important');
-            wall.style.setProperty('opacity', '1', 'important');
-            wall.style.setProperty('z-index', '99999', 'important');
-            console.log("✅ Muro forzado a DISPLAY FLEX.");
+            wall.style.opacity = '1';
         }
-        
-        forceRelease("INSTALL");
         return; 
     }
 
-    // --- 2. CASO: RECUPERACIÓN (RESET) ---
+    // 2. CASO: RECUPERACIÓN (RESET)
     if (resetCode) {
-        console.log("🔑 DETECTADO: Modo Recuperación.");
         window.history.replaceState({}, document.title, window.location.pathname);
-        
-        if (wall) wall.style.display = 'none';
-        document.getElementById('login-view')?.classList.remove('hidden');
-        
         forceRelease("RESET");
-        
-        if (typeof openResetPasswordModal === 'function') {
-            setTimeout(() => openResetPasswordModal(resetCode), 100);
-        }
+        const installWall = document.getElementById('install-wall');
+        if (installWall) installWall.style.display = 'none';
+        document.getElementById('login-view')?.classList.remove('hidden');
+        if (typeof openResetPasswordModal === 'function') openResetPasswordModal(resetCode);
         return; 
     }
 
-    // --- 3. CARGA NORMAL ---
+    // 3. CARGA NORMAL
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
     if (!token || !user) {
-        console.log("👤 Modo: Login.");
         document.getElementById('login-view')?.classList.remove('hidden');
         forceRelease("LOGIN");
         return;
     }
 
     try {
-        console.log("📡 Cargando datos de Neon...");
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
-            return {
-                NORM: normalize(attr.Grado || attr.grado || ""),
-                HORAS: parseFloat(attr.Horas_Necesarias || attr.horas_necesarias || 0)
-            };
+            return { NORM: normalize(attr.Grado || attr.grado || ""), HORAS: parseFloat(attr.Horas_Necesarias || 0) };
         });
-
         await refreshStudentData();
         await checkTodayClass();
-
         showView('dashboard');
         const nav = document.getElementById('main-nav');
-        if (nav) {
-            nav.classList.remove('hidden');
-            nav.style.display = 'grid';
-        }
-        
+        if (nav) { nav.classList.remove('hidden'); nav.style.display = 'grid'; }
         forceRelease("DASHBOARD");
-
-    } catch (error) {
-        console.error("🔥 Error en despliegue:", error);
-        forceRelease("ERROR_FALLBACK");
-    }
+    } catch (error) { forceRelease("ERROR"); }
 }
 
 /* --- REFRESH DATA (VERSION 9.3 - VISIBILIDAD SENSEI ASEGURADA) --- */
@@ -3130,29 +3105,18 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 async function handleAndroidInstall() {
-    console.log("🖱️ Botón 'INSTALAR AHORA' pulsado");
-
+    console.log("🖱️ Intentando instalar...");
     if (deferredPrompt) {
-        console.log("✅ Llave detectada. Lanzando ventana...");
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        console.log(`👤 Respuesta: ${outcome}`);
-        deferredPrompt = null; 
-    } else { 
-        // 🥋 SI NO HAY LLAVE, LANZAMOS INSTRUCCIONES PARA TABLET LENTA
-        console.warn("⚠️ Llave bloqueada por el sistema. Mostrando tutorial manual.");
-        
-        showModal("INSTALACIÓN EN TABLET", `
-            <div style="text-align:left; font-size:14px; line-height:1.6;">
-                <p>El sistema de tu tablet ha bloqueado la instalación automática. Sigue estos pasos:</p>
-                <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:15px; border:1px solid var(--accent);">
-                    1. Pulsa los <b>3 puntos (⋮)</b> de Chrome arriba.<br>
-                    2. Busca y pulsa en <b>'Compartir...'</b>.<br>
-                    3. Desliza hacia arriba y selecciona <b>'Añadir a pantalla de inicio'</b>.
-                </div>
-                <p style="color:var(--accent); font-size:12px; margin-top:10px; font-weight:800;">
-                    <i class="fa-solid fa-circle-info"></i> Si no ves la opción, refresca la página deslizando hacia abajo.
-                </p>
+        console.log(`👤 Resultado: ${outcome}`);
+        deferredPrompt = null;
+    } else {
+        // Si no hay llave, mostramos el modal de ayuda manual
+        showModal("INSTALACIÓN", `
+            <div style="text-align:left;">
+                <p>Tu dispositivo no permite la instalación automática. Hazlo manualmente:</p>
+                <p>1. Pulsa los <b>3 puntos (⋮)</b> arriba.<br>2. Pulsa en <b>'Compartir'</b>.<br>3. Selecciona <b>'Añadir a pantalla de inicio'</b>.</p>
             </div>
         `);
     }
