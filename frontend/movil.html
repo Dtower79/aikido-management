@@ -1692,6 +1692,7 @@ async function initApp() {
 }
 
 /* --- REFRESH DATA V10.2 (VÍNCULO DE MANDO RESTAURADO) --- */
+/* --- REFRESH DATA V10.3 (RESTAURACIÓN DE PANEL PARA INSTRUCTORES) --- */
 async function refreshStudentData() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     if (!user) return null;
@@ -1699,7 +1700,7 @@ async function refreshStudentData() {
     const savedDocId = localStorage.getItem('aikido_student_doc_id');
     let dataAlu = null; 
 
-    // 1. CARGA DE FICHA (Excepto para el usuario TABLET)
+    // 1. CARGA DE FICHA (Tablet vs Alumnos/Instructores)
     if (user.username !== 'TABLET') {
         if (savedDocId && savedDocId !== "null") {
             dataAlu = await fetchSmart(`/alumnos/${savedDocId}?populate=*`, 'perfil_alumno', 168);
@@ -1722,44 +1723,40 @@ async function refreshStudentData() {
     const p = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     if (p && p.dojo) dojoIdGlobal = String(getID(p.dojo.data || p.dojo));
 
-    // 3. IDENTIDAD (TABLET DOJO)
+    // 3. IDENTIDAD
     const displayName = user.username === 'TABLET' ? "TABLET DOJO" : (p?.nombre || user.nombre || "SENSEI").toUpperCase();
     const initials = user.username === 'TABLET' ? "TD" : ((p?.nombre?.[0] || user.nombre?.[0] || "S") + (p?.apellidos?.[0] || user.apellidos?.[0] || "")).toUpperCase();
     
     document.getElementById('user-display-name').innerText = displayName;
 
-    // --- 🥋 CIRUGÍA: RESTAURACIÓN DEL CLIC DE GESTIÓN ---
+    // 🥋 LÓGICA DE PERMISOS (SENSEI O INSTRUCTOR)
+    const esSenseiDirecto = (user.is_sensei === true || user.is_sensei === "true");
+    const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
+    const tienePermisosGestion = esSenseiDirecto || esInstructorFicha;
+
+    // 4. VÍNCULO DE INICIALES (Management)
     if (initialsCircle) {
         initialsCircle.innerText = initials;
-        
-        // El usuario TABLET es sensei por tabla User, así que 'esGestor' será true
-        const esGestor = (user.is_sensei === true || user.is_sensei === "true" || (p && (p.es_instructor === true || p.es_instructor === "true")));
-
-        if (esGestor) {
+        if (tienePermisosGestion) {
             initialsCircle.style.cursor = 'pointer';
             initialsCircle.title = "Acceder a Gestión Arashi";
-            initialsCircle.onclick = () => { 
-                window.location.href = 'https://arashi-group.netlify.app/'; 
-            };
+            initialsCircle.onclick = () => { window.location.href = 'https://arashi-group.netlify.app/'; };
         } else {
             initialsCircle.style.cursor = 'default';
             initialsCircle.onclick = null;
         }
     }
 
-    // 4. LÓGICA DE SENSEI
-    const esSenseiRango = (user.is_sensei === true || user.is_sensei === "true");
-
-    if (esSenseiRango) {
+    // 5. INTERFAZ: SENSEI VS ALUMNO
+    // Solo mostramos la "Zen Card" si NO es un alumno instructor (como Raúl)
+    // Los instructores mantienen su círculo de horas para su propio progreso.
+    if (esSenseiDirecto && user.username === 'TABLET') {
         document.body.classList.add('is-sensei-mode'); 
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         if (zenCard) zenCard.remove();
-
-        let dojoNom = p?.dojo ? parseRelation(p.dojo).nombre : "GESTIÓN DE CLASES";
-        const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title" style="font-size:30px !important;">SENSEI</h2><p class="zen-subtitle">${dojoNom.toUpperCase()}</p></div>`;
+        const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title" style="font-size:30px !important;">SENSEI</h2><p class="zen-subtitle">TABLET DOJO</p></div>`;
         if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
-
     } else if (p) {
         document.body.classList.remove('is-sensei-mode');
         if (zenCard) zenCard.remove();
@@ -1791,13 +1788,18 @@ async function refreshStudentData() {
         }
     }
 
+    // 6. BARRA DE NAVEGACIÓN (BOTÓN SENSEI)
+    // CIRUGÍA: Si es Sensei O es Instructor, mostramos el botón en el menú inferior
     const navSensei = document.getElementById('nav-sensei');
     if (navSensei) {
-        if (esSenseiRango) {
+        if (tienePermisosGestion) {
             navSensei.style.display = 'flex';
             navSensei.onclick = () => { showView('sensei', navSensei); loadSenseiPanel(); };
+        } else {
+            navSensei.style.display = 'none';
         }
     }
+    
     return alumnoGlobal;
 }
 
