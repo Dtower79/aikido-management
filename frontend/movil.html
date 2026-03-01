@@ -3086,7 +3086,7 @@ document.getElementById('forgot-form').addEventListener('submit', async (e) => {
         });
         if (res.ok) {
             document.getElementById('forgot-modal').classList.add('hidden');
-            showModal("¡Email Enviado!", "Si el email existe, recibirás un enlace de recuperación pronto.");
+            showModal("¡Email Enviado!", "Si el email existe, recibirás un enlace de recuperación pronto. Revisa SPAM");
         } else {
             showModal("Aviso", "No se pudo procesar. Revisa el email.");
         }
