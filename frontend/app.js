@@ -1363,7 +1363,7 @@ document.getElementById('forgot-form')?.addEventListener('submit', async (e) => 
     }
 });
 
-/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V35.1 - DOBLE ORDENACIÓN Y DURACIÓN) --- */
+/* --- INFORME EXCLUSIVO: ASISTENCIA DIARIA (V36.0 - MULTI-TABLA POR TURNOS) --- */
 async function generateAttendanceReport() {
     const attendanceDate = document.getElementById('report-attendance-date').value;
     const dojoSelect = document.getElementById('report-dojo-filter');
@@ -1380,21 +1380,20 @@ async function generateAttendanceReport() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
     
-    // 🥋 LOGO ESPECÍFICO DEL INFORME
+    // 🥋 LOGO DEL INFORME
     const logoImg = new Image();
     logoImg.src = 'img/logo-arashi-informe.png'; 
 
     logoImg.onerror = function() {
-        console.warn("⚠️ No se encontró logo-arashi-informe.png. Usando logo estándar.");
-        logoImg.src = 'img/logo-arashi.png'; 
-        logoImg.onerror = null; 
+        console.error("❌ No se encontró logo-arashi-informe.png.");
+        showModal("Error", "Falta la imagen del logo (img/logo-arashi-informe.png).");
     };
 
     logoImg.onload = async function () {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         try {
-            // 🥋 PASO 1: Mapeo de Dojos (Caché inteligente)
+            // 🥋 PASO 1: Mapeo de Dojos
             console.log("📡 [SISTEMA] Paso 1: Mapeando sedes...");
             const aluData = await fetchSmart('/api/alumnos?populate=dojo&pagination[limit]=1000', 'alumnos_report_cache', 12);
             
@@ -1408,17 +1407,14 @@ async function generateAttendanceReport() {
                 dojoIdMap[id] = attr.dojo ? getID(attr.dojo) : null; 
             });
 
-            // 🥋 PASO 2: SINTAXIS STRAPI V5 ESTRICTA
+            // 🥋 PASO 2: Descargar asistencias (Strapi V5 Estricto)
             const apiUrl = `${API_URL}/api/asistencias?populate[0]=clase&populate[1]=alumno&pagination[limit]=1000&sort=createdAt:desc`;
-            
-            console.log("📡[SISTEMA] Paso 2: Descargando registros de Tatami...");
             const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
             
             if (!res.ok) throw new Error(`Fallo V5 (Status: ${res.status})`);
-            
             const json = await res.json();
             
-            // 🥋 PASO 3: Filtrado e Inyección de Datos
+            // 🥋 PASO 3: Filtrado y Extracción de Grado/Horas
             const listadoFinal = (json.data ||[]).filter(item => {
                 const a = item.attributes || item;
                 const cla = parseRelation(a.clase);
@@ -1427,8 +1423,6 @@ async function generateAttendanceReport() {
                 if (!cla || !alu || !cla.Fecha_Hora) return false; 
                 
                 const aluId = getID(alu);
-                
-                // Filtros de Cruce (Fecha, Dojo, Estado)
                 const classDatePart = cla.Fecha_Hora.split('T')[0];
                 const matchFecha = (classDatePart === attendanceDate);
                 
@@ -1436,7 +1430,7 @@ async function generateAttendanceReport() {
                 const matchDojo = (!dojoFilterId || dojoFilterId === "all" || aluDojoDocId === dojoFilterId);
                 
                 const estadoClean = (a.Estado || a.estado || "").toLowerCase().trim();
-                const matchEstado = ['confirmado', 'asistio', 'asistió'].includes(estadoClean);
+                const matchEstado =['confirmado', 'asistio', 'asistió'].includes(estadoClean);
                 
                 return matchFecha && matchDojo && matchEstado;
                 
@@ -1446,8 +1440,7 @@ async function generateAttendanceReport() {
                 const cla = parseRelation(a.clase);
                 const aluId = getID(alu);
                 
-                // 🥋 FIX TIMEZONE: Extracción literal (Corta el string sin aplicar husos horarios)
-                // Ej: "2026-02-24T10:00:00.000Z" -> "10:00"
+                // FIX HORA (Literal desde String, sin alterar por el navegador)
                 const horaLiteral = cla.Fecha_Hora.split('T')[1].substring(0, 5);
                 const duracion = parseFloat(cla.Duracion || 1.5).toFixed(1);
                 
@@ -1455,60 +1448,102 @@ async function generateAttendanceReport() {
                     apellidos: (alu.apellidos || "").toUpperCase(),
                     nombre: alu.nombre || "",
                     dojo: dojoNameMap[aluId] || "NO DISP",
-                    tipo: cla.Tipo || "Keiko",
-                    horaMinutos: horaLiteral, // Usado para ordenar matemáticamente
-                    horaVisual: `${horaLiteral}h`, // Usado para pintar en el PDF
-                    duracion: `${duracion}h`,
+                    grado: normalizeGrade(alu.grado) || "S/G", // <-- NUEVO
+                    horasAcum: parseFloat(alu.horas_acumuladas || 0).toFixed(1) + "h", // <-- NUEVO
+                    horaMinutos: horaLiteral,
+                    duracion: duracion,
                     estado: (a.Estado || a.estado || "CONFIRMADO").toUpperCase()
                 };
             });
 
             if (listadoFinal.length === 0) {
-                showModal("Tatami Vacío", `No hay alumnos confirmados para el día ${formatDateDisplay(attendanceDate)} en esta sede.`);
+                showModal("Tatami Vacío", `No hay alumnos confirmados para el día ${formatDateDisplay(attendanceDate)}.`);
                 return;
             }
 
-            // 🥋 ORDENACIÓN MAESTRA (DOBLE CRITERIO)
-            listadoFinal.sort((a, b) => {
-                // 1. Primero ordenamos por la Hora del Keiko (Mañana primero, Tarde después)
-                if (a.horaMinutos !== b.horaMinutos) {
-                    return a.horaMinutos.localeCompare(b.horaMinutos);
-                }
-                // 2. Si están en el mismo Keiko, ordenamos alfabéticamente por Apellidos
-                return a.apellidos.localeCompare(b.apellidos, 'es');
+            // 🥋 PASO 4: ORDENACIÓN Y AGRUPACIÓN
+            // Ordenamos todos alfabéticamente primero (Juez de paz)
+            listadoFinal.sort((a, b) => a.apellidos.localeCompare(b.apellidos, 'es'));
+
+            // Separamos a los alumnos en grupos según la hora de su Keiko
+            const keikosAgrupados = {};
+            listadoFinal.forEach(it => {
+                if(!keikosAgrupados[it.horaMinutos]) keikosAgrupados[it.horaMinutos] = [];
+                keikosAgrupados[it.horaMinutos].push(it);
             });
 
-            // 🥋 CONSTRUCCIÓN DEL PDF (NUEVA COLUMNA: DURACIÓN)
-            const headRow =['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Tipo Clase', 'Hora', 'Dur.', 'Estado'];
-            const body = listadoFinal.map((it, idx) =>[
-                `${idx + 1}`, it.apellidos, it.nombre, it.dojo, it.tipo, it.horaVisual, it.duracion, it.estado
-            ]);
+            // 🥋 PASO 5: DIBUJO DEL PDF (Multitabla)
+            let currentY = 32;
+            const pagesDrawn = new Set(); // Escudo para no dibujar cabeceras superpuestas
 
-            doc.autoTable({
-                startY: 30, margin: { top: 30, left: 10, right: 10 },
-                head: [headRow], body: body, theme: 'grid',
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor:[190, 0, 0], halign: 'center', fontStyle: 'bold' },
-                columnStyles: {
-                    0: { halign: 'center', cellWidth: 10 },
-                    4: { halign: 'center' },
-                    5: { halign: 'center', textColor:[34, 197, 94], fontStyle: 'bold' }, // Hora verde
-                    6: { halign: 'center', textColor: [59, 130, 246], fontStyle: 'bold' }, // Duración Azul
-                    7: { halign: 'center', fontStyle: 'bold' } 
-                },
-                didDrawPage: (data) => {
-                    doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
-                    doc.setFontSize(14); doc.text("LISTADO DE ASISTENCIA", pageWidth / 2, 12, { align: 'center' });
-                    doc.setFontSize(9); doc.text(`DOJO: ${dojoFilterName} | FECHA DEL KEIKO: ${formatDateDisplay(attendanceDate)}`, pageWidth / 2, 18, { align: 'center' });
-                    doc.setFontSize(8); doc.setTextColor(150, 150, 150);
-                    doc.text(`Total inscritos: ${listadoFinal.length}`, pageWidth - 10, 18, { align: 'right' });
+            // Dibujador de cabecera de documento (solo 1 vez por página)
+            const drawMainHeader = (data) => {
+                if (pagesDrawn.has(data.pageNumber)) return;
+                pagesDrawn.add(data.pageNumber);
+                
+                doc.addImage(logoImg, 'PNG', 10, 5, 22, 15);
+                doc.setFontSize(14); doc.setTextColor(0, 0, 0);
+                doc.text("PARTE DE ASISTENCIA TÉCNICA", pageWidth / 2, 12, { align: 'center' });
+                doc.setFontSize(9);
+                doc.text(`DOJO: ${dojoFilterName} | FECHA: ${formatDateDisplay(attendanceDate)}`, pageWidth / 2, 18, { align: 'center' });
+                doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+                doc.text(`Total general: ${listadoFinal.length} alumnos`, pageWidth - 10, 18, { align: 'right' });
+            };
+
+            // Iteramos sobre las horas ordenadas (Mañana -> Tarde)
+            Object.keys(keikosAgrupados).sort().forEach((horaKey, index) => {
+                const grupo = keikosAgrupados[horaKey];
+                const duracion = grupo[0].duracion;
+                
+                // Calculamos si es Mañana o Tarde (corte a las 14:00)
+                const isManana = parseInt(horaKey.split(':')[0]) < 14;
+                const turnoLabel = isManana ? "TURNO DE MAÑANA" : "TURNO DE TARDE";
+
+                // Si no hay espacio para la siguiente tabla, forzamos página nueva
+                if (currentY > 170 && index > 0) {
+                    doc.addPage();
+                    currentY = 32;
                 }
+
+                // 1. DIBUJAR TÍTULO DEL KEIKO
+                doc.setFontSize(11);
+                doc.setTextColor(190, 0, 0); // Rojo Arashi
+                doc.setFont("helvetica", "bold");
+                doc.text(`>> ${turnoLabel} | Inicio: ${horaKey}h | Duración: ${duracion}h`, 10, currentY);
+                doc.setFont("helvetica", "normal");
+                
+                // 2. DIBUJAR TABLA DEL KEIKO
+                const headRow =['Nº', 'Apellidos', 'Nombre', 'Dojo Alumno', 'Grado', 'Horas Acum.', 'Estado'];
+                const body = grupo.map((it, idx) =>[
+                    `${idx + 1}`, it.apellidos, it.nombre, it.dojo, it.grado, it.horasAcum, it.estado
+                ]);
+
+                doc.autoTable({
+                    startY: currentY + 3,
+                    margin: { top: 32, left: 10, right: 10 },
+                    head: [headRow], 
+                    body: body, 
+                    theme: 'grid',
+                    styles: { fontSize: 8, cellPadding: 2.5 },
+                    // Cabecera oscura para contrastar con el título rojo
+                    headStyles: { fillColor: [30, 41, 59], halign: 'center', fontStyle: 'bold' },
+                    columnStyles: {
+                        0: { halign: 'center', cellWidth: 10 },
+                        4: { halign: 'center', fontStyle: 'bold' }, // Grado
+                        5: { halign: 'center', textColor:[34, 197, 94], fontStyle: 'bold' }, // Horas en verde
+                        6: { halign: 'center', fontStyle: 'bold' } // Estado
+                    },
+                    didDrawPage: drawMainHeader
+                });
+
+                // Actualizamos la posición Y para el siguiente Keiko (separación de 15px)
+                currentY = doc.lastAutoTable.finalY + 15;
             });
 
             doc.save(`Asistencia_Arashi_${attendanceDate}.pdf`);
 
         } catch (e) {
-            console.error("🔥 Error V35:", e);
+            console.error("🔥 Error V36:", e);
             showModal("Error", "No se pudo generar el informe. Revisa la consola.");
         }
     };
