@@ -922,3 +922,34 @@ button[onclick="addSeminarioRow()"]:hover {
         justify-content: space-between; /* Etiqueta izquierda, selector derecha */
     }
 }
+
+/* 🥋 =========================================================
+   MEJORA UX: EXPANSIÓN TOTAL DE LAS TABLAS (TATAMI COMPLETO)
+   ========================================================= */
+
+/* 1. Eliminamos el hueco muerto inferior de la caja de la tabla */
+.table-container {
+    padding-bottom: 0 !important; 
+}
+
+/* 2. Activamos la Inteligencia Flexbox (Solo para Escritorio) */
+@media (min-width: 901px) {
+    
+    /* Convertimos las secciones en un "túnel" que calcula su propia altura */
+    #sec-alumnos:not(.hidden),
+    #sec-bajas:not(.hidden) {
+        display: flex !important; /* Fuerza el modo Flex ignorando el JS */
+        flex-direction: column;
+        overflow: hidden; /* Fija la página exterior: Ahora SOLO la tabla hará scroll */
+        padding-bottom: 20px; /* Estira la sección hasta casi tocar la base de la pantalla */
+    }
+
+    /* La tabla se traga el 100% del espacio restante automáticamente */
+    #sec-alumnos .table-container,
+    #sec-bajas .table-container {
+        flex: 1;          /* ¡La Magia! Absorbe el hueco milimétricamente */
+        min-height: 0;    /* Requisito técnico para que funcione el scroll interno */
+        max-height: none; /* Fulminamos la antigua restricción de 70vh */
+        height: auto;
+    }
+}
