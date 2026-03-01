@@ -96,7 +96,7 @@
             width: 100vw;
             height: 100vh;
             background: #000000 !important; /* Negro absoluto */
-            z-index: 99999;
+            z-index: 26000;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -1045,7 +1045,7 @@ body.is-sensei-mode #confirm-btn {
     position: fixed;
     inset: 0;
     background: #05080f; /* Negro profundo */
-    z-index: 30000;
+    z-index: 25000;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1585,55 +1585,49 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 17.0 - SMOOTH RESET TRANSITION) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 18.0 - INSTALACIÓN BLINDADA) --- */
 async function initApp() {
     const mask = document.getElementById('initial-mask');
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
-    // Función unificada para levantar el velo con suavidad
-    const completeDeployment = () => {
+    const liftVeil = () => {
         setTimeout(() => {
-            // 1. Desbloqueamos el ratón
+            if (mask) mask.classList.add('fade-out');
             document.body.classList.add('app-ready');
             document.documentElement.classList.add('app-loaded');
-            // 2. Retiramos el velo con fundido
-            if (mask) mask.classList.add('fade-out');
-            console.log("✨ [SISTEMA] Velo levantado. Tatami operativo.");
-        }, 600); // 600ms de elegancia visual
+        }, 400);
     };
 
-    // --- A. FLUJO DE RECUPERACIÓN (RESET PASSWORD) ---
-    if (resetCode) {
-        console.log("🔑 [RESET] Configurando modal de seguridad...");
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Limpiamos el muro de instalación para que no estorbe al fondo
-        const splash = document.getElementById('install-wall');
-        if (splash) splash.style.display = 'none';
-
-        // Preparamos el escenario: Fondo de login activo
-        document.getElementById('login-view').classList.remove('hidden');
-        
-        // Inyectamos el modal (todavía no es visible por el velo)
-        openResetPasswordModal(resetCode);
-        
-        completeDeployment();
+    // 1. SI ESTAMOS EN NAVEGADOR (MOSTRAR MURO)
+    if (document.documentElement.classList.contains('show-install-wall')) {
+        console.log("📱 [SISTEMA] Modo Navegador detectado. Preparando muro...");
+        liftVeil(); // Levantamos el velo para que el botón sea clicable
         return; 
     }
 
-    // --- B. FLUJO NORMAL (USUARIO / LOGIN) ---
+    // 2. MODO RECUPERACIÓN
+    if (resetCode) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        const splash = document.getElementById('install-wall');
+        if (splash) splash.style.display = 'none';
+        document.getElementById('login-view').classList.remove('hidden');
+        openResetPasswordModal(resetCode);
+        liftVeil();
+        return;
+    }
+
+    // 3. CARGA NORMAL (EL RESTO DE TU CÓDIGO)
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
     if (!token || !user) {
         document.getElementById('login-view')?.classList.remove('hidden');
-        completeDeployment();
+        liftVeil();
         return;
     }
 
     try {
-        // Carga secuencial de datos técnicos
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
@@ -1642,22 +1636,14 @@ async function initApp() {
                 HORAS: parseFloat(attr.Horas_Necesarias || attr.horas_necesarias || 0)
             };
         });
-
         await refreshStudentData();
         await checkTodayClass();
-
         showView('dashboard');
-        const nav = document.getElementById('main-nav');
-        if (nav) {
-            nav.classList.remove('hidden');
-            nav.style.display = 'grid';
-        }
-
-        completeDeployment();
-
+        document.getElementById('main-nav')?.classList.remove('hidden');
+        document.getElementById('main-nav').style.display = 'grid';
+        liftVeil();
     } catch (error) {
-        console.error("🔥 [ERROR] Fallo en carga:", error);
-        completeDeployment(); 
+        liftVeil();
     }
 }
 
@@ -3090,7 +3076,8 @@ let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => { 
     // Evita que Chrome muestre su propio aviso para usar el tuyo personalizado
     e.preventDefault(); 
-    deferredPrompt = e; 
+    deferredPrompt = e;
+    console.log("✅ [SISTEMA] Llave de instalación capturada y lista."); 
     // Muestra tu botón de instalar
     const b = document.getElementById('android-btn-area'); 
     if (b) b.style.display = 'block'; 
