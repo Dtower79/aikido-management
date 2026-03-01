@@ -1585,49 +1585,68 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 18.0 - INSTALACIÓN BLINDADA) --- */
+/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 19.0 - ANTI-BLOQUEO) --- */
 async function initApp() {
     const mask = document.getElementById('initial-mask');
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
+    // Función interna de seguridad para liberar la pantalla siempre
     const liftVeil = () => {
-        setTimeout(() => {
-            if (mask) mask.classList.add('fade-out');
-            document.body.classList.add('app-ready');
-            document.documentElement.classList.add('app-loaded');
-        }, 400);
+        if (mask) mask.classList.add('fade-out');
+        document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
+        const appContent = document.getElementById('app-content');
+        if (appContent) {
+            appContent.style.display = 'flex';
+            appContent.style.opacity = '1';
+        }
     };
 
-    // 1. SI ESTAMOS EN NAVEGADOR (MOSTRAR MURO)
-    if (document.documentElement.classList.contains('show-install-wall')) {
-        console.log("📱 [SISTEMA] Modo Navegador detectado. Preparando muro...");
-        liftVeil(); // Levantamos el velo para que el botón sea clicable
+    // --- A. MODO RECUPERACIÓN (SI HAY CÓDIGO EN LA URL) ---
+    if (resetCode) {
+        console.log("🔑 [SISTEMA] Iniciando recuperación tras el velo...");
+        
+        // Desbloqueamos la interfaz ANTES de nada para evitar pantalla negra
+        liftVeil();
+
+        // Limpiamos la URL (estética)
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Preparamos el fondo
+        const splash = document.getElementById('install-wall');
+        if (splash) splash.style.display = 'none';
+        const loginView = document.getElementById('login-view');
+        if (loginView) loginView.classList.remove('hidden');
+
+        // Lanzamos el modal (Asegúrate de que la función existe abajo)
+        if (typeof openResetPasswordModal === 'function') {
+            openResetPasswordModal(resetCode);
+        } else {
+            console.error("❌ Error: openResetPasswordModal no encontrada.");
+        }
         return; 
     }
 
-    // 2. MODO RECUPERACIÓN
-    if (resetCode) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-        const splash = document.getElementById('install-wall');
-        if (splash) splash.style.display = 'none';
-        document.getElementById('login-view').classList.remove('hidden');
-        openResetPasswordModal(resetCode);
+    // --- B. SI EL NAVEGADOR PIDE INSTALACIÓN ---
+    if (document.documentElement.classList.contains('show-install-wall')) {
         liftVeil();
-        return;
+        return; 
     }
 
-    // 3. CARGA NORMAL (EL RESTO DE TU CÓDIGO)
+    // --- C. CARGA NORMAL (LOGIN / DASHBOARD) ---
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
 
     if (!token || !user) {
-        document.getElementById('login-view')?.classList.remove('hidden');
+        const loginView = document.getElementById('login-view');
+        if (loginView) loginView.classList.remove('hidden');
         liftVeil();
         return;
     }
 
     try {
+        // Carga secuencial de requisitos para el círculo de grados
         const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
         requisitosGradoGlobal = (reqData?.data || []).map(r => {
             const attr = r.attributes || r;
@@ -1636,14 +1655,22 @@ async function initApp() {
                 HORAS: parseFloat(attr.Horas_Necesarias || attr.horas_necesarias || 0)
             };
         });
+
         await refreshStudentData();
         await checkTodayClass();
+
         showView('dashboard');
-        document.getElementById('main-nav')?.classList.remove('hidden');
-        document.getElementById('main-nav').style.display = 'grid';
+        const nav = document.getElementById('main-nav');
+        if (nav) {
+            nav.classList.remove('hidden');
+            nav.style.display = 'grid';
+        }
+
         liftVeil();
+
     } catch (error) {
-        liftVeil();
+        console.error("🔥 [ERROR] Fallo en despliegue:", error);
+        liftVeil(); // Failsafe: levantamos el velo aunque el servidor falle
     }
 }
 
