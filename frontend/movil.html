@@ -1086,16 +1086,23 @@ body.app-ready #app-content {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* --- CORRECCIÓN: OJO A LA DERECHA --- */
 .toggle-password {
     position: absolute;
-    right: 16px; 
+    right: 16px;      /* Esto lo manda a la derecha del todo */
+    left: auto;       /* IMPORTANTE: Esto quita la orden de ponerse a la izquierda */
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
     color: var(--text-muted);
-    z-index: 10;
+    z-index: 20;      /* Un poco más alto para asegurar que sea clicable */
     font-size: 16px;
-    padding: 10px; /* Ampliamos el área de clic para facilitar el toque */
+    padding: 5px;     /* Área de clic más cómoda */
+}
+
+/* --- AJUSTE INPUT: Padding derecho para que el texto no tape el ojo --- */
+.input-group input {
+    padding-right: 45px !important; /* Espacio para que el texto no pise el icono */
 }
 
     </style>
