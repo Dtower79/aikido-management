@@ -1174,8 +1174,22 @@ body.app-ready #app-content {
                 <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Introduce tu DNI y crea una contraseña.</p>
                 <form id="activate-form">
                     <input type="text" id="act-dni" class="modal-field" placeholder="DNI (12345678X)" required maxlength="9" oninput="this.value = this.value.toUpperCase()">
-                    <input type="password" id="act-pass" class="modal-field" placeholder="Nueva Contraseña" required>
-                    <input type="password" id="act-pass2" class="modal-field" placeholder="Repetir Contraseña" required>
+                    
+                    <div class="input-group">
+                        <input type="password" id="act-pass" class="modal-field" placeholder="Nueva Contraseña" required style="padding-right: 45px;">
+                        <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('act-pass', this)"></i>
+                    </div>
+                    
+                    <div class="input-group">
+                        <input type="password" id="act-pass2" class="modal-field" placeholder="Repetir Contraseña" required style="padding-right: 45px;">
+                        <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('act-pass2', this)"></i>
+                    </div>
+
+                    <!-- Instrucción de seguridad -->
+                    <p style="font-size:10px; color:var(--accent); text-align:left; margin: 5px 0 15px 10px; font-weight: 700;">
+                        * Mínimo 6 caracteres.
+                    </p>
+
                     <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px;">
                         <button type="submit" class="action-btn primary" id="btn-activate-submit">ACTIVAR</button>
                         <button type="button" class="action-btn" style="background:#334155; color:white;" onclick="document.getElementById('activate-modal').classList.add('hidden')">CANCELAR</button>
