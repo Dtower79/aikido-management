@@ -1252,20 +1252,16 @@ body.app-ready #app-content {
             <div id="student-list" style="padding-bottom: 120px;"></div>
         </div>
 
-        <div id="seminarios-view" class="hidden">
-            <header class="header-app"><h1 style="font-size:24px; margin:0;">SEMINARIOS</h1></header>
-            <div style="padding: 25px; text-align: center;">
-                <i class="fa-solid fa-book-open" style="font-size: 50px; color: var(--accent); margin-bottom: 20px;"></i>
-                <p style="color: var(--text-muted);">Próximamente disponible: Historial de seminarios y próximos eventos externos.</p>
-            </div>
-        </div>
+        
         <!-- NAV BAR -->
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
             <a href="#" class="nav-item" onclick="loadMonthlyClasses(this)"><i class="fa-solid fa-calendar-alt"></i><span>Clases</span></a>
             <div class="qr-main-btn" onclick="startQRScanner()"><div class="qr-inner"><i class="fa-solid fa-qrcode"></i></div></div>
             <a href="#" id="nav-sensei" class="nav-item" style="display:none;" onclick="showView('sensei', this); loadSenseiPanel();"><i class="fa-solid fa-user-shield"></i><span>Sensei</span></a>
-            <a href="#" id="nav-seminarios" class="nav-item" style="display:none;" onclick="showView('seminarios', this)"><i class="fa-solid fa-book-open"></i><span>Seminarios</span></a>
+            <a href="https://www.meetontatami.com/" id="nav-seminarios" class="nav-item" style="display:none;" target="_blank">
+                <i class="fa-solid fa-book-open"></i><span>Seminarios</span>
+            </a>
             <a href="#" class="nav-item" onclick="toggleProfileSheet()">
             <i class="fa-solid fa-sliders"></i><span>Panel</span>
             </a>
