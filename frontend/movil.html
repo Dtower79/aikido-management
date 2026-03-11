@@ -1449,8 +1449,17 @@ body.app-ready #app-content {
 
             <div style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 18px; border: 1px solid var(--accent); margin: 20px 0;">
                 <span class="modal-label" style="color: white; margin-left: 0; font-size: 9px;">SEGURIDAD: CREA TU CONTRASEÑA DE ACCESO</span>
-                <input type="password" id="ins-pass" class="modal-field" placeholder="Mínimo 6 caracteres" required style="margin-top: 10px; background: rgba(0,0,0,0.3) !important;">
-                <input type="password" id="ins-pass-confirm" class="modal-field" placeholder="Repite contraseña" required style="background: rgba(0,0,0,0.3) !important; margin-bottom: 0;">
+                
+                    <div class="input-group">
+                        <input type="password" id="ins-pass" class="modal-field" placeholder="Mínimo 6 caracteres" required style="margin-top: 10px; background: rgba(0,0,0,0.3) !important; padding-right: 45px;">
+                        <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('ins-pass', this)"></i>
+                    </div>
+
+                    <!-- Contenedor con ojo -->
+                    <div class="input-group">
+                        <input type="password" id="ins-pass-confirm" class="modal-field" placeholder="Repite contraseña" required style="background: rgba(0,0,0,0.3) !important; margin-bottom: 0; padding-right: 45px;">
+                        <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('ins-pass-confirm', this)"></i>
+                    </div>
             </div>
 
             <button type="submit" id="btn-ins-submit" class="action-btn primary" style="height: 60px; font-size: 16px;">
@@ -3403,12 +3412,16 @@ function openResetPasswordModal(code) {
         <div style="text-align:left; margin-top:10px;">
             <p style="font-size:13px; color:#94a3b8; margin-bottom:20px;">Escribe tu nueva clave de acceso al Dojo.</p>
             <span class="modal-label">NUEVA CLAVE:</span>
-            <input type="password" id="reset-p1" class="modal-field" placeholder="Mínimo 6 caracteres" style="margin-bottom:15px;">
+            <div class="input-group">
+                <input type="password" id="reset-p1" class="modal-field" placeholder="Mínimo 6 caracteres" style="padding-right: 45px;">
+                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('reset-p1', this)"></i>
+            </div>
+
             <span class="modal-label">REPETIR CLAVE:</span>
-            <input type="password" id="reset-p2" class="modal-field" placeholder="Confirma tu clave">
-            <button class="action-btn primary" onclick="processPasswordReset('${code}')" style="margin-top:25px; width:100%; height:60px; font-weight:800;">
-                ACTUALIZAR CONTRASEÑA
-            </button>
+            <div class="input-group">
+                <input type="password" id="reset-p2" class="modal-field" placeholder="Confirma tu clave" style="padding-right: 45px;">
+                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('reset-p2', this)"></i>
+            </div>
         </div>
     `, false);
 }
