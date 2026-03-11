@@ -1086,6 +1086,18 @@ body.app-ready #app-content {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.toggle-password {
+    position: absolute;
+    right: 16px; 
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--text-muted);
+    z-index: 10;
+    font-size: 16px;
+    padding: 10px; /* Ampliamos el área de clic para facilitar el toque */
+}
+
     </style>
 </head>
 <body>
@@ -1178,7 +1190,11 @@ body.app-ready #app-content {
                     <div class="input-group">
                         <i class="fa-solid fa-lock"></i>
                         <input type="password" id="password" placeholder="Contraseña" required>
+                        <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('password', this)"></i>
                     </div>
+                    <p style="font-size:10px; color:var(--text-muted); text-align:left; margin-top:-10px; margin-bottom:15px; margin-left:5px;">
+                        * Mínimo 6 caracteres.
+                    </p>
                     <button type="submit" class="action-btn primary">ENTRAR AL DOJO</button>
                 </form>
                 <!-- PIE DE LOGIN ACTUALIZADO -->
@@ -1252,7 +1268,7 @@ body.app-ready #app-content {
             <div id="student-list" style="padding-bottom: 120px;"></div>
         </div>
 
-        
+
         <!-- NAV BAR -->
         <nav class="nav-bar hidden" id="main-nav">
             <a href="#" class="nav-item active" onclick="showView('dashboard', this)"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
@@ -1287,13 +1303,28 @@ body.app-ready #app-content {
     <div class="modal-content">
         <h3 style="margin-top:0">Cambiar Contraseña</h3>
         <form id="change-pass-form">
-            <input type="password" id="old-pass" class="modal-field" placeholder="Contraseña Actual" required>
-            <input type="password" id="new-pass" class="modal-field" placeholder="Nueva Contraseña" required>
-            <input type="password" id="confirm-pass" class="modal-field" placeholder="Repetir Nueva Contraseña" required>
-            <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px;">
-                <button type="submit" class="action-btn primary" id="btn-pass-submit">ACTUALIZAR</button>
-                <button type="button" class="action-btn" style="background:#334155; color:white;" onclick="closePassModal()">CANCELAR</button>
+            <span class="modal-label">CONTRASEÑA ACTUAL:</span>
+            <div class="input-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" id="old-pass" class="modal-field" placeholder="Actual" required>
+                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('old-pass', this)"></i>
             </div>
+
+            <span class="modal-label">NUEVA CLAVE (MÍN. 6 CARACTERES):</span>
+            <div class="input-group">
+                <i class="fa-solid fa-key"></i>
+                <input type="password" id="new-pass" class="modal-field" placeholder="Nueva" required>
+                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('new-pass', this)"></i>
+            </div>
+
+            <span class="modal-label">REPETIR CLAVE:</span>
+            <div class="input-group">
+                <i class="fa-solid fa-key"></i>
+                <input type="password" id="confirm-pass" class="modal-field" placeholder="Repetir" required>
+                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('confirm-pass', this)"></i>
+            </div>
+            
+            <button type="submit" class="action-btn primary" id="btn-pass-submit">ACTUALIZAR</button>
         </form>
     </div>
 </div>
@@ -3420,6 +3451,16 @@ setTimeout(() => {
     }
 }, 3000);
 
+function togglePassword(inputId, icon) {
+    const input = document.getElementById(inputId);
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.replace("fa-eye", "fa-eye-slash");
+    } else {
+        input.type = "password";
+        icon.classList.replace("fa-eye-slash", "fa-eye");
+    }
+}
 
     </script>
 </body>
