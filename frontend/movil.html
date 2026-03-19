@@ -2095,6 +2095,9 @@ async function checkTodayClass(forcedDojoId = null) {
     let dojoBusqueda = forcedDojoId || (filterEl ? filterEl.value : dojoIdGlobal) || 'all';
     const idFinal = String(dojoBusqueda);
 
+    // Reset de la variable global cada vez que comprobamos el estado
+    globalAsistId = null;
+
     try {
         const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=50`, { 
             headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
@@ -2126,7 +2129,12 @@ async function checkTodayClass(forcedDojoId = null) {
                 });
                 const chkJ = await chk.json();
                 const asistencia = chkJ.data?.[0];
-                estadoAlumno = asistencia ? (asistencia.attributes?.Estado || asistencia.Estado) : null;
+                
+                if (asistencia) {
+                    estadoAlumno = asistencia.attributes?.Estado || asistencia.Estado;
+                    globalAsistId = asistencia.documentId || asistencia.id; // 🥋 GUARDAMOS EL ID DE LA ASISTENCIA AQUÍ
+                }
+                
                 if (estadoAlumno === 'Asistio') continue;
             }
             claseElegida = c;
@@ -2142,21 +2150,31 @@ async function checkTodayClass(forcedDojoId = null) {
             document.getElementById('next-class-time').innerText = f.time;
             document.getElementById('next-class-date').innerHTML = `${f.date} <br><span style="font-size:11px; color:var(--accent); font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span>`;
             
-            // --- 🥋 EL CAMBIO MAESTRO AQUÍ ---
             if (user && user.is_sensei === true) {
-                // Francesc no necesita el botón, lo borramos de la vista
-                if(btn) {
-                    btn.classList.add('hidden');
-                    btn.style.display = 'none';
-                }
+                if(btn) { btn.classList.add('hidden'); btn.style.display = 'none'; }
             } else {
-                // Los alumnos lo ven normal
                 if(btn) {
                     btn.classList.remove('hidden');
                     btn.style.display = 'flex';
-                    btn.innerText = (estadoAlumno === 'Confirmado') ? "YA CONFIRMADO" : "ASISTIR AL KEIKO";
-                    btn.disabled = (estadoAlumno === 'Confirmado');
-                    btn.style.background = (estadoAlumno === 'Confirmado') ? "#1e293b" : "white";
+                    
+                    // LÓGICA DE BOTÓN DINÁMICO
+                    if (estadoAlumno === 'Confirmado') {
+                        btn.innerText = "CANCELAR ASISTENCIA";
+                        btn.style.background = "#ef4444"; // Rojo Arashi
+                        btn.style.color = "white";
+                        btn.disabled = false;
+                        btn.onclick = () => cancelAttendance(globalAsistId);
+                    } else if (estadoAlumno === 'Asistio') {
+                        btn.innerText = "YA VALIDADO";
+                        btn.disabled = true;
+                        btn.style.background = "#1e293b";
+                    } else {
+                        btn.innerText = "ASISTIR AL KEIKO";
+                        btn.style.background = "white";
+                        btn.style.color = "black";
+                        btn.disabled = false;
+                        btn.onclick = confirmAttendance;
+                    }
                 }
             }
         } else {

@@ -55,6 +55,7 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 24) {
 // loadAlumnos() -> fetchSmart('/api/alumnos?populate=*', 'alumnos_list', 1);
 let jwtToken = localStorage.getItem('aikido_jwt');
 let userData = JSON.parse(localStorage.getItem('aikido_user'));
+let globalAsistId = null; // Variable global para guardar el ID de la asistencia
 
 const GRADE_WEIGHTS = {
     '8º DAN': 108, '7º DAN': 107, '6º DAN': 106, '5º DAN': 105, '4º DAN': 104, '3º DAN': 103, '2º DAN': 102, '1º DAN': 101,
@@ -1572,4 +1573,32 @@ async function generateAttendanceReport() {
             showModal("Error", "No se pudo generar el informe. Revisa la consola.");
         }
     };
+}
+
+async function cancelAttendance(asistId, claseId) {
+    const token = localStorage.getItem('aikido_jwt');
+    const btn = document.getElementById('confirm-btn');
+    
+    btn.innerText = "CANCELANDO...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/asistencias/${asistId}`, { 
+            method: 'DELETE', 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        });
+
+        if (res.ok) {
+            console.log("✅ Asistencia cancelada.");
+            localStorage.removeItem('cache_asistencias_sensei');
+            await checkTodayClass(); // Recargamos el botón para que vuelva a decir ASISTIR
+            showModal("CANCELADO", "Tu asistencia ha sido anulada. Esperamos verte en el próximo keiko.");
+        } else {
+            throw new Error("No se pudo contactar con el Dojo.");
+        }
+    } catch (e) {
+        showModal("Error", e.message);
+        btn.innerText = "CANCELAR ASISTENCIA";
+        btn.disabled = false;
+    }
 }
