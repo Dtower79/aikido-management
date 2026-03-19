@@ -3514,6 +3514,34 @@ function togglePassword(inputId, icon) {
     }
 }
 
+async function cancelAttendance(asistId, claseId) {
+    const token = localStorage.getItem('aikido_jwt');
+    const btn = document.getElementById('confirm-btn');
+    
+    btn.innerText = "CANCELANDO...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/asistencias/${asistId}`, { 
+            method: 'DELETE', 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        });
+
+        if (res.ok) {
+            console.log("✅ Asistencia cancelada.");
+            localStorage.removeItem('cache_asistencias_sensei');
+            await checkTodayClass(); // Recargamos el botón para que vuelva a decir ASISTIR
+            showModal("CANCELADO", "Tu asistencia ha sido anulada. Esperamos verte en el próximo keiko.");
+        } else {
+            throw new Error("No se pudo contactar con el Dojo.");
+        }
+    } catch (e) {
+        showModal("Error", e.message);
+        btn.innerText = "CANCELAR ASISTENCIA";
+        btn.disabled = false;
+    }
+}
+
     </script>
 </body>
 </html>
