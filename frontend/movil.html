@@ -1981,57 +1981,66 @@ async function loadSenseiPanel() {
 /* --- VALIDACIÓN SENSEI (VERSIÓN 6.3 - SINCRONIZADA CON NEON) --- */
 async function validateAttendance(asistId, asiste, aluId, dur) {
     const token = localStorage.getItem('aikido_jwt');
-    
-    // REGLA MAESTRA: Sincronización exacta con los valores de Strapi
     const valorEstado = asiste ? 'Asistio' : 'No_asistio';
 
-    console.log(`📡 [SENSEI] Enviando a Neon: "${valorEstado}"`);
+    console.log(`📡 [SENSEI] Validando: ${asistId} -> ${valorEstado}`);
+
+    // 1. Buscamos el elemento visual antes de hacer nada para poder borrarlo luego
+    const itemElement = document.getElementById('it-' + asistId);
 
     try {
+        // Ejecución de la lógica en Neon (Strapi)
         const resAsist = await fetch(`${API_URL}/asistencias/${asistId}`, { 
             method: 'PUT', 
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
-            }, 
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
             body: JSON.stringify({ data: { Estado: valorEstado } }) 
         });
 
-        if (!resAsist.ok) {
-            const errorJson = await resAsist.json();
-            throw new Error(errorJson.error?.message || "Error al actualizar");
-        }
+        if (!resAsist.ok) throw new Error("Error al actualizar estado en Strapi");
 
-        // Si el Sensei marca OK, sumamos las horas al alumno
+        // Si asiste, sumamos horas
         if(asiste) {
-            const alRes = await fetch(`${API_URL}/alumnos/${aluId}`, { 
-                headers: { 'Authorization': `Bearer ${token}` } 
-            });
+            const alRes = await fetch(`${API_URL}/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
             const alJson = await alRes.json();
             const p = alJson.data.attributes || alJson.data;
-            
             const totalNuevo = (parseFloat(p.horas_acumuladas || 0) + parseFloat(dur || 1.5));
 
             await fetch(`${API_URL}/alumnos/${aluId}`, { 
                 method: 'PUT', 
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${token}` 
-                }, 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
                 body: JSON.stringify({ data: { horas_acumuladas: totalNuevo } }) 
             });
         }
 
-        // Limpieza de memoria y refresco de vista
-        localStorage.removeItem('cache_perfil_alumno');
-        localStorage.removeItem('cache_asistencias_sensei');
-        
-        await loadSenseiPanel(); 
+        // 🥋 CIRUGÍA DOM (SIN RECARGAR PÁGINA)
+        if (itemElement) {
+            itemElement.style.transition = "opacity 0.3s ease";
+            itemElement.style.opacity = "0";
+            
+            setTimeout(() => {
+                const parentGroup = itemElement.parentElement;
+                itemElement.remove(); // Eliminamos solo esta fila
+
+                // Actualizamos el contador del grupo visualmente
+                const remaining = parentGroup.querySelectorAll('.student-item').length;
+                const header = parentGroup.parentElement.querySelector('.class-group-header p');
+                
+                if (header) {
+                    header.innerText = remaining + " ALUMNOS PENDIENTES";
+                    if (remaining === 0) {
+                        // Si ya no quedan, borramos la tarjeta de la clase entera
+                        parentGroup.parentElement.remove();
+                    }
+                }
+            }, 300);
+        }
+
+        // Refrescamos datos de fondo de forma silenciosa para mantener el perfil al día
         await refreshStudentData();
 
     } catch (e) {
         console.error("❌ Fallo en validación:", e);
-        showModal("Error 400", `Detalle: ${e.message}. Asegúrate de que los permisos de 'Update' están activos para el rol Authenticated.`);
+        showModal("Error", `Detalle: ${e.message}`);
     }
 }
 
