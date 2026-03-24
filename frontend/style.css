@@ -1056,6 +1056,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* --- DISEÑO DEL PASAPORTE TÉCNICO --- */
+/* --- DISEÑO MEJORADO DEL PASAPORTE TÉCNICO --- */
 .history-tab-btn {
     flex: 1;
     padding: 12px;
@@ -1063,21 +1064,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     border: none;
     color: #64748b;
     font-weight: 800;
-    font-size: 12px;
+    font-size: 13px;
     border-radius: 10px;
     cursor: pointer;
-    transition: 0.3s;
+    transition: all 0.3s ease;
 }
 .history-tab-btn.active {
     background: var(--accent);
     color: white;
-    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
 }
+
+/* El bloque de cada clase ahora tiene más aire */
 .history-item-card {
     background: rgba(255,255,255,0.03);
     border: 1px solid var(--glass-border);
-    border-radius: 15px;
-    padding: 18px;
-    margin-bottom: 12px;
-    text-align: left;
+    border-radius: 20px;
+    padding: 20px; /* Más aire interno */
+    margin-bottom: 18px; /* Separación clara entre bloques */
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Separación entre líneas dentro del bloque */
 }
