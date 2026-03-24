@@ -1308,6 +1308,9 @@ body.app-ready #app-content {
     <div class="sheet-header"></div>
     <h3 style="margin: 0 0 20px; font-size: 18px; text-align: center;">AJUSTES DE PERFIL</h3>
     
+    <button class="sheet-btn" onclick="openHistoryModal()">
+        <i class="fa-solid fa-clock-rotate-left"></i> MI HISTORIAL TÉCNICO
+    </button>
     <button class="sheet-btn" onclick="openChangePassModal()">
         <i class="fa-solid fa-key"></i> CAMBIAR CONTRASEÑA
     </button>
@@ -1319,9 +1322,7 @@ body.app-ready #app-content {
     <button class="sheet-btn logout" onclick="logout()">
         <i class="fa-solid fa-power-off"></i> CERRAR SESIÓN
     </button>
-    <button class="sheet-btn" onclick="openHistoryModal()">
-        <i class="fa-solid fa-clock-rotate-left"></i> MI HISTORIAL TÉCNICO
-        </button>
+    
 </div>
         <div id="password-modal" class="modal-overlay hidden">
     <div class="modal-content">
@@ -3641,22 +3642,32 @@ async function openHistoryModal() {
     }
     semC.innerHTML = sHtml;
 
-    // --- 2. CARGAR CLASES (Solo las asistidas) ---
+   // --- 2. CARGAR CLASES (Solo las asistidas) ---
     try {
-        const asisRes = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[$or][0][Estado][$eq]=Asistio&filters[$or][1][Estado][$eqi]=asistió&populate=clase.dojo&sort=createdAt:desc&pagination[limit]=100`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // 🥋 SINTAXIS V5 BLINDADA: Población profunda estructurada
+        const urlClases = `${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${aluId}&populate[clase][populate]=dojo&sort=createdAt:desc&pagination[limit]=100`;
+        const asisRes = await fetch(urlClases, { headers: { 'Authorization': `Bearer ${token}` } });
+        
+        if (!asisRes.ok) throw new Error("Error en la petición a Strapi");
         const asisJson = await asisRes.json();
         
+        // 🥋 FILTRADO EN CLIENTE: Infalible contra acentos o mayúsculas
+        const clasesAsistidas = (asisJson.data ||[]).filter(item => {
+            const attr = item.attributes || item;
+            const est = (attr.Estado || attr.estado || "").toLowerCase();
+            return est.includes('asistio') || est.includes('asistió');
+        });
+        
         let cHtml = '';
-        if (asisJson.data && asisJson.data.length > 0) {
-            asisJson.data.forEach(item => {
+        if (clasesAsistidas.length > 0) {
+            clasesAsistidas.forEach(item => {
                 const a = item.attributes || item;
                 const cla = parseRelation(a.clase);
-                if (!cla) return;
+                
+                if (!cla) return; // Escudo anti-fantasmas
                 
                 const dojo = parseRelation(cla.dojo);
-                const dojoName = dojo ? (dojo.nombre || "ARASHI").replace(/Aikido\s+Arashi\s+/gi, '') : "ARASHI";
+                const dojoName = dojo ? (dojo.nombre || "ARASHI").replace(/Aikido\s+Arashi\s+/gi, '') : "SEDE PRINCIPAL";
                 
                 const f = formatTimeSafe(cla.Fecha_Hora);
                 const dur = parseFloat(cla.Duracion || 1.5).toFixed(1);
@@ -3664,19 +3675,24 @@ async function openHistoryModal() {
                 cHtml += `
                 <div class="history-item-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h4 style="margin:0; color:white; font-size:14px;"><i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:5px;"></i> ${f.date}</h4>
+                        <h4 style="margin:0; color:white; font-size:14px;">
+                            <i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:5px;"></i> ${f.date}
+                        </h4>
                         <span style="font-size:12px; font-weight:800; color:var(--success);">+${dur}h</span>
                     </div>
-                    <p style="margin:8px 0 0; font-size:12px; color:var(--text-muted);"><i class="fa-regular fa-clock"></i> ${f.time} - ${dojoName.toUpperCase()}</p>
+                    <p style="margin:8px 0 0; font-size:12px; color:var(--text-muted);">
+                        <i class="fa-regular fa-clock"></i> ${f.time} - ${dojoName.toUpperCase()}
+                    </p>
                 </div>`;
             });
         } else {
             cHtml = '<p style="text-align:center; color:var(--text-muted); margin-top:40px;"><i class="fa-solid fa-clock-rotate-left" style="font-size:40px; opacity:0.3; margin-bottom:15px; display:block;"></i>No hay historial en el tatami.</p>';
         }
-        clasesC.innerHTML = cHtml;
+        clasesC.innerHTML = cHtml || '<p style="text-align:center; color:var(--text-muted); margin-top:40px;">No hay historial válido.</p>';
 
     } catch(e) {
-        clasesC.innerHTML = '<p style="color:red; text-align:center;">Fallo de conexión con el Dojo.</p>';
+        console.error("Error cargando clases:", e);
+        clasesC.innerHTML = '<p style="color:var(--accent); text-align:center; font-weight:bold; margin-top:20px;">Fallo de conexión con el Dojo.</p>';
     }
 }
 
