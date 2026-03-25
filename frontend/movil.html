@@ -3600,16 +3600,17 @@ function closeHistoryModal() {
 }
 
 function switchHistoryTab(tab) {
-    // 1. Quitar 'active' de todos los botones con esa clase
+    console.log("🖱️ Cambiando a pestaña:", tab); // <-- AÑADE ESTO
+    
+    // 1. Quitar 'active' de todos los botones
     const botones = document.querySelectorAll('.history-tab-btn');
-    botones.forEach(btn => {
-        btn.classList.remove('active');
-    });
+    botones.forEach(btn => btn.classList.remove('active'));
     
     // 2. Añadir 'active' SOLO al que hemos pulsado
     const botonSeleccionado = document.getElementById(`tab-btn-${tab}`);
     if (botonSeleccionado) {
         botonSeleccionado.classList.add('active');
+        console.log("✅ Clase 'active' aplicada a:", botonSeleccionado.id); // <-- AÑADE ESTO
     }
 
     // 3. Mostrar/Ocultar contenido
