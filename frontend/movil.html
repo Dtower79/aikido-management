@@ -1903,7 +1903,7 @@ async function loadSenseiPanel() {
     const filterEl = document.getElementById('sensei-dojo-filter');
     const dojoFilter = filterEl ? filterEl.value : (dojoIdGlobal || 'all');
     
-    // Mostramos estado de carga
+    // Mostramos estado de carga inicial
     listDiv.innerHTML = `
         <div style="margin: 0 20px 20px;">
             <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')">
@@ -1913,21 +1913,20 @@ async function loadSenseiPanel() {
         <p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Tatami con Neon...</p>
     `;
     
-    // Margen de 7 días
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - 7);
 
     try {
-        // 🥋 FIX V5: Sintaxis de población por índices numéricos (A prueba de errores 400)
-        // Pedimos alumno, clase, y la relación dojo que está dentro de clase
+        // 🥋 FIX V5: Sintaxis correcta de población para evitar Error 400
         const endpoint = '/asistencias?populate[0]=alumno&populate[1]=clase&populate[2]=clase.dojo&pagination[limit]=200&sort=clase.Fecha_Hora:asc';
         
-        // El 0 al final de fetchSmart es para no usar caché y forzar consulta real
-        const json = await fetchSmart(endpoint, 'asistencias_sensei', 0); 
+        // Usamos 0 para no forzar caché vieja y obtener datos frescos
+        const json = await fetchSmart(endpoint, 'asistencias_sensei_full', 0); 
         
-        if (!json || !json.data) throw new Error("No hay datos");
+        if (!json || !json.data) throw new Error("No hay datos disponibles");
 
         const groups = {};
+        
         json.data.forEach(item => {
             const a = item.attributes || item; 
             const cla = parseRelation(a.clase);
@@ -1935,15 +1934,15 @@ async function loadSenseiPanel() {
             
             if (!cla || !alu) return;
 
-            // Filtro de estado: solo 'confirmado' (pendiente de validar)
+            // Filtro de estado: solo confirmados (pendientes de validar)
             const estado = (a.Estado || a.estado || "").toLowerCase().trim();
             if (estado !== 'confirmado') return;
 
-            // Filtro de fecha
+            // Filtro de fecha: que no sea de hace más de 7 días
             const classDate = new Date(cla.Fecha_Hora);
             if (classDate < limitDate) return;
 
-            // Filtro de dojo
+            // Filtro de Dojo
             const dojo = parseRelation(cla.dojo);
             if (dojoFilter !== 'all' && String(getID(dojo)) !== String(dojoFilter)) return;
 
@@ -1960,6 +1959,8 @@ async function loadSenseiPanel() {
         });
 
         const keys = Object.keys(groups);
+        
+        // Mantenemos el botón de seminarios arriba y borramos el "Sincronizando..."
         const topHtml = listDiv.firstElementChild.outerHTML;
         listDiv.innerHTML = topHtml;
 
@@ -1968,10 +1969,12 @@ async function loadSenseiPanel() {
             return;
         }
 
+        // Renderizado de tarjetas de clase
         keys.forEach(cid => {
             const g = groups[cid];
             const f = formatTimeSafe(g.info.Fecha_Hora);
             let sRows = "";
+            
             g.students.forEach(s => {
                 sRows += `
                 <div class="student-item" id="it-${s.asistId}">
@@ -2006,8 +2009,8 @@ async function loadSenseiPanel() {
             </div>`;
         });
     } catch (e) {
-        console.error("Error crítico:", e);
-        listDiv.innerHTML = `<p style='text-align:center; padding:20px; color:var(--accent);'>Error de conexión con Strapi. Revisa la consola.</p>`;
+        console.error("Error en panel:", e);
+        listDiv.innerHTML = `<p style='text-align:center; padding:20px;'>Error de conexión: ${e.message}</p>`;
     }
 }
 
