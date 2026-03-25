@@ -3598,10 +3598,13 @@ function closeHistoryModal() {
 }
 
 function switchHistoryTab(tab) {
-    document.getElementById('tab-btn-clases').classList.remove('active');
-    document.getElementById('tab-btn-seminarios').classList.remove('active');
+    // 1. Limpiar todos los botones
+    document.querySelectorAll('.history-tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    // 2. Activar el botón clicado
     document.getElementById(`tab-btn-${tab}`).classList.add('active');
 
+    // 3. Mostrar/Ocultar contenido
     if(tab === 'clases') {
         document.getElementById('history-clases').classList.remove('hidden');
         document.getElementById('history-seminarios').classList.add('hidden');
@@ -3682,21 +3685,23 @@ async function openHistoryModal() {
                 const dojo = parseRelation(cla.dojo);
                 const dNom = dojo ? (dojo.nombre || "ARASHI").replace(/Aikido\s+Arashi\s+/gi, '') : "SEDE";
 
-                cHtml += `
-                <div class="history-item-card" style="margin-bottom: 25px !important; padding: 20px !important; border-radius: 20px !important; background: rgba(255,255,255,0.05) !important;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                        <h4 style="margin:0; color:white; font-size:14px; display:flex; align-items:center;">
-                            <i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:10px;"></i> 
-                            ${f.date}
-                        </h4>
-                        <span style="font-size:14px; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:6px 14px; border-radius:12px;">+${dur}h</span>
-                    </div>
-                    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
-                        <p style="margin:0; font-size:12px; color:var(--text-muted);">
-                            <i class="fa-regular fa-clock" style="margin-right:8px;"></i> ${f.time} • ${dNom.toUpperCase()}
-                        </p>
-                    </div>
-                </div>`;
+                // ... dentro de tu bucle forEach de clases:
+cHtml += `
+<div class="history-item-card">
+    <div class="card-content">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h4 style="margin:0; color:white; font-size:15px; display:flex; align-items:center;">
+                <i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:10px;"></i> ${f.date}
+            </h4>
+            <span style="font-size:14px; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:6px 12px; border-radius:10px;">+${dur}h</span>
+        </div>
+        <div style="padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <p style="margin:0; font-size:12px; color:var(--text-muted); font-weight: 600;">
+                <i class="fa-regular fa-clock" style="margin-right:8px;"></i> ${f.time} • ${dNom.toUpperCase()}
+            </p>
+        </div>
+    </div>
+</div>`;
             });
         } else {
             cHtml = '<p style="text-align:center; color:var(--text-muted);">No hay historial.</p>';
