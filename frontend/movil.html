@@ -3600,20 +3600,28 @@ function closeHistoryModal() {
 }
 
 function switchHistoryTab(tab) {
-    // 1. Quitar la clase 'active' de todos los botones de las pestañas
+    // 1. Quitar 'active' de todos los botones con esa clase
     const botones = document.querySelectorAll('.history-tab-btn');
-    botones.forEach(btn => btn.classList.remove('active'));
+    botones.forEach(btn => {
+        btn.classList.remove('active');
+    });
     
-    // 2. Poner la clase 'active' SOLO al botón pulsado
-    document.getElementById(`tab-btn-${tab}`).classList.add('active');
+    // 2. Añadir 'active' SOLO al que hemos pulsado
+    const botonSeleccionado = document.getElementById(`tab-btn-${tab}`);
+    if (botonSeleccionado) {
+        botonSeleccionado.classList.add('active');
+    }
 
     // 3. Mostrar/Ocultar contenido
+    const divClases = document.getElementById('history-clases');
+    const divSeminarios = document.getElementById('history-seminarios');
+
     if(tab === 'clases') {
-        document.getElementById('history-clases').classList.remove('hidden');
-        document.getElementById('history-seminarios').classList.add('hidden');
+        divClases.classList.remove('hidden');
+        divSeminarios.classList.add('hidden');
     } else {
-        document.getElementById('history-clases').classList.add('hidden');
-        document.getElementById('history-seminarios').classList.remove('hidden');
+        divClases.classList.add('hidden');
+        divSeminarios.classList.remove('hidden');
     }
 }
 
