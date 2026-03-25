@@ -1903,7 +1903,7 @@ async function loadSenseiPanel() {
     const filterEl = document.getElementById('sensei-dojo-filter');
     const dojoFilter = filterEl ? filterEl.value : (dojoIdGlobal || 'all');
     
-    // Mostramos estado de carga inicial
+    // Renderizamos la cabecera
     listDiv.innerHTML = `
         <div style="margin: 0 20px 20px;">
             <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')">
@@ -1913,14 +1913,15 @@ async function loadSenseiPanel() {
         <p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Tatami con Neon...</p>
     `;
     
+    // Límite de 7 días hacia atrás
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - 7);
 
     try {
-        // 🥋 FIX V5: Sintaxis correcta de población para evitar Error 400
-        const endpoint = '/asistencias?populate[0]=alumno&populate[1]=clase&populate[2]=clase.dojo&pagination[limit]=200&sort=clase.Fecha_Hora:asc';
+        // 🥋 POBLACIÓN SEGURA: Pedimos el alumno, su dojo, la clase y el dojo de la clase.
+        // Usamos la sintaxis de array que te ha devuelto código 200 OK
+        const endpoint = '/asistencias?populate[0]=alumno&populate[1]=clase&populate[2]=clase.dojo&populate[3]=alumno.dojo&pagination[limit]=200';
         
-        // Usamos 0 para no forzar caché vieja y obtener datos frescos
         const json = await fetchSmart(endpoint, 'asistencias_sensei_full', 0); 
         
         if (!json || !json.data) throw new Error("No hay datos disponibles");
@@ -1934,20 +1935,26 @@ async function loadSenseiPanel() {
             
             if (!cla || !alu) return;
 
-            // Filtro de estado: solo confirmados (pendientes de validar)
+            // 1. Filtro de Estado (Solo confirmados)
             const estado = (a.Estado || a.estado || "").toLowerCase().trim();
             if (estado !== 'confirmado') return;
 
-            // Filtro de fecha: que no sea de hace más de 7 días
+            // 2. Filtro de Fecha (Ignoramos si es más antiguo de 7 días)
             const classDate = new Date(cla.Fecha_Hora);
             if (classDate < limitDate) return;
 
-            // Filtro de Dojo
-            const dojo = parseRelation(cla.dojo);
-            if (dojoFilter !== 'all' && String(getID(dojo)) !== String(dojoFilter)) return;
+            // 3. 🥋 ESCUDO DEL DOJO: Buscamos el dojo en la clase o en el alumno
+            const dojo = parseRelation(cla.dojo) || parseRelation(alu.dojo);
+            const dojoIdStr = dojo ? String(getID(dojo)) : null;
+            
+            // SOLO ocultamos al alumno si sabemos SEGURO que es de otro Dojo.
+            // Si dojoIdStr llega nulo por culpa de la API, lo dejamos pasar para no perderlo.
+            if (dojoFilter !== 'all' && dojoIdStr && dojoIdStr !== String(dojoFilter)) {
+                return; 
+            }
 
             const cid = getID(cla);
-            if (!groups[cid]) groups[cid] = { info: cla, students: [] };
+            if (!groups[cid]) groups[cid] = { info: cla, students:[] };
             groups[cid].students.push({ 
                 asistId: getID(item), 
                 alumnoId: getID(alu), 
@@ -1969,7 +1976,9 @@ async function loadSenseiPanel() {
             return;
         }
 
-        // Renderizado de tarjetas de clase
+        // Ordenamos las clases cronológicamente (las más antiguas primero)
+        keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
+
         keys.forEach(cid => {
             const g = groups[cid];
             const f = formatTimeSafe(g.info.Fecha_Hora);
@@ -2010,7 +2019,7 @@ async function loadSenseiPanel() {
         });
     } catch (e) {
         console.error("Error en panel:", e);
-        listDiv.innerHTML = `<p style='text-align:center; padding:20px;'>Error de conexión: ${e.message}</p>`;
+        listDiv.innerHTML = `<p style='text-align:center; padding:20px; color:var(--accent);'>Error de conexión: ${e.message}</p>`;
     }
 }
 
