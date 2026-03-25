@@ -1903,21 +1903,26 @@ async function loadSenseiPanel() {
     const filterEl = document.getElementById('sensei-dojo-filter');
     const dojoFilter = filterEl ? filterEl.value : (dojoIdGlobal || 'all');
     
+    // Mostramos estado de carga
     listDiv.innerHTML = `
         <div style="margin: 0 20px 20px;">
             <button class="action-btn" style="background:#000; color:#fff; border:1px solid var(--accent); width:100%;" onclick="window.open('https://www.meetontatami.com/', '_blank')">
                 <i class="fa-solid fa-earth-europe"></i> VER SEMINARIOS EXTERNOS
             </button>
         </div>
-        <p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Tatami...</p>
+        <p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Tatami con Neon...</p>
     `;
     
+    // Margen de 7 días
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - 7);
 
     try {
-        // 🥋 FIX V5: Populate estructurado para asegurar que la relación clase->dojo viene en el JSON
-        const endpoint = `/asistencias?populate[alumno]=*&populate[clase][populate][dojo]=*&pagination[limit]=200`;
+        // 🥋 FIX V5: Sintaxis de población por índices numéricos (A prueba de errores 400)
+        // Pedimos alumno, clase, y la relación dojo que está dentro de clase
+        const endpoint = '/asistencias?populate[0]=alumno&populate[1]=clase&populate[2]=clase.dojo&pagination[limit]=200&sort=clase.Fecha_Hora:asc';
+        
+        // El 0 al final de fetchSmart es para no usar caché y forzar consulta real
         const json = await fetchSmart(endpoint, 'asistencias_sensei', 0); 
         
         if (!json || !json.data) throw new Error("No hay datos");
@@ -1928,20 +1933,18 @@ async function loadSenseiPanel() {
             const cla = parseRelation(a.clase);
             const alu = parseRelation(a.alumno);
             
-            // Si el alumno o la clase no existen, saltamos
-            if (!alu || !cla) return;
+            if (!cla || !alu) return;
 
-            // Filtramos solo los que están 'Confirmado' (Pendientes de validar)
+            // Filtro de estado: solo 'confirmado' (pendiente de validar)
             const estado = (a.Estado || a.estado || "").toLowerCase().trim();
             if (estado !== 'confirmado') return;
 
-            const dojo = parseRelation(cla.dojo);
+            // Filtro de fecha
             const classDate = new Date(cla.Fecha_Hora);
-            
-            // 🥋 FILTRO DE SEGURIDAD (7 días + Filtro Dojo)
             if (classDate < limitDate) return;
-            
-            // Forzamos comparación como strings para evitar errores de tipo
+
+            // Filtro de dojo
+            const dojo = parseRelation(cla.dojo);
             if (dojoFilter !== 'all' && String(getID(dojo)) !== String(dojoFilter)) return;
 
             const cid = getID(cla);
@@ -1951,7 +1954,8 @@ async function loadSenseiPanel() {
                 alumnoId: getID(alu), 
                 nombre: alu.nombre, 
                 apellidos: alu.apellidos, 
-                grado: alu.grado 
+                grado: alu.grado,
+                duracion: cla.Duracion
             });
         });
 
@@ -1960,11 +1964,9 @@ async function loadSenseiPanel() {
         listDiv.innerHTML = topHtml;
 
         if (keys.length === 0) {
-            listDiv.innerHTML += "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes de validar en esta sede.</p>";
+            listDiv.innerHTML += "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes en esta sede.</p>";
             return;
         }
-
-        keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
 
         keys.forEach(cid => {
             const g = groups[cid];
@@ -2004,8 +2006,8 @@ async function loadSenseiPanel() {
             </div>`;
         });
     } catch (e) {
-        console.error(e);
-        listDiv.innerHTML = `<p style='text-align:center; padding:20px; color:var(--accent);'>Error: ${e.message}</p>`;
+        console.error("Error crítico:", e);
+        listDiv.innerHTML = `<p style='text-align:center; padding:20px; color:var(--accent);'>Error de conexión con Strapi. Revisa la consola.</p>`;
     }
 }
 
