@@ -1308,6 +1308,9 @@ body.app-ready #app-content {
     <div class="sheet-header"></div>
     <h3 style="margin: 0 0 20px; font-size: 18px; text-align: center;">AJUSTES DE PERFIL</h3>
     
+    <button class="sheet-btn" onclick="openHistoryModal()">
+        <i class="fa-solid fa-clock-rotate-left"></i> MI HISTORIAL TÉCNICO
+    </button>
     <button class="sheet-btn" onclick="openChangePassModal()">
         <i class="fa-solid fa-key"></i> CAMBIAR CONTRASEÑA
     </button>
@@ -1319,6 +1322,7 @@ body.app-ready #app-content {
     <button class="sheet-btn logout" onclick="logout()">
         <i class="fa-solid fa-power-off"></i> CERRAR SESIÓN
     </button>
+    
 </div>
         <div id="password-modal" class="modal-overlay hidden">
     <div class="modal-content">
@@ -1394,6 +1398,27 @@ body.app-ready #app-content {
             </button>
         </div>
     </div>
+<!-- MODAL: PASAPORTE TÉCNICO -->
+<div id="history-modal" class="modal-overlay hidden" style="z-index: 15000;">
+    <div class="modal-content" style="max-width: 500px; padding: 25px 20px; height: 85vh; display: flex; flex-direction: column;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px; color: white;">PASAPORTE TÉCNICO</h2>
+            <button onclick="closeHistoryModal()" style="background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <!-- PESTAÑAS -->
+        <div style="display: flex; background: rgba(0,0,0,0.4); border-radius: 12px; padding: 4px; margin-bottom: 20px; flex-shrink: 0; border: 1px solid var(--glass-border);">
+            <button id="tab-btn-clases" class="history-tab-btn active" onclick="switchHistoryTab('clases')">CLASES</button>
+            <button id="tab-btn-seminarios" class="history-tab-btn" onclick="switchHistoryTab('seminarios')">SEMINARIOS</button>
+        </div>
+
+        <!-- CONTENIDO -->
+        <div id="history-clases" class="history-content no-scrollbar" style="flex: 1; overflow-y: auto; text-align: left;"></div>
+        <div id="history-seminarios" class="history-content hidden no-scrollbar" style="flex: 1; overflow-y: auto; text-align: left;"></div>
+        
+    </div>
+</div>
 
     <!-- FORMULARIO DE INSCRIPCIÓN: NUEVO AIKIDOKA -->
 
@@ -1798,16 +1823,18 @@ async function refreshStudentData() {
     const esInstructorFicha = (p && (p.es_instructor === true || p.es_instructor === "true"));
     const tienePermisosGestion = esSenseiDirecto || esInstructorFicha;
 
-    // 4. VÍNCULO DE INICIALES (Management)
+    // 4. VÍNCULO DE INICIALES (Management o Historial)
     if (initialsCircle) {
         initialsCircle.innerText = initials;
+        initialsCircle.style.cursor = 'pointer';
+        
         if (tienePermisosGestion) {
-            initialsCircle.style.cursor = 'pointer';
             initialsCircle.title = "Acceder a Gestión Arashi";
             initialsCircle.onclick = () => { window.location.href = 'https://arashi-group.netlify.app/'; };
         } else {
-            initialsCircle.style.cursor = 'default';
-            initialsCircle.onclick = null;
+            // 🥋 ALUMNOS: Abren su pasaporte técnico
+            initialsCircle.title = "Ver Historial Técnico";
+            initialsCircle.onclick = () => { openHistoryModal(); };
         }
     }
 
@@ -1874,8 +1901,6 @@ async function refreshStudentData() {
 async function loadSenseiPanel() {
     const listDiv = document.getElementById('student-list');
     const filterEl = document.getElementById('sensei-dojo-filter');
-    
-    // Capturamos el valor del filtro de dojo
     const dojoFilter = filterEl ? filterEl.value : (dojoIdGlobal || 'all');
     
     listDiv.innerHTML = `
@@ -1891,29 +1916,31 @@ async function loadSenseiPanel() {
     limitDate.setDate(limitDate.getDate() - 7);
 
     try {
-        // 🥋 LA BALA DE PLATA: Aumentamos el límite a 500 y ordenamos por los recién creados (createdAt:desc)
-        const endpoint = `/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=500&sort=createdAt:desc`;
-        
-        // El '0' al final fuerza a ignorar la caché guardada y pedir datos frescos
-        const json = await fetchSmart(endpoint, 'asistencias_sensei', 0); 
+        // 🥋 URL V5 CORREGIDA: Usamos populate[0/1/2] para traer relaciones profundas sin error 400
+        const endpoint = '/asistencias?populate[0]=alumno&populate[1]=clase&populate[2]=clase.dojo&pagination[limit]=500&sort=createdAt:desc';
+        const json = await fetchSmart(endpoint, 'asistencias_sensei_v5', 0); 
         
         if (!json || !json.data) throw new Error("No hay datos");
 
         const groups = {};
         json.data.forEach(item => {
             const a = item.attributes || item; 
-            if ((a.Estado || a.estado || "").toLowerCase() !== 'confirmado') return;
-
-            const alu = parseRelation(a.alumno);
             const cla = parseRelation(a.clase);
-            if (!alu || !cla) return;
-
-            const dojo = parseRelation(cla.dojo);
-            const classDate = new Date(cla.Fecha_Hora);
+            const alu = parseRelation(a.alumno);
             
-            // FILTRO DE SEGURIDAD (7 días y Dojo)
+            if (!cla || !alu) return;
+
+            // Filtro estado: Pendiente de validar
+            const estado = (a.Estado || a.estado || "").toLowerCase().trim();
+            if (estado !== 'confirmado') return;
+
+            // Filtro fecha
+            const classDate = new Date(cla.Fecha_Hora);
             if (classDate < limitDate) return;
-            if (dojoFilter !== 'all' && getID(dojo) != dojoFilter) return;
+
+            // Filtro Dojo
+            const dojo = parseRelation(cla.dojo);
+            if (dojoFilter !== 'all' && String(getID(dojo)) !== String(dojoFilter)) return;
 
             const cid = getID(cla);
             if (!groups[cid]) groups[cid] = { info: cla, students: [] };
@@ -1922,12 +1949,12 @@ async function loadSenseiPanel() {
                 alumnoId: getID(alu), 
                 nombre: alu.nombre, 
                 apellidos: alu.apellidos, 
-                grado: alu.grado 
+                grado: alu.grado,
+                duracion: cla.Duracion
             });
         });
 
         const keys = Object.keys(groups);
-        // Mantenemos el botón de seminarios arriba
         const topHtml = listDiv.firstElementChild.outerHTML;
         listDiv.innerHTML = topHtml;
 
@@ -1936,7 +1963,7 @@ async function loadSenseiPanel() {
             return;
         }
 
-        // Ordenamos los Keikos cronológicamente para que salgan en orden
+        // Ordenamos los Keikos por hora
         keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
 
         keys.forEach(cid => {
@@ -1944,7 +1971,7 @@ async function loadSenseiPanel() {
             const f = formatTimeSafe(g.info.Fecha_Hora);
             let sRows = "";
             
-            // Ordenamos a los alumnos alfabéticamente dentro de cada clase
+            // Ordenamos alumnos por apellido
             g.students.sort((a, b) => (a.apellidos || "").localeCompare(b.apellidos || "", 'es'));
 
             g.students.forEach(s => {
@@ -1981,7 +2008,8 @@ async function loadSenseiPanel() {
             </div>`;
         });
     } catch (e) {
-        listDiv.innerHTML = `<p style='text-align:center; padding:20px; color:var(--accent);'>Error al cargar el Tatami.</p>`;
+        console.error("Error en panel:", e);
+        listDiv.innerHTML = `<p style='text-align:center; padding:20px; color:var(--accent);'>Error de conexión.</p>`;
     }
 }
 
@@ -3557,6 +3585,108 @@ async function cancelAttendance(asistId, claseId) {
         btn.disabled = false;
     }
 }
+
+/* --- FUNCIONES DEL PASAPORTE TÉCNICO --- */
+function closeHistoryModal() {
+    document.getElementById('history-modal').classList.add('hidden');
+}
+
+function switchHistoryTab(tab) {
+    document.getElementById('tab-btn-clases').classList.remove('active');
+    document.getElementById('tab-btn-seminarios').classList.remove('active');
+    document.getElementById(`tab-btn-${tab}`).classList.add('active');
+
+    if(tab === 'clases') {
+        document.getElementById('history-clases').classList.remove('hidden');
+        document.getElementById('history-seminarios').classList.add('hidden');
+    } else {
+        document.getElementById('history-clases').classList.add('hidden');
+        document.getElementById('history-seminarios').classList.remove('hidden');
+    }
+}
+
+async function openHistoryModal() {
+    const sheet = document.getElementById('profile-sheet');
+    const overlay = document.getElementById('sheet-overlay');
+    if (sheet) sheet.classList.remove('open');
+    if (overlay) overlay.style.display = 'none';
+
+    document.getElementById('history-modal').classList.remove('hidden');
+    switchHistoryTab('clases');
+    
+    const clasesC = document.getElementById('history-clases');
+    const semC = document.getElementById('history-seminarios');
+    
+    clasesC.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Sincronizando Tatami...</p>';
+    semC.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Buscando seminarios...</p>';
+
+    if (!alumnoGlobal) {
+        clasesC.innerHTML = '<p style="text-align:center; color:red;">Ficha no encontrada</p>';
+        return;
+    }
+
+    const token = localStorage.getItem('aikido_jwt');
+    const aluId = getID(alumnoGlobal);
+    const p = alumnoGlobal.attributes || alumnoGlobal;
+
+    // 1. CARGAR SEMINARIOS
+    let sHtml = '';
+    if (p.seminarios && p.seminarios.length > 0) {
+        [...p.seminarios].reverse().forEach(s => {
+            sHtml += `
+            <div class="history-item-card">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <h4 style="margin:0; font-size:15px; color:white;">${s.sensei || 'Seminario'}</h4>
+                    <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white;">${s.any || ''}</span>
+                </div>
+            </div>`;
+        });
+    } else {
+        sHtml = '<p style="text-align:center; color:var(--text-muted);">Sin seminarios.</p>';
+    }
+    semC.innerHTML = sHtml;
+
+    // 2. CARGAR CLASES
+    try {
+        const urlClases = `${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&populate[clase][populate]=dojo&sort=createdAt:desc&pagination[limit]=100`;
+        const asisRes = await fetch(urlClases, { headers: { 'Authorization': `Bearer ${token}` } });
+        const asisJson = await asisRes.json();
+        
+        const clasesAsistidas = (asisJson.data || []).filter(item => {
+            const attr = item.attributes || item;
+            const est = (attr.Estado || attr.estado || "").toLowerCase();
+            return est.includes('asistio') || est.includes('asistió');
+        });
+        
+        let cHtml = '';
+        if (clasesAsistidas.length > 0) {
+            clasesAsistidas.forEach(item => {
+                const a = item.attributes || item;
+                const cla = parseRelation(a.clase);
+                if (!cla) return;
+                const f = formatTimeSafe(cla.Fecha_Hora);
+                const dur = parseFloat(cla.Duracion || 1.5).toFixed(1);
+                const dojo = parseRelation(cla.dojo);
+                const dNom = dojo ? (dojo.nombre || "ARASHI").replace(/Aikido\s+Arashi\s+/gi, '') : "SEDE";
+
+                cHtml += `
+                <div class="history-item-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h4 style="margin:0; color:white; font-size:14px;">
+                            <i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:8px;"></i> ${f.date} • ${f.time} • ${dNom.toUpperCase()}
+                        </h4>
+                        <span style="font-size:14px; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:4px 10px; border-radius:10px;">+${dur}h</span>
+                    </div>
+                </div>`;
+            });
+        } else {
+            cHtml = '<p style="text-align:center; color:var(--text-muted);">No hay historial.</p>';
+        }
+        clasesC.innerHTML = cHtml;
+    } catch(e) {
+        clasesC.innerHTML = '<p style="color:red; text-align:center;">Error de conexión.</p>';
+    }
+} // <--- ESTA LLAVE CIERRA LA FUNCIÓN
 
     </script>
 </body>
