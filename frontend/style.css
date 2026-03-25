@@ -1086,3 +1086,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     justify-content: space-between; /* Fecha y horas en extremos */
     align-items: center;
 }
+
+/* --- CABECERA DEL PASAPORTE (CON EL FONDO DEL KANJI) --- */
+.history-header-bg {
+    background: linear-gradient(rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.95)), url('img/kanjis.jpg');
+    background-size: cover;
+    background-position: center;
+    padding: 25px;
+    border-radius: 20px;
+    text-align: center;
+    border: 1px solid var(--accent);
+    margin-bottom: 20px;
+}
+
+/* --- BOTONES ESTILO PILL PROFESIONALES --- */
+.history-tab-container {
+    display: flex;
+    justify-content: center; /* Centrados */
+    background: rgba(0,0,0,0.3);
+    border-radius: 50px;
+    padding: 5px;
+    margin: 0 auto 20px auto;
+    width: fit-content;
+    border: 1px solid var(--border);
+}
+
+.history-tab-btn {
+    padding: 10px 25px;
+    border-radius: 50px;
+    font-size: 12px;
+    letter-spacing: 1px;
+}

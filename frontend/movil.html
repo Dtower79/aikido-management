@@ -1400,15 +1400,19 @@ body.app-ready #app-content {
     </div>
 <!-- MODAL: PASAPORTE TÉCNICO -->
 <div id="history-modal" class="modal-overlay hidden" style="z-index: 15000;">
-    <div class="modal-content" style="max-width: 500px; padding: 25px 20px; height: 85vh; display: flex; flex-direction: column;">
+    <div class="modal-content" style="max-width: 450px; padding: 20px; height: 85vh; display: flex; flex-direction: column;">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; font-size: 20px; color: white;">PASAPORTE TÉCNICO</h2>
-            <button onclick="closeHistoryModal()" style="background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        <!-- CABECERA PROFESIONAL CON FONDO DE KANJI -->
+        <div class="history-header-bg">
+            <h2 style="margin:0; font-size:14px; color:white; text-transform:uppercase; letter-spacing:1px;">Horas Totales</h2>
+            <div id="total-hours-display" style="font-size: 40px; font-weight: 800; color: var(--accent); margin: 5px 0;">
+                0.0H
+            </div>
+            <p style="margin:0; font-size:11px; color:var(--text-muted); text-transform:uppercase;">Horas en el Tatami</p>
         </div>
-        
-        <!-- PESTAÑAS -->
-        <div style="display: flex; background: rgba(0,0,0,0.4); border-radius: 12px; padding: 4px; margin-bottom: 20px; flex-shrink: 0; border: 1px solid var(--glass-border);">
+
+        <!-- PESTAÑAS CENTRADAS -->
+        <div class="history-tab-container">
             <button id="tab-btn-clases" class="history-tab-btn active" onclick="switchHistoryTab('clases')">CLASES</button>
             <button id="tab-btn-seminarios" class="history-tab-btn" onclick="switchHistoryTab('seminarios')">SEMINARIOS</button>
         </div>
@@ -1419,6 +1423,7 @@ body.app-ready #app-content {
         
     </div>
 </div>
+
 
     <!-- FORMULARIO DE INSCRIPCIÓN: NUEVO AIKIDOKA -->
 
@@ -3606,6 +3611,13 @@ function switchHistoryTab(tab) {
 }
 
 async function openHistoryModal() {
+    // 1. Primero, definimos las variables de los datos
+    const p = alumnoGlobal.attributes || alumnoGlobal;
+
+    const horasTotales = parseFloat(p.horas_acumuladas || 0).toFixed(1);
+    
+    // 2. Ahora, inyectamos el valor en el HTML que creamos antes
+    document.getElementById('total-hours-display').innerText = horasTotales + 'H';
     const sheet = document.getElementById('profile-sheet');
     const overlay = document.getElementById('sheet-overlay');
     if (sheet) sheet.classList.remove('open');
@@ -3628,6 +3640,8 @@ async function openHistoryModal() {
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
     const p = alumnoGlobal.attributes || alumnoGlobal;
+
+    const horasTotales = parseFloat(p.horas_acumuladas || 0).toFixed(1);
 
     // 1. CARGAR SEMINARIOS
     let sHtml = '';
