@@ -1909,15 +1909,16 @@ async function loadSenseiPanel() {
                 <i class="fa-solid fa-earth-europe"></i> VER SEMINARIOS EXTERNOS
             </button>
         </div>
-        <p style='text-align:center; opacity:0.5; padding:20px;'>Sincronizando Tatami...</p>
+        <p style='text-align:center; opacity:0.5; padding:20px;'>Desplegando Tatami...</p>
     `;
     
     const limitDate = new Date();
     limitDate.setDate(limitDate.getDate() - 7);
 
     try {
-        // 🥋 SINTAXIS V5 BLINDADA (Fíjate que aquí pone limit=200)
-        const endpoint = '/asistencias?populate[0]=alumno&populate[1]=clase&populate[2]=clase.dojo&pagination[limit]=200&sort=clase.Fecha_Hora:asc';
+        // 🥋 BALA DE PLATA: Usamos EXACTAMENTE la misma ruta que el informe PDF (que ya sabemos que funciona perfecto)
+        // Eliminamos el sort conflictivo y traemos los últimos 500 registros
+        const endpoint = '/asistencias?populate[0]=clase&populate[1]=alumno&pagination[limit]=500&sort=createdAt:desc';
         const json = await fetchSmart(endpoint, 'asistencias_sensei_full', 0); 
         
         if (!json || !json.data) throw new Error("No hay datos disponibles");
@@ -1931,19 +1932,18 @@ async function loadSenseiPanel() {
             
             if (!cla || !alu) return;
 
+            // Filtro 1: Solo los confirmados
             const estado = (a.Estado || a.estado || "").toLowerCase().trim();
             if (estado !== 'confirmado') return;
 
+            // Filtro 2: Margen de 7 días
             const classDate = new Date(cla.Fecha_Hora);
             if (classDate < limitDate) return;
 
-            const dojo = parseRelation(cla.dojo);
-            const dojoIdStr = dojo ? String(getID(dojo)) : null;
-
-            if (dojoFilter !== 'all' && dojoIdStr && dojoIdStr !== String(dojoFilter)) return;
-
+            // Agrupamos por clase
             const cid = getID(cla);
             if (!groups[cid]) groups[cid] = { info: cla, students: [] };
+            
             groups[cid].students.push({ 
                 asistId: getID(item), 
                 alumnoId: getID(alu), 
@@ -1959,9 +1959,12 @@ async function loadSenseiPanel() {
         listDiv.innerHTML = topHtml;
 
         if (keys.length === 0) {
-            listDiv.innerHTML += "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes en esta sede.</p>";
+            listDiv.innerHTML += "<p style='text-align:center; opacity:0.5; padding:40px;'>No hay alumnos pendientes en el sistema.</p>";
             return;
         }
+
+        // Ordenamos los grupos cronológicamente mediante JavaScript (así no forzamos a Strapi)
+        keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
 
         keys.forEach(cid => {
             const g = groups[cid];
