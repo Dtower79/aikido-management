@@ -3611,13 +3611,7 @@ function switchHistoryTab(tab) {
 }
 
 async function openHistoryModal() {
-    // 1. Primero, definimos las variables de los datos
-    const p = alumnoGlobal.attributes || alumnoGlobal;
-
-    const horasTotales = parseFloat(p.horas_acumuladas || 0).toFixed(1);
-    
-    // 2. Ahora, inyectamos el valor en el HTML que creamos antes
-    document.getElementById('total-hours-display').innerText = horasTotales + 'H';
+    // 1. Inicialización y limpieza del DOM
     const sheet = document.getElementById('profile-sheet');
     const overlay = document.getElementById('sheet-overlay');
     if (sheet) sheet.classList.remove('open');
@@ -3637,13 +3631,17 @@ async function openHistoryModal() {
         return;
     }
 
+    // 2. Definición única de variables (Aquí estaba el error de duplicidad)
+    const p = alumnoGlobal.attributes || alumnoGlobal;
+    const horasTotales = parseFloat(p.horas_acumuladas || 0).toFixed(1);
+    
+    // Inyectamos el valor en el HTML
+    document.getElementById('total-hours-display').innerText = horasTotales + 'H';
+
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
-    const p = alumnoGlobal.attributes || alumnoGlobal;
 
-    const horasTotales = parseFloat(p.horas_acumuladas || 0).toFixed(1);
-
-    // 1. CARGAR SEMINARIOS
+    // 3. CARGAR SEMINARIOS
     let sHtml = '';
     if (p.seminarios && p.seminarios.length > 0) {
         [...p.seminarios].reverse().forEach(s => {
@@ -3660,7 +3658,7 @@ async function openHistoryModal() {
     }
     semC.innerHTML = sHtml;
 
-    // 2. CARGAR CLASES
+    // 4. CARGAR CLASES
     try {
         const urlClases = `${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&populate[clase][populate]=dojo&sort=createdAt:desc&pagination[limit]=100`;
         const asisRes = await fetch(urlClases, { headers: { 'Authorization': `Bearer ${token}` } });
@@ -3700,8 +3698,7 @@ async function openHistoryModal() {
     } catch(e) {
         clasesC.innerHTML = '<p style="color:red; text-align:center;">Error de conexión.</p>';
     }
-} // <--- ESTA LLAVE CIERRA LA FUNCIÓN
-
+}
     </script>
 </body>
 </html>
