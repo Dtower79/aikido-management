@@ -1875,7 +1875,7 @@ async function loadSenseiPanel() {
     const listDiv = document.getElementById('student-list');
     const filterEl = document.getElementById('sensei-dojo-filter');
     
-    // Capturamos el valor (que ahora vendrá preseleccionado por loadDojosFilter)
+    // Capturamos el valor del filtro de dojo
     const dojoFilter = filterEl ? filterEl.value : (dojoIdGlobal || 'all');
     
     listDiv.innerHTML = `
@@ -1891,8 +1891,10 @@ async function loadSenseiPanel() {
     limitDate.setDate(limitDate.getDate() - 7);
 
     try {
-        // Forzamos datos frescos (Zero Waste: 0 horas) para gestión de alumnos
-        const endpoint = `/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=100`;
+        // 🥋 LA BALA DE PLATA: Aumentamos el límite a 500 y ordenamos por los recién creados (createdAt:desc)
+        const endpoint = `/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=500&sort=createdAt:desc`;
+        
+        // El '0' al final fuerza a ignorar la caché guardada y pedir datos frescos
         const json = await fetchSmart(endpoint, 'asistencias_sensei', 0); 
         
         if (!json || !json.data) throw new Error("No hay datos");
@@ -1909,7 +1911,7 @@ async function loadSenseiPanel() {
             const dojo = parseRelation(cla.dojo);
             const classDate = new Date(cla.Fecha_Hora);
             
-            // FILTRO DE SEGURIDAD
+            // FILTRO DE SEGURIDAD (7 días y Dojo)
             if (classDate < limitDate) return;
             if (dojoFilter !== 'all' && getID(dojo) != dojoFilter) return;
 
@@ -1934,12 +1936,17 @@ async function loadSenseiPanel() {
             return;
         }
 
+        // Ordenamos los Keikos cronológicamente para que salgan en orden
         keys.sort((a, b) => new Date(groups[a].info.Fecha_Hora) - new Date(groups[b].info.Fecha_Hora));
 
         keys.forEach(cid => {
             const g = groups[cid];
             const f = formatTimeSafe(g.info.Fecha_Hora);
             let sRows = "";
+            
+            // Ordenamos a los alumnos alfabéticamente dentro de cada clase
+            g.students.sort((a, b) => (a.apellidos || "").localeCompare(b.apellidos || "", 'es'));
+
             g.students.forEach(s => {
                 sRows += `
                 <div class="student-item" id="it-${s.asistId}">
@@ -1974,7 +1981,7 @@ async function loadSenseiPanel() {
             </div>`;
         });
     } catch (e) {
-        listDiv.innerHTML = `<p style='text-align:center; padding:20px;'>Error al cargar el Tatami.</p>`;
+        listDiv.innerHTML = `<p style='text-align:center; padding:20px; color:var(--accent);'>Error al cargar el Tatami.</p>`;
     }
 }
 
