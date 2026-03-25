@@ -1408,7 +1408,9 @@ body.app-ready #app-content {
             <div id="total-hours-display" style="font-size: 40px; font-weight: 800; color: var(--accent); margin: 5px 0;">
                 0.0H
             </div>
-            <p style="margin:0; font-size:11px; color:var(--text-muted); text-transform:uppercase;">Horas en el Tatami</p>
+            <p style="margin: 0 0 20px 0; font-size:11px; color:var(--text-muted); text-transform:uppercase;">
+    HORAS EN EL TATAMI
+</p>
         </div>
 
         <!-- PESTAÑAS CENTRADAS -->
@@ -3598,10 +3600,11 @@ function closeHistoryModal() {
 }
 
 function switchHistoryTab(tab) {
-    // 1. Limpiar todos los botones
-    document.querySelectorAll('.history-tab-btn').forEach(btn => btn.classList.remove('active'));
+    // 1. Quitar la clase 'active' de todos los botones de las pestañas
+    const botones = document.querySelectorAll('.history-tab-btn');
+    botones.forEach(btn => btn.classList.remove('active'));
     
-    // 2. Activar el botón clicado
+    // 2. Poner la clase 'active' SOLO al botón pulsado
     document.getElementById(`tab-btn-${tab}`).classList.add('active');
 
     // 3. Mostrar/Ocultar contenido
