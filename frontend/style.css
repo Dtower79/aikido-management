@@ -1089,7 +1089,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 /* --- CABECERA DEL PASAPORTE (CON EL FONDO DEL KANJI) --- */
 .history-header-bg {
-    background: linear-gradient(rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.95)), url('img/kanjis.jpg');
+    background: linear-gradient(rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.95)), url('https://i.ibb.co/L5T4FwS/kanjis.jpg'); /* URL estable */
     background-size: cover;
     background-position: center;
     padding: 25px;
@@ -1102,20 +1102,21 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 /* --- BOTONES ESTILO PILL PROFESIONALES --- */
 .history-tab-container {
     display: flex;
-    justify-content: center; /* Centrados */
-    background: rgba(0,0,0,0.3);
+    justify-content: center; /* Centra los botones horizontalmente */
+    background: rgba(0,0,0,0.4);
     border-radius: 50px;
-    padding: 5px;
+    padding: 4px;
     margin: 0 auto 20px auto;
-    width: fit-content;
-    border: 1px solid var(--border);
+    width: fit-content; /* El ancho se ajusta al contenido */
+    border: 1px solid var(--glass-border);
 }
 
 .history-tab-btn {
-    padding: 10px 25px;
-    border-radius: 50px;
-    font-size: 12px;
-    letter-spacing: 1px;
+    padding: 10px 30px;
+    border-radius: 50px; /* Píldora redondeada */
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
 }
-
 
