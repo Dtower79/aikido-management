@@ -1108,3 +1108,50 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     display: flex !important;
     flex-direction: column !important;
 }
+
+/* --- LIMPIEZA TOTAL PARA EL PASAPORTE TÉCNICO --- */
+
+/* 1. Reset para forzar el diseño de los botones tipo Pill */
+.history-tab-container {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background: rgba(0,0,0,0.4) !important;
+    border-radius: 50px !important;
+    padding: 4px !important;
+    margin: 0 auto 25px auto !important;
+    width: fit-content !important;
+    min-width: 250px !important;
+    border: 1px solid var(--border) !important;
+}
+
+.history-tab-btn {
+    padding: 10px 25px !important;
+    border-radius: 50px !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.history-tab-btn.active {
+    background: var(--accent) !important;
+    color: white !important;
+}
+
+/* 2. Tarjetas con espacio generoso (Separación clara) */
+.history-item-card {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 20px !important;
+    padding: 22px !important; /* Más aire interno */
+    margin-bottom: 20px !important; /* Separación clara entre filas */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important; /* Separación interna entre líneas */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+}
