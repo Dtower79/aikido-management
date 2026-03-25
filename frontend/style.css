@@ -1056,67 +1056,55 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* --- DISEÑO DEL PASAPORTE TÉCNICO --- */
-/* --- DISEÑO DE PESTAÑAS PROFESIONAL --- */
-.history-tab-btn {
-    flex: 1;
-    padding: 12px;
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-weight: 800;
-    font-size: 13px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-.history-tab-btn.active {
-    background: var(--accent);
-    color: white;
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-}
-
-/* --- TARJETA DE CLASE COMPACTA Y LEGIBLE --- */
-.history-item-card {
-    background: rgba(30, 41, 59, 0.4);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    padding: 18px;
-    margin-bottom: 15px;
-    display: flex;
-    justify-content: space-between; /* Fecha y horas en extremos */
-    align-items: center;
-}
-
-/* --- CABECERA DEL PASAPORTE (CON EL FONDO DEL KANJI) --- */
+/* --- CABECERA Y ESTILOS PASAPORTE TÉCNICO (NUEVO) --- */
 .history-header-bg {
-    background: linear-gradient(rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.95)), url('https://i.ibb.co/L5T4FwS/kanjis.jpg'); /* URL estable */
-    background-size: cover;
-    background-position: center;
-    padding: 25px;
-    border-radius: 20px;
-    text-align: center;
-    border: 1px solid var(--accent);
-    margin-bottom: 20px;
+    background: linear-gradient(rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.95)), url('https://i.ibb.co/L5T4FwS/kanjis.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    padding: 25px !important;
+    border-radius: 20px !important;
+    text-align: center !important;
+    border: 1px solid var(--accent) !important;
+    margin-bottom: 25px !important;
 }
 
-/* --- BOTONES ESTILO PILL PROFESIONALES --- */
+/* --- BOTONES "PILL" CENTRADOS --- */
 .history-tab-container {
-    display: flex;
-    justify-content: center; /* Centra los botones horizontalmente */
-    background: rgba(0,0,0,0.4);
-    border-radius: 50px;
-    padding: 4px;
-    margin: 0 auto 20px auto;
-    width: fit-content; /* El ancho se ajusta al contenido */
-    border: 1px solid var(--glass-border);
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background: rgba(0,0,0,0.3) !important;
+    border-radius: 50px !important;
+    padding: 5px !important;
+    margin: 0 auto 25px auto !important;
+    width: fit-content !important;
+    min-width: 250px !important;
 }
 
 .history-tab-btn {
-    padding: 10px 30px;
-    border-radius: 50px; /* Píldora redondeada */
-    font-size: 13px;
-    font-weight: 800;
+    padding: 12px 30px !important;
+    border-radius: 50px !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
     text-transform: uppercase;
-    transition: all 0.3s ease;
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    border: none !important;
+    cursor: pointer !important;
 }
 
+.history-tab-btn.active {
+    background: var(--accent) !important;
+    color: white !important;
+}
+
+/* --- SEPARACIÓN ENTRE FILAS (PARA QUE NO SE TOQUEN) --- */
+.history-item-card {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 15px !important;
+    padding: 20px !important; /* Más aire */
+    margin-bottom: 20px !important; /* Más separación entre filas */
+    display: flex !important;
+    flex-direction: column !important;
+}
