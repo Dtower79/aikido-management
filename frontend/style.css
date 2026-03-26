@@ -1134,6 +1134,49 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
 }
 
+/* --- ESCUDO ANTI-CACHÉ Y ESPECIFICIDAD --- */
+
+/* 1. Botones estilo "Pill" profesionales */
+.history-tab-container {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    margin: 20px auto 25px auto !important;
+}
+
+.history-tab-btn {
+    padding: 12px 30px !important;
+    border-radius: 50px !important;
+    border: 1px solid var(--border) !important;
+    background: rgba(0,0,0,0.2) !important;
+    color: var(--text-muted) !important;
+    font-weight: 800 !important;
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+/* ESTADO ACTIVO: Fuerza el cambio a color Rojo Arashi */
+.history-tab-btn.active {
+    background: var(--accent) !important;
+    color: white !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* 2. Tarjetas con separación (evitamos que las filas se toquen) */
+.history-item-card {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(255,255,255,0.05) !important;
+    border-radius: 20px !important;
+    padding: 20px !important;
+    margin-bottom: 25px !important; /* SEPARACIÓN REAL ENTRE KEIKOS */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+}
+
 
 
 
