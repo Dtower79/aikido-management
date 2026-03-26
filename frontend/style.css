@@ -1206,6 +1206,25 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     border-color: var(--accent) !important;
 }
 
+/* Limpieza de tarjetas para que no se pisen */
+.history-item-card {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 15px !important;
+    padding: 15px !important;
+    margin-bottom: 15px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+/* Forzar que el modal sea un flex vertical limpio */
+#history-modal .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 85vh !important;
+}
+
 
 
 

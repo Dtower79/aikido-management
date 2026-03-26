@@ -1459,8 +1459,11 @@ body.app-ready #app-content {
     <div id="history-clases" class="history-content no-scrollbar" style="flex: 1; overflow-y: auto;"></div>
 
     <!-- CONTENIDO SEMINARIOS (Incluye el botón de añadir) -->
+    <div id="history-clases" class="history-content no-scrollbar" style="flex: 1; overflow-y: auto;"></div>
+
     <div id="history-seminarios" class="history-content hidden no-scrollbar" style="flex: 1; overflow-y: auto;">
-        <button class="action-btn primary" style="width:100%; margin-bottom:20px; border-radius:12px;" onclick="openAddSeminarioModal()">
+        <!-- Botón añadir visible siempre que estemos en la pestaña seminarios -->
+        <button class="action-btn primary" style="width:100%; margin-bottom:20px; border-radius:12px; height: 50px;" onclick="openAddSeminarioModal()">
             <i class="fa-solid fa-plus"></i> AÑADIR SEMINARIO
         </button>
         <div id="seminarios-list-container"></div>
@@ -3639,29 +3642,20 @@ function closeHistoryModal() {
 }
 
 function switchHistoryTab(tab) {
-    console.log("🖱️ Cambiando a pestaña:", tab); // <-- AÑADE ESTO
-    
-    // 1. Quitar 'active' de todos los botones
-    const botones = document.querySelectorAll('.history-tab-btn');
-    botones.forEach(btn => btn.classList.remove('active'));
-    
-    // 2. Añadir 'active' SOLO al que hemos pulsado
-    const botonSeleccionado = document.getElementById(`tab-btn-${tab}`);
-    if (botonSeleccionado) {
-        botonSeleccionado.classList.add('active');
-        console.log("✅ Clase 'active' aplicada a:", botonSeleccionado.id); // <-- AÑADE ESTO
-    }
+    // 1. Botones
+    document.querySelectorAll('.history-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`tab-btn-${tab}`).classList.add('active');
 
-    // 3. Mostrar/Ocultar contenido
+    // 2. Contenido
     const divClases = document.getElementById('history-clases');
     const divSeminarios = document.getElementById('history-seminarios');
 
     if(tab === 'clases') {
-        divClases.classList.remove('hidden');
-        divSeminarios.classList.add('hidden');
+        divClases.style.display = 'block';
+        divSeminarios.style.display = 'none';
     } else {
-        divClases.classList.add('hidden');
-        divSeminarios.classList.remove('hidden');
+        divClases.style.display = 'none';
+        divSeminarios.style.display = 'block';
     }
 }
 
