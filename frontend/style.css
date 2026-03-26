@@ -1178,6 +1178,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 
+/* Limpieza radical de estilos */
+.history-tab-container {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin: 25px auto 25px auto !important;
+}
+
+.history-tab-btn {
+    padding: 12px 30px !important;
+    border-radius: 50px !important;
+    border: 1px solid var(--border) !important;
+    background: #1e293b !important; /* Fondo gris oscuro */
+    color: var(--text-muted) !important;
+    font-weight: 800 !important;
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.history-tab-btn.active {
+    background: var(--accent) !important; /* Rojo Arashi */
+    color: white !important;
+    border-color: var(--accent) !important;
+}
+
 
 
 
