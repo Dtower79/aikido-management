@@ -1105,6 +1105,38 @@ body.app-ready #app-content {
     padding-right: 45px !important; 
 }
 
+/* --- ESCUDO ANTI-CACHÉ Y ESPECIFICIDAD MÁXIMA --- */
+.history-tab-container {
+    display: flex !important;
+    justify-content: center !important;
+    background: #0f172a !important; 
+    border-radius: 50px !important;
+    padding: 4px !important;
+    margin: 20px auto 25px auto !important;
+    width: fit-content !important;
+    border: 1px solid #334155 !important;
+}
+
+.history-tab-btn {
+    padding: 10px 25px !important;
+    border-radius: 50px !important;
+    border: none !important;
+    background: transparent !important;
+    color: #94a3b8 !important; /* Gris por defecto */
+    font-weight: 800 !important;
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+/* El estilo de la clase .active, que controla JS */
+.history-tab-btn.active {
+    background: #ef4444 !important; /* Rojo Arashi */
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
+}
+
     </style>
 </head>
 <body>
@@ -1417,7 +1449,7 @@ body.app-ready #app-content {
 <!-- PESTAÑAS CENTRADAS -->
 <div class="history-tab-container">
     <button id="tab-btn-clases" class="history-tab-btn active" onclick="switchHistoryTab('clases')">CLASES</button>
-    <button id="tab-btn-seminarios" class="history-tab-btn" onclick="switchHistoryTab('seminarios')">SEMINARIOS</button>
+    <button id="tab-btn-seminarios" class="history-tab-btn active" onclick="switchHistoryTab('seminarios')">SEMINARIOS</button>
 </div>
 
         <!-- CONTENIDO -->
