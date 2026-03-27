@@ -3837,66 +3837,51 @@ async function guardarSeminarioAlumno() {
         any: parseInt(document.getElementById('sem-any').value) || new Date().getFullYear()
     };
 
-    if (!sem.sensei) {
-        alert("El campo 'Sensei' es obligatorio");
-        return;
-    }
+    if (!sem.sensei) { alert("El campo 'Sensei' es obligatorio"); return; }
 
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
     
-    // Obtenemos la lista actual de forma segura
-    let ficha = alumnoGlobal.attributes ? alumnoGlobal.attributes : alumnoGlobal;
-    
-    // 🥋 LIMPIEZA RADICAL: 
-    // Usamos .map para extraer SOLAMENTE los campos que Strapi espera en el componente
-    // Esto elimina cualquier 'id' o 'documentId' que cause el 'Invalid key id'
+    // Obtenemos la lista actual SIN los metadatos de Strapi (el .map purifica los datos)
+    const ficha = alumnoGlobal.attributes ? alumnoGlobal.attributes : alumnoGlobal;
     let listaSeminarios = (ficha.seminarios || []).map(s => ({
-        sensei: s.sensei,
-        ciudad: s.ciudad,
-        pais: s.pais,
-        mes: s.mes,
-        any: s.any
+        sensei: s.sensei, ciudad: s.ciudad, pais: s.pais, mes: s.mes, any: s.any
     }));
-    
     listaSeminarios.push(sem);
 
-try {
+    try {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
-        const oldText = btn.innerText;
         btn.innerText = "GUARDANDO...";
         btn.disabled = true;
 
+        // 1. Guardamos en Strapi
         const res = await fetch(`${API_URL}/alumnos/${aluId}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ data: { seminarios: listaSeminarios } })
         });
 
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error?.message || "Error al actualizar");
-        }
+        if (!res.ok) throw new Error("Fallo al guardar en la base de datos");
 
-        // Actualización local
-        if (alumnoGlobal.attributes) {
-            alumnoGlobal.attributes.seminarios = listaSeminarios;
-        } else {
-            alumnoGlobal.seminarios = listaSeminarios;
-        }
-        
-        // 2. RECUPERACIÓN FORZADA (Limpia la caché de perfil para obligar a leer de Neon)
+        // 2. TACTICA DE ESPERA: Damos un segundo de margen a la base de datos
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // 3. LIMPIEZA DE CACHÉ Y RECARGA FORZADA
         localStorage.removeItem('cache_perfil_alumno');
         
-        closeModal(); 
+        // RECARGAMOS LA FICHA DEL ALUMNO DIRECTAMENTE DE LA FUENTE
+        const resRefresh = await fetch(`${API_URL}/alumnos/${aluId}?populate=*`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        });
+        const json = await resRefresh.json();
         
-        // 3. Recarga limpia
-        showModal("¡OSS!", "Seminario registrado correctamente.", async () => {
-            await refreshStudentData(); // Refresca alumnoGlobal
-            openHistoryModal();        // Repinta el historial con el dato nuevo
+        // Actualizamos el objeto global con los datos reales que vienen de la DB
+        alumnoGlobal = json.data; 
+
+        // 4. CONFIRMACIÓN
+        closeModal();
+        showModal("¡OSS!", "Seminario registrado correctamente.", () => {
+            openHistoryModal(); // Abrimos el historial ya con el nuevo alumnoGlobal
         });
 
     } catch (err) {
