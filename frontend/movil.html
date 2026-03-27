@@ -3701,20 +3701,27 @@ if (p.seminarios && p.seminarios.length > 0) {
     const fecha = [s.mes, s.any].filter(Boolean).join(' ');
     
     sHtml += `
-    <div class="history-item-card">
-        <!-- Nombre -->
-        <span style="font-size:15px; color:white; font-weight:800;">${s.sensei || 'Seminario'}</span>
-        
-        <!-- Fecha -->
-        <span style="font-size:11px; background:var(--accent); padding:3px 8px; border-radius:8px; color:white; font-weight:700; white-space:nowrap;">${fecha}</span>
-        
-        <!-- Ubicación (se colocará debajo por el grid) -->
-        ${locacion ? `
-        <div style="font-size:12px; color:var(--text-muted); font-weight:600; display:flex; align-items:center;">
-            <i class="fa-solid fa-location-dot" style="margin-right:6px; color:var(--accent);"></i> ${locacion.toUpperCase()}
-        </div>` : ''}
+    <div class="history-item-card" style="padding: 15px !important; margin-bottom: 10px !important; display: block !important;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <!-- Fila 1: Nombre y Fecha -->
+            <tr>
+                <td style="font-size: 15px; color: white; font-weight: 800; padding-bottom: 5px;">
+                    ${s.sensei || 'Seminario'}
+                </td>
+                <td style="text-align: right; padding-bottom: 5px;">
+                    <span style="font-size: 11px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white; font-weight:700;">${fecha}</span>
+                </td>
+            </tr>
+            <!-- Fila 2: Ubicación -->
+            <tr>
+                <td colspan="2" style="font-size: 12px; color: var(--text-muted); font-weight: 600; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <i class="fa-solid fa-location-dot" style="margin-right:6px; color:var(--accent);"></i> ${locacion.toUpperCase()}
+                </td>
+            </tr>
+        </table>
     </div>`;
 });
+    
 } else {
     sHtml += '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Sin seminarios registrados.</p>';
 }
