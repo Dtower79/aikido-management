@@ -1164,7 +1164,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     margin-bottom: 20px !important; /* Espacio uniforme entre filas */
     /*display: flex !important;*/
     /*flex-direction: column !important; /* El contenido interno de la card va apilado */
-    gap: 10px !important;
+    gap: 15px !important;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 }
 
