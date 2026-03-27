@@ -3877,20 +3877,25 @@ async function guardarSeminarioAlumno() {
         });
         const jsonNuevaFicha = await resNuevaFicha.json();
         
-        // 2. ACTUALIZAMOS EL OBJETO GLOBAL
-        alumnoGlobal = jsonNuevaFicha.data;
+        // 2. ACTUALIZAMOS EL OBJETO GLOBAL (Para que si sales y entras, persista)
+        alumnoGlobal = jsonNuevaFicha.data; 
 
-        // 3. 🥋 PERSISTENCIA FORZADA: Guardamos en caché local explícitamente
-        // Esto hace que incluso si recargas, el perfil esté "caliente"
+        // 3. PERSISTENCIA EN CACHÉ
         localStorage.setItem('cache_perfil_alumno', JSON.stringify({ 
             time: Date.now(), 
             data: jsonNuevaFicha 
         }));
         
+        // 4. 🥋 RE-RENDERIZADO FORZADO: 
+        // No cerramos el modal, sino que llamamos a openHistoryModal para que pinte de nuevo
+        // Pero antes, cerramos el modal de "Guardando" si lo hubiera
         closeModal();
-        showModal("¡OSS!", "Seminario registrado.", () => {
-            openHistoryModal(); 
-        });
+        
+        // RE-EJECUTAMOS EL PINTADO DEL HISTORIAL CON LOS DATOS NUEVOS
+        // Esto refrescará la vista SIN que el usuario tenga que salir
+        openHistoryModal();
+        
+        showModal("¡OSS!", "Seminario registrado correctamente.");
 
     } catch (err) {
         showModal("Error", err.message);
