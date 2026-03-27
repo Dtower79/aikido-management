@@ -3667,20 +3667,15 @@ function closeHistoryModal() {
 }
 
 function switchHistoryTab(tab) {
-    console.log("🖱️ Cambiando a pestaña:", tab); // <-- AÑADE ESTO
+    // Guardamos la última pestaña activa para que al recargar sepa dónde volver
+    localStorage.setItem('last_history_tab', tab); 
     
-    // 1. Quitar 'active' de todos los botones
     const botones = document.querySelectorAll('.history-tab-btn');
     botones.forEach(btn => btn.classList.remove('active'));
     
-    // 2. Añadir 'active' SOLO al que hemos pulsado
     const botonSeleccionado = document.getElementById(`tab-btn-${tab}`);
-    if (botonSeleccionado) {
-        botonSeleccionado.classList.add('active');
-        console.log("✅ Clase 'active' aplicada a:", botonSeleccionado.id); // <-- AÑADE ESTO
-    }
+    if (botonSeleccionado) botonSeleccionado.classList.add('active');
 
-    // 3. Mostrar/Ocultar contenido
     const divClases = document.getElementById('history-clases');
     const divSeminarios = document.getElementById('history-seminarios');
 
@@ -3688,6 +3683,7 @@ function switchHistoryTab(tab) {
         divClases.classList.remove('hidden');
         divSeminarios.classList.add('hidden');
     } else {
+        divClases.classList.remove('hidden'); // Espera, esto debe ser semC.classList.remove...
         divClases.classList.add('hidden');
         divSeminarios.classList.remove('hidden');
     }
@@ -3701,7 +3697,10 @@ async function openHistoryModal() {
     if (overlay) overlay.style.display = 'none';
 
     document.getElementById('history-modal').classList.remove('hidden');
-    switchHistoryTab('clases');
+
+    // RECUPERAMOS LA PESTAÑA DONDE ESTÁBAMOS
+    const lastTab = localStorage.getItem('last_history_tab') || 'clases';
+    switchHistoryTab(lastTab);
     
     const clasesC = document.getElementById('history-clases');
     const semC = document.getElementById('history-seminarios');
@@ -3891,11 +3890,11 @@ async function guardarSeminarioAlumno() {
         // Pero antes, cerramos el modal de "Guardando" si lo hubiera
         closeModal();
         
-        // RE-EJECUTAMOS EL PINTADO DEL HISTORIAL CON LOS DATOS NUEVOS
-        // Esto refrescará la vista SIN que el usuario tenga que salir
-        openHistoryModal();
-        
-        showModal("¡OSS!", "Seminario registrado correctamente.");
+        // FORZAMOS LA PESTAÑA A SEMINARIOS AL CERRAR EL AVISO
+        showModal("¡OSS!", "Seminario registrado.", () => {
+            localStorage.setItem('last_history_tab', 'seminarios'); // <--- CLAVE
+            openHistoryModal(); 
+        });
 
     } catch (err) {
         showModal("Error", err.message);
