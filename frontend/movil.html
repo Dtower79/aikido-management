@@ -3861,8 +3861,9 @@ async function guardarSeminarioAlumno() {
     
     listaSeminarios.push(sem);
 
-    try {
+try {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
+        const oldText = btn.innerText;
         btn.innerText = "GUARDANDO...";
         btn.disabled = true;
 
@@ -3877,7 +3878,6 @@ async function guardarSeminarioAlumno() {
 
         if (!res.ok) {
             const err = await res.json();
-            console.error("Error respuesta Strapi:", err);
             throw new Error(err.error?.message || "Error al actualizar");
         }
 
@@ -3888,8 +3888,12 @@ async function guardarSeminarioAlumno() {
             alumnoGlobal.seminarios = listaSeminarios;
         }
         
-        closeModal();
-        openHistoryModal(); // Refresco limpio
+        // --- 🥋 CONFIRMACIÓN PROFESIONAL ---
+        closeModal(); // Primero cerramos el modal del formulario
+        showModal("¡OSS!", "Seminario registrado correctamente en tu pasaporte.", () => {
+            // Cuando el usuario pulse OK, recargamos la vista del historial
+            openHistoryModal(); 
+        });
 
     } catch (err) {
         showModal("Error", err.message);
