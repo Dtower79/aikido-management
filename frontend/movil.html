@@ -3693,21 +3693,30 @@ async function openHistoryModal() {
 
     // 3. CARGAR SEMINARIOS
     let sHtml = '<button class="action-btn primary" style="width:100%; margin-bottom:20px; border-radius:12px;" onclick="openAddSeminarioModal()"><i class="fa-solid fa-plus"></i> AÑADIR SEMINARIO</button>';
-    if (p.seminarios && p.seminarios.length > 0) {
-        [...p.seminarios].reverse().forEach(s => {
-            const loc = [s.ciudad, s.pais].filter(Boolean).join(', ');
-            sHtml += `
-            <div class="history-item-card" style="padding: 15px !important; margin-bottom: 10px !important;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                    <span style="font-weight:800; color:white; font-size:14px;">${s.sensei}</span>
-                    <span style="font-size:11px; background:var(--accent); padding:2px 8px; border-radius:10px; color:white; white-space:nowrap;">${s.mes || ''} ${s.any || ''}</span>
-                </div>
-                ${loc ? `<div style="font-size:12px; color:var(--text-muted); margin-top:5px;"><i class="fa-solid fa-location-dot" style="margin-right:5px; color:var(--accent);"></i> ${loc}</div>` : ''}
-            </div>`;
-        });
-    } else {
-        sHtml += '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Sin seminarios.</p>';
-    }
+    // ... dentro de openHistoryModal, en la sección de seminarios:
+
+if (p.seminarios && p.seminarios.length > 0) {
+    [...p.seminarios].reverse().forEach(s => {
+        const locacion = [s.ciudad, s.pais].filter(Boolean).join(', ');
+        const fecha = [s.mes, s.any].filter(Boolean).join(' ');
+        
+        sHtml += `
+        <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <h4 style="margin:0; font-size:15px; color:white; font-weight:800;">${s.sensei || 'Seminario'}</h4>
+                <span style="font-size:11px; background:rgba(239, 68, 68, 0.2); padding:4px 8px; border-radius:8px; color:var(--accent); font-weight:800;">${fecha}</span>
+            </div>
+            
+            ${locacion ? `
+            <div style="display:flex; align-items:center; color:var(--text-muted); font-size:12px; font-weight:600; border-top: 1px solid rgba(255,255,255,0.05); padding-top:8px;">
+                <i class="fa-solid fa-location-dot" style="margin-right:6px; font-size:10px;"></i> 
+                ${locacion.toUpperCase()}
+            </div>` : ''}
+        </div>`;
+    });
+} else {
+    sHtml += '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Sin seminarios registrados.</p>';
+}
     semC.innerHTML = sHtml;
 
     // 4. CARGAR CLASES
