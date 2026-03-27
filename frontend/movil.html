@@ -1693,11 +1693,14 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 }
 
         /* --- MODALES --- */
-        function showModal(t, htmlContent, showCloseBtn = true) { 
+       function showModal(t, htmlContent, showCloseBtn = true) { 
             document.getElementById('modal-title').innerText = t;
             document.getElementById('modal-body-content').innerHTML = htmlContent || "";
             document.getElementById('modal-ok-btn').style.display = showCloseBtn ? 'block' : 'none';
-            document.getElementById('custom-modal').classList.remove('hidden'); 
+            
+            const modal = document.getElementById('custom-modal');
+            modal.style.zIndex = "20000"; // ESCUDO: Fuerza a que se abra por encima del pasaporte
+            modal.classList.remove('hidden'); 
         }
         function closeModal() { 
             document.getElementById('custom-modal').classList.add('hidden'); 
@@ -3678,6 +3681,7 @@ function switchHistoryTab(tab) {
 }
 
 async function openHistoryModal() {
+    // 1. Inicialización y limpieza del DOM
     const sheet = document.getElementById('profile-sheet');
     const overlay = document.getElementById('sheet-overlay');
     if (sheet) sheet.classList.remove('open');
@@ -3703,52 +3707,35 @@ async function openHistoryModal() {
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
 
-    // 3. CARGAR SEMINARIOS
+    // 2. CARGAR SEMINARIOS
     let sHtml = '<button class="action-btn primary" style="width:100%; margin-bottom:20px; border-radius:12px;" onclick="openAddSeminarioModal()"><i class="fa-solid fa-plus"></i> AÑADIR SEMINARIO</button>';
-    // ... dentro de openHistoryModal, en la sección de seminarios:
-
-if (p.seminarios && p.seminarios.length > 0) {
-    [...p.seminarios].reverse().forEach(s => {
-    const locacion = [s.ciudad, s.pais].filter(Boolean).join(', ');
-    const fecha =[s.mes, s.any].filter(Boolean).join(' ');
-    
-    sHtml += `
-    <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; gap: 10px !important;">
-        
-        <!-- PARTE IZQUIERDA: Maestro + Ubicación (Todo en línea) -->
-        <div style="display: flex; align-items: center; flex: 1; overflow: hidden; gap: 8px;">
-            <span style="font-size: 14px; color: white; font-weight: 800; white-space: nowrap;">
-                ${s.sensei || 'Seminario'}
-            </span>
-            
-            ${locacion ? `
-            <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center;">
-                <span style="opacity: 0.3; margin-right: 8px;">|</span>
-                <i class="fa-solid fa-location-dot" style="margin-right: 4px; color: var(--accent);"></i> ${locacion.toUpperCase()}
-            </span>` : ''}
-        </div>
-
-        <!-- PARTE DERECHA: Fecha -->
-        <span style="font-size: 11px; background: var(--accent); padding: 4px 8px; border-radius: 8px; color: white; font-weight: 700; white-space: nowrap; flex-shrink: 0;">
-            ${fecha}
-        </span>
-
-    </div>`;
-});
-    
-} else {
-    sHtml += '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Sin seminarios registrados.</p>';
-}
+    if (p.seminarios && p.seminarios.length > 0) {
+        [...p.seminarios].reverse().forEach(s => {
+            const loc = [s.ciudad, s.pais].filter(Boolean).join(', ');
+            const fecha = [s.mes, s.any].filter(Boolean).join(' ');
+            sHtml += `
+            <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important; display: flex !important; flex-direction: column !important; gap: 5px !important; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:14px; color:white; font-weight:800;">${s.sensei || 'Seminario'}</span>
+                    <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white; font-weight:700;">${fecha}</span>
+                </div>
+                ${loc ? `<div style="font-size:11px; color:var(--text-muted); font-weight:600;"><i class="fa-solid fa-location-dot" style="margin-right:5px; color:var(--accent);"></i> ${loc.toUpperCase()}</div>` : ''}
+            </div>`;
+        });
+    } else {
+        sHtml += '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Sin seminarios registrados.</p>';
+    }
     semC.innerHTML = sHtml;
 
-    // 4. CARGAR CLASES
+    // 3. CARGAR CLASES
     try {
         const urlClases = `${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&populate[clase][populate]=dojo&sort=createdAt:desc&pagination[limit]=100`;
         const asisRes = await fetch(urlClases, { headers: { 'Authorization': `Bearer ${token}` } });
         const asisJson = await asisRes.json();
         
         const clasesAsistidas = (asisJson.data || []).filter(item => {
-            const est = (item.attributes?.Estado || item.Estado || "").toLowerCase();
+            const attr = item.attributes || item;
+            const est = (attr.Estado || attr.estado || "").toLowerCase();
             return est.includes('asistio') || est.includes('asistió');
         });
         
@@ -3763,25 +3750,17 @@ if (p.seminarios && p.seminarios.length > 0) {
                 const dojo = parseRelation(cla.dojo);
                 const dNom = dojo ? (dojo.nombre || "ARASHI").replace(/Aikido\s+Arashi\s+/gi, '') : "SEDE";
 
-                // LA ESTRUCTURA LINEAL:
                 cHtml += `
-                <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                        
-                        <!-- IZQUIERDA: Fecha + Hora + Dojo en una línea -->
-                        <div style="display:flex; align-items:center; gap:10px; flex:1; overflow:hidden;">
-                            <i class="fa-solid fa-check-circle" style="color:var(--success); font-size:16px; flex-shrink:0;"></i>
-                            <div style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:13px; color:white; white-space:nowrap;">
-                                <span>${f.date}</span>
-                                <span style="opacity:0.3;">|</span>
-                                <span>${f.time}</span>
-                                <span style="opacity:0.3;">|</span>
-                                <span style="color:var(--text-muted); font-size:11px; text-transform:uppercase;">${dNom.toUpperCase()}</span>
-                            </div>
-                        </div>
-
-                        <!-- DERECHA: Horas -->
-                        <span style="font-size:13px; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:4px 8px; border-radius:8px; flex-shrink:0;">+${dur}h</span>
+                <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:14px; color:white; font-weight:800; display:flex; align-items:center;">
+                            <i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:8px; font-size:14px;"></i> ${f.date}
+                        </span>
+                        <span style="font-size:12px; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:3px 8px; border-radius:8px;">+${dur}h</span>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); font-weight:600; display:flex; align-items:center; gap:10px;">
+                        <span><i class="fa-regular fa-clock" style="margin-right:4px;"></i> ${f.time}</span>
+                        <span><i class="fa-solid fa-location-dot" style="margin-right:4px;"></i> ${dNom.toUpperCase()}</span>
                     </div>
                 </div>`;
             });
