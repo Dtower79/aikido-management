@@ -3877,13 +3877,18 @@ async function guardarSeminarioAlumno() {
         });
         const jsonNuevaFicha = await resNuevaFicha.json();
         
-        // 3. ACTUALIZAMOS EL OBJETO GLOBAL CON LA RESPUESTA REAL
-        alumnoGlobal = jsonNuevaFicha.data; 
+        // 2. ACTUALIZAMOS EL OBJETO GLOBAL
+        alumnoGlobal = jsonNuevaFicha.data;
+
+        // 3. 🥋 PERSISTENCIA FORZADA: Guardamos en caché local explícitamente
+        // Esto hace que incluso si recargas, el perfil esté "caliente"
+        localStorage.setItem('cache_perfil_alumno', JSON.stringify({ 
+            time: Date.now(), 
+            data: jsonNuevaFicha 
+        }));
         
         closeModal();
-        
         showModal("¡OSS!", "Seminario registrado.", () => {
-            // 4. Abrimos el historial usando el objeto RECIÉN OBTENIDO
             openHistoryModal(); 
         });
 
