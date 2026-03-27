@@ -3867,21 +3867,24 @@ async function guardarSeminarioAlumno() {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // 3. LIMPIEZA DE CACHÉ Y RECARGA FORZADA
+        // 1. LIMPIEZA TOTAL DE CACHÉ
         localStorage.removeItem('cache_perfil_alumno');
         
-        // RECARGAMOS LA FICHA DEL ALUMNO DIRECTAMENTE DE LA FUENTE
-        const resRefresh = await fetch(`${API_URL}/alumnos/${aluId}?populate=*`, { 
+        // 2. RECARGA FORZADA Y SINCRONIZADA
+        // En lugar de confiar en alumnoGlobal, pedimos el objeto nuevo al servidor
+        const resNuevaFicha = await fetch(`${API_URL}/alumnos/${aluId}?populate=*`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
-        const json = await resRefresh.json();
+        const jsonNuevaFicha = await resNuevaFicha.json();
         
-        // Actualizamos el objeto global con los datos reales que vienen de la DB
-        alumnoGlobal = json.data; 
-
-        // 4. CONFIRMACIÓN
+        // 3. ACTUALIZAMOS EL OBJETO GLOBAL CON LA RESPUESTA REAL
+        alumnoGlobal = jsonNuevaFicha.data; 
+        
         closeModal();
-        showModal("¡OSS!", "Seminario registrado correctamente.", () => {
-            openHistoryModal(); // Abrimos el historial ya con el nuevo alumnoGlobal
+        
+        showModal("¡OSS!", "Seminario registrado.", () => {
+            // 4. Abrimos el historial usando el objeto RECIÉN OBTENIDO
+            openHistoryModal(); 
         });
 
     } catch (err) {
