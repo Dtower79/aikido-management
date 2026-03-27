@@ -1550,7 +1550,7 @@ body.app-ready #app-content {
     </div>
 </div>
 
-<!-- === PEGAR AQUÍ EL MODAL SISTEMA (FUERA DE TODOS LOS CONTENEDORES) === -->
+    <!-- === EL MODAL DEBE ESTAR AQUÍ, FUERA Y ANTES DEL SCRIPT === -->
     <div id="custom-modal" class="modal-overlay hidden" style="z-index: 99999 !important;">
         <div class="modal-content">
             <i id="modal-icon" class="fa-solid fa-circle-check" style="font-size:45px; color:var(--accent); margin-bottom:20px; display:block;"></i>
@@ -1559,11 +1559,6 @@ body.app-ready #app-content {
             <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">CERRAR</button>
         </div>
     </div>
-    <!-- ==================================================================== -->
-
-    <script>
-            /* 🥋 ESCUDO ANTI-PARPADEO: Se ejecuta antes de pintar la página */
-    (function() {
 
     <script>
             /* 🥋 ESCUDO ANTI-PARPADEO: Se ejecuta antes de pintar la página */
