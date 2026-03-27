@@ -1065,30 +1065,37 @@ function addSeminarioRow(data = {}) {
     const rowId = Date.now();
     const div = document.createElement('div');
     
-    // Usamos el mismo diseño que el resto del formulario
     div.className = 'seminario-item';
     div.id = `sem-${rowId}`;
-    div.style = `
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        position: relative;
-    `;
+    div.style = `background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 20px; position: relative;`;
 
     div.innerHTML = `
-    <button type="button" onclick="document.getElementById('sem-${rowId}').remove()" ...>...</button>
-    <div class="form-row">
-        <div class="form-group" style="flex:2"><label>Sensei</label><input type="text" class="sem-sensei" value="${data.sensei || ''}"></div>
-        <div class="form-group"><label>Ciudad</label><input type="text" class="sem-ciudad" value="${data.ciudad || ''}"></div>
-    </div>
-    <div class="form-row">
-        <div class="form-group"><label>País</label><input type="text" class="sem-pais" value="${data.pais || ''}"></div>
-        <div class="form-group"><label>Mes</label><input type="text" class="sem-mes" value="${data.mes || ''}"></div>
-        <div class="form-group"><label>Año</label><input type="number" class="sem-any" value="${data.any || new Date().getFullYear()}"></div>
-    </div>
-`;
+        <button type="button" onclick="document.getElementById('sem-${rowId}').remove()" 
+            style="position:absolute; top:-10px; right:-10px; background:var(--bg-dark); border:1px solid var(--accent); color:var(--accent); cursor:pointer; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size: 0.8rem; z-index:10;">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        
+        <div class="form-row" style="margin-bottom: 10px;">
+            <div class="form-group" style="flex:2">
+                <input type="text" class="sem-sensei" value="${data.sensei || ''}" placeholder="Sensei / Maestro">
+            </div>
+            <div class="form-group" style="flex:1">
+                <input type="text" class="sem-ciudad" value="${data.ciudad || ''}" placeholder="Ciudad">
+            </div>
+        </div>
+        
+        <div class="form-row" style="margin-bottom:0;">
+            <div class="form-group" style="flex:1">
+                <input type="text" class="sem-pais" value="${data.pais || ''}" placeholder="País">
+            </div>
+            <div class="form-group" style="flex:0.5">
+                <input type="text" class="sem-mes" value="${data.mes || ''}" placeholder="Mes">
+            </div>
+            <div class="form-group" style="flex:0.5">
+                <input type="number" class="sem-any" value="${data.any || new Date().getFullYear()}" placeholder="Año">
+            </div>
+        </div>
+    `;
     container.appendChild(div);
 }
 

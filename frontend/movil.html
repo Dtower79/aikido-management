@@ -3699,14 +3699,18 @@ async function openHistoryModal() {
         [...p.seminarios].reverse().forEach(s => {
             const locacion = [s.ciudad, s.pais].filter(Boolean).join(', ');
             const fecha = [s.mes, s.any].filter(Boolean).join(' ');
-            sHtml += `
-            <div class="history-item-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                    <h4 style="margin:0; font-size:15px; color:white;">${s.sensei || 'Seminario'}</h4>
-                    <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white;">${fecha}</span>
-                </div>
-                ${locacion ? `<div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center;"><i class="fa-solid fa-location-dot" style="margin-right:6px; color:var(--accent);"></i> ${locacion}</div>` : ''}
-            </div>`;
+            // ... dentro del bucle de seminarios ...
+sHtml += `
+<div class="history-item-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+        <h4 style="margin:0; font-size:15px; color:white;">${s.sensei || 'Seminario'}</h4>
+        <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white;">${fecha}</span>
+    </div>
+    ${locacion ? `
+        <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:10px;">
+            <span style="display:flex; align-items:center;"><i class="fa-solid fa-location-dot" style="margin-right:5px; color:var(--accent);"></i> ${locacion}</span>
+        </div>` : ''}
+</div>`;
         });
     } else {
         sHtml += '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Sin seminarios registrados.</p>';
