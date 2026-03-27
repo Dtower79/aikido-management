@@ -3829,13 +3829,22 @@ function openAddSeminarioModal() {
 
 // 2. Función que toma los valores y los envía a Strapi
 async function guardarSeminarioAlumno() {
-    const sem = {
+    // Capturamos los valores
+    const semRaw = {
         sensei: document.getElementById('sem-sensei').value.trim(),
         ciudad: document.getElementById('sem-ciudad').value.trim(),
         pais: document.getElementById('sem-pais').value.trim(),
         mes: document.getElementById('sem-mes').value.trim(),
         any: parseInt(document.getElementById('sem-any').value) || new Date().getFullYear()
     };
+
+    // 🛡️ LIMPIEZA: Eliminamos campos vacíos para no confundir a Strapi
+    const sem = {};
+    for (const key in semRaw) {
+        if (semRaw[key] !== "" && semRaw[key] !== null) {
+            sem[key] = semRaw[key];
+        }
+    }
 
     if (!sem.sensei) {
         alert("El campo 'Sensei' es obligatorio");
@@ -3846,36 +3855,38 @@ async function guardarSeminarioAlumno() {
     const aluId = getID(alumnoGlobal);
     const p = alumnoGlobal.attributes || alumnoGlobal;
 
-    // Clonamos la lista actual
-    let listaSeminarios = p.seminarios ? [...p.seminarios] : [];
+    // Preparamos la lista (sin los IDs internos de Strapi si los hubiera)
+    let listaSeminarios = (p.seminarios || []).map(s => {
+        return { sensei: s.sensei, ciudad: s.ciudad, pais: s.pais, mes: s.mes, any: s.any };
+    });
     listaSeminarios.push(sem);
-
-    // --- 🥋 DEBUG CRÍTICO ---
-    console.log("📤 Datos a enviar:", JSON.stringify({ data: { seminarios: listaSeminarios } }, null, 2));
 
     try {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
-        const oldText = btn.innerText;
         btn.innerText = "GUARDANDO...";
         btn.disabled = true;
 
+        // 🚀 PETICIÓN PUT
         const res = await fetch(`${API_URL}/alumnos/${aluId}`, {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json', 
                 'Authorization': `Bearer ${token}` 
             },
-            body: JSON.stringify({ data: { seminarios: listaSeminarios } })
+            body: JSON.stringify({ 
+                data: { seminarios: listaSeminarios } 
+            })
         });
 
-        // 🥋 DIAGNÓSTICO DEL ERROR 400
         if (!res.ok) {
-            const errDetail = await res.json();
-            console.error("❌ Error de Strapi:", errDetail);
-            throw new Error(errDetail.error?.message || "Fallo al guardar en Strapi");
+            const err = await res.json();
+            console.error("Error Strapi:", err);
+            throw new Error("Error " + res.status + ": " + (err.error?.message || "Revisa la consola"));
         }
 
+        // Actualizamos estado local
         alumnoGlobal.attributes.seminarios = listaSeminarios;
+        
         closeModal();
         openHistoryModal(); 
 
