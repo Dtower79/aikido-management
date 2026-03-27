@@ -1226,5 +1226,30 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 
+/* --- FIX: Estilo forzado para inputs en seminarios y formularios --- */
+#sec-nuevo-alumno .seminario-item input,
+#sec-nuevo-alumno .seminario-item select,
+.seminario-item input,
+.form-group input,
+.form-group select {
+    background-color: #0f172a !important; /* Nuestro azul oscuro */
+    color: #e2e8f0 !important;           /* Texto claro */
+    border: 1px solid #334155 !important; /* Borde sutil */
+    -webkit-text-fill-color: #e2e8f0 !important; /* Fuerza el color del texto */
+}
 
+/* Forzar autocompletado para que no se ponga blanco */
+.seminario-item input:-webkit-autofill,
+.seminario-item input:-webkit-autofill:hover,
+.seminario-item input:-webkit-autofill:focus,
+.seminario-item input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Ajuste de place holder para visibilidad */
+.seminario-item input::placeholder {
+    color: #475569 !important;
+}
 
