@@ -3690,57 +3690,57 @@ function switchHistoryTab(tab) {
 }
 
 async function openHistoryModal() {
-    // 1. Inicialización y limpieza del DOM
+    // 1. Limpieza y apertura
     const sheet = document.getElementById('profile-sheet');
     const overlay = document.getElementById('sheet-overlay');
     if (sheet) sheet.classList.remove('open');
     if (overlay) overlay.style.display = 'none';
 
     document.getElementById('history-modal').classList.remove('hidden');
-
-    // RECUPERAMOS LA PESTAÑA DONDE ESTÁBAMOS
-    const lastTab = localStorage.getItem('last_history_tab') || 'clases';
-    switchHistoryTab(lastTab);
     
+    // 2. Pintar datos frescos
     const clasesC = document.getElementById('history-clases');
     const semC = document.getElementById('history-seminarios');
     
-    clasesC.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Sincronizando Tatami...</p>';
-    semC.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Buscando seminarios...</p>';
+    clasesC.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...</p>';
+    semC.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Sincronizando...</p>';
 
-    if (!alumnoGlobal) {
-        clasesC.innerHTML = '<p style="text-align:center; color:red;">Ficha no encontrada</p>';
-        return;
-    }
-
-    const p = alumnoGlobal.attributes || alumnoGlobal;
-    document.getElementById('total-hours-display').innerText = parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'H';
-
+    // 3. RECUPERAR FICHA ACTUALIZADA DESDE STRAPI (Ruta única a la verdad)
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
-
-    // 2. CARGAR SEMINARIOS
-    let sHtml = '<button class="action-btn primary" style="width:100%; margin-bottom:20px; border-radius:12px;" onclick="openAddSeminarioModal()"><i class="fa-solid fa-plus"></i> AÑADIR SEMINARIO</button>';
-    if (p.seminarios && p.seminarios.length > 0) {
-        [...p.seminarios].reverse().forEach(s => {
-            const loc = [s.ciudad, s.pais].filter(Boolean).join(', ');
-            const fecha = [s.mes, s.any].filter(Boolean).join(' ');
-            sHtml += `
-            <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important; display: flex !important; flex-direction: column !important; gap: 5px !important; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 15px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:14px; color:white; font-weight:800;">${s.sensei || 'Seminario'}</span>
-                    <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white; font-weight:700;">${fecha}</span>
-                </div>
-                ${loc ? `<div style="font-size:11px; color:var(--text-muted); font-weight:600;"><i class="fa-solid fa-location-dot" style="margin-right:5px; color:var(--accent);"></i> ${loc.toUpperCase()}</div>` : ''}
-            </div>`;
-        });
-    } else {
-        sHtml += '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Sin seminarios registrados.</p>';
-    }
-    semC.innerHTML = sHtml;
-
-    // 3. CARGAR CLASES
+    
     try {
+        const res = await fetch(`${API_URL}/alumnos/${aluId}?populate=*`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        });
+        const json = await res.json();
+        const p = json.data.attributes || json.data;
+        alumnoGlobal = json.data; // Actualizamos el global con lo que dice el servidor
+
+        document.getElementById('total-hours-display').innerText = parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'H';
+
+        // 4. RENDERIZAR SEMINARIOS (Lógica pura desde p)
+        let sHtml = '<button class="action-btn primary" style="width:100%; margin-bottom:20px; border-radius:12px;" onclick="openAddSeminarioModal()"><i class="fa-solid fa-plus"></i> AÑADIR SEMINARIO</button>';
+        
+        if (p.seminarios && p.seminarios.length > 0) {
+            [...p.seminarios].reverse().forEach(s => {
+                const loc = [s.ciudad, s.pais].filter(Boolean).join(', ');
+                const fecha = [s.mes, s.any].filter(Boolean).join(' ');
+                sHtml += `
+                <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important; display: flex !important; flex-direction: column !important; gap: 5px !important; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:14px; color:white; font-weight:800;">${s.sensei || 'Seminario'}</span>
+                        <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white; font-weight:700;">${fecha}</span>
+                    </div>
+                    ${loc ? `<div style="font-size:11px; color:var(--text-muted); font-weight:600;"><i class="fa-solid fa-location-dot" style="margin-right:5px; color:var(--accent);"></i> ${loc.toUpperCase()}</div>` : ''}
+                </div>`;
+            });
+        } else {
+            sHtml += '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Sin seminarios registrados.</p>';
+        }
+        semC.innerHTML = sHtml;
+
+        // 5. RENDERIZAR CLASES
         const urlClases = `${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&populate[clase][populate]=dojo&sort=createdAt:desc&pagination[limit]=100`;
         const asisRes = await fetch(urlClases, { headers: { 'Authorization': `Bearer ${token}` } });
         const asisJson = await asisRes.json();
@@ -3761,7 +3761,6 @@ async function openHistoryModal() {
                 const dur = parseFloat(cla.Duracion || 1.5).toFixed(1);
                 const dojo = parseRelation(cla.dojo);
                 const dNom = dojo ? (dojo.nombre || "ARASHI").replace(/Aikido\s+Arashi\s+/gi, '') : "SEDE";
-
                 cHtml += `
                 <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -3780,6 +3779,11 @@ async function openHistoryModal() {
             cHtml = '<p style="text-align:center; color:var(--text-muted); margin-top:20px;">No hay historial de clases.</p>';
         }
         clasesC.innerHTML = cHtml;
+
+        // 6. Restaurar pestaña activa
+        const lastTab = localStorage.getItem('last_history_tab') || 'clases';
+        switchHistoryTab(lastTab);
+
     } catch(e) {
         clasesC.innerHTML = '<p style="color:red; text-align:center; margin-top:20px;">Error de conexión.</p>';
     }
