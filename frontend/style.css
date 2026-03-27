@@ -1107,17 +1107,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* --- TARJETAS DEL PASAPORTE (SEPARADAS Y AIREADAS) --- */
-.history-item-card {
-    background: rgba(255,255,255,0.03) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 20px !important;
-    padding: 22px !important; 
-    margin-bottom: 25px !important; /* SEPARACIÓN CLARA ENTRE FILAS */
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 15px !important; /* SEPARACIÓN ENTRE HORA/LUGAR Y FECHA */
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-}
+
 
 /* --- ESCUDO ANTI-CACHÉ Y ANTI-ESPECIFICIDAD --- */
 .history-tab-container .history-tab-btn {
@@ -1167,14 +1157,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 /* 2. Tarjetas con separación (evitamos que las filas se toquen) */
 .history-item-card {
-    background: rgba(255,255,255,0.03) !important;
-    border: 1px solid rgba(255,255,255,0.05) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid var(--glass-border) !important;
     border-radius: 20px !important;
     padding: 20px !important;
-    margin-bottom: 25px !important; /* SEPARACIÓN REAL ENTRE KEIKOS */
+    margin-bottom: 20px !important; /* Espacio uniforme entre filas */
     display: flex !important;
-    flex-direction: column !important;
-    gap: 15px !important;
+    flex-direction: column !important; /* El contenido interno de la card va apilado */
+    gap: 10px !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 }
 
 
@@ -1207,16 +1198,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* Limpieza de tarjetas para que no se pisen */
-.history-item-card {
-    background: rgba(255,255,255,0.03) !important;
-    border: 1px solid var(--glass-border) !important;
-    border-radius: 15px !important;
-    padding: 15px !important;
-    margin-bottom: 15px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-}
+
 
 /* Forzar que el modal sea un flex vertical limpio */
 #history-modal .modal-content {

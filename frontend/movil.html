@@ -3702,14 +3702,18 @@ async function openHistoryModal() {
             // ... dentro del bucle de seminarios ...
 sHtml += `
 <div class="history-item-card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
         <h4 style="margin:0; font-size:15px; color:white;">${s.sensei || 'Seminario'}</h4>
         <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white;">${fecha}</span>
     </div>
-    ${locacion ? `
-        <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:10px;">
-            <span style="display:flex; align-items:center;"><i class="fa-solid fa-location-dot" style="margin-right:5px; color:var(--accent);"></i> ${locacion}</span>
-        </div>` : ''}
+    
+    <!-- CONTENEDOR FLEX PARA CIUDAD Y PAÍS EN UNA LÍNEA -->
+    <div style="display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-muted); margin-top:5px;">
+        <span style="display:flex; align-items:center;">
+            <i class="fa-solid fa-location-dot" style="margin-right:5px; color:var(--accent);"></i> 
+            ${locacion}
+        </span>
+    </div>
 </div>`;
         });
     } else {
