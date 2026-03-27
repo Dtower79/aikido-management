@@ -1693,22 +1693,25 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 }
 
         /* --- MODALES --- */
- function showModal(t, htmlContent, showCloseBtn = true) { 
+function showModal(t, htmlContent, showCloseBtn = true) { 
     // 1. Título
     const titleEl = document.getElementById('modal-title');
     if (titleEl) titleEl.innerText = t;
     
-    // 2. Contenido (Inyectamos el formulario aquí)
+    // 2. Contenido
     const contentEl = document.getElementById('modal-body-content');
     if (contentEl) contentEl.innerHTML = htmlContent || "";
     
-    // 3. Botón de cerrar por defecto
+    // 3. Botón de cerrar
     const okBtn = document.getElementById('modal-ok-btn');
     if (okBtn) okBtn.style.display = showCloseBtn ? 'block' : 'none';
     
-    // 4. Mostrar el modal
+    // 4. Mostrar el modal y forzar capa
     const modal = document.getElementById('custom-modal');
-    if (modal) modal.classList.remove('hidden'); 
+    if (modal) {
+        modal.style.setProperty('z-index', '99999', 'important'); // EL ESCUDO DEFINITIVO
+        modal.classList.remove('hidden'); 
+    }
 }
         function closeModal() { 
             document.getElementById('custom-modal').classList.add('hidden'); 
