@@ -3829,22 +3829,13 @@ function openAddSeminarioModal() {
 
 // 2. Función que toma los valores y los envía a Strapi
 async function guardarSeminarioAlumno() {
-    // Capturamos los valores
-    const semRaw = {
+    const sem = {
         sensei: document.getElementById('sem-sensei').value.trim(),
         ciudad: document.getElementById('sem-ciudad').value.trim(),
         pais: document.getElementById('sem-pais').value.trim(),
         mes: document.getElementById('sem-mes').value.trim(),
         any: parseInt(document.getElementById('sem-any').value) || new Date().getFullYear()
     };
-
-    // 🛡️ LIMPIEZA: Eliminamos campos vacíos para no confundir a Strapi
-    const sem = {};
-    for (const key in semRaw) {
-        if (semRaw[key] !== "" && semRaw[key] !== null) {
-            sem[key] = semRaw[key];
-        }
-    }
 
     if (!sem.sensei) {
         alert("El campo 'Sensei' es obligatorio");
@@ -3853,20 +3844,24 @@ async function guardarSeminarioAlumno() {
 
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
-    const p = alumnoGlobal.attributes || alumnoGlobal;
-
-    // Preparamos la lista (sin los IDs internos de Strapi si los hubiera)
-    let listaSeminarios = (p.seminarios || []).map(s => {
-        return { sensei: s.sensei, ciudad: s.ciudad, pais: s.pais, mes: s.mes, any: s.any };
-    });
+    
+    // 🛡️ BLINDAJE: Obtenemos la lista actual de forma segura (v5 usa o no .attributes)
+    // Buscamos seminarios en el objeto global, tratando de evitar el 'undefined'
+    let listaSeminarios = [];
+    if (alumnoGlobal && alumnoGlobal.seminarios) {
+        listaSeminarios = [...alumnoGlobal.seminarios];
+    } else if (alumnoGlobal && alumnoGlobal.attributes && alumnoGlobal.attributes.seminarios) {
+        listaSeminarios = [...alumnoGlobal.attributes.seminarios];
+    }
+    
     listaSeminarios.push(sem);
 
     try {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
+        const oldText = btn.innerText;
         btn.innerText = "GUARDANDO...";
         btn.disabled = true;
 
-        // 🚀 PETICIÓN PUT
         const res = await fetch(`${API_URL}/alumnos/${aluId}`, {
             method: 'PUT',
             headers: { 
@@ -3880,12 +3875,15 @@ async function guardarSeminarioAlumno() {
 
         if (!res.ok) {
             const err = await res.json();
-            console.error("Error Strapi:", err);
-            throw new Error("Error " + res.status + ": " + (err.error?.message || "Revisa la consola"));
+            throw new Error(err.error?.message || "Error en el servidor");
         }
 
-        // Actualizamos estado local
-        alumnoGlobal.attributes.seminarios = listaSeminarios;
+        // 3. ACTUALIZACIÓN SEGURA DE VARIABLE GLOBAL
+        if (alumnoGlobal.attributes) {
+            alumnoGlobal.attributes.seminarios = listaSeminarios;
+        } else {
+            alumnoGlobal.seminarios = listaSeminarios;
+        }
         
         closeModal();
         openHistoryModal(); 
