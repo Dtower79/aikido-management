@@ -3698,27 +3698,29 @@ async function openHistoryModal() {
 if (p.seminarios && p.seminarios.length > 0) {
     [...p.seminarios].reverse().forEach(s => {
     const locacion = [s.ciudad, s.pais].filter(Boolean).join(', ');
-    const fecha = [s.mes, s.any].filter(Boolean).join(' ');
+    const fecha =[s.mes, s.any].filter(Boolean).join(' ');
     
     sHtml += `
-    <div class="history-item-card" style="padding: 15px !important; margin-bottom: 10px !important; display: block !important;">
-        <table style="width: 100%; border-collapse: collapse;">
-            <!-- Fila 1: Nombre y Fecha -->
-            <tr>
-                <td style="font-size: 15px; color: white; font-weight: 800; padding-bottom: 5px;">
-                    ${s.sensei || 'Seminario'}
-                </td>
-                <td style="text-align: right; padding-bottom: 5px;">
-                    <span style="font-size: 11px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white; font-weight:700;">${fecha}</span>
-                </td>
-            </tr>
-            <!-- Fila 2: Ubicación -->
-            <tr>
-                <td colspan="2" style="font-size: 12px; color: var(--text-muted); font-weight: 600; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.05);">
-                    <i class="fa-solid fa-location-dot" style="margin-right:6px; color:var(--accent);"></i> ${locacion.toUpperCase()}
-                </td>
-            </tr>
-        </table>
+    <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; gap: 10px !important;">
+        
+        <!-- PARTE IZQUIERDA: Maestro + Ubicación (Todo en línea) -->
+        <div style="display: flex; align-items: center; flex: 1; overflow: hidden; gap: 8px;">
+            <span style="font-size: 14px; color: white; font-weight: 800; white-space: nowrap;">
+                ${s.sensei || 'Seminario'}
+            </span>
+            
+            ${locacion ? `
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center;">
+                <span style="opacity: 0.3; margin-right: 8px;">|</span>
+                <i class="fa-solid fa-location-dot" style="margin-right: 4px; color: var(--accent);"></i> ${locacion.toUpperCase()}
+            </span>` : ''}
+        </div>
+
+        <!-- PARTE DERECHA: Fecha -->
+        <span style="font-size: 11px; background: var(--accent); padding: 4px 8px; border-radius: 8px; color: white; font-weight: 700; white-space: nowrap; flex-shrink: 0;">
+            ${fecha}
+        </span>
+
     </div>`;
 });
     
