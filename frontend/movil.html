@@ -3829,10 +3829,6 @@ function openAddSeminarioModal() {
 
 // 2. Función que toma los valores y los envía a Strapi
 async function guardarSeminarioAlumno() {
-    // 1. Logs de diagnóstico para ver qué tenemos en la mano
-    console.log("🔍 [DEBUG] alumnoGlobal actual:", alumnoGlobal);
-
-    // 2. Extracción de datos del modal
     const sem = {
         sensei: document.getElementById('sem-sensei').value.trim(),
         ciudad: document.getElementById('sem-ciudad').value.trim(),
@@ -3841,15 +3837,27 @@ async function guardarSeminarioAlumno() {
         any: parseInt(document.getElementById('sem-any').value) || new Date().getFullYear()
     };
 
-    if (!sem.sensei) { alert("El campo 'Sensei' es obligatorio"); return; }
+    if (!sem.sensei) {
+        alert("El campo 'Sensei' es obligatorio");
+        return;
+    }
 
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
     
-    // 3. BLINDAJE DE ESTRUCTURA:
-    // Si alumnoGlobal no tiene 'attributes', es que estamos trabajando directamente con el objeto plano (Strapi v5)
+    // Obtenemos la lista actual de forma segura
     let ficha = alumnoGlobal.attributes ? alumnoGlobal.attributes : alumnoGlobal;
-    let listaSeminarios = ficha.seminarios ? [...ficha.seminarios] : [];
+    
+    // 🥋 LIMPIEZA RADICAL: 
+    // Usamos .map para extraer SOLAMENTE los campos que Strapi espera en el componente
+    // Esto elimina cualquier 'id' o 'documentId' que cause el 'Invalid key id'
+    let listaSeminarios = (ficha.seminarios || []).map(s => ({
+        sensei: s.sensei,
+        ciudad: s.ciudad,
+        pais: s.pais,
+        mes: s.mes,
+        any: s.any
+    }));
     
     listaSeminarios.push(sem);
 
@@ -3869,10 +3877,11 @@ async function guardarSeminarioAlumno() {
 
         if (!res.ok) {
             const err = await res.json();
-            throw new Error(err.error?.message || "Error en el servidor");
+            console.error("Error respuesta Strapi:", err);
+            throw new Error(err.error?.message || "Error al actualizar");
         }
 
-        // 4. ACTUALIZACIÓN DE ESTADO SEGURA
+        // Actualización local
         if (alumnoGlobal.attributes) {
             alumnoGlobal.attributes.seminarios = listaSeminarios;
         } else {
@@ -3880,10 +3889,9 @@ async function guardarSeminarioAlumno() {
         }
         
         closeModal();
-        openHistoryModal(); 
+        openHistoryModal(); // Refresco limpio
 
     } catch (err) {
-        console.error("❌ Fallo crítico:", err);
         showModal("Error", err.message);
         const btn = document.querySelector('#custom-modal .action-btn.primary');
         if(btn) { btn.innerText = "GUARDAR SEMINARIO"; btn.disabled = false; }
