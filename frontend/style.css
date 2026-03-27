@@ -329,7 +329,7 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     grid-column: 3; display: flex; justify-content: flex-end; gap: 5px;
 }
 
-#custom-modal { z-index: 9999 !important; }
+#custom-modal { z-index: 99999 !important; }
 
 .search-box { 
     display: flex; 
