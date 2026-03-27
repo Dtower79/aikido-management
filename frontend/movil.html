@@ -3697,25 +3697,26 @@ async function openHistoryModal() {
 
 if (p.seminarios && p.seminarios.length > 0) {
     [...p.seminarios].reverse().forEach(s => {
-         const locacion = [s.ciudad, s.pais].filter(Boolean).join(', ');
+    const locacion = [s.ciudad, s.pais].filter(Boolean).join(', ');
     const fecha = [s.mes, s.any].filter(Boolean).join(' ');
     
     sHtml += `
-    <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important;">
-        <!-- Fila Única: Nombre del Sensei y Fecha a la derecha -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <h4 style="margin:0; font-size:15px; color:white; font-weight:800;">${s.sensei || 'Seminario'}</h4>
-            <span style="font-size:11px; background:rgba(239, 68, 68, 0.2); padding:4px 8px; border-radius:8px; color:var(--accent); font-weight:800; white-space:nowrap;">${fecha}</span>
+    <div class="history-item-card" style="padding: 15px !important; margin-bottom: 10px !important;">
+        <!-- CONTENEDOR FLEX PRINCIPAL -->
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            
+            <!-- FILA 1: Nombre + Fecha (ALINEADOS) -->
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                <span style="font-size:14px; color:white; font-weight:800;">${s.sensei || 'Seminario'}</span>
+                <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white; white-space:nowrap;">${fecha}</span>
+            </div>
+
+            <!-- FILA 2: Ubicación (ALINEADA) -->
+            ${locacion ? `
+            <div style="font-size:12px; color:var(--text-muted); font-weight:600; display:flex; align-items:center;">
+                <i class="fa-solid fa-location-dot" style="margin-right:6px; color:var(--accent);"></i> ${locacion.toUpperCase()}
+            </div>` : ''}
         </div>
-        
-        <!-- Tabla invisible para forzar la alineación horizontal de la ubicación -->
-        <table style="width:100%; border-collapse:collapse; border-top:1px solid rgba(255,255,255,0.05); margin-top:5px; padding-top:5px;">
-            <tr>
-                <td style="padding:8px 0 0 0; font-size:12px; color:var(--text-muted); font-weight:600;">
-                    <i class="fa-solid fa-location-dot" style="margin-right:6px; color:var(--accent);"></i>${locacion.toUpperCase()}
-                </td>
-            </tr>
-        </table>
     </div>`;
 });
 } else {

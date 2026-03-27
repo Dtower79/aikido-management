@@ -1163,7 +1163,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     padding: 20px !important;
     margin-bottom: 20px !important; /* Espacio uniforme entre filas */
     /*display: flex !important;*/
-    flex-direction: column !important; /* El contenido interno de la card va apilado */
+    /*flex-direction: column !important; /* El contenido interno de la card va apilado */
     gap: 10px !important;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 }
