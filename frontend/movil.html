@@ -1885,15 +1885,19 @@ async function refreshStudentData() {
         }
     }
 
-    // 5. INTERFAZ: SENSEI VS ALUMNO
-    // Solo mostramos la "Zen Card" si NO es un alumno instructor (como Raúl)
-    // Los instructores mantienen su círculo de horas para su propio progreso.
-    if (esSenseiDirecto && user.username === 'TABLET') {
+// 5. INTERFAZ: SENSEI VS ALUMNO
+    // Mostrar la Zen Card a cualquier usuario marcado como Sensei principal (is_sensei = true)
+    if (esSenseiDirecto) {
         document.body.classList.add('is-sensei-mode'); 
         if (circle) circle.classList.add('hidden');
         if (nextGrade) nextGrade.classList.add('hidden');
         if (zenCard) zenCard.remove();
-        const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title" style="font-size:30px !important;">SENSEI</h2><p class="zen-subtitle">TABLET DOJO</p></div>`;
+        
+        // Si entra la tablet pone TABLET DOJO, si entra Francesc pondrá FRANCESC
+        const subTitleText = user.username === 'TABLET' ? 'TABLET DOJO' : displayName;
+        
+        const zenHTML = `<div id="zen-card" class="zen-master-card"><img src="img/logo-arashi.png" class="zen-logo"><h2 class="zen-title" style="font-size:30px !important;">SENSEI</h2><p class="zen-subtitle">${subTitleText}</p></div>`;
+        
         if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
     } else if (p) {
         document.body.classList.remove('is-sensei-mode');
