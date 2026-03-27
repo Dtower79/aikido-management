@@ -1,61 +1,69 @@
-const CACHE_NAME = 'arashi-v5.61-update';
+const CACHE_NAME = 'arashi-v6.0-network-first'; // Cambiamos el nombre para forzar limpieza
 
-// Activos críticos para que la UI cargue en el tatami sin internet
-const ASSETS_TO_CACHE = [
+const ASSETS_TO_CACHE =[
   './',
   './movil.html',
   './manifest.json',
   './img/logo-arashi.png',
-  './img/logo-arashi-movil.png',
-  './img/kanjis.jpg', // Crítico para la Zen Master Card de Senseis
+  './img/kanjis.jpg',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap'
 ];
 
-// 1. INSTALACIÓN: Captura de activos estáticos
+// 1. INSTALACIÓN
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('🥋 [SW] Blindando interfaz en caché...');
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
   );
-  self.skipWaiting();
+  self.skipWaiting(); // Obligamos al nuevo SW a instalarse de inmediato
 });
 
-// 2. ACTIVACIÓN: Limpieza de versiones antiguas (Zero Waste Storage)
+// 2. ACTIVACIÓN Y LIMPIEZA
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       );
-    }).then(() => self.clients.claim()) // <--- CIRUGÍA: Reclamar control inmediato
+    }).then(() => self.clients.claim()) // Toma el control de la app al instante
   );
-  console.log('🥋 [SW] Sistema Arashi Activado y Limpio.');
 });
 
-// 3. ESTRATEGIA DE CARGA: Cache-First para UI, Network-Only para API
+// 3. ESTRATEGIA: NETWORK-FIRST (Red Primero, Caché como Respaldo)
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // REGLA DE ORO: No cachear llamadas a la API de Render
-  // La integridad de los datos de Neon depende de que el fetch sea real o use LocalStorage
-  if (url.pathname.startsWith('/api/')) {
-    return; // Dejamos que movil.html y fetchSmart gestionen esto
+  // Excluimos la API (FetchSmart ya gestiona esto)
+  if (url.pathname.startsWith('/api/')) return;
+
+  // PARA HTML, CSS Y JS: Siempre buscar la versión más nueva en el servidor
+  if (event.request.mode === 'navigate' || event.request.destination === 'style' || event.request.destination === 'script') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          // Si hay red y éxito, guardamos la nueva versión en caché y la mostramos
+          return caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        })
+        .catch(() => {
+          // Si no hay red (Offline), sacamos la última versión guardada de la caché
+          return caches.match(event.request);
+        })
+    );
+    return;
   }
 
-  // Para el resto (HTML, CSS, Imágenes, Fuentes)
+  // PARA IMÁGENES Y FUENTES: Caché Primero (Ahorra muchos datos y carga al instante)
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Si está en caché, lo devolvemos (Velocidad instantánea)
-      // Si no, lo buscamos en la red
-      return response || fetch(event.request);
-    }).catch(() => {
-      // Si todo falla (Sin offline y sin caché), podrías devolver una página offline.
-      if (event.request.mode === 'navigate') {
-        return caches.match('./movil.html');
-      }
+    caches.match(event.request).then((cachedResponse) => {
+      return cachedResponse || fetch(event.request).then(networkResponse => {
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      });
     })
   );
 });

@@ -3212,27 +3212,38 @@ function showView(v, el) {
             window.location.replace('movil.html'); 
         }
 
-        /* --- PWA LOGIC --- */
-        /* --- PWA LOGIC (Arquitectura Arashi) --- */
-
-// 1. Registro del Service Worker con Forzado de Actualización
+/* --- PWA LOGIC (Arquitectura Arashi) --- */
 if ('serviceWorker' in navigator) {
-    // CIRUGÍA: Detectar cambio de versión y recargar automáticamente
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshing) return;
-        refreshing = true;
-        window.location.reload();
-    });
-
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        // El "?v=" evita que el navegador cachee el propio archivo del Service Worker
+        navigator.serviceWorker.register('./sw.js?v=' + new Date().getTime())
             .then(reg => {
-                console.log('🥋 SW: Sistema de defensa activo');
-                // Opcional: comprueba si hay actualizaciones al cargar
+                console.log('🥋 SW: Sistema de defensa activo y buscando actualizaciones...');
+                
+                // Forzar comprobación al servidor
                 reg.update();
+
+                // Si detecta un código nuevo en el servidor, prepara la recarga
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log("♻️ Nueva versión de Arashi detectada. Actualizando...");
+                            window.location.reload(true); // Recarga forzosa ignorando caché
+                        }
+                    });
+                });
             })
             .catch(err => console.log('❌ SW: Fallo de despliegue', err));
+    });
+
+    // Controlador de seguridad: si el SW cambia de versión mientras el usuario mira la app, recarga
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            refreshing = true;
+            window.location.reload(true);
+        }
     });
 }
 
