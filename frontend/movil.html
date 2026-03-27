@@ -3829,6 +3829,10 @@ function openAddSeminarioModal() {
 
 // 2. Función que toma los valores y los envía a Strapi
 async function guardarSeminarioAlumno() {
+    // 1. Logs de diagnóstico para ver qué tenemos en la mano
+    console.log("🔍 [DEBUG] alumnoGlobal actual:", alumnoGlobal);
+
+    // 2. Extracción de datos del modal
     const sem = {
         sensei: document.getElementById('sem-sensei').value.trim(),
         ciudad: document.getElementById('sem-ciudad').value.trim(),
@@ -3837,28 +3841,20 @@ async function guardarSeminarioAlumno() {
         any: parseInt(document.getElementById('sem-any').value) || new Date().getFullYear()
     };
 
-    if (!sem.sensei) {
-        alert("El campo 'Sensei' es obligatorio");
-        return;
-    }
+    if (!sem.sensei) { alert("El campo 'Sensei' es obligatorio"); return; }
 
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
     
-    // 🛡️ BLINDAJE: Obtenemos la lista actual de forma segura (v5 usa o no .attributes)
-    // Buscamos seminarios en el objeto global, tratando de evitar el 'undefined'
-    let listaSeminarios = [];
-    if (alumnoGlobal && alumnoGlobal.seminarios) {
-        listaSeminarios = [...alumnoGlobal.seminarios];
-    } else if (alumnoGlobal && alumnoGlobal.attributes && alumnoGlobal.attributes.seminarios) {
-        listaSeminarios = [...alumnoGlobal.attributes.seminarios];
-    }
+    // 3. BLINDAJE DE ESTRUCTURA:
+    // Si alumnoGlobal no tiene 'attributes', es que estamos trabajando directamente con el objeto plano (Strapi v5)
+    let ficha = alumnoGlobal.attributes ? alumnoGlobal.attributes : alumnoGlobal;
+    let listaSeminarios = ficha.seminarios ? [...ficha.seminarios] : [];
     
     listaSeminarios.push(sem);
 
     try {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
-        const oldText = btn.innerText;
         btn.innerText = "GUARDANDO...";
         btn.disabled = true;
 
@@ -3868,9 +3864,7 @@ async function guardarSeminarioAlumno() {
                 'Content-Type': 'application/json', 
                 'Authorization': `Bearer ${token}` 
             },
-            body: JSON.stringify({ 
-                data: { seminarios: listaSeminarios } 
-            })
+            body: JSON.stringify({ data: { seminarios: listaSeminarios } })
         });
 
         if (!res.ok) {
@@ -3878,7 +3872,7 @@ async function guardarSeminarioAlumno() {
             throw new Error(err.error?.message || "Error en el servidor");
         }
 
-        // 3. ACTUALIZACIÓN SEGURA DE VARIABLE GLOBAL
+        // 4. ACTUALIZACIÓN DE ESTADO SEGURA
         if (alumnoGlobal.attributes) {
             alumnoGlobal.attributes.seminarios = listaSeminarios;
         } else {
@@ -3889,6 +3883,7 @@ async function guardarSeminarioAlumno() {
         openHistoryModal(); 
 
     } catch (err) {
+        console.error("❌ Fallo crítico:", err);
         showModal("Error", err.message);
         const btn = document.querySelector('#custom-modal .action-btn.primary');
         if(btn) { btn.innerText = "GUARDAR SEMINARIO"; btn.disabled = false; }
