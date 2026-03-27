@@ -3686,30 +3686,30 @@ async function openHistoryModal() {
         return;
     }
 
-    // 2. Definición única de variables (Aquí estaba el error de duplicidad)
     const p = alumnoGlobal.attributes || alumnoGlobal;
     const horasTotales = parseFloat(p.horas_acumuladas || 0).toFixed(1);
-    
-    // Inyectamos el valor en el HTML
     document.getElementById('total-hours-display').innerText = horasTotales + 'H';
 
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
 
-    // 3. CARGAR SEMINARIOS
+    // 3. CARGAR SEMINARIOS (Versión completa con ubicación y mes)
     let sHtml = '';
     if (p.seminarios && p.seminarios.length > 0) {
         [...p.seminarios].reverse().forEach(s => {
+            const locacion = [s.ciudad, s.pais].filter(Boolean).join(', ');
+            const fecha = [s.mes, s.any].filter(Boolean).join(' ');
             sHtml += `
             <div class="history-item-card">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <h4 style="margin:0; font-size:15px; color:white;">${s.sensei || 'Seminario'}</h4>
-                    <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white;">${s.any || ''}</span>
+                    <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white;">${fecha}</span>
                 </div>
+                ${locacion ? `<p style="margin:5px 0 0; font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-location-dot"></i> ${locacion}</p>` : ''}
             </div>`;
         });
     } else {
-        sHtml = '<p style="text-align:center; color:var(--text-muted);">Sin seminarios.</p>';
+        sHtml = '<p style="text-align:center; color:var(--text-muted);">Sin seminarios registrados.</p>';
     }
     semC.innerHTML = sHtml;
 
@@ -3736,26 +3736,23 @@ async function openHistoryModal() {
                 const dojo = parseRelation(cla.dojo);
                 const dNom = dojo ? (dojo.nombre || "ARASHI").replace(/Aikido\s+Arashi\s+/gi, '') : "SEDE";
 
-                // ... dentro de tu bucle forEach de clases:
-cHtml += `
-<div class="history-item-card">
-    <div class="card-content">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h4 style="margin:0; color:white; font-size:15px; display:flex; align-items:center;">
-                <i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:10px;"></i> ${f.date}
-            </h4>
-            <span style="font-size:14px; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:6px 12px; border-radius:10px;">+${dur}h</span>
-        </div>
-        <div style="padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <p style="margin:0; font-size:12px; color:var(--text-muted); font-weight: 600;">
-                <i class="fa-regular fa-clock" style="margin-right:8px;"></i> ${f.time} • ${dNom.toUpperCase()}
-            </p>
-        </div>
-    </div>
-</div>`;
+                cHtml += `
+                <div class="history-item-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h4 style="margin:0; color:white; font-size:15px; display:flex; align-items:center;">
+                            <i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:10px;"></i> ${f.date}
+                        </h4>
+                        <span style="font-size:14px; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:6px 12px; border-radius:10px;">+${dur}h</span>
+                    </div>
+                    <div style="padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1); margin-top:5px;">
+                        <p style="margin:0; font-size:12px; color:var(--text-muted); font-weight: 600;">
+                            <i class="fa-regular fa-clock" style="margin-right:8px;"></i> ${f.time} • ${dNom.toUpperCase()}
+                        </p>
+                    </div>
+                </div>`;
             });
         } else {
-            cHtml = '<p style="text-align:center; color:var(--text-muted);">No hay historial.</p>';
+            cHtml = '<p style="text-align:center; color:var(--text-muted);">No hay historial de clases.</p>';
         }
         clasesC.innerHTML = cHtml;
     } catch(e) {
@@ -3763,44 +3760,97 @@ cHtml += `
     }
 }
 
+/* --- BLOQUE DE SEMINARIOS (NUEVA INTEGRACIÓN) --- */
+
+// 1. Función que abre el modal con el formulario
+function openAddSeminarioModal() {
+    showModal("AÑADIR SEMINARIO", `
+        <div style="text-align:left; margin-top:10px;">
+            <span class="modal-label">SENSEI / MAESTRO:</span>
+            <input type="text" id="sem-sensei" class="modal-field" placeholder="Nombre del Maestro">
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div>
+                    <span class="modal-label">CIUDAD:</span>
+                    <input type="text" id="sem-ciudad" class="modal-field" placeholder="Ciudad">
+                </div>
+                <div>
+                    <span class="modal-label">PAÍS:</span>
+                    <input type="text" id="sem-pais" class="modal-field" placeholder="País">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div>
+                    <span class="modal-label">MES:</span>
+                    <input type="text" id="sem-mes" class="modal-field" placeholder="Ej: Mayo">
+                </div>
+                <div>
+                    <span class="modal-label">AÑO:</span>
+                    <input type="number" id="sem-any" class="modal-field" value="${new Date().getFullYear()}">
+                </div>
+            </div>
+
+            <button class="action-btn primary" style="width:100%; margin-top:20px;" onclick="guardarSeminarioAlumno()">
+                GUARDAR SEMINARIO
+            </button>
+            <button class="action-btn btn-secondary" style="width:100%; margin-top:10px;" onclick="closeModal()">
+                CANCELAR
+            </button>
+        </div>
+    `, false);
+}
+
+// 2. Función que toma los valores y los envía a Strapi
 async function guardarSeminarioAlumno() {
     const sem = {
-        sensei: document.getElementById('sem-sensei').value,
-        ciudad: document.getElementById('sem-ciudad').value,
-        pais: document.getElementById('sem-pais').value,
-        mes: document.getElementById('sem-mes').value,
-        any: parseInt(document.getElementById('sem-any').value) // Aseguramos que sea número
+        sensei: document.getElementById('sem-sensei').value.trim(),
+        ciudad: document.getElementById('sem-ciudad').value.trim(),
+        pais: document.getElementById('sem-pais').value.trim(),
+        mes: document.getElementById('sem-mes').value.trim(),
+        any: parseInt(document.getElementById('sem-any').value) || new Date().getFullYear()
     };
+
+    if (!sem.sensei) {
+        alert("El campo 'Sensei' es obligatorio");
+        return;
+    }
 
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
     const p = alumnoGlobal.attributes || alumnoGlobal;
 
-    // 🥋 LÓGICA DE COMPONENTE: Strapi espera el array completo de seminarios
-    let listaSeminarios = p.seminarios || [];
+    // Clonamos la lista actual de seminarios
+    let listaSeminarios = p.seminarios ? [...p.seminarios] : [];
     listaSeminarios.push(sem);
 
     try {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
+        const oldText = btn.innerText;
         btn.innerText = "GUARDANDO...";
         btn.disabled = true;
 
         const res = await fetch(`${API_URL}/alumnos/${aluId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+            },
             body: JSON.stringify({ data: { seminarios: listaSeminarios } })
         });
 
         if (!res.ok) throw new Error("Fallo al guardar en Strapi");
 
-        // Actualizamos la variable global para que el modal se refresque con el nuevo dato
+        // Actualizamos la variable global con la nueva lista
         alumnoGlobal.attributes.seminarios = listaSeminarios;
         
         closeModal();
-        openHistoryModal(); // Recargamos el modal para mostrar el nuevo seminario
+        openHistoryModal(); // Recarga la vista para mostrar los nuevos datos
 
     } catch (err) {
         showModal("Error", err.message);
+        const btn = document.querySelector('#custom-modal .action-btn.primary');
+        if(btn) { btn.innerText = "GUARDAR SEMINARIO"; btn.disabled = false; }
     }
 }
 

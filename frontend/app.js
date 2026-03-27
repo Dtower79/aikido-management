@@ -1078,22 +1078,17 @@ function addSeminarioRow(data = {}) {
     `;
 
     div.innerHTML = `
-        <button type="button" onclick="document.getElementById('sem-${rowId}').remove()" 
-            style="position:absolute; top:-10px; right:-10px; background:var(--bg-dark); border:1px solid var(--accent); color:var(--accent); cursor:pointer; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size: 0.8rem; z-index:10;">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-        <div class="form-row">
-            <div class="form-group" style="flex:2"><label>Sensei / Maestro</label><input type="text" class="sem-sensei" list="senseis-list" value="${data.sensei || ''}" placeholder="Nombre del Maestro"></div>
-            <div class="form-group" style="flex:1"><label>Ciudad</label><input type="text" class="sem-ciudad" list="ciudades-seminario-list" value="${data.ciudad || ''}" placeholder="Ciudad"></div>
-        </div>
-        <div class="form-row" style="margin-bottom:0;">
-            <div class="form-group"><label>País</label><input type="text" class="sem-pais" list="paises-list" value="${data.pais || ''}" placeholder="País"></div>
-            <div class="form-group"><label>Mes</label><input type="text" class="sem-mes" value="${data.mes || ''}" placeholder="Mes"></div>
-            <div class="form-group"><label>Año</label><input type="number" class="sem-any" value="${data.any || new Date().getFullYear()}"></div>
-        </div>
-        <!-- Marcador para el selector del submit -->
-        <input type="hidden" class="seminario-row-marker"> 
-    `;
+    <button type="button" onclick="document.getElementById('sem-${rowId}').remove()" ...>...</button>
+    <div class="form-row">
+        <div class="form-group" style="flex:2"><label>Sensei</label><input type="text" class="sem-sensei" value="${data.sensei || ''}"></div>
+        <div class="form-group"><label>Ciudad</label><input type="text" class="sem-ciudad" value="${data.ciudad || ''}"></div>
+    </div>
+    <div class="form-row">
+        <div class="form-group"><label>País</label><input type="text" class="sem-pais" value="${data.pais || ''}"></div>
+        <div class="form-group"><label>Mes</label><input type="text" class="sem-mes" value="${data.mes || ''}"></div>
+        <div class="form-group"><label>Año</label><input type="number" class="sem-any" value="${data.any || new Date().getFullYear()}"></div>
+    </div>
+`;
     container.appendChild(div);
 }
 
