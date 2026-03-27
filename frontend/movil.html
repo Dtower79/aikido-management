@@ -1699,7 +1699,10 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
             document.getElementById('modal-ok-btn').style.display = showCloseBtn ? 'block' : 'none';
             
             const modal = document.getElementById('custom-modal');
-            modal.style.zIndex = "20000"; // ESCUDO: Fuerza a que se abra por encima del pasaporte
+            
+            // 🥋 EL ESCUDO DEFINITIVO: setProperty con 'important' anula cualquier CSS rebelde
+            modal.style.setProperty('z-index', '99999', 'important'); 
+            
             modal.classList.remove('hidden'); 
         }
         function closeModal() { 

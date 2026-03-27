@@ -1037,6 +1037,10 @@ const ca = document.querySelector('.content'); if (ca) { ca.addEventListener('sc
 
 function showModal(titulo, mensaje, callbackOk = null) {
     const modal = document.getElementById('custom-modal');
+    
+    // 🥋 EL ESCUDO DEFINITIVO (Versión Escritorio)
+    modal.style.setProperty('z-index', '99999', 'important');
+    
     document.getElementById('modal-title').innerText = titulo;
     document.getElementById('modal-message').innerText = mensaje;
     
