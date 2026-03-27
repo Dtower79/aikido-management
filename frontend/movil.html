@@ -3214,36 +3214,33 @@ function showView(v, el) {
 
 /* --- PWA LOGIC (Arquitectura Arashi) --- */
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        // El "?v=" evita que el navegador cachee el propio archivo del Service Worker
-        navigator.serviceWorker.register('./sw.js?v=' + new Date().getTime())
-            .then(reg => {
-                console.log('🥋 SW: Sistema de defensa activo y buscando actualizaciones...');
-                
-                // Forzar comprobación al servidor
-                reg.update();
+    let refreshing = false;
 
-                // Si detecta un código nuevo en el servidor, prepara la recarga
+    // Solo recarga una vez cuando el nuevo Service Worker toma el control real
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+        }
+    });
+
+    window.addEventListener('load', () => {
+        // REGISTRO LIMPIO SIN TIMESTAMP
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => {
+                console.log('🥋 SW: Sistema de defensa activo y estable.');
+
+                // Si hay una actualización real en el archivo sw.js del servidor
                 reg.addEventListener('updatefound', () => {
                     const newWorker = reg.installing;
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            console.log("♻️ Nueva versión de Arashi detectada. Actualizando...");
-                            window.location.reload(true); // Recarga forzosa ignorando caché
+                            console.log("♻️ Nueva versión de Arashi descargada. Se aplicará en breve.");
                         }
                     });
                 });
             })
             .catch(err => console.log('❌ SW: Fallo de despliegue', err));
-    });
-
-    // Controlador de seguridad: si el SW cambia de versión mientras el usuario mira la app, recarga
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-            refreshing = true;
-            window.location.reload(true);
-        }
     });
 }
 
