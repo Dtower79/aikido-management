@@ -3888,11 +3888,15 @@ try {
             alumnoGlobal.seminarios = listaSeminarios;
         }
         
-        // --- 🥋 CONFIRMACIÓN PROFESIONAL ---
-        closeModal(); // Primero cerramos el modal del formulario
-        showModal("¡OSS!", "Seminario registrado correctamente en tu pasaporte.", () => {
-            // Cuando el usuario pulse OK, recargamos la vista del historial
-            openHistoryModal(); 
+        // 2. RECUPERACIÓN FORZADA (Limpia la caché de perfil para obligar a leer de Neon)
+        localStorage.removeItem('cache_perfil_alumno');
+        
+        closeModal(); 
+        
+        // 3. Recarga limpia
+        showModal("¡OSS!", "Seminario registrado correctamente.", async () => {
+            await refreshStudentData(); // Refresca alumnoGlobal
+            openHistoryModal();        // Repinta el historial con el dato nuevo
         });
 
     } catch (err) {
