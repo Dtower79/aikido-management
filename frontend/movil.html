@@ -3701,16 +3701,16 @@ if (p.seminarios && p.seminarios.length > 0) {
     const fecha = [s.mes, s.any].filter(Boolean).join(' ');
     
     sHtml += `
-    <div class="history-item-card" style="padding: 12px 15px !important; margin-bottom: 10px !important;">
-        <!-- FILA SUPERIOR: Nombre y Fecha -->
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom: 5px;">
-            <span style="font-size:15px; color:white; font-weight:800;">${s.sensei || 'Seminario'}</span>
-            <span style="font-size:11px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white; font-weight:700;">${fecha}</span>
-        </div>
+    <div class="history-item-card">
+        <!-- Nombre -->
+        <span style="font-size:15px; color:white; font-weight:800;">${s.sensei || 'Seminario'}</span>
         
-        <!-- FILA INFERIOR: Ubicación -->
+        <!-- Fecha -->
+        <span style="font-size:11px; background:var(--accent); padding:3px 8px; border-radius:8px; color:white; font-weight:700; white-space:nowrap;">${fecha}</span>
+        
+        <!-- Ubicación (se colocará debajo por el grid) -->
         ${locacion ? `
-        <div style="font-size:12px; color:var(--text-muted); font-weight:600; display:flex; align-items:center; margin-top: 2px;">
+        <div style="font-size:12px; color:var(--text-muted); font-weight:600; display:flex; align-items:center;">
             <i class="fa-solid fa-location-dot" style="margin-right:6px; color:var(--accent);"></i> ${locacion.toUpperCase()}
         </div>` : ''}
     </div>`;

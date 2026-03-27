@@ -1159,14 +1159,22 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .history-item-card {
     background: rgba(255, 255, 255, 0.03) !important;
     border: 1px solid var(--glass-border) !important;
-    border-radius: 20px !important;
-    padding: 20px !important;
-    margin-bottom: 20px !important; /* Espacio uniforme entre filas */
-    /*display: flex !important;*/
-    /*flex-direction: column !important; /* El contenido interno de la card va apilado */
-    gap: 15px !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    border-radius: 15px !important;
+    padding: 12px 15px !important;
+    margin-bottom: 10px !important;
+    /* REJILLA ESTRICTA */
+    display: grid !important;
+    grid-template-columns: 1fr auto !important; /* Nombre a la izquierda, Fecha a la derecha */
+    grid-template-rows: auto auto !important;   /* Fila de arriba y Fila de abajo */
+    gap: 5px !important;
+    align-items: center !important;
 }
+
+/* Forzamos que la ubicación ocupe toda la anchura abajo */
+.history-item-card > div:last-child {
+    grid-column: 1 / span 2;
+}
+
 
 
 /* Limpieza radical de estilos */
