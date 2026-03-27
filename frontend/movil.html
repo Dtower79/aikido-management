@@ -3846,9 +3846,12 @@ async function guardarSeminarioAlumno() {
     const aluId = getID(alumnoGlobal);
     const p = alumnoGlobal.attributes || alumnoGlobal;
 
-    // Clonamos la lista actual de seminarios
+    // Clonamos la lista actual
     let listaSeminarios = p.seminarios ? [...p.seminarios] : [];
     listaSeminarios.push(sem);
+
+    // --- 🥋 DEBUG CRÍTICO ---
+    console.log("📤 Datos a enviar:", JSON.stringify({ data: { seminarios: listaSeminarios } }, null, 2));
 
     try {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
@@ -3865,13 +3868,16 @@ async function guardarSeminarioAlumno() {
             body: JSON.stringify({ data: { seminarios: listaSeminarios } })
         });
 
-        if (!res.ok) throw new Error("Fallo al guardar en Strapi");
+        // 🥋 DIAGNÓSTICO DEL ERROR 400
+        if (!res.ok) {
+            const errDetail = await res.json();
+            console.error("❌ Error de Strapi:", errDetail);
+            throw new Error(errDetail.error?.message || "Fallo al guardar en Strapi");
+        }
 
-        // Actualizamos la variable global con la nueva lista
         alumnoGlobal.attributes.seminarios = listaSeminarios;
-        
         closeModal();
-        openHistoryModal(); // Recarga la vista para mostrar los nuevos datos
+        openHistoryModal(); 
 
     } catch (err) {
         showModal("Error", err.message);
