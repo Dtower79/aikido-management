@@ -3699,22 +3699,17 @@ async function openHistoryModal() {
         [...p.seminarios].reverse().forEach(s => {
             const locacion = [s.ciudad, s.pais].filter(Boolean).join(', ');
             const fecha = [s.mes, s.any].filter(Boolean).join(' ');
-            // ... dentro del bucle de seminarios ...
-sHtml += `
-<div class="history-item-card">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h4 style="margin:0; font-size:15px; color:white;">${s.sensei || 'Seminario'}</h4>
-        <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white;">${fecha}</span>
-    </div>
-    
-    <!-- CONTENEDOR FLEX PARA CIUDAD Y PAÍS EN UNA LÍNEA -->
-    <div style="display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-muted); margin-top:5px;">
-        <span style="display:flex; align-items:center;">
-            <i class="fa-solid fa-location-dot" style="margin-right:5px; color:var(--accent);"></i> 
-            ${locacion}
-        </span>
-    </div>
-</div>`;
+            sHtml += `
+            <div class="history-item-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <h4 style="margin:0; font-size:15px; color:white;">${s.sensei || 'Seminario'}</h4>
+                    <span style="font-size:10px; background:var(--accent); padding:3px 8px; border-radius:10px; color:white;">${fecha}</span>
+                </div>
+                ${locacion ? `
+                <div style="display:flex; align-items:center; font-size:12px; color:var(--text-muted);">
+                    <i class="fa-solid fa-location-dot" style="margin-right:5px; color:var(--accent);"></i> ${locacion}
+                </div>` : ''}
+            </div>`;
         });
     } else {
         sHtml += '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Sin seminarios registrados.</p>';
@@ -3744,34 +3739,26 @@ sHtml += `
                 const dojo = parseRelation(cla.dojo);
                 const dNom = dojo ? (dojo.nombre || "ARASHI").replace(/Aikido\s+Arashi\s+/gi, '') : "SEDE";
 
-                // Sustituye el bloque donde pintas cHtml dentro del forEach por esto:
-
                 cHtml += `
                 <div class="history-item-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
                         <h4 style="margin:0; color:white; font-size:15px; display:flex; align-items:center;">
                             <i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:10px;"></i> ${f.date}
                         </h4>
-                        <span style="font-size:14px; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:4px 10px; border-radius:10px;">+${dur}h</span>
+                        <span style="font-size:14px; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:6px 12px; border-radius:10px;">+${dur}h</span>
                     </div>
-                    
-                    <!-- CONTENEDOR FLEX PARA ALINEAR HORA Y DOJO PERFECTAMENTE -->
-                    <div style="display:flex; align-items:center; gap:15px; color:var(--text-muted); font-size:12px; font-weight:600; border-top: 1px solid rgba(255,255,255,0.05); padding-top:8px;">
-                        <span style="display:flex; align-items:center;">
-                            <i class="fa-regular fa-clock" style="margin-right:5px;"></i> ${f.time}
-                        </span>
-                        <span style="display:flex; align-items:center;">
-                            <i class="fa-solid fa-location-dot" style="margin-right:5px; font-size:10px;"></i> ${dNom.toUpperCase()}
-                        </span>
+                    <div style="display:flex; align-items:center; gap:15px; border-top:1px solid rgba(255,255,255,0.05); margin-top:8px; padding-top:8px; font-size:12px; color:var(--text-muted); font-weight:600;">
+                        <span style="display:flex; align-items:center;"><i class="fa-regular fa-clock" style="margin-right:5px;"></i> ${f.time}</span>
+                        <span style="display:flex; align-items:center;"><i class="fa-solid fa-location-dot" style="margin-right:5px; font-size:10px;"></i> ${dNom.toUpperCase()}</span>
                     </div>
                 </div>`;
             });
         } else {
-            cHtml = '<p style="text-align:center; color:var(--text-muted);">No hay historial de clases.</p>';
+            cHtml = '<p style="text-align:center; color:var(--text-muted); margin-top:20px;">No hay historial de clases.</p>';
         }
         clasesC.innerHTML = cHtml;
     } catch(e) {
-        clasesC.innerHTML = '<p style="color:red; text-align:center;">Error de conexión.</p>';
+        clasesC.innerHTML = '<p style="color:red; text-align:center; margin-top:20px;">Error de conexión.</p>';
     }
 }
 
