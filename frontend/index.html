@@ -110,36 +110,25 @@
                             <div class="form-group"><label>Grado Actual</label><select id="new-grado"><option value="">Selecciona grado...</option><option value="5º Kyu">5º Kyu</option><option value="4º Kyu">4º Kyu</option><option value="3º Kyu">3º Kyu</option><option value="2º Kyu">2º Kyu</option><option value="1º Kyu">1º Kyu</option><option value="1º Dan">1º Dan</option><option value="2º Dan">2º Dan</option><option value="3º Dan">3º Dan</option><option value="4º Dan">4º Dan</option><option value="5º Dan">5º Dan</option><option value="6º Dan">6º Dan</option><option value="7º Dan">7º Dan</option><option value="8º Dan">8º Dan</option></select></div>
                         </div>
 
-<!-- BARRA ADMINISTRATIVA RESPONSIVA -->
-<div class="admin-control-bar">
-    
-    <!-- Bloque Seguro -->
-    <div class="control-item">
-        <label>Seguro Anual:</label>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <label class="switch">
-                <input type="checkbox" id="new-seguro">
-                <span class="slider round"></span>
-            </label>
-            <span id="seguro-status-text" style="font-size:0.7rem; font-weight:800;">NO PAGADO</span>
-        </div>
-    </div>
+                        <div class="admin-control-bar">
+                            <div class="control-item">
+                                <label>Seguro Anual:</label>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <label class="switch"><input type="checkbox" id="new-seguro"><span class="slider round"></span></label>
+                                    <span id="seguro-status-text" style="font-size:0.7rem; font-weight:800;">NO PAGADO</span>
+                                </div>
+                            </div>
+                            <div class="control-separator"></div>
+                            <div class="control-item">
+                                <label>Género:</label>
+                                <div class="gender-pill-container">
+                                    <button type="button" id="btn-gender-home" class="gender-btn active" onclick="setGender('HOMBRE')">HOMBRE</button>
+                                    <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('MUJER')">MUJER</button>
+                                </div>
+                                <input type="hidden" id="new-genero" value="HOMBRE">
+                            </div>
+                        </div>                        
 
-    <!-- Línea divisoria (Solo visible en PC) -->
-    <div class="control-separator"></div>
-
-    <!-- Bloque Género -->
-    <div class="control-item">
-        <label>Género:</label>
-        <div class="gender-pill-container">
-            <button type="button" id="btn-gender-home" class="gender-btn active" onclick="setGender('HOMBRE')">HOMBRE</button>
-            <button type="button" id="btn-gender-dona" class="gender-btn" onclick="setGender('MUJER')">MUJER</button>
-        </div>
-        <input type="hidden" id="new-genero" value="HOMBRE">
-    </div>
-
-</div>                        
-                        <!-- SECCIÓN TÉCNICA INTEGRADA -->
                         <div class="sidebar-sep tecnico-header">
                             <i class="fa-solid fa-graduation-cap"></i> HISTORIAL TÉCNICO Y SEMINARIOS
                         </div>
@@ -156,16 +145,11 @@
                             </div>
                         </div>
 
-                        <div id="seminarios-list">
-                            <!-- Las filas se inyectan aquí desde app.js -->
-                        </div>
-
-                        <!-- Listas para Autocompletado Inteligente -->
+                        <div id="seminarios-list"></div>
                         <datalist id="senseis-list"></datalist>
                         <datalist id="ciudades-seminario-list"></datalist>
                         <datalist id="paises-list"></datalist>    
 
-                        <!-- ACCIONES DEL FORMULARIO -->
                         <div class="form-actions">
                             <button type="button" id="btn-cancelar-edit" class="action-btn secondary" onclick="resetForm(); showSection('alumnos')">Cancelar</button>
                             <button type="submit" id="btn-submit-alumno" class="action-btn">GUARDAR ALUMNO</button>
@@ -184,46 +168,48 @@
             <div id="sec-alumnos" class="section hidden">
                 <header class="section-header">
                     <h2><i class="fa-solid fa-users"></i> Alumnos</h2>
-                    <!-- BUSCADOR MÓVIL (Lupa al lado de los botones) -->
-             <div class="toolbar" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES</button>
-                <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
-                
-                <!-- LUPA: Alineada con los botones -->
-                <button id="btn-toggle-search" onclick="toggleSearch()" style="background:var(--bg-header); border:1px solid var(--border); color:var(--text-muted); padding:10px 15px; border-radius:8px; cursor:pointer;">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
+                    
+                    <div class="toolbar" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES</button>
+                        <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
+                        
+                        <!-- BUSCADOR ESCRITORIO (VISIBLE) -->
+                        <div class="search-box desktop-only">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="search-alumno" placeholder="Buscar..." onkeyup="filtrarTabla('table-alumnos', 'search-alumno')">
+                        </div>
+                        
+                        <!-- LUPA MÓVIL -->
+                        <button id="btn-toggle-search" class="mobile-only" onclick="toggleSearch()" style="background:var(--bg-header); border:1px solid var(--border); color:var(--text-muted); padding:10px 15px; border-radius:8px; cursor:pointer;">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
+                    </div>
 
-                <!-- CAJA DE BÚSQUEDA (El 'width: 100%' hará que baje a la siguiente fila automáticamente) -->
-                <div id="search-input-box" class="hidden" style="width: 100%; background: var(--bg-card); border: 2px solid var(--primary); padding: 10px; border-radius: 12px; display: flex; align-items: center; gap: 10px; box-sizing: border-box;">
-                    <input type="text" id="search-alumno-mobile" placeholder="Escribe nombre o DNI..." style="border:none; background:transparent; color:white; width: 100%; padding: 5px; font-size: 16px; outline:none;" onkeyup="filtrarTabla('table-alumnos', 'search-alumno-mobile')">
-                    <button onclick="toggleSearch()" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size: 1.2rem;"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-            </div>
-
-                        <div id="actions-alumnos" class="toolbar-actions-area"></div>
+                    <!-- CAJA MÓVIL (EMPUJA HACIA ABAJO) -->
+                    <div id="search-input-box" class="hidden mobile-only" style="width: 100%; background: var(--bg-card); border: 2px solid var(--primary); padding: 10px; border-radius: 12px; display: flex; align-items: center; gap: 10px; box-sizing: border-box; margin-top: 5px;">
+                        <input type="text" id="search-alumno-mobile" placeholder="Escribe nombre o DNI..." style="border:none; background:transparent; color:white; width: 100%; padding: 5px; font-size: 16px; outline:none;" onkeyup="filtrarTabla('table-alumnos', 'search-alumno-mobile')">
+                        <button onclick="toggleSearch()" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size: 1.2rem;"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                 </header>
-
+                
                 <div class="table-container drag-scroll">
                     <table id="table-alumnos">
-                    <!-- CABECERA DE TABLA SINCRONIZADA (12 COLUMNAS) -->
-                <thead>
-                    <tr>
-                        <th onclick="sortTable('apellidos')" style="cursor:pointer">Apellidos <i class="fa-solid fa-sort"></i></th>
-                        <th onclick="sortTable('nombre')" style="cursor:pointer">Nombre <i class="fa-solid fa-sort"></i></th>
-                        <th onclick="sortTable('genero')" style="cursor:pointer">Género <i class="fa-solid fa-sort"></i></th>
-                        <th>DNI</th>
-                        <th onclick="sortTable('fecha_nacimiento')" style="cursor:pointer">Edad <i class="fa-solid fa-sort"></i></th>
-                        <th onclick="sortTable('grado')" style="cursor:pointer">Grado <i class="fa-solid fa-sort"></i></th>
-                        <th onclick="sortTable('horas_acumuladas')" style="cursor:pointer">Horas <i class="fa-solid fa-sort"></i></th>
-                        <th onclick="sortTable('seguro_pagado')" style="cursor:pointer">Seguro <i class="fa-solid fa-sort"></i></th>
-                        <th>Teléfono</th>
-                        <th>Email</th>
-                        <th>Dirección / Población</th>
-                        <th onclick="sortTable('dojo')" style="cursor:pointer">Dojo <i class="fa-solid fa-sort"></i></th>
-                    </tr>
-                </thead>
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('apellidos')" style="cursor:pointer">Apellidos <i class="fa-solid fa-sort"></i></th>
+                                <th onclick="sortTable('nombre')" style="cursor:pointer">Nombre <i class="fa-solid fa-sort"></i></th>
+                                <th onclick="sortTable('genero')" style="cursor:pointer">Género <i class="fa-solid fa-sort"></i></th>
+                                <th>DNI</th>
+                                <th onclick="sortTable('fecha_nacimiento')" style="cursor:pointer">Edad <i class="fa-solid fa-sort"></i></th>
+                                <th onclick="sortTable('grado')" style="cursor:pointer">Grado <i class="fa-solid fa-sort"></i></th>
+                                <th onclick="sortTable('horas_acumuladas')" style="cursor:pointer">Horas <i class="fa-solid fa-sort"></i></th>
+                                <th onclick="sortTable('seguro_pagado')" style="cursor:pointer">Seguro <i class="fa-solid fa-sort"></i></th>
+                                <th>Teléfono</th>
+                                <th>Email</th>
+                                <th>Dirección / Población</th>
+                                <th onclick="sortTable('dojo')" style="cursor:pointer">Dojo <i class="fa-solid fa-sort"></i></th>
+                            </tr>
+                        </thead>
                         <tbody id="lista-alumnos-body"></tbody>
                     </table>
                 </div>
@@ -232,14 +218,6 @@
             <!-- SECCIÓN BAJAS -->
             <div id="sec-bajas" class="section hidden">
                 <header class="section-header"><h2 class="txt-accent"><i class="fa-solid fa-user-slash"></i> Histórico Bajas</h2></header>
-                <div class="toolbar">
-                    <div class="font-tool"><button onclick="changeFontSize('table-bajas', -1)">A-</button><button onclick="changeFontSize('table-bajas', 1)">A+</button></div>
-                    <div class="search-box">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="search-baja" placeholder="Buscar baja...">
-                    </div>
-                    <div id="actions-bajas" class="toolbar-actions-area"></div>
-                </div>
                 <div class="table-container drag-scroll">
                     <table id="table-bajas">
                         <thead>
@@ -248,7 +226,7 @@
                                 <th onclick="sortTable('nombre')" style="cursor:pointer">Nombre <i class="fa-solid fa-sort"></i></th>
                                 <th onclick="sortTable('genero')" style="cursor:pointer">Género <i class="fa-solid fa-sort"></i></th>
                                 <th>DNI</th>
-                                <th>Edad</th> <!-- <--- NUEVA COLUMNA -->
+                                <th>Edad</th>
                                 <th onclick="sortTable('grado')" style="cursor:pointer">Grado <i class="fa-solid fa-sort"></i></th>
                                 <th onclick="sortTable('horas_acumuladas')" style="cursor:pointer">Horas <i class="fa-solid fa-sort"></i></th>
                                 <th onclick="sortTable('seguro_pagado')" style="cursor:pointer">Seguro <i class="fa-solid fa-sort"></i></th>
@@ -270,12 +248,10 @@
                     <div class="card">
                         <h3><i class="fa-solid fa-file-excel"></i> Copia de Seguridad</h3>
                         <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Descarga la base de datos completa.</p>
-                        <div style="margin-bottom:10px;">
-                            <select id="export-dojo-filter" style="width:100%; padding:8px; margin-top:5px; background:#0f172a; color:white; border:1px solid #334155;">
-                                <option value="">-- Todos los Dojos --</option>
-                            </select>
-                        </div>
-                        <button onclick="exportBackupExcel()" class="action-btn" style="width:100%"><i class="fa-solid fa-download"></i> DESCARGAR EXCEL</button>
+                        <select id="export-dojo-filter" style="width:100%; padding:8px; margin-top:5px; background:#0f172a; color:white; border:1px solid #334155;">
+                            <option value="">-- Todos los Dojos --</option>
+                        </select>
+                        <button onclick="exportBackupExcel()" class="action-btn" style="width:100%; margin-top:10px;"><i class="fa-solid fa-download"></i> DESCARGAR EXCEL</button>
                     </div>
                     <div class="card" style="border-color:#ef4444;">
                         <h3 class="txt-accent"><i class="fa-solid fa-calendar-xmark"></i> Cierre de Año</h3>
@@ -285,10 +261,8 @@
                     <div class="card" style="border-color:#3b82f6;">
                         <h3 style="color:#3b82f6;"><i class="fa-solid fa-user-shield"></i> Mi Cuenta</h3>
                         <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Gestión de seguridad y acceso.</p>
-                        <div style="display:flex; gap:10px; margin-top:auto;">
-                            <button onclick="openChangePasswordModal()" class="action-btn secondary" style="flex:1;"><i class="fa-solid fa-key"></i> Cambiar Clave</button>
-                            <button onclick="logout()" class="action-btn" style="flex:1; background:#334155;"><i class="fa-solid fa-power-off"></i> Salir</button>
-                        </div>
+                        <button onclick="openChangePasswordModal()" class="action-btn secondary" style="width:100%;"><i class="fa-solid fa-key"></i> Cambiar Clave</button>
+                        <button onclick="logout()" class="action-btn" style="width:100%; margin-top:10px; background:#334155;"><i class="fa-solid fa-power-off"></i> Salir</button>
                     </div>
                 </div>
                 <div class="console-wrapper">
@@ -313,7 +287,16 @@
     </div>
 
     <!-- MODALES SISTEMA -->
-    <div id="custom-modal" class="modal-overlay hidden"><div class="modal-box"><h3 id="modal-title">Título</h3><p id="modal-message">Mensaje</p><div class="modal-actions"><button id="modal-btn-cancel" class="action-btn secondary">Cancelar</button><button id="modal-btn-ok" class="action-btn">Aceptar</button></div></div></div>
+    <div id="custom-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3 id="modal-title">Título</h3>
+            <p id="modal-message">Mensaje</p>
+            <div class="modal-actions">
+                <button id="modal-btn-cancel" class="action-btn secondary">Cancelar</button>
+                <button id="modal-btn-ok" class="action-btn">Aceptar</button>
+            </div>
+        </div>
+    </div>
     
     <div id="report-modal" class="modal-overlay hidden">
         <div class="modal-box" style="width:650px; max-width: 95vw;">
@@ -333,26 +316,17 @@
             <div class="report-grid">
                 <div class="report-col">
                     <h4 style="color:var(--primary); font-size:0.75rem; text-transform:uppercase; margin-bottom:10px;">Alumnos Activos</h4>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <button class="menu-btn sm" onclick="generateReport('surname')">Por Apellidos</button>
-                        <button class="menu-btn sm" onclick="generateReport('grade')">Por Grado</button>
-                        <button class="menu-btn sm" onclick="generateReport('age')">Por Edad</button>
-                        <button class="menu-btn sm" onclick="generateReport('gender')">Por Género</button> 
-                    </div>
+                    <button class="menu-btn sm" onclick="generateReport('surname')">Por Apellidos</button>
+                    <button class="menu-btn sm" onclick="generateReport('grade')">Por Grado</button>
                 </div>
                 <div class="report-col">
                     <h4 style="color:#22c55e; font-size:0.75rem; text-transform:uppercase; margin-bottom:10px;">Control Tatami</h4>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <button class="menu-btn sm" onclick="generateReport('insurance')">Estado Seguros</button>
-                        <button class="menu-btn sm" onclick="generateAttendanceReport()">ASISTENCIA DÍA</button>
-                    </div>
+                    <button class="menu-btn sm" onclick="generateReport('insurance')">Estado Seguros</button>
+                    <button class="menu-btn sm" onclick="generateAttendanceReport()">ASISTENCIA DÍA</button>
                 </div>
                 <div class="report-col">
                     <h4 style="color:var(--accent); font-size:0.75rem; text-transform:uppercase; margin-bottom:10px;">Bajas</h4>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <button class="menu-btn sm" onclick="generateReport('bajas_surname')">Por Apellidos</button>
-                        <button class="menu-btn sm" onclick="generateReport('bajas_date')">Por Fecha</button>
-                    </div>
+                    <button class="menu-btn sm" onclick="generateReport('bajas_surname')">Por Apellidos</button>
                 </div>
             </div>
             <div class="modal-actions"><button class="action-btn secondary" onclick="document.getElementById('report-modal').classList.add('hidden')">Cerrar</button></div>
