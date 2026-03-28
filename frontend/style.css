@@ -266,10 +266,12 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
 .toolbar { 
     display: flex; 
     align-items: center; 
+    flex-wrap: wrap; /* 🥋 CLAVE: Permite que el buscador baje a una nueva línea */
     gap: 15px; 
     width: 100%; 
     margin-bottom: 20px;
-    height: 50px;
+    min-height: 50px;
+    height: auto !important; /* 🥋 CLAVE: Permite que la barra crezca si el buscador está abierto */
 }
 
 .selected-student-name {
@@ -1213,27 +1215,26 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
         cursor: pointer; 
     }
     
+/* 🥋 EL SECRETO: El buscador ahora empuja la tabla en lugar de flotar sobre ella */
     #search-input-box {
-        position: fixed !important; 
-        top: 185px !important; /* BAJAMOS LA BARRA DEBAJO DE LOS BOTONES */
-        left: 15px !important; 
-        right: 15px !important;
+        position: relative !important; 
+        width: 100% !important; /* Ocupa todo el ancho disponible */
+        margin-top: 5px !important; /* Separación con el botón de Informes */
         background: #1e293b !important; 
-        border: 2px solid var(--primary) !important;
-        padding: 10px 15px !important;
-        border-radius: 16px !important;
-        z-index: 99999 !important;
+        border: 1px solid var(--border) !important;
+        padding: 5px 15px !important;
+        border-radius: 12px !important;
         display: flex !important; 
         align-items: center !important; 
         gap: 10px !important;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
         box-sizing: border-box !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
     }
     
     #search-input-box.hidden {
-        display: none !important;
+        display: none !important; /* Cuando se oculta, la tabla vuelve a subir instantáneamente */
     }
-    
+
     #search-alumno-mobile { 
         background: transparent !important; 
         border: none !important; 
@@ -1267,30 +1268,29 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* --- DISEÑO PREMIUM BOTÓN CERRAR BUSCADOR --- */
-.btn-close-search {
-    background: rgba(239, 68, 68, 0.1) !important; /* Fondo rojo translúcido */
-    border: 1px solid rgba(239, 68, 68, 0.2) !important; /* Borde rojo sutil */
-    color: var(--accent) !important; /* Icono rojo Arashi */
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 50% !important; /* Círculo perfecto */
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    cursor: pointer !important;
-    font-size: 1rem !important;
-    flex-shrink: 0 !important; /* Evita que se aplaste */
-    transition: all 0.2s ease !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
+   .btn-close-search { 
+        background: rgba(239, 68, 68, 0.1) !important; 
+        border: 1px solid rgba(239, 68, 68, 0.2) !important; 
+        color: var(--accent) !important; 
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 50% !important; 
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important; 
+        font-size: 1rem !important; 
+        flex-shrink: 0 !important; 
+        transition: all 0.2s ease !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
 
-/* Efecto al pulsar el botón */
-.btn-close-search:active {
-    background: var(--accent) !important;
-    color: white !important;
-    transform: scale(0.9) !important;
-}
+    .btn-close-search:active {
+        background: var(--accent) !important;
+        color: white !important;
+        transform: scale(0.9) !important;
+    }
 
 /* Eliminar el borde azul por defecto del navegador al escribir */
 #search-input-box input:focus {
