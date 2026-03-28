@@ -1626,15 +1626,23 @@ async function cancelAttendance(asistId, claseId) {
 
 function toggleSearch() {
     const inputBox = document.getElementById('search-input-box');
-    const btnLupa = document.getElementById('btn-toggle-search');
+    if (!inputBox) return; // Seguridad extra
     
-    // Si estamos en PC, el input siempre debe estar visible (revertimos el toggle)
-    if (window.innerWidth > 900) return;
-
     inputBox.classList.toggle('hidden');
-    btnLupa.classList.toggle('hidden');
+    
+    // Buscamos el input que esté DENTRO de la caja flotante, se llame como se llame
+    const inputElement = inputBox.querySelector('input');
     
     if (!inputBox.classList.contains('hidden')) {
-        document.getElementById('search-alumno').focus();
+        // Al abrir, ponemos el cursor automáticamente
+        if (inputElement) {
+            setTimeout(() => inputElement.focus(), 100);
+        }
+    } else {
+        // Al cerrar, limpiamos la búsqueda
+        if (inputElement) {
+            inputElement.value = "";
+            filtrarTabla('table-alumnos', inputElement.id);
+        }
     }
 }
