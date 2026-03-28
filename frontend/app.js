@@ -1035,31 +1035,34 @@ function toggleMobileMenu() {
 function scrollToTop() { const c = document.querySelector('.content'); if (c) c.scrollTo({ top: 0, behavior: 'smooth' }); else window.scrollTo({ top: 0, behavior: 'smooth' }); }
 const ca = document.querySelector('.content'); if (ca) { ca.addEventListener('scroll', () => { const b = document.getElementById('btn-scroll-top'); if (ca.scrollTop > 300) b.classList.add('visible'); else b.classList.remove('visible'); }); }
 
-function showModal(t, htmlContent, showCloseBtn = true) { 
-    // 1. Buscamos el modal
+function showModal(titulo, mensaje, callbackOk = null) {
     const modal = document.getElementById('custom-modal');
-    if (!modal) {
-        console.error("❌ El modal #custom-modal no existe en el DOM");
-        return;
-    }
-    
-    // 2. FORZAMOS CAPA SUPERIOR
-    modal.style.setProperty('z-index', '999999', 'important');
-    modal.style.display = 'flex'; // Aseguramos que sea visible
-    
-    // 3. Contenido
     const titleEl = document.getElementById('modal-title');
-    if (titleEl) titleEl.innerText = t;
-    
-    const contentEl = document.getElementById('modal-body-content');
-    if (contentEl) contentEl.innerHTML = htmlContent || "";
-    
-    const okBtn = document.getElementById('modal-ok-btn');
-    if (okBtn) okBtn.style.display = showCloseBtn ? 'block' : 'none';
-    
-    // 4. Quitamos clase hidden
-    modal.classList.remove('hidden'); 
-    console.log("✅ Modal abierto con z-index 999999");
+    const msgEl = document.getElementById('modal-message');
+    const btnOk = document.getElementById('modal-btn-ok');
+    const btnCancel = document.getElementById('modal-btn-cancel');
+
+    // Asignar textos
+    if (titleEl) titleEl.innerText = titulo;
+    if (msgEl) msgEl.innerText = mensaje;
+
+    // ELIMINAR CUALQUIER ONCLICK PREVIO DEL HTML (Esto limpia el "clic muerto")
+    btnOk.onclick = null;
+    btnCancel.onclick = null;
+
+    // ASIGNAR EVENTOS NUEVOS
+    btnOk.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        if (callbackOk) callbackOk();
+    }, { once: true }); // { once: true } es vital para evitar eventos duplicados
+
+    btnCancel.addEventListener('click', () => {
+        modal.classList.remove('hidden'); // Solo para asegurar visibilidad antes de cerrar
+        modal.classList.add('hidden');
+    }, { once: true });
+
+    // Mostrar
+    modal.classList.remove('hidden');
 }
 
 function closeModal() {
@@ -1069,15 +1072,16 @@ function closeModal() {
 // 1. Función para añadir una fila de seminario
 function addSeminarioRow(data = {}) {
     const container = document.getElementById('seminarios-list');
-    const rowId = Date.now();
+    // Generamos un ID único combinando el tiempo y un número aleatorio
+    const rowId = 'sem-' + Date.now() + Math.floor(Math.random() * 1000);
     const div = document.createElement('div');
     
     div.className = 'seminario-item';
-    div.id = `sem-${rowId}`;
+    div.id = rowId;
     div.style = `background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 20px; position: relative;`;
 
     div.innerHTML = `
-        <button type="button" onclick="document.getElementById('sem-${rowId}').remove()" 
+        <button type="button" onclick="borrarFilaSeminario('${rowId}')" 
             style="position:absolute; top:-10px; right:-10px; background:var(--bg-dark); border:1px solid var(--accent); color:var(--accent); cursor:pointer; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size: 0.8rem; z-index:10;">
             <i class="fa-solid fa-xmark"></i>
         </button>
@@ -1104,6 +1108,14 @@ function addSeminarioRow(data = {}) {
         </div>
     `;
     container.appendChild(div);
+}
+
+// Función auxiliar para borrar la fila exacta
+function borrarFilaSeminario(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.remove();
+    }
 }
 
 // 2. Inteligencia: Extraer datos existentes para autocompletado
