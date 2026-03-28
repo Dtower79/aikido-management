@@ -1244,14 +1244,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
         outline: none !important; 
     }
     
-    .btn-close-search { 
-        background: none !important; 
-        border: none !important; 
-        color: #ef4444 !important; 
-        cursor: pointer !important; 
-        font-size: 1.2rem !important; 
-        padding: 5px !important;
-    }
+    
 }
 
 /* --- TARJETAS PASAPORTE (ALINEACIÓN EN 1 LÍNEA) --- */
@@ -1271,4 +1264,36 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .modal-overlay { 
     position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; 
     z-index: 999999 !important; pointer-events: auto !important; 
+}
+
+/* --- DISEÑO PREMIUM BOTÓN CERRAR BUSCADOR --- */
+.btn-close-search {
+    background: rgba(239, 68, 68, 0.1) !important; /* Fondo rojo translúcido */
+    border: 1px solid rgba(239, 68, 68, 0.2) !important; /* Borde rojo sutil */
+    color: var(--accent) !important; /* Icono rojo Arashi */
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important; /* Círculo perfecto */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    font-size: 1rem !important;
+    flex-shrink: 0 !important; /* Evita que se aplaste */
+    transition: all 0.2s ease !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Efecto al pulsar el botón */
+.btn-close-search:active {
+    background: var(--accent) !important;
+    color: white !important;
+    transform: scale(0.9) !important;
+}
+
+/* Eliminar el borde azul por defecto del navegador al escribir */
+#search-input-box input:focus {
+    outline: none !important;
+    box-shadow: none !important;
 }

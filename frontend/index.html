@@ -202,7 +202,9 @@
     </button>
     <div id="search-input-box" class="hidden mobile-only">
         <input type="text" id="search-alumno-mobile" placeholder="Escribe nombre o DNI..." onkeyup="filtrarTabla('table-alumnos', 'search-alumno-mobile')">
-        <button onclick="toggleSearch()"><i class="fa-solid fa-xmark"></i></button>
+<button class="btn-close-search" onclick="toggleSearch()">
+    <i class="fa-solid fa-xmark"></i>
+</button>
     </div>
 </div>
 
