@@ -184,16 +184,25 @@
             <div id="sec-alumnos" class="section hidden">
                 <header class="section-header">
                     <h2><i class="fa-solid fa-users"></i> Alumnos</h2>
-                    <div class="toolbar">
-                        <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> CENTRO INFORMES</button>
+                    <div class="toolbar" style="display:flex; align-items:center; gap:10px;">
+                        <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES</button>
                         <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
-                        <div class="search-box">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="search-alumno" placeholder="Buscar por nombre o DNI...">
+                        
+                        <!-- BUSCADOR EXPANDIBLE -->
+                        <div class="search-wrapper" style="position: relative;">
+                            <button id="btn-toggle-search" onclick="toggleSearch()" style="background:var(--bg-header); border:1px solid var(--border); color:var(--text-muted); padding:10px 15px; border-radius:8px; cursor:pointer;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </button>
+                            <div id="search-input-box" class="hidden" style="position: absolute; right: 0; top: 0; background: var(--bg-card); border: 1px solid var(--primary); padding: 5px; border-radius: 8px; z-index: 50; display: flex; align-items: center; gap: 5px; width: 280px;">
+                                <input type="text" id="search-alumno" placeholder="Buscar..." style="border:none; background:transparent; color:white; width: 100%; padding: 5px;" onkeyup="filtrarTabla('table-alumnos', 'search-alumno')">
+                                <button onclick="toggleSearch()" style="background:none; border:none; color:white; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
                         </div>
+
                         <div id="actions-alumnos" class="toolbar-actions-area"></div>
                     </div>
                 </header>
+                
                 <div class="table-container drag-scroll">
                     <table id="table-alumnos">
                     <!-- CABECERA DE TABLA SINCRONIZADA (12 COLUMNAS) -->

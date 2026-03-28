@@ -1623,3 +1623,16 @@ async function cancelAttendance(asistId, claseId) {
         btn.disabled = false;
     }
 }
+
+function toggleSearch() {
+    const inputBox = document.getElementById('search-input-box');
+    const btnLupa = document.getElementById('btn-toggle-search');
+    
+    inputBox.classList.toggle('hidden');
+    btnLupa.classList.toggle('hidden');
+    
+    if (!inputBox.classList.contains('hidden')) {
+        const input = document.getElementById('search-alumno');
+        input.focus(); // Autofoco para escribir al instante
+    }
+}

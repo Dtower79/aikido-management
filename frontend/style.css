@@ -1252,3 +1252,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     color: #475569 !important;
 }
 
+.search-wrapper { display: flex; align-items: center; justify-content: flex-end; }
+
+.btn-lupa { background: var(--bg-header); border: 1px solid var(--border); color: var(--text-muted); padding: 10px 15px; border-radius: 8px; cursor: pointer; }
+
+.search-input-box { 
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg-header); border: 1px solid var(--primary); 
+    padding: 0 10px; border-radius: 8px; height: 45px;
+    width: 300px; /* Tamaño escritorio */
+    transition: all 0.3s ease;
+}
+
+/* En móvil, la caja ocupará casi toda la toolbar al activarse */
+@media (max-width: 900px) {
+    .search-input-box.hidden { display: none !important; }
+    .search-input-box { position: absolute; left: 10px; right: 10px; width: calc(100% - 20px); z-index: 50; }
+    .btn-lupa { border: none; }
+}
+
+.btn-close-search { background: none; border: none; color: var(--text-muted); cursor: pointer; }
+
