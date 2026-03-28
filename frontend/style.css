@@ -1321,7 +1321,3 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     box-shadow: none !important;
 }
 
-.modal-actions .btn-pdf {
-    min-width: 140px !important;
-    justify-content: center !important;
-}
