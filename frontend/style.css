@@ -1083,12 +1083,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .history-tab-container {
     display: flex !important;
     justify-content: center !important;
-    background: rgba(0,0,0,0.3) !important;
+    align-items: center !important;
+    background: rgba(0, 0, 0, 0.3) !important;
     border-radius: 50px !important;
     padding: 5px !important;
     margin: 0 auto 25px auto !important;
     width: fit-content !important;
     border: 1px solid var(--border) !important;
+    gap: 5px !important;
 }
 
 .history-tab-btn {
@@ -1111,111 +1113,22 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .history-tab-btn:hover:not(.active) {
-    background: rgba(255,255,255,0.05) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
     color: white !important;
 }
 
 /* --- TARJETAS DEL PASAPORTE (SEPARADAS Y AIREADAS) --- */
-
-
-/* --- ESCUDO ANTI-CACHÉ Y ANTI-ESPECIFICIDAD --- */
-.history-tab-container .history-tab-btn {
-    background: transparent !important;
-    color: var(--text-muted) !important;
-    border: none !important;
-    transition: all 0.3s ease !important;
-}
-
-/* Forzamos el color del botón activo con !important */
-.history-tab-container .history-tab-btn.active {
-    background: var(--accent) !important;
-    color: white !important;
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
-}
-
-/* --- ESCUDO ANTI-CACHÉ Y ESPECIFICIDAD --- */
-
-/* 1. Botones estilo "Pill" profesionales */
-.history-tab-container {
-    display: flex !important;
-    justify-content: center !important;
-    gap: 10px !important;
-    margin: 20px auto 25px auto !important;
-}
-
-.history-tab-btn {
-    padding: 12px 30px !important;
-    border-radius: 50px !important;
-    border: 1px solid var(--border) !important;
-    background: rgba(0,0,0,0.2) !important;
-    color: var(--text-muted) !important;
-    font-weight: 800 !important;
-    font-size: 13px !important;
-    text-transform: uppercase !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-}
-
-/* ESTADO ACTIVO: Fuerza el cambio a color Rojo Arashi */
-.history-tab-btn.active {
-    background: var(--accent) !important;
-    color: white !important;
-    border-color: var(--accent) !important;
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3) !important;
-}
-
-/* 2. Tarjetas con separación (evitamos que las filas se toquen) */
 .history-item-card {
     background: rgba(255, 255, 255, 0.03) !important;
     border: 1px solid var(--glass-border) !important;
     border-radius: 15px !important;
-    padding: 12px 15px !important;
-    margin-bottom: 10px !important;
-    /* REJILLA ESTRICTA */
-    display: grid !important;
-    grid-template-columns: 1fr auto !important; /* Nombre a la izquierda, Fecha a la derecha */
-    grid-template-rows: auto auto !important;   /* Fila de arriba y Fila de abajo */
-    gap: 5px !important;
-    align-items: center !important;
-}
-
-/* Forzamos que la ubicación ocupe toda la anchura abajo */
-.history-item-card > div:last-child {
-    grid-column: 1 / span 2;
-}
-
-
-
-/* Limpieza radical de estilos */
-.history-tab-container {
+    padding: 15px !important;
+    margin-bottom: 12px !important;
     display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    gap: 10px !important;
-    margin: 25px auto 25px auto !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 }
-
-.history-tab-btn {
-    padding: 12px 30px !important;
-    border-radius: 50px !important;
-    border: 1px solid var(--border) !important;
-    background: #1e293b !important; /* Fondo gris oscuro */
-    color: var(--text-muted) !important;
-    font-weight: 800 !important;
-    font-size: 13px !important;
-    text-transform: uppercase !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-}
-
-.history-tab-btn.active {
-    background: var(--accent) !important; /* Rojo Arashi */
-    color: white !important;
-    border-color: var(--accent) !important;
-}
-
-/* Limpieza de tarjetas para que no se pisen */
-
 
 /* Forzar que el modal sea un flex vertical limpio */
 #history-modal .modal-content {
@@ -1223,7 +1136,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     flex-direction: column !important;
     height: 85vh !important;
 }
-
 
 /* --- FIX: Estilo forzado para inputs en seminarios y formularios --- */
 #sec-nuevo-alumno .seminario-item input,
@@ -1252,61 +1164,111 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     color: #475569 !important;
 }
 
-.search-wrapper { display: flex; align-items: center; justify-content: flex-end; }
-
-.btn-lupa { background: var(--bg-header); border: 1px solid var(--border); color: var(--text-muted); padding: 10px 15px; border-radius: 8px; cursor: pointer; }
-
-.search-input-box { 
-    display: flex; align-items: center; gap: 10px;
-    background: var(--bg-header); border: 1px solid var(--primary); 
-    padding: 0 10px; border-radius: 8px; height: 45px;
-    width: 300px; /* Tamaño escritorio */
-    transition: all 0.3s ease;
+/* Ajuste de place holder para visibilidad */
+.seminario-item input::placeholder {
+    color: #475569 !important;
 }
 
-/* En móvil, la caja ocupará casi toda la toolbar al activarse */
+/* --- BUSCADOR EXPANDIBLE (UNIFICADO Y SEGURO) --- */
+.search-wrapper { 
+    position: relative; 
+    display: flex; 
+    align-items: center; 
+}
+
+/* Escritorio: Buscador siempre visible, ocultamos lo de móvil */
+@media (min-width: 901px) {
+    .mobile-only { display: none !important; }
+    
+    .search-box { 
+        display: flex !important; 
+        align-items: center; 
+        background: var(--bg-header); 
+        border: 1px solid var(--border); 
+        border-radius: 8px; 
+        padding: 0 15px; 
+        height: 45px;
+        flex: 0 1 300px;
+    }
+    .search-box input { 
+        background: transparent !important; 
+        border: none !important; 
+        padding: 0 10px !important; 
+        color: white; 
+        width: 100%; 
+        outline: none; 
+    }
+}
+
+/* Móvil: Lupa que expande un modal flotante, ocultamos lo de PC */
 @media (max-width: 900px) {
-    .search-input-box.hidden { display: none !important; }
-    .btn-lupa { border: none; }
-    /* Buscador Premium Móvil */
+    .desktop-only { display: none !important; }
+    
+    #btn-toggle-search { 
+        background: var(--bg-header); 
+        border: 1px solid var(--border); 
+        color: var(--text-muted); 
+        padding: 10px 15px; 
+        border-radius: 8px; 
+        cursor: pointer; 
+    }
+    
     #search-input-box {
-        background: #1e293b !important; /* Mismo azul que tus formularios */
-        border: 1px solid #334155 !important; /* Borde oscuro */
+        position: fixed !important; 
+        top: 80px !important; 
+        left: 15px !important; 
+        right: 15px !important;
+        background: #1e293b !important; 
+        border: 2px solid var(--primary) !important;
+        padding: 10px 15px !important;
         border-radius: 16px !important;
-        padding: 5px 15px !important;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+        z-index: 99999 !important;
+        display: flex !important; 
+        align-items: center !important; 
+        gap: 10px !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+        box-sizing: border-box !important; /* CLAVE PARA QUE NO SE SALGA DE LA PANTALLA */
     }
-
-    #search-alumno {
-        background: transparent !important;
-        border: none !important;
-        color: white !important;
-        font-size: 1rem !important;
-        padding: 10px !important;
+    
+    #search-input-box.hidden {
+        display: none !important;
     }
-
-    /* Eliminar el borde azul del navegador al hacer clic */
-    #search-alumno:focus {
-        outline: none !important;
+    
+    #search-alumno-mobile { 
+        background: transparent !important; 
+        border: none !important; 
+        color: white !important; 
+        width: 100% !important; 
+        padding: 5px !important; 
+        font-size: 16px !important; 
+        outline: none !important; 
     }
-
-    /* Botón de cerrar la X */
-    .btn-close-search {
-        background: none !important;
-        border: none !important;
-        color: #ef4444 !important; /* Rojo Arashi */
-        font-size: 1.2rem !important;
+    
+    .btn-close-search { 
+        background: none !important; 
+        border: none !important; 
+        color: #ef4444 !important; 
+        cursor: pointer !important; 
+        font-size: 1.2rem !important; 
+        padding: 5px !important;
     }
 }
 
-.btn-close-search { background: none; border: none; color: var(--text-muted); cursor: pointer; }
+/* --- TARJETAS PASAPORTE (ALINEACIÓN EN 1 LÍNEA) --- */
+.history-item-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 15px !important;
+    padding: 12px 15px !important;
+    margin-bottom: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+}
 
-@media (min-width: 900px) {
-    #search-input-box {
-        position: absolute !important;
-        top: 0 !important;
-        left: auto !important;
-        right: 0 !important;
-        width: 300px !important;
-    }
+/* --- ESCUDO PARA QUE LOS MODALES SIEMPRE SE ABRAN POR ENCIMA --- */
+.modal-overlay { 
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; 
+    z-index: 999999 !important; pointer-events: auto !important; 
 }

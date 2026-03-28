@@ -188,15 +188,21 @@
                         <button class="btn-pdf" onclick="openReportModal()"><i class="fa-solid fa-file-pdf"></i> INFORMES</button>
                         <div class="font-tool"><button onclick="changeFontSize('table-alumnos', -1)">A-</button><button onclick="changeFontSize('table-alumnos', 1)">A+</button></div>
                         
-<!-- BUSCADOR PREMIUM (Integrado y Responsive) -->
-<div class="search-wrapper" style="position: relative;">
-    <button id="btn-toggle-search" onclick="toggleSearch()" style="background:var(--bg-header); border:1px solid var(--border); color:var(--text-muted); padding:10px 15px; border-radius:8px; cursor:pointer;">
+<!-- BUSCADOR CON RESPONSIVE DESIGN -->
+<div class="search-wrapper">
+    <!-- BUSCADOR ESCRITORIO (Siempre visible, diseño original) -->
+    <div class="search-box desktop-only">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="search-alumno-desktop" placeholder="Buscar por nombre o DNI..." onkeyup="filtrarTabla('table-alumnos', 'search-alumno-desktop')">
+    </div>
+
+    <!-- BUSCADOR MÓVIL (Lupa que expande) -->
+    <button id="btn-toggle-search" class="mobile-only" onclick="toggleSearch()">
         <i class="fa-solid fa-magnifying-glass"></i>
     </button>
-    
-    <div id="search-input-box" class="hidden" style="position: fixed; top: 15px; left: 15px; right: 15px; background: var(--bg-card); border: 2px solid var(--primary); padding: 10px; border-radius: 12px; z-index: 9999; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box;">
-        <input type="text" id="search-alumno" placeholder="Escribe nombre o DNI..." style="border:none; background:transparent; color:white; width: 100%; padding: 5px; font-size: 16px; outline:none;" onkeyup="filtrarTabla('table-alumnos', 'search-alumno')">
-        <button onclick="toggleSearch()" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size: 1.2rem; padding: 5px;"><i class="fa-solid fa-xmark"></i></button>
+    <div id="search-input-box" class="hidden mobile-only">
+        <input type="text" id="search-alumno-mobile" placeholder="Escribe nombre o DNI..." onkeyup="filtrarTabla('table-alumnos', 'search-alumno-mobile')">
+        <button onclick="toggleSearch()"><i class="fa-solid fa-xmark"></i></button>
     </div>
 </div>
 
