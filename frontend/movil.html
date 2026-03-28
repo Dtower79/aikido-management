@@ -1698,27 +1698,17 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 function showModal(t, htmlContent, showCloseBtn = true) { 
     let modal = document.getElementById('custom-modal');
     
-    // SI EL MODAL NO EXISTE O ESTÁ CORRUPTO, LO CREAMOS AL VUELO
-    if (!modal) {
-        console.warn("⚠️ Modal no encontrado en DOM, creando uno nuevo...");
-        modal = document.createElement('div');
-        modal.id = 'custom-modal';
-        modal.className = 'modal-overlay hidden';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3 id="modal-title">...</h3>
-                <div id="modal-body-content"></div>
-                <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">CERRAR</button>
-            </div>`;
+    // 1. Mover el modal al final del BODY si no está ya ahí
+    if (modal.parentNode !== document.body) {
         document.body.appendChild(modal);
     }
     
-    // CONFIGURACIÓN DE SEGURIDAD MÁXIMA
-    modal.style.setProperty('display', 'flex', 'important');
+    // 2. Aplicar estilos de capa superior absoluta
+    modal.style.setProperty('position', 'fixed', 'important');
     modal.style.setProperty('z-index', '999999', 'important');
-    modal.classList.remove('hidden');
+    modal.style.setProperty('display', 'flex', 'important');
     
-    // Inyectar contenido
+    // 3. Rellenar contenido
     const titleEl = document.getElementById('modal-title');
     if (titleEl) titleEl.innerText = t;
     
@@ -1728,8 +1718,12 @@ function showModal(t, htmlContent, showCloseBtn = true) {
     const okBtn = document.getElementById('modal-ok-btn');
     if (okBtn) okBtn.style.display = showCloseBtn ? 'block' : 'none';
     
+    // 4. Mostrar
+    modal.classList.remove('hidden'); 
     console.log("✅ [MODAL] Operación lanzada con éxito.");
 }
+
+
         function closeModal() { 
     const modal = document.getElementById('custom-modal');
     if (modal) {
