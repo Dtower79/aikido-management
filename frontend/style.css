@@ -1215,7 +1215,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     
     #search-input-box {
         position: fixed !important; 
-        top: 195px !important; /* BAJAMOS LA BARRA DEBAJO DE LOS BOTONES */
+        top: 185px !important; /* BAJAMOS LA BARRA DEBAJO DE LOS BOTONES */
         left: 15px !important; 
         right: 15px !important;
         background: #1e293b !important; 
