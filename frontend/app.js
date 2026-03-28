@@ -1628,11 +1628,13 @@ function toggleSearch() {
     const inputBox = document.getElementById('search-input-box');
     const btnLupa = document.getElementById('btn-toggle-search');
     
+    // Si estamos en PC, el input siempre debe estar visible (revertimos el toggle)
+    if (window.innerWidth > 900) return;
+
     inputBox.classList.toggle('hidden');
     btnLupa.classList.toggle('hidden');
     
     if (!inputBox.classList.contains('hidden')) {
-        const input = document.getElementById('search-alumno');
-        input.focus(); // Autofoco para escribir al instante
+        document.getElementById('search-alumno').focus();
     }
 }
