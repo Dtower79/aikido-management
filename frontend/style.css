@@ -1206,6 +1206,25 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 @media (max-width: 900px) {
     .desktop-only { display: none !important; }
     
+     /* 1. Aplastar el contenedor general de la cabecera */
+    .section-header {
+        margin-bottom: 5px !important; /* Estaba en 25px */
+        padding-bottom: 5px !important; /* Estaba en 15px */
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; /* Línea divisoria suave */
+    }
+
+    /* 2. Pegar la botonera (INFORMES, Lupa) a la línea de abajo */
+    .toolbar {
+        margin-bottom: 0 !important; /* Estaba empujando la línea hacia abajo */
+        min-height: auto !important; /* Quitar alturas forzadas */
+    }
+
+    /* 3. Pegar la tabla al encabezado */
+    .table-container {
+        margin-top: 0 !important; 
+    }
+
+
     #btn-toggle-search { 
         background: var(--bg-header); 
         border: 1px solid var(--border); 
