@@ -1215,7 +1215,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     
     #search-input-box {
         position: fixed !important; 
-        top: 80px !important; 
+        top: 150px !important; /* BAJAMOS LA BARRA DEBAJO DE LOS BOTONES */
         left: 15px !important; 
         right: 15px !important;
         background: #1e293b !important; 
@@ -1227,7 +1227,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
         align-items: center !important; 
         gap: 10px !important;
         box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
-        box-sizing: border-box !important; /* CLAVE PARA QUE NO SE SALGA DE LA PANTALLA */
+        box-sizing: border-box !important;
     }
     
     #search-input-box.hidden {
