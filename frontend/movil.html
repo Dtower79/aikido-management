@@ -1696,33 +1696,39 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         /* --- MODALES --- */
 function showModal(t, htmlContent, showCloseBtn = true) { 
-    // 1. Buscamos el modal en el DOM
-    const modal = document.getElementById('custom-modal');
+    let modal = document.getElementById('custom-modal');
     
-    // Si no existe, error crítico en consola
+    // SI EL MODAL NO EXISTE O ESTÁ CORRUPTO, LO CREAMOS AL VUELO
     if (!modal) {
-        console.error("❌ ERROR: El elemento #custom-modal no existe en el HTML. Revisa el ID.");
-        return;
+        console.warn("⚠️ Modal no encontrado en DOM, creando uno nuevo...");
+        modal = document.createElement('div');
+        modal.id = 'custom-modal';
+        modal.className = 'modal-overlay hidden';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3 id="modal-title">...</h3>
+                <div id="modal-body-content"></div>
+                <button class="action-btn primary" id="modal-ok-btn" onclick="closeModal()">CERRAR</button>
+            </div>`;
+        document.body.appendChild(modal);
     }
     
-    // 2. Título
+    // CONFIGURACIÓN DE SEGURIDAD MÁXIMA
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('z-index', '999999', 'important');
+    modal.classList.remove('hidden');
+    
+    // Inyectar contenido
     const titleEl = document.getElementById('modal-title');
     if (titleEl) titleEl.innerText = t;
     
-    // 3. Contenido
     const contentEl = document.getElementById('modal-body-content');
     if (contentEl) contentEl.innerHTML = htmlContent || "";
     
-    // 4. Botón de cerrar
     const okBtn = document.getElementById('modal-ok-btn');
     if (okBtn) okBtn.style.display = showCloseBtn ? 'block' : 'none';
     
-    // 5. APERTURA BLINDADA (Z-Index + Display + Clase)
-    modal.style.setProperty('z-index', '999999', 'important');
-    modal.style.setProperty('display', 'flex', 'important');
-    modal.classList.remove('hidden'); 
-    
-    console.log("✅ Modal abierto con éxito: " + t);
+    console.log("✅ [MODAL] Operación lanzada con éxito.");
 }
         function closeModal() { 
     const modal = document.getElementById('custom-modal');
