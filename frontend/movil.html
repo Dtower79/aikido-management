@@ -1696,29 +1696,47 @@ async function fetchSmart(endpoint, cacheKey, durationHours = 1) {
 
         /* --- MODALES --- */
 function showModal(t, htmlContent, showCloseBtn = true) { 
-    // 1. Título
+    // 1. Buscamos el modal en el DOM
+    const modal = document.getElementById('custom-modal');
+    
+    // Si no existe, error crítico en consola
+    if (!modal) {
+        console.error("❌ ERROR: El elemento #custom-modal no existe en el HTML. Revisa el ID.");
+        return;
+    }
+    
+    // 2. Título
     const titleEl = document.getElementById('modal-title');
     if (titleEl) titleEl.innerText = t;
     
-    // 2. Contenido
+    // 3. Contenido
     const contentEl = document.getElementById('modal-body-content');
     if (contentEl) contentEl.innerHTML = htmlContent || "";
     
-    // 3. Botón de cerrar
+    // 4. Botón de cerrar
     const okBtn = document.getElementById('modal-ok-btn');
     if (okBtn) okBtn.style.display = showCloseBtn ? 'block' : 'none';
     
-    // 4. Mostrar el modal y forzar capa
-    const modal = document.getElementById('custom-modal');
-    if (modal) {
-        modal.style.setProperty('z-index', '99999', 'important'); // EL ESCUDO DEFINITIVO
-        modal.classList.remove('hidden'); 
-    }
+    // 5. APERTURA BLINDADA (Z-Index + Display + Clase)
+    modal.style.setProperty('z-index', '999999', 'important');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.classList.remove('hidden'); 
+    
+    console.log("✅ Modal abierto con éxito: " + t);
 }
         function closeModal() { 
-            document.getElementById('custom-modal').classList.add('hidden'); 
-            if(html5QrCode) { html5QrCode.stop().catch(()=>{}); html5QrCode = null; } 
-        }
+    const modal = document.getElementById('custom-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none'; // Necesario para resetear el estilo forzado al abrir
+    }
+    
+    // Limpieza de cámara si estaba encendida
+    if (typeof html5QrCode !== 'undefined' && html5QrCode) { 
+        html5QrCode.stop().catch(()=>{}); 
+        html5QrCode = null; 
+    } 
+}
 
         /* --- FECHAS Y GRADOS --- */
         function formatTimeSafe(iso) {
@@ -2065,9 +2083,9 @@ async function loadSenseiPanel() {
                     <i class="fa-solid fa-chevron-down" style="opacity:0.3; font-size:12px;"></i>
                 </div>
                 <div class="class-group-body">
-                    <button class="qr-tatami-btn" onclick="generateClassQR('${cid}')">
-                        <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
-                    </button>
+                    <button class="qr-tatami-btn" onclick="console.log('Botón pulsado: ${cid}'); generateClassQR('${cid}');">
+    <i class="fa-solid fa-qrcode"></i> MOSTRAR QR PARA TATAMI
+</button>
                     <div style="border-top:1px solid var(--glass-border); padding: 0 15px;">
                         ${sRows}
                     </div>

@@ -1035,28 +1035,31 @@ function toggleMobileMenu() {
 function scrollToTop() { const c = document.querySelector('.content'); if (c) c.scrollTo({ top: 0, behavior: 'smooth' }); else window.scrollTo({ top: 0, behavior: 'smooth' }); }
 const ca = document.querySelector('.content'); if (ca) { ca.addEventListener('scroll', () => { const b = document.getElementById('btn-scroll-top'); if (ca.scrollTop > 300) b.classList.add('visible'); else b.classList.remove('visible'); }); }
 
-function showModal(titulo, mensaje, callbackOk = null) {
+function showModal(t, htmlContent, showCloseBtn = true) { 
+    // 1. Buscamos el modal
     const modal = document.getElementById('custom-modal');
+    if (!modal) {
+        console.error("❌ El modal #custom-modal no existe en el DOM");
+        return;
+    }
     
-    // 🥋 EL ESCUDO DEFINITIVO (Versión Escritorio)
-    modal.style.setProperty('z-index', '99999', 'important');
+    // 2. FORZAMOS CAPA SUPERIOR
+    modal.style.setProperty('z-index', '999999', 'important');
+    modal.style.display = 'flex'; // Aseguramos que sea visible
     
-    document.getElementById('modal-title').innerText = titulo;
-    document.getElementById('modal-message').innerText = mensaje;
+    // 3. Contenido
+    const titleEl = document.getElementById('modal-title');
+    if (titleEl) titleEl.innerText = t;
     
-    const btnOk = document.getElementById('modal-btn-ok');
-    const btnCancel = document.getElementById('modal-btn-cancel');
+    const contentEl = document.getElementById('modal-body-content');
+    if (contentEl) contentEl.innerHTML = htmlContent || "";
     
-    modal.classList.remove('hidden');
+    const okBtn = document.getElementById('modal-ok-btn');
+    if (okBtn) okBtn.style.display = showCloseBtn ? 'block' : 'none';
     
-    btnOk.onclick = () => {
-        modal.classList.add('hidden');
-        if (callbackOk) callbackOk();
-    };
-    
-    btnCancel.onclick = () => {
-        modal.classList.add('hidden');
-    };
+    // 4. Quitamos clase hidden
+    modal.classList.remove('hidden'); 
+    console.log("✅ Modal abierto con z-index 999999");
 }
 
 function closeModal() {
