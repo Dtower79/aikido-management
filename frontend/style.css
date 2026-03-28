@@ -1273,3 +1273,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 .btn-close-search { background: none; border: none; color: var(--text-muted); cursor: pointer; }
 
+@media (min-width: 900px) {
+    #search-input-box {
+        position: absolute !important; /* En PC vuelve a ser absoluto */
+        top: 0 !important;
+        right: 0 !important;
+        width: 350px !important;
+    }
+}
