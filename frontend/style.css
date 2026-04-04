@@ -317,9 +317,15 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     pointer-events: none;
 }
 .toolbar-actions-area.active {
-    opacity: 1; pointer-events: all;
-    background: rgba(239, 68, 68, 0.05);
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important; /* Etiqueta | Espacio | Botones */
+    align-items: center !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    padding: 0 15px !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--primary) !important;
+    border-radius: 8px !important;
 }
 .student-tag {
     grid-column: 2; /* Siempre al centro */
@@ -327,8 +333,13 @@ tr:hover td.sticky-col { background-color: #262f3f !important; }
     text-transform: uppercase; white-space: nowrap;
 }
 
+/* Forzar que los iconos de acción se vean sí o sí */
 .actions-buttons-wrap {
-    grid-column: 3; display: flex; justify-content: flex-end; gap: 5px;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-end !important;
+    gap: 15px !important;
+    opacity: 1 !important;
 }
 
 #custom-modal { z-index: 99999 !important; }
@@ -1321,3 +1332,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     box-shadow: none !important;
 }
 
+#actions-alumnos.active, 
+#actions-bajas.active {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important; /* [1] Espacio [2] Nombre [3] Botones */
+    align-items: center !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--primary) !important;
+    border-radius: 8px !important;
+    padding: 0 15px !important;
+    height: 45px !important;
+}
