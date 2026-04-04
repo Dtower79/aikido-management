@@ -265,12 +265,13 @@ function renderTableAlumnos(data, tbody, activos) {
 
 // A. SELECCIÓN DE ALUMNO CON CENTRADO SIMÉTRICO
 function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
+    // 1. Limpieza absoluta previa
     closeAlumnoActions();
     const row = document.getElementById(`row-${id}`);
     if (row) row.classList.add('selected-row');
 
+    // 2. Lógica para Móvil
     if (window.innerWidth <= 900) {
-        // MÓVIL: Diseño con etiquetas debajo de los iconos
         const actionsHtml = esActivo ? `
             <div class="action-item-wrap">
                 <button class="action-btn-icon" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
@@ -297,8 +298,9 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
         document.getElementById('sheet-alumno-name').innerText = `${nombre} ${apellidos}`;
         document.getElementById('sheet-actions-container').innerHTML = actionsHtml;
         document.getElementById('bottom-sheet-mobile').classList.remove('hidden');
-    } else {
-        // DESKTOP: Mantener barra superior
+    } 
+    // 3. Lógica para Escritorio
+    else {
         const actionsHtml = esActivo ? `
             <button class="action-btn-icon" onclick="generateIndividualHistory('${id}', '${nombre}', '${apellidos}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
             <button class="action-btn-icon" onclick="editarAlumno('${id}')"><i class="fa-solid fa-pen"></i></button>
@@ -307,13 +309,20 @@ function handleAlumnoSelection(id, nombre, apellidos, event, esActivo) {
             <button class="action-btn-icon restore" onclick="confirmarEstado('${id}', true, '${nombre}')"><i class="fa-solid fa-rotate-left"></i></button>
             <button class="action-btn-icon delete" onclick="eliminarDefinitivo('${id}', '${nombre}')"><i class="fa-solid fa-trash-can"></i></button>
         `;
+        
         const targetId = esActivo ? 'actions-alumnos' : 'actions-bajas';
         const container = document.getElementById(targetId);
+        
         if (container) {
-            container.innerHTML = `<div style="grid-column: 1;"></div><span class="student-tag">${nombre} ${apellidos}</span><div class="actions-buttons-wrap">${actionsHtml}</div>`;
+            // Estructura simplificada sin grid-column para que flex haga su trabajo
+            container.innerHTML = `
+                <span class="student-tag">${nombre} ${apellidos}</span>
+                <div class="actions-buttons-wrap">${actionsHtml}</div>
+            `;
             container.classList.add('active');
         }
     }
+    
     if (event) event.stopPropagation();
 }
 
