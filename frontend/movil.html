@@ -2215,7 +2215,7 @@ async function closeQRAndRefresh() {
     console.log("✅ Tatami actualizado.");
 }
 
-/* --- PRÓXIMO KEIKO (VERSION 7.0 - SIN BOTÓN PARA SENSEI) --- */
+/* --- PRÓXIMO KEIKO (VERSION 7.2 - CON FILTRO DE FECHA SERVIDOR) --- */
 async function checkTodayClass(forcedDojoId = null) {
     const btn = document.getElementById('confirm-btn');
     const user = JSON.parse(localStorage.getItem('aikido_user')); 
@@ -2228,11 +2228,18 @@ async function checkTodayClass(forcedDojoId = null) {
     globalAsistId = null;
 
     try {
-        const res = await fetch(`${API_URL}/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=50`, { 
+        const ahora = new Date();
+        
+        // 🥋 EL CAMBIO MAESTRO: Calculamos el límite (Ahora menos 3 horas para clases en curso)
+        const tiempoLimite = new Date(ahora.getTime() - (3 * 3600000)).toISOString();
+
+        // 🥋 NUEVA URL: Filtramos desde el servidor con $gte (Mayor o igual a tiempoLimite)
+        const url = `${API_URL}/clases?filters[Fecha_Hora][$gte]=${tiempoLimite}&sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=20`;
+        
+        const res = await fetch(url, { 
             headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
         });
         const json = await res.json();
-        const ahora = new Date();
 
         if (!json.data || json.data.length === 0) return setEmptyDashboard("Calendario vacío");
 
@@ -2244,7 +2251,7 @@ async function checkTodayClass(forcedDojoId = null) {
             const dIdClase = d.dojo ? String(getID(parseRelation(d.dojo))) : null;
             const [fechaPart, resto] = d.Fecha_Hora.split('T');
             const [y, m, day] = fechaPart.split('-');
-            const [hh, mm] = resto.split(':');
+            const[hh, mm] = resto.split(':');
             const inicioLit = new Date(y, m - 1, day, hh, mm);
             const finLit = new Date(inicioLit.getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
 
@@ -2262,6 +2269,8 @@ async function checkTodayClass(forcedDojoId = null) {
                 if (asistencia) {
                     estadoAlumno = asistencia.attributes?.Estado || asistencia.Estado;
                     globalAsistId = asistencia.documentId || asistencia.id; // 🥋 GUARDAMOS EL ID DE LA ASISTENCIA AQUÍ
+                } else {
+                    estadoAlumno = null;
                 }
                 
                 if (estadoAlumno === 'Asistio') continue;
@@ -2286,7 +2295,7 @@ async function checkTodayClass(forcedDojoId = null) {
                     btn.classList.remove('hidden');
                     btn.style.display = 'flex';
                     
-                    // LÓGICA DE BOTÓN DINÁMICO
+                    // LÓGICA DE BOTÓN DINÁMICO (Tuya original, intacta)
                     if (estadoAlumno === 'Confirmado') {
                         btn.innerText = "CANCELAR ASISTENCIA";
                         btn.style.background = "#ef4444"; // Rojo Arashi
