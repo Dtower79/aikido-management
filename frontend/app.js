@@ -482,6 +482,9 @@ async function editarAlumno(documentId) {
         const btnCancel = document.getElementById('btn-cancelar-edit');
         if (btnCancel) btnCancel.classList.remove('hidden'); 
         
+        // MOSTRAR SECCIÓN KEIKO MANUAL
+        const manualKeikoSec = document.getElementById('manual-keiko-section');
+        if (manualKeikoSec) manualKeikoSec.classList.remove('hidden');
         updateSeminariosDatalists();
         showSection('nuevo-alumno');
 
@@ -491,9 +494,145 @@ async function editarAlumno(documentId) {
     }
 }
 
+/* --- REGISTRO MANUAL DE KEIKO (TATAMI RETROACTIVO) --- */
+async function registrarKeikoManual() {
+    const studentId = document.getElementById('edit-id').value;
+    const dojoId = document.getElementById('new-dojo').value;
+    const dateVal = document.getElementById('mk-date').value;
+    const timeVal = document.getElementById('mk-time').value;
+    const durVal = document.getElementById('mk-dur').value;
+
+    // Validación anti-errores
+    if (!studentId) {
+        showModal("Error", "Guarda primero la ficha del alumno nuevo antes de añadir un keiko.");
+        return;
+    }
+    if (!dojoId || !dateVal || !timeVal) {
+        showModal("Aviso", "Rellena Fecha, Hora y Dojo para registrar el Keiko.");
+        return;
+    }
+
+    // Formato Estricto Arashi: ISO Timezone Safe
+    const isoString = `${dateVal}T${timeVal}:00.000Z`;
+    const durNum = parseFloat(durVal);
+    
+    const btn = document.querySelector('#manual-keiko-section button');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESANDO...';
+    btn.disabled = true;
+
+    try {
+        let classId = null;
+
+        // 1. ESCUDO ANTI-DUPLICADOS Y BÚSQUEDA DE CLASE EXISTENTE
+        const resClase = await fetch(`${API_URL}/api/clases?filters[Fecha_Hora][$eq]=${isoString}&filters[dojo][documentId][$eq]=${dojoId}`, {
+            headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+        const jsonClase = await resClase.json();
+
+        if (jsonClase.data && jsonClase.data.length > 0) {
+            classId = jsonClase.data[0].documentId || jsonClase.data[0].id;
+        } else {
+            // No existe, la creamos al vuelo silenciosamente
+            const createRes = await fetch(`${API_URL}/api/clases`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
+                body: JSON.stringify({ data: { Fecha_Hora: isoString, Duracion: durNum, dojo: dojoId } })
+            });
+            if (!createRes.ok) throw new Error("Fallo al crear la clase maestra.");
+            const newClass = await createRes.json();
+            classId = newClass.data.documentId || newClass.data.id;
+        }
+
+        // 2. REGISTRO DE ASISTENCIA Y CONTROL DE DUPLICADOS (Evitar doble conteo)
+        const resAsist = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${studentId}&filters[clase][documentId][$eq]=${classId}`, {
+            headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+        const jsonAsist = await resAsist.json();
+        
+        let sumarHoras = false;
+
+        if (jsonAsist.data && jsonAsist.data.length > 0) {
+            const asistencia = jsonAsist.data[0];
+            const asistId = asistencia.documentId || asistencia.id;
+            const estadoPrevio = asistencia.attributes?.Estado || asistencia.Estado;
+
+            // Si ya asistió, detenemos la operación
+            if (estadoPrevio === 'Asistio' || estadoPrevio === 'Asistió') {
+                showModal("Aviso", "El alumno ya tenía validada la asistencia a este Keiko.");
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                return;
+            }
+
+            // Si estaba como Confirmado o Falta, lo pasamos a Asistio
+            await fetch(`${API_URL}/api/asistencias/${asistId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
+                body: JSON.stringify({ data: { Estado: 'Asistio' } })
+            });
+            sumarHoras = true;
+        } else {
+            // Creamos asistencia nueva y directa en estado 'Asistio'
+            await fetch(`${API_URL}/api/asistencias`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
+                body: JSON.stringify({ data: { alumno: studentId, clase: classId, Estado: 'Asistio' } })
+            });
+            sumarHoras = true;
+        }
+
+        // 3. ACTUALIZACIÓN DEL HISTORIAL DE HORAS EN LA FICHA
+        if (sumarHoras) {
+            const inputHoras = document.getElementById('new-horas');
+            const horasActuales = parseFloat(inputHoras.value || 0);
+            const nuevasHoras = horasActuales + durNum;
+            
+            // Actualizamos en Strapi
+            const resUpdate = await fetch(`${API_URL}/api/alumnos/${studentId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` },
+                body: JSON.stringify({ data: { horas_acumuladas: nuevasHoras } })
+            });
+
+            if(resUpdate.ok) {
+                // Reflejo visual inmediato
+                inputHoras.value = nuevasHoras.toFixed(1);
+
+                // Forzamos limpieza de caché de tablas (Alumnos Activos y Archivo de Clases)
+                localStorage.removeItem('cache_alumnos_activos');
+                localStorage.removeItem('cache_alumnos_bajas');
+                localStorage.removeItem('cache_clases_archivo');
+                
+                showModal("¡OSS!", "Asistencia retroactiva registrada. Se han sumado las horas al alumno.");
+                
+                // Vaciamos los campos para poder meter el siguiente keiko rápidamente
+                document.getElementById('mk-date').value = '';
+                document.getElementById('mk-time').value = '';
+            } else {
+                throw new Error("Strapi rechazó la suma de horas.");
+            }
+        }
+
+    } catch (error) {
+        console.error("🔥 Error al registrar keiko manual:", error);
+        showModal("Error", "Fallo de conexión con Neon/Render.");
+    } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
+}
+
+
+
 /* --- FUNCIÓN: RESET FORMULARIO --- */
 /* --- RESET TOTAL DEL FORMULARIO --- */
 function resetForm() { 
+    // OCULTAR SECCIÓN KEIKO MANUAL
+    const manualKeikoSec = document.getElementById('manual-keiko-section');
+    if (manualKeikoSec) manualKeikoSec.classList.add('hidden');
+
+
     const f = document.getElementById('form-nuevo-alumno'); 
     if (f) f.reset(); 
     
