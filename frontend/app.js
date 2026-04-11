@@ -720,9 +720,19 @@ async function generateIndividualHistory(id, nombre, apellidos) {
         const p = jsonAlu.data.attributes || jsonAlu.data;
 
         // 2. OBTENER ASISTENCIAS
-        const resAsist = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${id}&populate=clase&sort=createdAt:desc&pagination[limit]=200`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
+        // Quitamos el sort de la URL porque Strapi no puede ordenar bien por tablas relacionadas
+        const resAsist = await fetch(`${API_URL}/api/asistencias?filters[alumno][documentId][$eq]=${id}&populate=clase&pagination[limit]=200`, { headers: { 'Authorization': `Bearer ${jwtToken}` } });
         const jsonAsist = await resAsist.json();
-        const asistencias = jsonAsist.data || [];
+        let asistencias = jsonAsist.data ||[];
+
+        // 🥋 MOTOR DE ORDENACIÓN CRONOLÓGICA EN CLIENTE
+        asistencias.sort((a, b) => {
+            const cA = parseRelation((a.attributes || a).clase);
+            const cB = parseRelation((b.attributes || b).clase);
+            const timeA = cA?.Fecha_Hora ? new Date(cA.Fecha_Hora).getTime() : 0;
+            const timeB = cB?.Fecha_Hora ? new Date(cB.Fecha_Hora).getTime() : 0;
+            return timeB - timeA; // Descendente: Más recientes primero
+        });
 
         // CABECERA
         doc.setFontSize(18); doc.text(`PASAPORTE TÉCNICO ARASHI`, 105, 15, { align: 'center' });
@@ -733,13 +743,16 @@ async function generateIndividualHistory(id, nombre, apellidos) {
         doc.setFontSize(12); doc.setTextColor(190, 0, 0); doc.text("HISTORIAL DE SEMINARIOS Y CURSOS", 14, 38);
         doc.setTextColor(0, 0, 0);
 
-        const semBody = (p.seminarios || []).map(s => [
+        // Ordenar seminarios de más nuevo a más viejo
+        let seminariosOrd =[...(p.seminarios || [])].reverse();
+        
+        const semBody = seminariosOrd.map(s =>[
             s.sensei || '-', s.ciudad || '-', s.pais || '-', `${s.mes || ''} ${s.any || ''}`
         ]);
 
         doc.autoTable({
             startY: 42, head: [['SENSEI / MAESTRO', 'CIUDAD', 'PAÍS', 'FECHA']], body: semBody.length ? semBody : [['---', 'No hay seminarios registrados', '---', '---']],
-            theme: 'grid', headStyles: { fillColor: [51, 65, 85] }, styles: { fontSize: 8 }
+            theme: 'grid', headStyles: { fillColor:[51, 65, 85] }, styles: { fontSize: 8 }
         });
 
         // SECCIÓN B: ÚLTIMAS ASISTENCIAS
@@ -751,7 +764,7 @@ async function generateIndividualHistory(id, nombre, apellidos) {
             const a = item.attributes || item;
             const c = parseRelation(a.clase);
             const [fechaPart, resto] = (c?.Fecha_Hora || "T").split('T');
-            return [
+            return[
                 formatDateDisplay(fechaPart),
                 resto.substring(0, 5) + "h",
                 c?.Duracion + "h",

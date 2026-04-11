@@ -3767,16 +3767,26 @@ async function openHistoryModal() {
     }
     semC.innerHTML = sHtml;
 
-    // 3. CARGAR CLASES
+// 3. CARGAR CLASES
     try {
-        const urlClases = `${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&populate[clase][populate]=dojo&sort=createdAt:desc&pagination[limit]=100`;
+        const urlClases = `${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&populate[clase][populate]=dojo&pagination[limit]=100`;
         const asisRes = await fetch(urlClases, { headers: { 'Authorization': `Bearer ${token}` } });
         const asisJson = await asisRes.json();
         
-        const clasesAsistidas = (asisJson.data || []).filter(item => {
+        // Obtenemos los datos y los filtramos
+        let clasesAsistidas = (asisJson.data || []).filter(item => {
             const attr = item.attributes || item;
             const est = (attr.Estado || attr.estado || "").toLowerCase();
             return est.includes('asistio') || est.includes('asistió');
+        });
+
+        // 🥋 MOTOR DE ORDENACIÓN CRONOLÓGICA EN CLIENTE (ESTO ES LO QUE TE FALTABA)
+        clasesAsistidas.sort((a, b) => {
+            const cA = parseRelation((a.attributes || a).clase);
+            const cB = parseRelation((b.attributes || b).clase);
+            const timeA = cA?.Fecha_Hora ? new Date(cA.Fecha_Hora).getTime() : 0;
+            const timeB = cB?.Fecha_Hora ? new Date(cB.Fecha_Hora).getTime() : 0;
+            return timeB - timeA; // Descendente: Más recientes primero
         });
         
         let cHtml = '';
