@@ -3741,19 +3741,27 @@ async function openHistoryModal() {
         return;
     }
 
-    // 🥋 CÁLCULO DE DESGLOSE (Aplica la nueva lógica de horas)
+// 2. ACTUALIZACIÓN DEL CONTADOR (Jerarquía: Seminarios > Horas)
     const p = alumnoGlobal.attributes || alumnoGlobal;
     const desglose = calcularHorasDesglosadas(p);
     
-    const totalDisplay = document.getElementById('total-hours-display');
-    totalDisplay.innerHTML = `
-        <div style="font-size: 35px; font-weight: 800; color: var(--accent); margin-bottom: 2px;">${desglose.total}H</div>
-        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-bottom: 12px;">HORAS TOTALES EN EL TATAMI</div>
-        <div style="display: inline-block; background: rgba(255,255,255,0.05); padding: 6px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-            <span style="font-size: 13px; color: white; font-weight: 800;">${desglose.numSem} SEMINARIOS REALIZADOS</span>
+    // Seleccionamos todo el bloque con fondo (Kanjis) para borrar el <p> duplicado del HTML original
+    const headerBg = document.querySelector('.history-header-bg');
+    headerBg.innerHTML = `
+        <div style="display: inline-block; background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 12px;">
+            <span style="font-size: 12px; color: white; font-weight: 800; letter-spacing: 0.5px;">
+                ${desglose.numSem} SEMINARIOS REALIZADOS
+            </span>
+        </div>
+        
+        <div id="total-hours-display" style="font-size: 42px; font-weight: 800; color: var(--accent); line-height: 1; margin-bottom: 4px;">
+            ${desglose.total}H
+        </div>
+        
+        <div style="font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+            HORAS TOTALES EN EL TATAMI
         </div>
     `;
-
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
 
