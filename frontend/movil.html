@@ -3744,12 +3744,13 @@ async function openHistoryModal() {
     // 🥋 CÁLCULO DE DESGLOSE (Aplica la nueva lógica de horas)
     const p = alumnoGlobal.attributes || alumnoGlobal;
     const desglose = calcularHorasDesglosadas(p);
-
+    
     const totalDisplay = document.getElementById('total-hours-display');
     totalDisplay.innerHTML = `
-        <div style="font-size: 35px; font-weight: 800; color: var(--accent);">${desglose.total}H</div>
-        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-top: 5px; text-transform: uppercase;">
-            ${desglose.numSem} Seminarios realizados
+        <div style="font-size: 35px; font-weight: 800; color: var(--accent); margin-bottom: 2px;">${desglose.total}H</div>
+        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">HORAS TOTALES EN EL TATAMI</div>
+        <div style="font-size: 12px; color: white; font-weight: 800; background: rgba(255,255,255,0.05); padding: 5px 12px; border-radius: 10px; display: inline-block;">
+            ${desglose.numSem} SEMINARIOS REALIZADOS
         </div>
     `;
 
