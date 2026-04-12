@@ -1426,19 +1426,27 @@ body.app-ready #app-content {
 <div id="history-modal" class="modal-overlay hidden" style="z-index: 15000;">
     <div class="modal-content" style="max-width: 450px; padding: 20px; height: 90vh; display: flex; flex-direction: column;">
     
-    <!-- CABECERA CON BOTÓN VOLVER -->
+<!-- CABECERA CON BOTÓN VOLVER Y MEDALLA DE SEMINARIOS -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <button onclick="closeHistoryModal()" class="btn-secondary" style="border-radius:12px; padding: 10px 15px;">
             <i class="fa-solid fa-arrow-left"></i>
         </button>
-        <h2 style="margin:0; font-size:16px; color:white; text-transform:uppercase;">Pasaporte</h2>
+        
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <h2 style="margin:0 0 6px 0; font-size:16px; color:white; text-transform:uppercase; letter-spacing: 1px;">Pasaporte</h2>
+            <!-- Píldora de seminarios debajo del título -->
+            <div style="background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                <span id="seminarios-count-display" style="font-size: 9px; color: var(--accent); font-weight: 800; letter-spacing: 0.5px;">0 SEMINARIOS REALIZADOS</span>
+            </div>
+        </div>
+
         <div style="width:40px;"></div> <!-- Espacio para centrar el título -->
     </div>
 
-    <!-- CONTADOR HORAS -->
+    <!-- CONTADOR HORAS EN TATAMI -->
     <div class="history-header-bg" style="margin-bottom: 15px;">
-        <div id="total-hours-display" style="font-size: 35px; font-weight: 800; color: var(--accent);">0.0H</div>
-        <p style="margin:0; font-size:10px; color:var(--text-muted); text-transform:uppercase;">Horas totales en el Tatami</p>
+        <div id="total-hours-display" style="font-size: 45px; font-weight: 800; color: var(--accent); line-height: 0.9; margin-bottom: 4px;">0.0H</div>
+        <div style="font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Horas totales en el Tatami</div>
     </div>
 
     <!-- PESTAÑAS -->
@@ -3741,27 +3749,47 @@ async function openHistoryModal() {
         return;
     }
 
-// 2. ACTUALIZACIÓN DEL CONTADOR (Jerarquía: Seminarios > Horas - Diseño Compacto)
+// 2. ACTUALIZACIÓN DEL CONTADOR (Jerarquía: Seminarios bajo PASAPORTE > Horas en Kanjis)
     const p = alumnoGlobal.attributes || alumnoGlobal;
     const desglose = calcularHorasDesglosadas(p);
     
-    // Seleccionamos todo el bloque con fondo (Kanjis)
+    // 1. INYECCIÓN DINÁMICA: Movemos los seminarios debajo de la palabra "PASAPORTE"
+    let semDisplay = document.getElementById('seminarios-count-display');
+    
+    // Si el contenedor no existe aún, el JS lo crea automáticamente sin tocar el HTML a mano
+    if (!semDisplay) {
+        const tituloH2 = document.querySelector('#history-modal h2');
+        if (tituloH2 && tituloH2.innerText.toUpperCase() === 'PASAPORTE') {
+            const nuevoContenedor = document.createElement('div');
+            nuevoContenedor.style.cssText = 'display: flex; flex-direction: column; align-items: center;';
+            nuevoContenedor.innerHTML = `
+                <h2 style="margin:0 0 6px 0; font-size:16px; color:white; text-transform:uppercase; letter-spacing: 1px;">Pasaporte</h2>
+                <div style="background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                    <span id="seminarios-count-display" style="font-size: 9px; color: var(--accent); font-weight: 800; letter-spacing: 0.5px;"></span>
+                </div>
+            `;
+            tituloH2.parentNode.replaceChild(nuevoContenedor, tituloH2);
+            semDisplay = document.getElementById('seminarios-count-display');
+        }
+    }
+
+    // Ponemos el número de seminarios en su sitio
+    if (semDisplay) {
+        semDisplay.innerText = `${desglose.numSem} SEMINARIOS REALIZADOS`;
+    }
+
+    // 2. ACTUALIZAMOS LA CAJA DE KANJIS (Solo para las horas)
     const headerBg = document.querySelector('.history-header-bg');
-    headerBg.innerHTML = `
-        <div style="display: inline-block; background: rgba(255, 255, 255, 0.05); padding: 4px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 6px;">
-            <span style="font-size: 11px; color: white; font-weight: 800; letter-spacing: 0.5px;">
-                ${desglose.numSem} SEMINARIOS REALIZADOS
-            </span>
-        </div>
-        
-        <div id="total-hours-display" style="font-size: 42px; font-weight: 800; color: var(--accent); line-height: 0.9; margin-bottom: 2px;">
-            ${desglose.total}H
-        </div>
-        
-        <div style="font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
-            HORAS TOTALES EN EL TATAMI
-        </div>
-    `;
+    if (headerBg) {
+        headerBg.innerHTML = `
+            <div id="total-hours-display" style="font-size: 45px; font-weight: 800; color: var(--accent); line-height: 0.9; margin-bottom: 4px;">
+                ${desglose.total}H
+            </div>
+            <div style="font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+                HORAS TOTALES EN EL TATAMI
+            </div>
+        `;
+    }
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
 
