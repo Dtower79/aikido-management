@@ -743,16 +743,36 @@ async function generateIndividualHistory(id, nombre, apellidos) {
         doc.setFontSize(12); doc.setTextColor(190, 0, 0); doc.text("HISTORIAL DE SEMINARIOS Y CURSOS", 14, 38);
         doc.setTextColor(0, 0, 0);
 
-        // Ordenar seminarios de más nuevo a más viejo
-        let seminariosOrd =[...(p.seminarios || [])].reverse();
+        // 🥋 MOTOR DE ORDENACIÓN CRONOLÓGICA INTELIGENTE (Año > Mes)
+        const mesesMap = {
+            "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
+            "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12
+        };
+
+        let seminariosOrd = [...(p.seminarios || [])].sort((a, b) => {
+            const anyA = parseInt(a.any || 0);
+            const anyB = parseInt(b.any || 0);
+            if (anyA !== anyB) return anyB - anyA; // Año descendente
+
+            const mesA = mesesMap[a.mes?.toLowerCase().trim()] || 0;
+            const mesB = mesesMap[b.mes?.toLowerCase().trim()] || 0;
+            return mesB - mesA; // Mes descendente
+        });
         
         const semBody = seminariosOrd.map(s =>[
-            s.sensei || '-', s.ciudad || '-', s.pais || '-', `${s.mes || ''} ${s.any || ''}`
+            s.sensei || '-', 
+            s.ciudad || '-', 
+            s.pais || '-', 
+            `${s.mes || ''} ${s.any || ''}`.trim()
         ]);
 
         doc.autoTable({
-            startY: 42, head: [['SENSEI / MAESTRO', 'CIUDAD', 'PAÍS', 'FECHA']], body: semBody.length ? semBody : [['---', 'No hay seminarios registrados', '---', '---']],
-            theme: 'grid', headStyles: { fillColor:[51, 65, 85] }, styles: { fontSize: 8 }
+            startY: 42, 
+            head: [['SENSEI / MAESTRO', 'CIUDAD', 'PAÍS', 'FECHA']], 
+            body: semBody.length ? semBody : [['---', 'No hay seminarios registrados', '---', '---']],
+            theme: 'grid', 
+            headStyles: { fillColor:[51, 65, 85] }, 
+            styles: { fontSize: 8 }
         });
 
         // SECCIÓN B: ÚLTIMAS ASISTENCIAS

@@ -3749,8 +3749,26 @@ async function openHistoryModal() {
 
     // 2. CARGAR SEMINARIOS
     let sHtml = '<button class="action-btn primary" style="width:100%; margin-bottom:20px; border-radius:12px;" onclick="openAddSeminarioModal()"><i class="fa-solid fa-plus"></i> AÑADIR SEMINARIO</button>';
+    
     if (p.seminarios && p.seminarios.length > 0) {
-        [...p.seminarios].reverse().forEach(s => {
+        // 🥋 MOTOR DE ORDENACIÓN CRONOLÓGICA INTELIGENTE (Año > Mes)
+        const mesesMap = {
+            "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
+            "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12
+        };
+
+        const seminariosOrdenados = [...p.seminarios].sort((a, b) => {
+            const anyA = parseInt(a.any || 0);
+            const anyB = parseInt(b.any || 0);
+            if (anyA !== anyB) return anyB - anyA; // Año descendente
+
+            // Si el año es igual, comparamos el mes
+            const mesA = mesesMap[a.mes?.toLowerCase().trim()] || 0;
+            const mesB = mesesMap[b.mes?.toLowerCase().trim()] || 0;
+            return mesB - mesA; // Mes descendente
+        });
+
+        seminariosOrdenados.forEach(s => {
             const loc = [s.ciudad, s.pais].filter(Boolean).join(', ');
             const fecha = [s.mes, s.any].filter(Boolean).join(' ');
             sHtml += `
