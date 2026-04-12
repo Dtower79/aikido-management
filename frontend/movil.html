@@ -3744,12 +3744,12 @@ async function openHistoryModal() {
     // 🥋 CÁLCULO DE DESGLOSE (Aplica la nueva lógica de horas)
     const p = alumnoGlobal.attributes || alumnoGlobal;
     const desglose = calcularHorasDesglosadas(p);
-    
+
     const totalDisplay = document.getElementById('total-hours-display');
     totalDisplay.innerHTML = `
         <div style="font-size: 35px; font-weight: 800; color: var(--accent);">${desglose.total}H</div>
-        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-top: 5px;">
-            (${desglose.keikos}H Keikos + ${desglose.seminarios}H Seminarios)
+        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-top: 5px; text-transform: uppercase;">
+            ${desglose.numSem} Seminarios realizados
         </div>
     `;
 
@@ -3971,14 +3971,11 @@ async function guardarSeminarioAlumno() {
 // Función helper para calcular horas desglosadas
 function calcularHorasDesglosadas(p) {
     const total = parseFloat(p.horas_acumuladas || 0);
-    // Cada seminario suma 3 horas por defecto
-    const horasSeminarios = (p.seminarios ? p.seminarios.length * 3 : 0);
-    const horasKeiko = Math.max(0, total - horasSeminarios);
+    const numSeminarios = (p.seminarios ? p.seminarios.length : 0);
     
     return {
-        total: total.toFixed(1),
-        keikos: horasKeiko.toFixed(1),
-        seminarios: horasSeminarios.toFixed(1)
+        total: total.toFixed(1), // Horas totales acumuladas
+        numSem: numSeminarios    // Contador simple de seminarios
     };
 }
 
