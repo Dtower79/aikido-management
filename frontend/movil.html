@@ -3741,8 +3741,17 @@ async function openHistoryModal() {
         return;
     }
 
+    // 🥋 CÁLCULO DE DESGLOSE (Aplica la nueva lógica de horas)
     const p = alumnoGlobal.attributes || alumnoGlobal;
-    document.getElementById('total-hours-display').innerText = parseFloat(p.horas_acumuladas || 0).toFixed(1) + 'H';
+    const desglose = calcularHorasDesglosadas(p);
+    
+    const totalDisplay = document.getElementById('total-hours-display');
+    totalDisplay.innerHTML = `
+        <div style="font-size: 35px; font-weight: 800; color: var(--accent);">${desglose.total}H</div>
+        <div style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-top: 5px;">
+            (${desglose.keikos}H Keikos + ${desglose.seminarios}H Seminarios)
+        </div>
+    `;
 
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
@@ -3957,6 +3966,20 @@ async function guardarSeminarioAlumno() {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
         if(btn) { btn.innerText = "GUARDAR SEMINARIO"; btn.disabled = false; }
     }
+}
+
+// Función helper para calcular horas desglosadas
+function calcularHorasDesglosadas(p) {
+    const total = parseFloat(p.horas_acumuladas || 0);
+    // Cada seminario suma 3 horas por defecto
+    const horasSeminarios = (p.seminarios ? p.seminarios.length * 3 : 0);
+    const horasKeiko = Math.max(0, total - horasSeminarios);
+    
+    return {
+        total: total.toFixed(1),
+        keikos: horasKeiko.toFixed(1),
+        seminarios: horasSeminarios.toFixed(1)
+    };
 }
 
 

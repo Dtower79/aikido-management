@@ -734,10 +734,12 @@ async function generateIndividualHistory(id, nombre, apellidos) {
             return timeB - timeA; // Descendente: Más recientes primero
         });
 
-        // CABECERA
+        // CABECERA CON DESGLOSE
+        const desglose = calcularHorasDesglosadas(p);
         doc.setFontSize(18); doc.text(`PASAPORTE TÉCNICO ARASHI`, 105, 15, { align: 'center' });
         doc.setFontSize(12); doc.text(`${apellidos.toUpperCase()}, ${nombre} - ${normalizeGrade(p.grado)}`, 105, 23, { align: 'center' });
-        doc.setFontSize(10); doc.text(`Horas en Tatami: ${parseFloat(p.horas_acumuladas || 0).toFixed(1)}h | Dojo: ${getDojoName(p.dojo)}`, 105, 29, { align: 'center' });
+        doc.setFontSize(10); 
+        doc.text(`Horas Totales: ${desglose.total}h (${desglose.keikos}h Keikos + ${desglose.seminarios}h Seminarios) | Dojo: ${getDojoName(p.dojo)}`, 105, 29, { align: 'center' });
 
         // SECCIÓN A: SEMINARIOS REALIZADOS
         doc.setFontSize(12); doc.setTextColor(190, 0, 0); doc.text("HISTORIAL DE SEMINARIOS Y CURSOS", 14, 38);
@@ -1826,4 +1828,18 @@ function toggleSearch() {
             filtrarTabla('table-alumnos', inputElement.id);
         }
     }
+}
+
+// Función helper para calcular horas desglosadas
+function calcularHorasDesglosadas(p) {
+    const total = parseFloat(p.horas_acumuladas || 0);
+    // Cada seminario suma 3 horas por defecto
+    const horasSeminarios = (p.seminarios ? p.seminarios.length * 3 : 0);
+    const horasKeiko = Math.max(0, total - horasSeminarios);
+    
+    return {
+        total: total.toFixed(1),
+        keikos: horasKeiko.toFixed(1),
+        seminarios: horasSeminarios.toFixed(1)
+    };
 }
