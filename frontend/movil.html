@@ -1863,6 +1863,10 @@ async function initApp() {
         
         forceRelease("DASHBOARD");
 
+        // 🥋 ACTIVAMOS EL KIOSKO AQUÍ:
+        iniciarModoKiosko();
+
+
     } catch (error) {
         console.error("🔥 Error en despliegue:", error);
         forceRelease("ERROR_FALLBACK");
@@ -2176,7 +2180,6 @@ async function validateAttendance(asistId, asiste, aluId, dur) {
 function generateClassQR(classId) {
     console.log("🎫 Generando QR para Clase ID:", classId);
     
-    // Mostramos el modal pero con un botón personalizado para cerrar y refrescar
     showModal("CÓDIGO DE ASISTENCIA", `
         <div style="margin-top:10px;">
             <div class="qr-display-container">
@@ -2185,11 +2188,11 @@ function generateClassQR(classId) {
             <p style="font-size:12px; color:var(--text-muted); margin-top:15px; font-weight:400; text-transform:none; line-height:1.4;">
                 Muestra este código a los alumnos.<br>Deben usar el escáner de su App para registrarse.
             </p>
-            <button class="action-btn primary" style="margin-top:20px; width:100%;" onclick="closeQRAndRefresh()">
+            <button class="action-btn primary" style="margin-top:20px; width:100%;" onclick="closeQRAndRefresh('${classId}')">
                 FINALIZAR Y ACTUALIZAR LISTA
             </button>
         </div>
-    `, false); // 'false' para ocultar el botón cerrar genérico y usar el nuestro
+    `, false);
 
     setTimeout(() => {
         const container = document.getElementById('qr-gen');
@@ -2208,19 +2211,50 @@ function generateClassQR(classId) {
 }
 
 /* --- CIERRE DE QR Y RECARGA FORZADA DE TATAMI --- */
-async function closeQRAndRefresh() {
+async function closeQRAndRefresh(classId = null) {
     console.log("♻️ Cerrando QR y sincronizando alumnos validados...");
     
-    // 1. Borramos la caché de asistencias para obligar a fetchSmart a ir a Neon
+    // 🥋 ESCUDO KIOSKO: Marcamos esta clase como "cerrada por el sensei"
+    if (classId) {
+        localStorage.setItem('qr_closed_' + classId, 'true');
+    }
+    
     localStorage.removeItem('cache_asistencias_sensei');
-    
-    // 2. Cerramos el modal
     closeModal();
-    
-    // 3. Recargamos el panel del sensei (ahora descargará los datos nuevos)
     await loadSenseiPanel();
-    
     console.log("✅ Tatami actualizado.");
+}
+
+function iniciarModoKiosko() {
+    const user = JSON.parse(localStorage.getItem('aikido_user'));
+    // Si no es la tablet, abortamos (no queremos que le salte a los alumnos)
+    if (!user || user.username !== 'TABLET') return;
+
+    console.log("🤖 [KIOSKO] Motor Centinela activado. Vigilando el Tatami...");
+
+    // 1. Bucle de vigilancia: Comprueba la hora cada 30 segundos
+    setInterval(async () => {
+        await checkTodayClass(); // Actualiza en silencio qué clase toca ahora
+        
+        if (claseHoyId) {
+            const yaCerrado = localStorage.getItem('qr_closed_' + claseHoyId);
+            const modal = document.getElementById('custom-modal');
+            const isModalOpen = !modal.classList.contains('hidden');
+
+            // Si hay clase, el Sensei no la ha cerrado aún, y el modal no está abierto... ¡ZAS!
+            if (!yaCerrado && !isModalOpen) {
+                console.log("🎯 [KIOSKO] Clase detectada. Disparando QR Automático.");
+                generateClassQR(claseHoyId);
+            }
+        }
+    }, 30000);
+
+    // 2. Disparo inicial (por si la tablet se reinicia en mitad de una clase)
+    setTimeout(() => {
+        if (claseHoyId && !localStorage.getItem('qr_closed_' + claseHoyId)) {
+            generateClassQR(claseHoyId);
+        }
+    }, 2000);
 }
 
 /* --- PRÓXIMO KEIKO (VERSION 7.2 - CON FILTRO DE FECHA SERVIDOR) --- */
