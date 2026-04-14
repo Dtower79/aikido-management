@@ -2227,32 +2227,44 @@ async function closeQRAndRefresh(classId = null) {
 
 function iniciarModoKiosko() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
-    // Si no es la tablet, abortamos (no queremos que le salte a los alumnos)
+    // Si no es la tablet, abortamos
     if (!user || user.username !== 'TABLET') return;
 
-    console.log("🤖 [KIOSKO] Motor Centinela activado. Vigilando el Tatami...");
+    console.log("🤖 [KIOSKO] Motor Centinela activado. Vigilando el Tatami a tiempo real...");
 
     // 1. Bucle de vigilancia: Comprueba la hora cada 30 segundos
     setInterval(async () => {
-        await checkTodayClass(); // Actualiza en silencio qué clase toca ahora
+        await checkTodayClass(); 
         
-        if (claseHoyId) {
+        if (claseHoyId && claseHoyInicio) {
+            const ahora = new Date();
+            
+            // 🥋 Disparo exacto: Comparamos directamente con la hora de inicio
+            const tiempoApertura = claseHoyInicio;
+            
             const yaCerrado = localStorage.getItem('qr_closed_' + claseHoyId);
             const modal = document.getElementById('custom-modal');
             const isModalOpen = !modal.classList.contains('hidden');
 
-            // Si hay clase, el Sensei no la ha cerrado aún, y el modal no está abierto... ¡ZAS!
-            if (!yaCerrado && !isModalOpen) {
-                console.log("🎯 [KIOSKO] Clase detectada. Disparando QR Automático.");
+            // Dispara SOLO si ya es la hora exacta (o ha pasado), el Sensei no lo ha cerrado, y no está ya en pantalla
+            if (ahora >= tiempoApertura && !yaCerrado && !isModalOpen) {
+                console.log("🎯 [KIOSKO] ¡Hora exacta del Keiko! Disparando QR Automático.");
                 generateClassQR(claseHoyId);
             }
         }
     }, 30000);
 
-    // 2. Disparo inicial (por si la tablet se reinicia en mitad de una clase)
-    setTimeout(() => {
-        if (claseHoyId && !localStorage.getItem('qr_closed_' + claseHoyId)) {
-            generateClassQR(claseHoyId);
+    // 2. Disparo de rescate (por si la tablet se enciende o recarga con la clase ya empezada)
+    setTimeout(async () => {
+        if (claseHoyId && claseHoyInicio) {
+            const ahora = new Date();
+            const tiempoApertura = claseHoyInicio;
+            const yaCerrado = localStorage.getItem('qr_closed_' + claseHoyId);
+            
+            // Si arrancamos la tablet y la clase ya empezó, salta directo
+            if (ahora >= tiempoApertura && !yaCerrado) {
+                generateClassQR(claseHoyId);
+            }
         }
     }, 2000);
 }
