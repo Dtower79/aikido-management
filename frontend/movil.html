@@ -1483,7 +1483,7 @@ body.app-ready #app-content {
                 <input type="text" id="ins-apellidos" class="modal-field" placeholder="Apellidos" required>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: end;">
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: start;">
                 <div>
                     <span class="modal-label">DNI / NIE:</span>
                     <input type="text" id="ins-dni" class="modal-field" placeholder="12345678X" maxlength="9" required 
@@ -1491,7 +1491,7 @@ body.app-ready #app-content {
                 </div>
                 <div>
                     <span class="modal-label">GÉNERO:</span>
-                    <div class="gender-pill-container" style="display: flex; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 12px; border: 1px solid var(--glass-border); height: 46px; box-sizing: border-box;">
+                    <div class="gender-pill-container" style="display: flex; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 12px; border: 1px solid var(--glass-border); height: 49px; margin-bottom: 12px; box-sizing: border-box;">
                         <button type="button" id="ins-btn-HOMBRE" class="gender-btn active" onclick="setEnrollmentGender('HOMBRE')" style="flex:1;">HOMBRE</button>
                         <button type="button" id="ins-btn-MUJER" class="gender-btn" onclick="setEnrollmentGender('MUJER')" style="flex:1;">MUJER</button>
                     </div>
