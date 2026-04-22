@@ -1781,8 +1781,7 @@ function showModal(t, htmlContent, showCloseBtn = true) {
                 .replace(/[^0-9A-Z]/g, '');                      // Solo deja letras y números (5DAN)
         }
 
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 23.0 - CON RADAR DE DIAGNÓSTICO) --- */
-/* --- NÚCLEO DE INICIALIZACIÓN (VERSION 24.0 - ANTI-ZOMBI) --- */
+// --- 3. CARGA NORMAL CON ESCUDO DE 24 HORAS ---
 async function initApp() {
     console.log("🚀 [RADAR] Iniciando initApp...");
     
@@ -1834,11 +1833,22 @@ async function initApp() {
         return; 
     }
 
-    // --- 3. CARGA NORMAL ---
+    // --- 3. CARGA NORMAL CON ESCUDO DE 24 HORAS ---
     const token = localStorage.getItem('aikido_jwt');
     const user = JSON.parse(localStorage.getItem('aikido_user'));
+    const loginTime = localStorage.getItem('aikido_login_time');
+    
+    // Calculamos si han pasado 24 horas (24h * 60m * 60s * 1000ms = 86400000 ms)
+    const sessionExpired = loginTime ? (Date.now() - parseInt(loginTime) > 86400000) : true;
 
-    if (!token || !user) {
+    // Si no hay token, no hay usuario, O LA SESIÓN HA CADUCADO, lo echamos al Login
+    if (!token || !user || sessionExpired) {
+        console.log("🔒 Sesión caducada o inexistente. Pidiendo credenciales.");
+        // Limpiamos los rastros viejos
+        localStorage.removeItem('aikido_jwt');
+        localStorage.removeItem('aikido_user');
+        localStorage.removeItem('aikido_login_time');
+        
         document.getElementById('login-view')?.classList.remove('hidden');
         forceRelease("LOGIN");
         return;
@@ -2982,8 +2992,15 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
     if (res.ok) { 
         const d = await res.json(); 
+        
+        // 1. Limpiamos datos viejos (por si le prestan el móvil a otro alumno)
+        localStorage.removeItem('aikido_student_doc_id');
+        localStorage.removeItem('cache_perfil_alumno');
+        
+        // 2. Guardamos las llaves y el RELOJ
         localStorage.setItem('aikido_jwt', d.jwt); 
         localStorage.setItem('aikido_user', JSON.stringify(d.user)); 
+        localStorage.setItem('aikido_login_time', Date.now().toString()); // 🥋 RELOJ ACTIVADO
         initApp(); 
     } else { 
         showModal("Error", "DNI o contraseña incorrectos."); 
@@ -3689,6 +3706,7 @@ async function processPasswordReset(code) {
             const data = await res.json();
             localStorage.setItem('aikido_jwt', data.jwt);
             localStorage.setItem('aikido_user', JSON.stringify(data.user));
+            localStorage.setItem('aikido_login_time', Date.now().toString()); // 🥋 RELOJ ACTIVADO
             showModal("¡HECHO!", "Contraseña cambiada. Entrando...", () => { window.location.href = 'movil.html'; });
         } else {
             showModal("ERROR", "El enlace ha caducado. Pide uno nuevo.");
