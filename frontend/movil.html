@@ -3486,38 +3486,47 @@ function openActivationModal() {
 }
 
 // Opción Nuevo Aikidoka: Próxima fase
-function openEnrollmentForm() {
-    closeRegisterSelector();
-    showModal("INFO", "En el siguiente paso abriremos el formulario de inscripción completa.");
-    // Aquí es donde inyectaremos el formulario de tu primera captura
-}
 
-/* --- UBICACIÓN: Al final del <script> en movil.html --- */
-
-// 1. Abrir el formulario y cargar Dojos
 // 2. CARGA DE DOJOS Y APERTURA DE FORMULARIO
 
+// 🥋 FUNCIÓN DE APERTURA DE INSCRIPCIÓN BLINDADA
 async function openEnrollmentForm() {
-    closeRegisterSelector();
-    document.getElementById('enrollment-modal').classList.remove('hidden');
+    console.log("🛠️ Abriendo formulario de inscripción...");
     
+    // 1. Cerramos el selector
+    closeRegisterSelector();
+    
+    // 2. Buscamos el modal de inscripción
+    const modal = document.getElementById('enrollment-modal');
+    if (!modal) {
+        console.error("❌ FATAL ERROR: El HTML del id='enrollment-modal' ha desaparecido.");
+        alert("Error crítico: El HTML del formulario de inscripción no existe. Revisa si lo has borrado sin querer.");
+        return;
+    }
+    
+    // 3. Mostramos el formulario
+    modal.classList.remove('hidden');
+    
+    // 4. Cargamos los Dojos
     const select = document.getElementById('ins-dojo');
+    if (!select) {
+        console.warn("⚠️ No se encontró el selector de Dojos (id='ins-dojo').");
+        return; 
+    }
+
     select.innerHTML = '<option value="">Cargando sedes...</option>';
 
     try {
-        // LLAMADA ABIERTA (Sin token, para que los nuevos puedan ver los dojos)
-        // Usamos la URL limpia para evitar el error de /api/api
         const res = await fetch(`${API_URL}/dojos`);
+        if (!res.ok) throw new Error("Strapi devolvió error al pedir los Dojos");
         const json = await res.json();
 
-        if (json && json.data) {
+        if (json && json.data && json.data.length > 0) {
             select.innerHTML = '<option value="">Selecciona Dojo...</option>';
             json.data.forEach(d => {
                 const info = d.attributes || d;
                 const opt = document.createElement('option');
-                // Guardamos el documentId para que Strapi v5 lo reconozca
                 opt.value = d.documentId || d.id;
-                // Limpiamos el nombre para que quede estético
                 opt.innerText = info.nombre.toUpperCase().replace("AIKIDO ARASHI ", "");
                 select.appendChild(opt);
             });
@@ -3525,8 +3534,8 @@ async function openEnrollmentForm() {
             select.innerHTML = '<option value="">Error: No hay Dojos activos</option>';
         }
     } catch (e) {
-        console.error("❌ Fallo al cargar dojos para inscripción:", e);
-        select.innerHTML = '<option value="">Error de conexión con el Dojo</option>';
+        console.error("❌ Fallo al cargar dojos:", e);
+        select.innerHTML = '<option value="">Error de conexión</option>';
     }
 }
 
