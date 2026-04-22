@@ -1839,7 +1839,7 @@ async function initApp() {
     const loginTime = localStorage.getItem('aikido_login_time');
     
     // Calculamos si han pasado 24 horas (24h * 60m * 60s * 1000ms = 86400000 ms)
-    const sessionExpired = loginTime ? (Date.now() - parseInt(loginTime) > 60000) : true;
+    const sessionExpired = loginTime ? (Date.now() - parseInt(loginTime) > 86400000) : true;
 
     // Si no hay token, no hay usuario, O LA SESIÓN HA CADUCADO, lo echamos al Login
     if (!token || !user || sessionExpired) {
