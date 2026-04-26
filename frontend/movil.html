@@ -581,33 +581,36 @@
         }
 
        
-        /* --- MODALES PREMIUM (ESTILO PANTALLA COMPLETA NATIVA) --- */
+        /* --- MODALES PREMIUM (FONDO FIJO CON DEGRADADO INMERSIVO) --- */
         .modal-overlay { 
             position: fixed; 
             inset: 0; 
-            background: #05080f; /* Fondo base oscuro detrás */
+            /* 🥋 El degradado se pinta en la pared fija del fondo */
+            background: #080c15; 
+            background-image: radial-gradient(circle at top right, #1e1b4b, #080c15); 
             display: flex; 
             justify-content: center; 
             align-items: center; 
             z-index: 9999; 
-            padding: 0; /* 🥋 CERO MARCO: Se pega completamente a los bordes del móvil */
+            padding: 0; 
         }
 
         #custom-modal { z-index: 10001 !important; }
 
         .modal-content { 
-            background: radial-gradient(circle at top right, #1e1b4b, #080c15); /* 🥋 EL DEGRADADO DEL CALENDARIO */
-            border: none; /* Sin borde de caja */
+            /* 🥋 El contenido ahora es transparente, dejando ver la pared fija de atrás */
+            background: transparent !important; 
+            border: none; 
             padding: 25px 20px 20px; 
-            border-radius: 0; /* Al pegar a la pantalla, quitamos las curvas para que sea nativo */
+            border-radius: 0; 
             width: 100%; 
-            max-width: 800px; /* En tablet se frenará aquí para no verse deforme */
+            max-width: 800px; 
             text-align: center; 
             box-sizing: border-box; 
-            height: 100vh; /* 🥋 ALTURA TOTAL */
+            height: 100vh; 
             max-height: 100vh; 
             overflow-y: auto; 
-            box-shadow: none; /* Ya no hace falta sombra porque no flota */
+            box-shadow: none; 
             scrollbar-width: none; 
             -ms-overflow-style: none; 
         }
