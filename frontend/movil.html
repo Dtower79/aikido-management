@@ -2200,9 +2200,13 @@ function generateClassQR(classId) {
     
     showModal("CÓDIGO DE ASISTENCIA", `
         <div style="margin-top:10px;">
-            <div class="qr-display-container">
+            <!-- 🥋 CONTENEDOR RELATIVO PARA EL LOGO FLOTANTE -->
+            <div class="qr-display-container" style="position: relative; display: inline-block;">
                 <div id="qr-gen"></div>
+                <!-- 🥋 LOGO INYECTADO EN EL CENTRO -->
+                <img src="img/logo-arashi.png" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: white; padding: 3px; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none;">
             </div>
+            
             <p style="font-size:12px; color:var(--text-muted); margin-top:15px; font-weight:400; text-transform:none; line-height:1.4;">
                 Muestra este código a los alumnos.<br>Deben usar el escáner de su App para registrarse.
             </p>
@@ -2222,7 +2226,7 @@ function generateClassQR(classId) {
                 height: 200,
                 colorDark : "#000000",
                 colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
+                correctLevel : QRCode.CorrectLevel.H // 🥋 Nivel H: Permite tapar el centro sin que se rompa
             });
         }
     }, 200);
