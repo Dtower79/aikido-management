@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arashi-v6.13-network-first'; // Cambiamos el nombre para forzar limpieza
+const CACHE_NAME = 'arashi-v6.14-network-first'; // Cambiamos el nombre para forzar limpieza
 
 const ASSETS_TO_CACHE =[
   './',
