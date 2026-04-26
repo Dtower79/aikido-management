@@ -1,12 +1,12 @@
 {
   "name": "Arashi Group Aikido",
   "short_name": "Arashi",
-  "description": "Gestión de Grados y Asistencia - Arashi Group",
+  "description": "Gestión de Alumnos y Asistencia - Arashi Group",
   "start_url": "./movil.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
-  "orientation": "portrait",
+  "orientation": "any",
   "scope": "./",
   "icons": [
     {
