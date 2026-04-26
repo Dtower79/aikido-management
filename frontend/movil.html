@@ -581,6 +581,7 @@
         }
 
         /* --- MODALES PREMIUM --- */
+        /* --- MODALES PREMIUM --- */
         .modal-overlay { 
             position: fixed; 
             inset: 0; 
@@ -589,7 +590,7 @@
             justify-content: center; 
             align-items: center; 
             z-index: 9999; 
-            padding: 20px; 
+            padding: 8px; /* 🥋 REDUCIDO: De 20px a 8px para pegar la caja a los bordes */
         }
 
         #custom-modal { z-index: 10001 !important; }
@@ -597,16 +598,15 @@
         .modal-content { 
             background: #0f172a; 
             border: 1px solid var(--glass-border); 
-            padding: 45px 30px 35px; /* Margen superior elegante */
-            border-radius: 35px; 
+            padding: 25px 20px 20px; /* 🥋 REDUCIDO: Menos aire interior inútil */
+            border-radius: 25px; /* 🥋 REDUCIDO: De 35 a 25 para aprovechar mejor las esquinas */
             width: 100%; 
-            max-width: 400px; 
+            max-width: 600px; /* 🥋 AUMENTADO: De 400px a 600px para que expanda a lo ancho */
             text-align: center; 
             box-sizing: border-box; 
-            max-height: 90vh; 
+            max-height: 96vh; /* 🥋 AUMENTADO: De 90vh a 96vh para estirar casi hasta arriba/abajo */
             overflow-y: auto; 
             box-shadow: 0 25px 50px rgba(0,0,0,0.6);
-            /* Ocultar barra de desplazamiento visualmente */
             scrollbar-width: none; 
             -ms-overflow-style: none; 
         }
@@ -1423,8 +1423,7 @@ body.app-ready #app-content {
         </div>
     </div>
 <!-- MODAL: PASAPORTE TÉCNICO -->
-<div id="history-modal" class="modal-overlay hidden" style="z-index: 15000;">
-    <div class="modal-content" style="max-width: 450px; padding: 20px; height: 90vh; display: flex; flex-direction: column;">
+<div class="modal-content" style="max-width: 600px; width: 100%; padding: 20px 15px; height: 96vh; display: flex; flex-direction: column;">
     
 <!-- CABECERA CON BOTÓN VOLVER Y MEDALLA DE SEMINARIOS -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
