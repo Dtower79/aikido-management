@@ -1140,6 +1140,10 @@ body.app-ready #app-content {
     color: white !important;
     box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
 }
+.input-group .modal-field {
+            padding-left: 45px !important;
+            padding-right: 45px !important;
+}
 
     </style>
 </head>
@@ -1354,30 +1358,38 @@ body.app-ready #app-content {
 </div>
         <div id="password-modal" class="modal-overlay hidden">
     <div class="modal-content">
-        <h3 style="margin-top:0">Cambiar Contraseña</h3>
-        <form id="change-pass-form">
+        <h3 style="margin-top:0; font-size: 18px; text-transform: uppercase;">Cambiar Contraseña</h3>
+        <form id="change-pass-form" style="text-align: left; margin-top: 20px;">
+            
             <span class="modal-label">CONTRASEÑA ACTUAL:</span>
             <div class="input-group">
                 <i class="fa-solid fa-lock"></i>
-                <input type="password" id="old-pass" class="modal-field" placeholder="Actual" required>
+                <input type="password" id="old-pass" class="modal-field" placeholder="Clave actual" required>
                 <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('old-pass', this)"></i>
             </div>
 
             <span class="modal-label">NUEVA CLAVE (MÍN. 6 CARACTERES):</span>
             <div class="input-group">
                 <i class="fa-solid fa-key"></i>
-                <input type="password" id="new-pass" class="modal-field" placeholder="Nueva" required>
+                <input type="password" id="new-pass" class="modal-field" placeholder="Nueva clave" required>
                 <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('new-pass', this)"></i>
             </div>
 
             <span class="modal-label">REPETIR CLAVE:</span>
             <div class="input-group">
                 <i class="fa-solid fa-key"></i>
-                <input type="password" id="confirm-pass" class="modal-field" placeholder="Repetir" required>
+                <input type="password" id="confirm-pass" class="modal-field" placeholder="Repite la clave nueva" required>
                 <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('confirm-pass', this)"></i>
             </div>
             
-            <button type="submit" class="action-btn primary" id="btn-pass-submit">ACTUALIZAR</button>
+            <div style="display:flex; flex-direction:column; gap:12px; margin-top:25px;">
+                <button type="submit" class="action-btn primary" id="btn-pass-submit" style="width: 100%;">
+                    <i class="fa-solid fa-floppy-disk"></i> ACTUALIZAR CONTRASEÑA
+                </button>
+                <button type="button" class="action-btn btn-secondary" onclick="closePassModal()" style="width: 100%;">
+                    CANCELAR
+                </button>
+            </div>
         </form>
     </div>
 </div>
@@ -3412,8 +3424,11 @@ function openChangePassModal() {
 
 function closePassModal() {
     document.getElementById('password-modal').classList.add('hidden');
+    // Limpiamos los campos por seguridad para la próxima vez
+    document.getElementById('change-pass-form').reset(); 
 }
 
+// Lógica de cambio de contraseña en Strapi
 // Lógica de cambio de contraseña en Strapi
 document.getElementById('change-pass-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -3425,9 +3440,15 @@ document.getElementById('change-pass-form').addEventListener('submit', async (e)
         showModal("Aviso", "Las nuevas contraseñas no coinciden.");
         return;
     }
+    
+    if (password.length < 6) {
+        showModal("Aviso", "La nueva clave debe tener al menos 6 caracteres.");
+        return;
+    }
 
     const btn = document.getElementById('btn-pass-submit');
-    btn.innerText = "ACTUALIZANDO...";
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ACTUALIZANDO...';
     btn.disabled = true;
 
     try {
@@ -3441,15 +3462,21 @@ document.getElementById('change-pass-form').addEventListener('submit', async (e)
         });
 
         if (res.ok) {
+            const data = await res.json();
+            // Strapi V5 suele devolver un JWT renovado al cambiar la clave. Lo guardamos.
+            if (data.jwt) {
+                localStorage.setItem('aikido_jwt', data.jwt);
+                localStorage.setItem('aikido_user', JSON.stringify(data.user));
+            }
             closePassModal();
-            showModal("¡Éxito!", "Contraseña actualizada correctamente.");
+            showModal("¡Éxito!", "Tu contraseña ha sido actualizada y protegida.");
         } else {
             showModal("Error", "La contraseña actual no es correcta.");
         }
     } catch (err) {
-        showModal("Error", "Fallo de conexión.");
+        showModal("Error", "Fallo de conexión con el servidor.");
     } finally {
-        btn.innerText = "ACTUALIZAR";
+        btn.innerHTML = originalText;
         btn.disabled = false;
     }
 });
