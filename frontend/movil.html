@@ -1810,7 +1810,7 @@ async function initApp() {
     const urlParams = new URLSearchParams(window.location.search);
     const resetCode = urlParams.get('code');
 
-    // FUNCIÓN DE LIBERACIÓN TOTAL (Blindada contra el bloqueo de ratón)
+    // FUNCIÓN DE LIBERACIÓN TOTAL (Blindada contra el bloqueo de ratón y CSS)
     const forceRelease = (mode) => {
         console.log(`🔓 [SISTEMA] Liberando UI en modo: ${mode}`);
         body.classList.add('app-ready');
@@ -1822,8 +1822,9 @@ async function initApp() {
         if (mask) mask.style.display = 'none';
         
         if (appContent) {
-            appContent.style.display = 'flex';
-            appContent.style.opacity = '1';
+            // 🥋 FIX: Forzamos el !important en JS para vencer al CSS y mostrar la pantalla
+            appContent.style.setProperty('display', 'flex', 'important');
+            appContent.style.setProperty('opacity', '1', 'important');
             appContent.style.pointerEvents = 'auto';
         }
     };
