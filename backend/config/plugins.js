@@ -4,8 +4,8 @@ module.exports = ({ env }) => ({
       provider: 'nodemailer',
       providerOptions: {
         host: env('SMTP_HOST', 'smtp.hostalia.com'),
-        port: env.int('SMTP_PORT', 465),
-        secure: true, // true para el puerto 465 (SSL cifrado)
+        port: env.int('SMTP_PORT', 587),
+         secure: env.bool('SMTP_SECURE', false), // 🥋 Ahora depende de Render
         auth: {
           user: env('SMTP_USERNAME'),
           pass: env('SMTP_PASSWORD'),
