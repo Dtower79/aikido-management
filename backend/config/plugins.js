@@ -1,14 +1,23 @@
 module.exports = ({ env }) => ({
-  // ... otros plugins si los tienes
   email: {
     config: {
-      provider: 'sendgrid',
+      provider: 'nodemailer',
       providerOptions: {
-        apiKey: env('SENDGRID_API_KEY'),
+        host: env('SMTP_HOST', 'smtp.hostalia.com'),
+        port: env.int('SMTP_PORT', 465),
+        secure: true, // true para el puerto 465 (SSL cifrado)
+        auth: {
+          user: env('SMTP_USERNAME'),
+          pass: env('SMTP_PASSWORD'),
+        },
+        // Esto evita bloqueos de certificados estrictos en algunos servidores
+        tls: {
+          rejectUnauthorized: false
+        }
       },
       settings: {
-        defaultFrom: 'arashi_app@aikidobadalona.com', // ⚠️ DEBE ser el que verificaste en SendGrid
-        defaultReplyTo: 'arashi_app@aikidobadalona.com',
+        defaultFrom: env('SMTP_USERNAME'),
+        defaultReplyTo: env('SMTP_USERNAME'),
       },
     },
   },
