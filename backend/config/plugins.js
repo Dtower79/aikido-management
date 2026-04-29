@@ -6,8 +6,8 @@ module.exports = ({ env }) => ({
         apiKey: env('RESEND_API_KEY'),
       },
       settings: {
-        defaultFrom: 'arashi_app@aikidoarashigroup.com',
-        defaultReplyTo: 'arashi_app@aikidoarashigroup.com',
+        defaultFrom: 'onboarding@resend.dev',
+        defaultReplyTo: 'onboarding@resend.dev',
       },
     },
   },
