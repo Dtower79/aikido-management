@@ -1,15 +1,13 @@
 module.exports = ({ env }) => ({
   email: {
     config: {
-      provider: 'resend',
+      provider: 'strapi-provider-email-resend', // <--- Nombre clave para que Strapi lo encuentre
       providerOptions: {
         apiKey: env('RESEND_API_KEY'),
       },
       settings: {
-        // 🥋 Mientras no verifiques tu dominio en Resend, 
-        // debes usar obligatoriamente 'onboarding@resend.dev'
-        defaultFrom: 'onboarding@resend.dev', 
-        defaultReplyTo: 'onboarding@resend.dev',
+        defaultFrom: 'arashi_app@aikidoarashigroup.com',
+        defaultReplyTo: 'arashi_app@aikidoarashigroup.com',
       },
     },
   },
