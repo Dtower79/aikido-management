@@ -4,8 +4,8 @@ module.exports = ({ env }) => ({
       provider: 'nodemailer',
       providerOptions: {
         host: env('SMTP_HOST', 'smtp.servidor-correo.net'), // Servidor genérico de Hostalia
-        port: 587,
-        secure: false, // El puerto 587 siempre usa secure: false
+        port: 465,
+        secure: true, // El puerto 587 siempre usa secure: false
         auth: {
           user: env('SMTP_USERNAME'),
           pass: env('SMTP_PASSWORD'),
