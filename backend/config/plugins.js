@@ -3,15 +3,15 @@ module.exports = ({ env }) => ({
     config: {
       provider: 'nodemailer',
       providerOptions: {
-        host: env('SMTP_HOST', 'smtp.servidor-correo.net'), // Servidor genérico de Hostalia
-        port: 465,
-        secure: true, // El puerto 587 siempre usa secure: false
+        host: env('SMTP_HOST', 'smtp.servidor-correo.net'),
+        port: 465, // 🥋 Cambiado a 465
+        secure: true, // 🥋 Cambiado a true por orden de Hostalia
         auth: {
           user: env('SMTP_USERNAME'),
           pass: env('SMTP_PASSWORD'),
         },
         tls: {
-          rejectUnauthorized: false // 🥋 Vital para que Hostalia no bloquee el envío por nombre de certificado
+          rejectUnauthorized: false // 🥋 Clave para que Render no tire la conexión
         }
       },
       settings: {
