@@ -1,13 +1,22 @@
 module.exports = ({ env }) => ({
   email: {
     config: {
-      provider: 'strapi-provider-email-resend', // <--- Nombre clave para que Strapi lo encuentre
+      provider: 'nodemailer',
       providerOptions: {
-        apiKey: env('RESEND_API_KEY'),
+        host: env('SMTP_HOST', 'smtp.servidor-correo.net'), // Servidor genérico de Hostalia
+        port: 587,
+        secure: false, // El puerto 587 siempre usa secure: false
+        auth: {
+          user: env('SMTP_USERNAME'),
+          pass: env('SMTP_PASSWORD'),
+        },
+        tls: {
+          rejectUnauthorized: false // 🥋 Vital para que Hostalia no bloquee el envío por nombre de certificado
+        }
       },
       settings: {
-        defaultFrom: 'onboarding@resend.dev',
-        defaultReplyTo: 'onboarding@resend.dev',
+        defaultFrom: env('SMTP_USERNAME'),
+        defaultReplyTo: env('SMTP_USERNAME'),
       },
     },
   },
