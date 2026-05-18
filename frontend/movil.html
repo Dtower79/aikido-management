@@ -1144,7 +1144,13 @@ body.app-ready #app-content {
             padding-left: 45px !important;
             padding-right: 45px !important;
 }
-
+/* 🥋 Estilos del Carrusel de Clases */
+        #class-slider::-webkit-scrollbar { display: none; }
+        .slider-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,0.2); transition: 0.3s;
+        }
+        
     </style>
 </head>
 <body>
@@ -1283,11 +1289,18 @@ body.app-ready #app-content {
             </div>
             <div id="next-grade-display" class="next-grade-label hidden">Cargando meta...</div>
 
-            <div class="class-hero" id="class-hero-card">
-                <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Siguiente Keiko</p>
-                <h2 id="next-class-time" style="margin:12px 0 4px; font-size:38px;">--:--</h2>
-                <p id="next-class-date" style="margin:0 0 18px; font-size:17px; font-weight:700;">--/--/----</p>
-                <button class="action-btn" id="confirm-btn" onclick="confirmAttendance()">ASISTIR AL KEIKO</button>
+            <!-- 🥋 NUEVO CARRUSEL DE CLASES -->
+            <div id="class-slider-wrapper" style="width: 100%; position: relative;">
+                <div id="class-slider" style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none;">
+                    <!-- Tarjeta por defecto mientras carga -->
+                    <div class="class-hero" style="flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important;">
+                        <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Buscando Keikos...</p>
+                        <h2 style="margin:12px 0 4px; font-size:38px;">--:--</h2>
+                        <p style="margin:0 0 18px; font-size:17px; font-weight:700;">Conectando...</p>
+                    </div>
+                </div>
+                <!-- Los puntitos de navegación -->
+                <div id="slider-dots" style="display: flex; justify-content: center; gap: 8px; margin-top: 15px;"></div>
             </div>
         </div>
 
@@ -2306,46 +2319,40 @@ function iniciarModoKiosko() {
 
 /* --- PRÓXIMO KEIKO (VERSION 7.2 - CON FILTRO DE FECHA SERVIDOR) --- */
 async function checkTodayClass(forcedDojoId = null) {
-    const btn = document.getElementById('confirm-btn');
     const user = JSON.parse(localStorage.getItem('aikido_user')); 
     const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
     const filterEl = document.getElementById('cal-dojo-filter');
     let dojoBusqueda = forcedDojoId || (filterEl ? filterEl.value : dojoIdGlobal) || 'all';
     const idFinal = String(dojoBusqueda);
 
-    // Reset de la variable global cada vez que comprobamos el estado
     globalAsistId = null;
 
     try {
         const ahora = new Date();
-        
-        // 🥋 EL CAMBIO MAESTRO: Calculamos el límite (Ahora menos 3 horas para clases en curso)
         const tiempoLimite = new Date(ahora.getTime() - (3 * 3600000)).toISOString();
-
-        // 🥋 NUEVA URL: Filtramos desde el servidor con $gte (Mayor o igual a tiempoLimite)
         const url = `${API_URL}/clases?filters[Fecha_Hora][$gte]=${tiempoLimite}&sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=20`;
         
-        const res = await fetch(url, { 
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
-        });
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
         const json = await res.json();
 
-        if (!json.data || json.data.length === 0) return setEmptyDashboard("Calendario vacío");
+        if (!json.data || json.data.length === 0) return setEmptyDashboard("Sin keikos próximos");
 
-        let claseElegida = null;
-        let estadoAlumno = null;
+        let clasesDisponibles = [];
 
         for (const c of json.data) {
             const d = parseData(c);
             const dIdClase = d.dojo ? String(getID(parseRelation(d.dojo))) : null;
             const [fechaPart, resto] = d.Fecha_Hora.split('T');
             const [y, m, day] = fechaPart.split('-');
-            const[hh, mm] = resto.split(':');
+            const [hh, mm] = resto.split(':');
             const inicioLit = new Date(y, m - 1, day, hh, mm);
             const finLit = new Date(inicioLit.getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
 
             if (ahora > finLit) continue; 
             if (idFinal !== 'all' && dIdClase !== idFinal) continue;
+
+            let estado = null;
+            let asistId = null;
 
             if (aluId) {
                 const cid = getID(c);
@@ -2356,59 +2363,79 @@ async function checkTodayClass(forcedDojoId = null) {
                 const asistencia = chkJ.data?.[0];
                 
                 if (asistencia) {
-                    estadoAlumno = asistencia.attributes?.Estado || asistencia.Estado;
-                    globalAsistId = asistencia.documentId || asistencia.id; // 🥋 GUARDAMOS EL ID DE LA ASISTENCIA AQUÍ
-                } else {
-                    estadoAlumno = null;
+                    estado = asistencia.attributes?.Estado || asistencia.Estado;
+                    asistId = asistencia.documentId || asistencia.id;
                 }
                 
-                if (estadoAlumno === 'Asistio') continue;
+                if (estado === 'Asistio' || estado === 'Asistió') continue;
             }
-            claseElegida = c;
-            claseHoyInicio = inicioLit;
-            break; 
+            
+            clasesDisponibles.push({ clase: c, inicio: inicioLit, estado: estado, asistId: asistId });
         }
 
-        if (claseElegida) {
-            const d = parseData(claseElegida);
-            const dojoInfo = parseRelation(d.dojo);
-            claseHoyId = getID(claseElegida);
-            const f = formatTimeSafe(d.Fecha_Hora);
-            
-            document.getElementById('next-class-time').innerText = f.time;
-            document.getElementById('next-class-date').innerHTML = `${f.date} <br><span style="font-size:11px; color:var(--accent); font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span>`;
-            
-            if (user && user.is_sensei === true) {
-                if(btn) { btn.classList.add('hidden'); btn.style.display = 'none'; }
-            } else {
-                if(btn) {
-                    btn.classList.remove('hidden');
-                    btn.style.display = 'flex';
-                    
-                    // LÓGICA DE BOTÓN DINÁMICO (Tuya original, intacta)
-                    if (estadoAlumno === 'Confirmado') {
-                        btn.innerText = "CANCELAR ASISTENCIA";
-                        btn.style.background = "#ef4444"; // Rojo Arashi
-                        btn.style.color = "white";
-                        btn.disabled = false;
-                        btn.onclick = () => cancelAttendance(globalAsistId);
-                    } else if (estadoAlumno === 'Asistio') {
-                        btn.innerText = "YA VALIDADO";
-                        btn.disabled = true;
-                        btn.style.background = "#1e293b";
-                    } else {
-                        btn.innerText = "ASISTIR AL KEIKO";
-                        btn.style.background = "white";
-                        btn.style.color = "black";
-                        btn.disabled = false;
-                        btn.onclick = confirmAttendance;
-                    }
-                }
-            }
+        if (clasesDisponibles.length > 0) {
+            claseHoyId = getID(clasesDisponibles[0].clase);
+            claseHoyInicio = clasesDisponibles[0].inicio;
+            renderClassSlider(clasesDisponibles, user);
         } else {
-            setEmptyDashboard("Sin keikos próximos");
+            claseHoyId = null;
+            claseHoyInicio = null;
+            setEmptyDashboard("Sin keikos pendientes hoy");
         }
     } catch (e) { console.error(e); }
+}
+
+// 🥋 NUEVO: Función que dibuja el carrusel
+function renderClassSlider(clases, user) {
+    const slider = document.getElementById('class-slider');
+    const dots = document.getElementById('slider-dots');
+    if(!slider || !dots) return;
+
+    slider.innerHTML = '';
+    dots.innerHTML = '';
+
+    clases.forEach((obj, index) => {
+        const d = parseData(obj.clase);
+        const dojoInfo = parseRelation(d.dojo);
+        const f = formatTimeSafe(d.Fecha_Hora);
+        const cid = getID(obj.clase);
+        const isSensei = user && user.is_sensei === true;
+        let btnHtml = '';
+
+        if (!isSensei) {
+            if (obj.estado === 'Confirmado') {
+                btnHtml = `<button class="action-btn" style="background:#ef4444; color:white; width:100%; margin-top:10px;" onclick="cancelAttendance('${obj.asistId}')">CANCELAR ASISTENCIA</button>`;
+            } else {
+                // Le pasamos el ID exacto de esta tarjeta al botón
+                btnHtml = `<button class="action-btn" style="background:white; color:black; width:100%; margin-top:10px;" onclick="confirmAttendance('${cid}')">ASISTIR AL KEIKO</button>`;
+            }
+        }
+
+        const div = document.createElement('div');
+        div.className = 'class-hero';
+        div.style.cssText = 'flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important;';
+        div.innerHTML = `
+            <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Keiko Programado</p>
+            <h2 style="margin:12px 0 4px; font-size:38px;">${f.time}</h2>
+            <p style="margin:0 0 18px; font-size:17px; font-weight:700;">${f.date} <br><span style="font-size:11px; color:white; font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span></p>
+            ${btnHtml}
+        `;
+        slider.appendChild(div);
+
+        // Creamos el punto
+        const dot = document.createElement('div');
+        dot.className = `slider-dot`;
+        dot.style.background = index === 0 ? 'var(--accent)' : 'rgba(255,255,255,0.2)';
+        dots.appendChild(dot);
+    });
+
+    // Control de deslizado para encender los puntitos
+    slider.onscroll = () => {
+        const index = Math.round(slider.scrollLeft / slider.offsetWidth);
+        document.querySelectorAll('.slider-dot').forEach((d, i) => {
+            d.style.background = (i === index) ? 'var(--accent)' : 'rgba(255,255,255,0.2)';
+        });
+    };
 }
 
 function setEmptyDashboard(msg) {
@@ -2419,12 +2446,18 @@ function setEmptyDashboard(msg) {
 }
 
 function setEmptyDashboard(msg) {
-    const timeEl = document.getElementById('next-class-time');
-    const dateEl = document.getElementById('next-class-date');
-    const btn = document.getElementById('confirm-btn');
-    if(timeEl) timeEl.innerText = "--:--";
-    if(dateEl) dateEl.innerText = msg;
-    if(btn) btn.classList.add('hidden');
+    const slider = document.getElementById('class-slider');
+    const dots = document.getElementById('slider-dots');
+    if(slider) {
+        slider.innerHTML = `
+            <div class="class-hero" style="flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important;">
+                <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Tatami Cerrado</p>
+                <h2 style="margin:12px 0 4px; font-size:38px;">--:--</h2>
+                <p style="margin:0 0 18px; font-size:17px; font-weight:700;">${msg}</p>
+            </div>
+        `;
+    }
+    if(dots) dots.innerHTML = '';
 }
 
 function setEmptyDashboard() {
@@ -2944,46 +2977,35 @@ async function loadMonthlyClasses(el) {
 }
 
 /* --- ASISTENCIA (VERSION 10.5 - BLOQUEO DE DUPLICADOS) --- */
-async function confirmAttendance() {
-    if (!claseHoyId || !alumnoGlobal) return;
+async function confirmAttendance(cid = null) {
+    const idAUsar = cid || claseHoyId;
+    if (!idAUsar || !alumnoGlobal) return;
     
     const token = localStorage.getItem('aikido_jwt');
     const aluId = getID(alumnoGlobal);
 
     try {
-        const btn = document.getElementById('confirm-btn');
+        const btn = event.currentTarget; // cogemos el botón exacto que se ha pulsado
+        const originalText = btn.innerText;
         btn.innerText = "VERIFICANDO...";
         btn.disabled = true;
 
-        // 1. ESCUDO: Comprobamos si ya existe el registro en Neon
-        const checkRes = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${claseHoyId}`, {
+        const checkRes = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${idAUsar}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const checkJ = await checkRes.json();
 
-        // Si ya hay datos, Natalia ya está inscrita. No permitimos el POST.
         if (checkJ.data && checkJ.data.length > 0) {
-            console.warn("⚠️ [AUTH] Intento de duplicado bloqueado.");
             btn.innerText = "YA CONFIRMADO";
             btn.style.background = "#1e293b";
             showModal("AVISO", "Ya estabas inscrito en este Keiko. No se han creado duplicados.");
             return;
         }
 
-        // 2. CREACIÓN: Solo si la validación anterior es limpia
         const res = await fetch(`${API_URL}/asistencias`, { 
             method: 'POST', 
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
-            }, 
-            body: JSON.stringify({ 
-                data: { 
-                    alumno: aluId, 
-                    clase: claseHoyId, 
-                    Estado: 'Confirmado' 
-                } 
-            }) 
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+            body: JSON.stringify({ data: { alumno: aluId, clase: idAUsar, Estado: 'Confirmado' } }) 
         });
 
         if (res.ok) {
@@ -2992,7 +3014,7 @@ async function confirmAttendance() {
             showModal("¡OSS!", "Inscripción confirmada con éxito.");
         }
     } catch (e) {
-        console.error("Error en confirmación:", e);
+        console.error(e);
         showModal("Error", "No se pudo conectar con el Dojo.");
     }
 }
