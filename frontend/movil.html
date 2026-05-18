@@ -2394,100 +2394,7 @@ async function checkTodayClass(forcedDojoId = null) {
 }
 
 // 🥋 NUEVO: Función que dibuja el carrusel (Con diseño arreglado)
-function renderClassSlider(clases, user) {
-    const slider = document.getElementById('class-slider');
-    const dots = document.getElementById('slider-dots');
-    if(!slider || !dots) return;
-
-    slider.innerHTML = '';
-    dots.innerHTML = '';
-
-    clases.forEach((obj, index) => {
-        const d = parseData(obj.clase);
-        const dojoInfo = parseRelation(d.dojo);
-        const f = formatTimeSafe(d.Fecha_Hora);
-        const cid = getID(obj.clase);
-        const isSensei = user && user.is_sensei === true;
-        let btnHtml = '';
-
-        if (!isSensei) {
-            if (obj.estado === 'Confirmado') {
-                btnHtml = `<button class="action-btn" style="background:#ef4444; color:white; width:100%; margin-top:10px;" onclick="cancelAttendance('${obj.asistId}')">CANCELAR ASISTENCIA</button>`;
-            } else {
-                btnHtml = `<button class="action-btn" style="background:white; color:black; width:100%; margin-top:10px;" onclick="confirmAttendance('${cid}')">ASISTIR AL KEIKO</button>`;
-            }
-        }
-
-        const div = document.createElement('div');
-        div.className = 'class-hero';
-        // 🥋 El width 100% y el padding garantizan que ocupa todo el contenedor sin desbordar
-        div.style.cssText = 'flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important; max-width: 100% !important;';
-        div.innerHTML = `
-            <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Keiko Programado</p>
-            <h2 style="margin:12px 0 4px; font-size:38px;">${f.time}</h2>
-            <p style="margin:0 0 18px; font-size:17px; font-weight:700;">${f.date} <br><span style="font-size:11px; color:white; font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span></p>
-            ${btnHtml}
-        `;
-        slider.appendChild(div);
-
-        // Creamos el punto
-        const dot = document.createElement('div');
-        dot.className = `slider-dot`;
-        dot.style.background = index === 0 ? 'var(--accent)' : 'rgba(255,255,255,0.2)';
-        dots.appendChild(dot);
-    });
-
-    // Control de deslizado
-    slider.onscroll = () => {
-        const index = Math.round(slider.scrollLeft / slider.offsetWidth);
-        document.querySelectorAll('.slider-dot').forEach((d, i) => {
-            d.style.background = (i === index) ? 'var(--accent)' : 'rgba(255,255,255,0.2)';
-        });
-    };
-    
-    // 🥋 NUEVO: Lógica de arrastre táctil con ratón (Especial para PC)
-    if (!slider.dataset.dragSetup) {
-        let isDown = false;
-        let startX;
-        let scrollLeft;
-
-        slider.style.cursor = 'grab'; // Cambia el cursor a una manita abierta
-
-        slider.addEventListener('mousedown', (e) => {
-            isDown = true;
-            slider.style.cursor = 'grabbing'; // Manita cerrada
-            slider.style.scrollSnapType = 'none'; // Desactiva el imán mientras arrastras
-            startX = e.pageX - slider.offsetLeft;
-            scrollLeft = slider.scrollLeft;
-        });
-
-        slider.addEventListener('mouseleave', () => {
-            isDown = false;
-            slider.style.cursor = 'grab';
-            slider.style.scrollSnapType = 'x mandatory'; // Reactiva el imán
-        });
-
-        slider.addEventListener('mouseup', () => {
-            isDown = false;
-            slider.style.cursor = 'grab';
-            slider.style.scrollSnapType = 'x mandatory'; // Reactiva el imán
-        });
-
-        slider.addEventListener('mousemove', (e) => {
-            if (!isDown) return;
-            e.preventDefault(); // Evita seleccionar texto por error al arrastrar
-            const x = e.pageX - slider.offsetLeft;
-            const walk = (x - startX) * 1.5; // El 1.5 es la sensibilidad/velocidad del arrastre
-            slider.scrollLeft = scrollLeft - walk;
-        });
-
-        // Le ponemos una marca invisible para no duplicar esta lógica si se recarga la clase
-        slider.dataset.dragSetup = "true"; 
-    }
-}
-
-
-// 🥋 NUEVO: Función que dibuja el carrusel
+// 🥋 FUNCIÓN DEFINITIVA QUE DIBUJA EL CARRUSEL
 function renderClassSlider(clases, user) {
     const slider = document.getElementById('class-slider');
     const dots = document.getElementById('slider-dots');
@@ -2515,7 +2422,8 @@ function renderClassSlider(clases, user) {
 
         const div = document.createElement('div');
         div.className = 'class-hero';
-        div.style.cssText = 'flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important;';
+        // 🥋 El width 100% y el padding garantizan que ocupa todo el contenedor sin desbordar
+        div.style.cssText = 'flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important; max-width: 100% !important;';
         div.innerHTML = `
             <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Keiko Programado</p>
             <h2 style="margin:12px 0 4px; font-size:38px;">${f.time}</h2>
@@ -2538,6 +2446,51 @@ function renderClassSlider(clases, user) {
             d.style.background = (i === index) ? 'var(--accent)' : 'rgba(255,255,255,0.2)';
         });
     };
+
+    // 🥋 Lógica de arrastre táctil con ratón (A prueba de PC)
+    if (!slider.dataset.dragSetup) {
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        slider.style.cursor = 'grab';
+
+        slider.addEventListener('mousedown', (e) => {
+            // Si hace clic en el botón de asistir, le dejamos pulsar normal
+            if (e.target.closest('button')) return; 
+            
+            isDown = true;
+            slider.style.cursor = 'grabbing';
+            slider.style.scrollSnapType = 'none'; // Quitamos el imán
+            
+            // Bloquea el intento del PC de seleccionar texto o arrastrar "fantasmas"
+            e.preventDefault(); 
+            
+            startX = e.pageX - slider.offsetLeft;
+            scrollLeft = slider.scrollLeft;
+        });
+
+        const stopDrag = () => {
+            if (!isDown) return;
+            isDown = false;
+            slider.style.cursor = 'grab';
+            slider.style.scrollSnapType = 'x mandatory'; // Reactivamos el imán al soltar
+        };
+
+        slider.addEventListener('mouseleave', stopDrag);
+        slider.addEventListener('mouseup', stopDrag);
+
+        slider.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault(); // Mantenemos el bloqueo de selección mientras movemos
+            const x = e.pageX - slider.offsetLeft;
+            const walk = (x - startX) * 1.5; // El 1.5 es la sensibilidad/velocidad del arrastre
+            slider.scrollLeft = scrollLeft - walk;
+        });
+
+        // Le ponemos una marca invisible para no duplicar esta lógica si se recarga la clase
+        slider.dataset.dragSetup = "true"; 
+    }
 }
 
 function setEmptyDashboard(msg) {
