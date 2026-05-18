@@ -2444,6 +2444,46 @@ function renderClassSlider(clases, user) {
             d.style.background = (i === index) ? 'var(--accent)' : 'rgba(255,255,255,0.2)';
         });
     };
+    
+    // 🥋 NUEVO: Lógica de arrastre táctil con ratón (Especial para PC)
+    if (!slider.dataset.dragSetup) {
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        slider.style.cursor = 'grab'; // Cambia el cursor a una manita abierta
+
+        slider.addEventListener('mousedown', (e) => {
+            isDown = true;
+            slider.style.cursor = 'grabbing'; // Manita cerrada
+            slider.style.scrollSnapType = 'none'; // Desactiva el imán mientras arrastras
+            startX = e.pageX - slider.offsetLeft;
+            scrollLeft = slider.scrollLeft;
+        });
+
+        slider.addEventListener('mouseleave', () => {
+            isDown = false;
+            slider.style.cursor = 'grab';
+            slider.style.scrollSnapType = 'x mandatory'; // Reactiva el imán
+        });
+
+        slider.addEventListener('mouseup', () => {
+            isDown = false;
+            slider.style.cursor = 'grab';
+            slider.style.scrollSnapType = 'x mandatory'; // Reactiva el imán
+        });
+
+        slider.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault(); // Evita seleccionar texto por error al arrastrar
+            const x = e.pageX - slider.offsetLeft;
+            const walk = (x - startX) * 1.5; // El 1.5 es la sensibilidad/velocidad del arrastre
+            slider.scrollLeft = scrollLeft - walk;
+        });
+
+        // Le ponemos una marca invisible para no duplicar esta lógica si se recarga la clase
+        slider.dataset.dragSetup = "true"; 
+    }
 }
 
 
