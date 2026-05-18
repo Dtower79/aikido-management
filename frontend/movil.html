@@ -1150,7 +1150,7 @@ body.app-ready #app-content {
             width: 8px; height: 8px; border-radius: 50%;
             background: rgba(255,255,255,0.2); transition: 0.3s;
         }
-        
+
     </style>
 </head>
 <body>
@@ -1290,8 +1290,9 @@ body.app-ready #app-content {
             <div id="next-grade-display" class="next-grade-label hidden">Cargando meta...</div>
 
             <!-- 🥋 NUEVO CARRUSEL DE CLASES -->
-            <div id="class-slider-wrapper" style="width: 100%; position: relative;">
-                <div id="class-slider" style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none;">
+            <div id="class-slider-wrapper" style="width: 100%; max-width: 600px; margin: 0 auto; position: relative;">
+                <div id="class-slider" style="display: flex; gap: 15px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px;">
+
                     <!-- Tarjeta por defecto mientras carga -->
                     <div class="class-hero" style="flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important;">
                         <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Buscando Keikos...</p>
@@ -2374,6 +2375,13 @@ async function checkTodayClass(forcedDojoId = null) {
         }
 
         if (clasesDisponibles.length > 0) {
+            // 🥋 FILTRO INTELIGENTE: Nos quedamos SOLO con las clases del mismo día que la más próxima
+            const fechaObjetivo = clasesDisponibles[0].inicio.toDateString();
+            
+            clasesDisponibles = clasesDisponibles.filter(obj => {
+                return obj.inicio.toDateString() === fechaObjetivo;
+            });
+
             claseHoyId = getID(clasesDisponibles[0].clase);
             claseHoyInicio = clasesDisponibles[0].inicio;
             renderClassSlider(clasesDisponibles, user);
@@ -2384,6 +2392,60 @@ async function checkTodayClass(forcedDojoId = null) {
         }
     } catch (e) { console.error(e); }
 }
+
+// 🥋 NUEVO: Función que dibuja el carrusel (Con diseño arreglado)
+function renderClassSlider(clases, user) {
+    const slider = document.getElementById('class-slider');
+    const dots = document.getElementById('slider-dots');
+    if(!slider || !dots) return;
+
+    slider.innerHTML = '';
+    dots.innerHTML = '';
+
+    clases.forEach((obj, index) => {
+        const d = parseData(obj.clase);
+        const dojoInfo = parseRelation(d.dojo);
+        const f = formatTimeSafe(d.Fecha_Hora);
+        const cid = getID(obj.clase);
+        const isSensei = user && user.is_sensei === true;
+        let btnHtml = '';
+
+        if (!isSensei) {
+            if (obj.estado === 'Confirmado') {
+                btnHtml = `<button class="action-btn" style="background:#ef4444; color:white; width:100%; margin-top:10px;" onclick="cancelAttendance('${obj.asistId}')">CANCELAR ASISTENCIA</button>`;
+            } else {
+                btnHtml = `<button class="action-btn" style="background:white; color:black; width:100%; margin-top:10px;" onclick="confirmAttendance('${cid}')">ASISTIR AL KEIKO</button>`;
+            }
+        }
+
+        const div = document.createElement('div');
+        div.className = 'class-hero';
+        // 🥋 El width 100% y el padding garantizan que ocupa todo el contenedor sin desbordar
+        div.style.cssText = 'flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important; max-width: 100% !important;';
+        div.innerHTML = `
+            <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Keiko Programado</p>
+            <h2 style="margin:12px 0 4px; font-size:38px;">${f.time}</h2>
+            <p style="margin:0 0 18px; font-size:17px; font-weight:700;">${f.date} <br><span style="font-size:11px; color:white; font-weight:800;"><i class="fa-solid fa-location-dot"></i> ${(dojoInfo?.nombre || "ARASHI").toUpperCase()}</span></p>
+            ${btnHtml}
+        `;
+        slider.appendChild(div);
+
+        // Creamos el punto
+        const dot = document.createElement('div');
+        dot.className = `slider-dot`;
+        dot.style.background = index === 0 ? 'var(--accent)' : 'rgba(255,255,255,0.2)';
+        dots.appendChild(dot);
+    });
+
+    // Control de deslizado
+    slider.onscroll = () => {
+        const index = Math.round(slider.scrollLeft / slider.offsetWidth);
+        document.querySelectorAll('.slider-dot').forEach((d, i) => {
+            d.style.background = (i === index) ? 'var(--accent)' : 'rgba(255,255,255,0.2)';
+        });
+    };
+}
+
 
 // 🥋 NUEVO: Función que dibuja el carrusel
 function renderClassSlider(clases, user) {
