@@ -3859,12 +3859,16 @@ function togglePassword(inputId, icon) {
     }
 }
 
-async function cancelAttendance(asistId, claseId) {
+async function cancelAttendance(asistId) {
     const token = localStorage.getItem('aikido_jwt');
-    const btn = document.getElementById('confirm-btn');
     
-    btn.innerText = "CANCELANDO...";
-    btn.disabled = true;
+    // 🥋 Atrapamos el botón exacto que el alumno acaba de pulsar (sin depender de IDs)
+    const btn = event.target.closest('button');
+    
+    if (btn) {
+        btn.innerText = "CANCELANDO...";
+        btn.disabled = true;
+    }
 
     try {
         const res = await fetch(`${API_URL}/asistencias/${asistId}`, { 
@@ -3875,15 +3879,20 @@ async function cancelAttendance(asistId, claseId) {
         if (res.ok) {
             console.log("✅ Asistencia cancelada.");
             localStorage.removeItem('cache_asistencias_sensei');
-            await checkTodayClass(); // Recargamos el botón para que vuelva a decir ASISTIR
+            
+            // Recargamos el carrusel para que el botón vuelva a su estado normal (ASISTIR)
+            await checkTodayClass(); 
+            
             showModal("CANCELADO", "Tu asistencia ha sido anulada. Esperamos verte en el próximo keiko.");
         } else {
             throw new Error("No se pudo contactar con el Dojo.");
         }
     } catch (e) {
         showModal("Error", e.message);
-        btn.innerText = "CANCELAR ASISTENCIA";
-        btn.disabled = false;
+        if (btn) {
+            btn.innerText = "CANCELAR ASISTENCIA";
+            btn.disabled = false;
+        }
     }
 }
 
