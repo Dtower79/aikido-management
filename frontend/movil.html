@@ -1124,18 +1124,20 @@ body.is-sensei-mode #confirm-btn {
 
 /* --- BLOQUE MAESTRO #app-content --- */
 #app-content {
-    display: flex;
+    display: flex !important;
     width: 100%;
     min-height: 100vh;
     flex-direction: column;
-    visibility: hidden; /* 🥋 Muro invisible */
-    opacity: 0;
+    opacity: 0;                /* Invisible inicialmente */
     transition: opacity 0.5s ease-in-out;
+    will-change: opacity;      /* 🥋 Optimizacion de hardware */
+    pointer-events: none;      /* Bloquea clics durante el fundido */
 }
 
+/* Solo cuando la App está lista */
 body.app-ready #app-content {
-    visibility: visible; /* 🥋 Se abre el muro */
     opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
     </style>
@@ -1813,13 +1815,18 @@ async function initApp() {
 
     // FUNCIÓN DE LIBERACIÓN TOTAL (Blindada contra el bloqueo de ratón y CSS)
     const forceRelease = (mode) => {
-        console.log(`🔓[SISTEMA] Liberando UI: ${mode}`);
+        console.log(`🔓 [SISTEMA] Liberando UI: ${mode}`);
         
         // 1. Quitamos la máscara de carga si existe
         if (mask) mask.style.display = 'none';
         
-        // 2. Activamos la clase que hace visible el contenido
+        // 2. LA CLAVE: Solo añadimos la clase, NO tocamos estilos inline
         document.body.classList.add('app-ready');
+        
+        // 3. Eliminamos cualquier rastro de style="visibility: hidden" que pudiera quedar
+        if (appContent) {
+            appContent.style.visibility = 'visible'; 
+        }
     };
 
     // --- 1. CASO: INSTALACIÓN PRIORITARIA ---
