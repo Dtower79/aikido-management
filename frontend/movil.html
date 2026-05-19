@@ -1124,22 +1124,19 @@ body.is-sensei-mode #confirm-btn {
 
 /* --- BLOQUE MAESTRO #app-content --- */
 #app-content {
-    display: none;                
+    display: flex;
     width: 100%;
     min-height: 100vh;
     flex-direction: column;
-    opacity: 0;                   
+    visibility: hidden; /* 🥋 Muro invisible */
+    opacity: 0;
     transition: opacity 0.5s ease-in-out;
-    padding-bottom: env(safe-area-inset-bottom, 120px); 
-    pointer-events: none;         
 }
 
 body.app-ready #app-content {
-    display: flex !important;
+    visibility: visible; /* 🥋 Se abre el muro */
     opacity: 1 !important;
-    pointer-events: auto !important;
 }
-
 
     </style>
 </head>
@@ -1192,7 +1189,7 @@ body.app-ready #app-content {
             </div>
         </div>
 
-    <div id="app-content">
+    <div id="app-content" style="visibility: hidden;">
       
 
         <!-- ACTIVAR CUENTA -->
@@ -1816,13 +1813,13 @@ async function initApp() {
 
     // FUNCIÓN DE LIBERACIÓN TOTAL (Blindada contra el bloqueo de ratón y CSS)
     const forceRelease = (mode) => {
-        console.log(`🔓 [SISTEMA] Liberando UI: ${mode}`);
-        document.body.classList.add('app-ready');
-        document.documentElement.classList.add('app-loaded');
+        console.log(`🔓[SISTEMA] Liberando UI: ${mode}`);
         
+        // 1. Quitamos la máscara de carga si existe
         if (mask) mask.style.display = 'none';
         
-        // No tocamos estilos inline aquí, dejamos que la clase .app-ready haga su trabajo
+        // 2. Activamos la clase que hace visible el contenido
+        document.body.classList.add('app-ready');
     };
 
     // --- 1. CASO: INSTALACIÓN PRIORITARIA ---
