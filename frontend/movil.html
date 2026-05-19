@@ -2416,12 +2416,16 @@ async function checkTodayClass(forcedDojoId = null) {
     } catch (e) { console.error(e); }
 }
 
-// 🥋 NUEVO: Función que dibuja el carrusel (Con diseño arreglado)
-// 🥋 FUNCIÓN DEFINITIVA QUE DIBUJA EL CARRUSEL
+// 🥋 FUNCIÓN DEFINITIVA QUE DIBUJA EL CARRUSEL (CON BLOQUEO DE REPINTADO)
 function renderClassSlider(clases, user) {
     const slider = document.getElementById('class-slider');
     const dots = document.getElementById('slider-dots');
     if(!slider || !dots) return;
+
+    // 1. ESCUDO: Si el contenido es exactamente el mismo, no hacemos NADA
+    const nuevoHTML = JSON.stringify(clases);
+    if (slider.dataset.lastRender === nuevoHTML) return; 
+    slider.dataset.lastRender = nuevoHTML;
 
     slider.innerHTML = '';
     dots.innerHTML = '';
@@ -2438,35 +2442,32 @@ function renderClassSlider(clases, user) {
             if (obj.estado === 'Confirmado') {
                 btnHtml = `<button class="action-btn" style="background:#ef4444; color:white; width:100%; margin-top:10px;" onclick="cancelAttendance('${obj.asistId}')">CANCELAR ASISTENCIA</button>`;
             } else {
-                // Le pasamos el ID exacto de esta tarjeta al botón
                 btnHtml = `<button class="action-btn" style="background:white; color:black; width:100%; margin-top:10px;" onclick="confirmAttendance('${cid}')">ASISTIR AL KEIKO</button>`;
             }
         }
 
         const div = document.createElement('div');
-        div.className = 'class-hero'; 
+        div.className = 'class-hero';
         div.style.cssText = 'flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important; max-width: 100% !important;';
         div.innerHTML = `
             <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Keiko Programado</p>
             <h2 style="margin:12px 0 4px; font-size:38px;">${f.time}</h2>
             <p style="margin:0 0 10px; font-size:17px; font-weight:700;">${f.date}</p>
-            
-            <!-- 🥋 NUEVO DISEÑO: Píldora de ubicación corporativa -->
-            
-            <div style="display: inline-block; background: #0f172a; padding: 8px 16px; border-radius: 12px; font-size: 15px; color: white; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+            <div style="display: inline-block; background: #0f172a; padding: 6px 14px; border-radius: 12px; font-size: 15px; color: white; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
                 <i class="fa-solid fa-map-location-dot" style="color: #ef4444; margin-right: 6px;"></i>${(dojoInfo?.nombre || "ARASHI").toUpperCase()}
             </div>
-            
             ${btnHtml}
         `;
         slider.appendChild(div);
 
-        // Creamos el punto
         const dot = document.createElement('div');
         dot.className = `slider-dot`;
         dot.style.background = index === 0 ? 'var(--accent)' : 'rgba(255,255,255,0.2)';
         dots.appendChild(dot);
     });
+
+   
+    }
 
     // Control de deslizado para encender los puntitos
     slider.onscroll = () => {
