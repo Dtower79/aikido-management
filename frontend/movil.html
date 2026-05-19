@@ -65,17 +65,9 @@
 
         /* --- MURO DE INSTALACIÓN --- */
         /* 1. ESTADO INICIAL: Todo oculto, muro preparado */
-       #app-content {
-            display: none !important; /* Oculto total por defecto */
-            width: 100%;
-            min-height: 100vh;
-            flex-direction: column;
-            opacity: 0; /* Totalmente invisible por defecto */
-            transition: opacity 0.3s ease-in-out; /* Fundido suave de medio segundo */
-            
-        }
+       
         /* Solo cuando esta clase esté presente, el contenido aparece */
-        .app-ready #app-content {
+        .app-ready {
             /*display: flex !important;*/
             opacity: 1 !important;
         }
@@ -84,10 +76,7 @@
         @keyframes emergency-show {
             to { opacity: 1; }
         }
-        #app-content {
-            animation: emergency-show 0.5s forwards;
-            animation-delay: 4s; /* Si en 4 segundos el JS no responde, la App aparece sí o sí */
-        }
+        
 
 #install-wall {
     display: none;
@@ -113,7 +102,7 @@
         }
 
         /* 2. EL INTERRUPTOR MAESTRO: Solo esta clase manda */
-        .ready-to-show #app-content {
+        .ready-to-show {
             display: flex !important;
         }
 
@@ -128,7 +117,7 @@
             display: none !important; /* Desaparece físicamente */
         }
 
-        .app-loaded #app-content {
+        .app-loaded {
             opacity: 1 !important;
         }
 
@@ -722,16 +711,8 @@
             box-shadow: var(--neon); 
         }
 
-        #app-content {
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-            pointer-events: none; /* Evita clics accidentales mientras carga */
-        }
-        body.app-ready #app-content {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .app-loaded #app-content {
+        
+        .app-loaded {
             opacity: 1;
         }
 
@@ -817,9 +798,7 @@
 }
 
 /* FIX PARA EVITAR EL CORTE POR LA BARRA INFERIOR */
-#app-content {
-    padding-bottom: 120px;
-}
+
 
         /* --- BOTTOM SHEET PERFIL --- */
 .bottom-sheet {
@@ -997,10 +976,8 @@
     padding-bottom: 140px !important; 
 }
 
-/* Aseguramos que el contenedor principal permita el scroll total */
-#app-content {
-    padding-bottom: env(safe-area-inset-bottom);
-}
+
+
 /* AJUSTE PARA QUE LOS MODALES SEAN MÁS GRANDES EN MÓVIL */
 @media (max-width: 480px) {
     .modal-content {
@@ -1067,15 +1044,9 @@ body.is-sensei-mode #confirm-btn {
 }
 
 /* Ocultamos el contenido de la App por defecto para evitar el parpadeo */
-#app-content {
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-}
+
 
 /* Solo cuando la App esté lista, permitimos que el contenido respire */
-body.app-ready #app-content {
-    opacity: 1;
-}
 
 
 /* Spinner sutil para el velo */
@@ -1150,6 +1121,33 @@ body.app-ready #app-content {
             width: 8px; height: 8px; border-radius: 50%;
             background: rgba(255,255,255,0.2); transition: 0.3s;
         }
+
+/* --- BLOQUE MAESTRO #app-content --- */
+#app-content {
+    display: none;                /* Oculto inicialmente */
+    width: 100%;
+    min-height: 100vh;
+    flex-direction: column;
+    opacity: 0;                   /* Transparente al inicio */
+    transition: opacity 0.5s ease-in-out;
+    padding-bottom: env(safe-area-inset-bottom, 120px); /* Ajuste seguro para iPhone */
+    pointer-events: none;         /* No clics durante la carga */
+}
+
+/* Solo cuando el JS añade la clase, se muestra */
+body.app-ready #app-content {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* Failsafe: Por si el JS falla, aparece a los 4 segundos */
+@keyframes emergency-show {
+    to { opacity: 1; display: flex; }
+}
+body:not(.app-ready) #app-content {
+    animation: emergency-show 0.5s forwards 4s;
+}        
 
     </style>
 </head>
@@ -1827,20 +1825,14 @@ async function initApp() {
     // FUNCIÓN DE LIBERACIÓN TOTAL (Blindada contra el bloqueo de ratón y CSS)
     const forceRelease = (mode) => {
         console.log(`🔓 [SISTEMA] Liberando UI en modo: ${mode}`);
-        body.classList.add('app-ready');
-        html.classList.add('app-loaded');
         
-        // Eliminamos bloqueos de pointer-events
-        body.style.pointerEvents = 'auto';
+        // Simplemente añadimos la clase que dispara el CSS de arriba
+        document.body.classList.add('app-ready');
         
+        // Quitamos el velo inicial
         if (mask) mask.style.display = 'none';
         
-        if (appContent) {
-            // 🥋 FIX: Forzamos el !important en JS para vencer al CSS y mostrar la pantalla
-            appContent.style.setProperty('display', 'flex', 'important');
-            appContent.style.setProperty('opacity', '1', 'important');
-            appContent.style.pointerEvents = 'auto';
-        }
+        // No toques appContent aquí, deja que el CSS (app-ready) haga su trabajo
     };
 
     // --- 1. CASO: INSTALACIÓN PRIORITARIA ---
