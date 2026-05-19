@@ -1140,6 +1140,24 @@ body.app-ready #app-content {
     pointer-events: auto !important;
 }
 
+/* 🥋 RESERVA DE ESPACIO PARA EVITAR EL SALTO */
+.class-hero {
+    min-height: 250px; /* Ajusta este valor al tamaño que suele tener tu tarjeta cargada */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: none !important; /* Evita que el navegador intente animar el cambio de tamaño */
+}
+
+.loading-state {
+    visibility: hidden; /* Oculto mientras se procesa internamente */
+}
+/* Cuando ya tiene el contenido, la mostramos de golpe */
+.class-hero:not(.loading-state) {
+    visibility: visible;
+}
+
     </style>
 </head>
 <body>
@@ -2426,8 +2444,7 @@ function renderClassSlider(clases, user) {
         }
 
         const div = document.createElement('div');
-        div.className = 'class-hero';
-        // 🥋 El width 100% y el padding garantizan que ocupa todo el contenedor sin desbordar
+        div.className = 'class-hero loading-state'; // Añadimos 'loading-state'
         div.style.cssText = 'flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important; max-width: 100% !important;';
         div.innerHTML = `
             <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Keiko Programado</p>
