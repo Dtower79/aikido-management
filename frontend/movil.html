@@ -1124,30 +1124,22 @@ body.is-sensei-mode #confirm-btn {
 
 /* --- BLOQUE MAESTRO #app-content --- */
 #app-content {
-    display: none;                /* Oculto inicialmente */
+    display: none;                
     width: 100%;
     min-height: 100vh;
     flex-direction: column;
-    opacity: 0;                   /* Transparente al inicio */
+    opacity: 0;                   
     transition: opacity 0.5s ease-in-out;
-    padding-bottom: env(safe-area-inset-bottom, 120px); /* Ajuste seguro para iPhone */
-    pointer-events: none;         /* No clics durante la carga */
+    padding-bottom: env(safe-area-inset-bottom, 120px); 
+    pointer-events: none;         
 }
 
-/* Solo cuando el JS añade la clase, se muestra */
 body.app-ready #app-content {
     display: flex !important;
     opacity: 1 !important;
     pointer-events: auto !important;
 }
 
-/* Failsafe: Por si el JS falla, aparece a los 4 segundos */
-@keyframes emergency-show {
-    to { opacity: 1; display: flex; }
-}
-body:not(.app-ready) #app-content {
-    animation: emergency-show 0.5s forwards 4s;
-}        
 
     </style>
 </head>
@@ -1824,15 +1816,13 @@ async function initApp() {
 
     // FUNCIÓN DE LIBERACIÓN TOTAL (Blindada contra el bloqueo de ratón y CSS)
     const forceRelease = (mode) => {
-        console.log(`🔓 [SISTEMA] Liberando UI en modo: ${mode}`);
-        
-        // Simplemente añadimos la clase que dispara el CSS de arriba
+        console.log(`🔓 [SISTEMA] Liberando UI: ${mode}`);
         document.body.classList.add('app-ready');
+        document.documentElement.classList.add('app-loaded');
         
-        // Quitamos el velo inicial
         if (mask) mask.style.display = 'none';
         
-        // No toques appContent aquí, deja que el CSS (app-ready) haga su trabajo
+        // No tocamos estilos inline aquí, dejamos que la clase .app-ready haga su trabajo
     };
 
     // --- 1. CASO: INSTALACIÓN PRIORITARIA ---
