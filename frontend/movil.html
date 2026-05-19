@@ -71,7 +71,7 @@
             min-height: 100vh;
             flex-direction: column;
             opacity: 0; /* Totalmente invisible por defecto */
-            transition: opacity 0.8s ease-in-out; /* Fundido suave de medio segundo */
+            transition: opacity 0.3s ease-in-out; /* Fundido suave de medio segundo */
             
         }
         /* Solo cuando esta clase esté presente, el contenido aparece */
@@ -724,7 +724,7 @@
 
         #app-content {
             opacity: 0;
-            transition: opacity 0.8s ease-in-out;
+            transition: opacity 0.3s ease-in-out;
             pointer-events: none; /* Evita clics accidentales mientras carga */
         }
         body.app-ready #app-content {
@@ -1069,7 +1069,7 @@ body.is-sensei-mode #confirm-btn {
 /* Ocultamos el contenido de la App por defecto para evitar el parpadeo */
 #app-content {
     opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+    transition: opacity 0.3s ease-in-out;
 }
 
 /* Solo cuando la App esté lista, permitimos que el contenido respire */
@@ -1869,36 +1869,37 @@ async function initApp() {
     const user = JSON.parse(localStorage.getItem('aikido_user'));
     const loginTime = localStorage.getItem('aikido_login_time');
     
-    // Calculamos si han pasado 24 horas (24h * 60m * 60s * 1000ms = 86400000 ms)
     const sessionExpired = loginTime ? (Date.now() - parseInt(loginTime) > 86400000) : true;
 
-    // Si no hay token, no hay usuario, O LA SESIÓN HA CADUCADO, lo echamos al Login
     if (!token || !user || sessionExpired) {
         console.log("🔒 Sesión caducada o inexistente. Pidiendo credenciales.");
-        // Limpiamos los rastros viejos
         localStorage.removeItem('aikido_jwt');
         localStorage.removeItem('aikido_user');
         localStorage.removeItem('aikido_login_time');
-        
         document.getElementById('login-view')?.classList.remove('hidden');
         forceRelease("LOGIN");
         return;
     }
 
     try {
-        // Carga de requisitos
-        const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
-        requisitosGradoGlobal = (reqData?.data || []).map(r => {
-            const attr = r.attributes || r;
-            return {
-                NORM: normalize(attr.Grado || attr.grado || ""),
-                HORAS: parseFloat(attr.Horas_Necesarias || attr.horas_necesarias || 0)
-            };
-        });
+        // 🥋 CARGA ATÓMICA EN PARALELO (Mata el parpadeo de carga)
+        // Ejecutamos las 3 peticiones a la vez. No se muestra nada hasta que las 3 terminen.
+        await Promise.all([
+            (async () => {
+                const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
+                requisitosGradoGlobal = (reqData?.data || []).map(r => {
+                    const attr = r.attributes || r;
+                    return {
+                        NORM: normalize(attr.Grado || attr.grado || ""),
+                        HORAS: parseFloat(attr.Horas_Necesarias || attr.horas_necesarias || 0)
+                    };
+                });
+            })(),
+            refreshStudentData(),
+            checkTodayClass()
+        ]);
 
-        await refreshStudentData();
-        await checkTodayClass();
-
+        // 🥋 DESPLIEGUE DE INTERFAZ (Todo el contenido ya está listo en el DOM)
         showView('dashboard');
         const nav = document.getElementById('main-nav');
         if (nav) {
@@ -1906,17 +1907,18 @@ async function initApp() {
             nav.style.display = 'grid';
         }
         
+        // Liberamos la máscara (velo) y el contenido aparece ya "rellenado"
         forceRelease("DASHBOARD");
 
-        // 🥋 ACTIVAMOS EL KIOSKO AQUÍ:
+        // Activamos vigilantes de segundo plano
         iniciarModoKiosko();
 
-
     } catch (error) {
-        console.error("🔥 Error en despliegue:", error);
+        console.error("🔥 Error en despliegue atómico:", error);
         forceRelease("ERROR_FALLBACK");
     }
 }
+
 
 /* --- REFRESH DATA V10.2 (VÍNCULO DE MANDO RESTAURADO) --- */
 /* --- REFRESH DATA V10.3 (RESTAURACIÓN DE PANEL PARA INSTRUCTORES) --- */
