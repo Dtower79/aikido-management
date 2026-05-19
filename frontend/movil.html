@@ -2323,16 +2323,19 @@ function iniciarModoKiosko() {
 async function checkTodayClass(forcedDojoId = null) {
     const user = JSON.parse(localStorage.getItem('aikido_user')); 
     const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
-    const filterEl = document.getElementById('cal-dojo-filter');
-    let dojoBusqueda = forcedDojoId || (filterEl ? filterEl.value : dojoIdGlobal) || 'all';
-    const idFinal = String(dojoBusqueda);
+    
+    // 🥋 1. Obtenemos cuál es el "Dojo Casa" del alumno actual
+    const pAlu = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
+    const miDojoId = (pAlu && pAlu.dojo) ? String(getID(parseRelation(pAlu.dojo))) : null;
 
     globalAsistId = null;
 
     try {
         const ahora = new Date();
         const tiempoLimite = new Date(ahora.getTime() - (3 * 3600000)).toISOString();
-        const url = `${API_URL}/clases?filters[Fecha_Hora][$gte]=${tiempoLimite}&sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=20`;
+        
+        // 🥋 Pedimos 30 clases por si el grupo Arashi crece, para que no falte ninguna de ese día
+        const url = `${API_URL}/clases?filters[Fecha_Hora][$gte]=${tiempoLimite}&sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=30`;
         
         const res = await fetch(url, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
         const json = await res.json();
@@ -2351,7 +2354,9 @@ async function checkTodayClass(forcedDojoId = null) {
             const finLit = new Date(inicioLit.getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
 
             if (ahora > finLit) continue; 
-            if (idFinal !== 'all' && dIdClase !== idFinal) continue;
+            
+            // 🥋 HEMOS ELIMINADO EL FILTRO QUE BLOQUEABA OTROS DOJOS
+            // Ahora dejamos pasar todas las clases de Arashi Group
 
             let estado = null;
             let asistId = null;
@@ -2372,15 +2377,26 @@ async function checkTodayClass(forcedDojoId = null) {
                 if (estado === 'Asistio' || estado === 'Asistió') continue;
             }
             
-            clasesDisponibles.push({ clase: c, inicio: inicioLit, estado: estado, asistId: asistId });
+            clasesDisponibles.push({ clase: c, inicio: inicioLit, estado: estado, asistId: asistId, dojoId: dIdClase });
         }
 
         if (clasesDisponibles.length > 0) {
-            // 🥋 FILTRO INTELIGENTE: Nos quedamos SOLO con las clases del mismo día que la más próxima
+            // 2. Filtramos para que SOLO queden las clases de ese día exacto
             const fechaObjetivo = clasesDisponibles[0].inicio.toDateString();
-            
-            clasesDisponibles = clasesDisponibles.filter(obj => {
-                return obj.inicio.toDateString() === fechaObjetivo;
+            clasesDisponibles = clasesDisponibles.filter(obj => obj.inicio.toDateString() === fechaObjetivo);
+
+            // 3. 🥋 MOTOR DE ORDENACIÓN INTELIGENTE (Mi Dojo -> Hora)
+            clasesDisponibles.sort((a, b) => {
+                // Si la clase A es de mi dojo y la B no, la A va primero
+                const esMiDojoA = (a.dojoId === miDojoId) ? -1 : 1;
+                const esMiDojoB = (b.dojoId === miDojoId) ? -1 : 1;
+                
+                if (esMiDojoA !== esMiDojoB) {
+                    return esMiDojoA - esMiDojoB;
+                }
+                
+                // Si ambas son de mi dojo, o ambas son de fuera, ordenamos por Hora
+                return a.inicio - b.inicio;
             });
 
             claseHoyId = getID(clasesDisponibles[0].clase);
@@ -2539,22 +2555,37 @@ async function loadManageClasses() {
     let endpoint = `/clases?sort=Fecha_Hora:asc&pagination[limit]=100&populate=dojo`;
     if (dojoId !== 'all') endpoint += `&filters[dojo][documentId][$eq]=${dojoId}`;
 
-    // Forzamos bypass de caché (0 horas) usando la llave unificada
     const json = await fetchSmart(endpoint, 'clases_archivo', 0);
     
     if (!json || !json.data) return;
 
     const grouped = {};
     const hoyCorte = new Date(); 
-    hoyCorte.setHours(0,0,0,0); // Mostramos todo lo de hoy en adelante
+    hoyCorte.setHours(0,0,0,0); 
 
     json.data.filter(c => new Date(parseData(c).Fecha_Hora) >= hoyCorte).forEach(c => {
         const d = parseData(c);
         const f = formatTimeSafe(d.Fecha_Hora);
-        const dojoInfo = parseRelation(d.dojo);
-        if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon: [] };
-        const item = { ...f, id: getID(c), dur: d.Duracion, raw: d.Fecha_Hora, dNom: (dojoInfo?.nombre || "ARASHI").replace("Aikido Arashi ", "") };
-        if (f.hour < 14) grouped[f.month].morning.push(item); else grouped[f.month].afternoon.push(item);
+        const dojoObj = parseRelation(d.dojo);
+        
+        // 🥋 1. Preparamos los datos base
+        const dNom = (dojoObj?.nombre || "ARASHI").replace("Aikido Arashi ", "");
+        const dId = getID(dojoObj);
+        
+        if (!grouped[f.month]) grouped[f.month] = { morning: [], afternoon:[] };
+        
+        // 🥋 2. Construimos el objeto con el dId incluido para poder editarlo después
+        const item = { 
+            ...f, 
+            id: getID(c), 
+            dur: d.Duracion, 
+            raw: d.Fecha_Hora, 
+            dNom: dNom.toUpperCase(), 
+            dId: dId 
+        };
+
+        if (f.hour < 14) grouped[f.month].morning.push(item); 
+        else grouped[f.month].afternoon.push(item);
     });
 
     listDiv.innerHTML = `<button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">← VOLVER A VALIDACIONES</button>`;
@@ -2565,8 +2596,9 @@ async function loadManageClasses() {
             if(grouped[month][per].length) {
                 html += `<div class="section-label">${per === 'morning' ? 'MAÑANA' : 'TARDE'}</div><div class="grid-container">`;
                 grouped[month][per].forEach(i => {
-                    html += `<div class="class-card" onclick="openEditClass('${i.id}','${i.raw}',${i.dur})">
-                        <span style="font-size:8px; color:var(--accent); font-weight:800; display:block; margin-bottom:2px;">${i.dNom.toUpperCase()}</span>
+                    // 🥋 3. Aquí pasamos i.dId al modal de edición
+                    html += `<div class="class-card" onclick="openEditClass('${i.id}','${i.raw}',${i.dur}, '${i.dId}')">
+                        <span style="font-size:8px; color:var(--accent); font-weight:800; display:block; margin-bottom:2px;">${i.dNom}</span>
                         <h4>${i.date}</h4><p>${i.time} • ${i.dur}h</p>
                     </div>`;
                 });
@@ -2578,9 +2610,24 @@ async function loadManageClasses() {
 }
 
 
-/* --- MODAL DE EDICIÓN (CON BOTÓN DE CIERRE) --- */
-function openEditClass(id, raw, dur) { 
+/* --- MODAL DE EDICIÓN (ACTUALIZADO PARA DOJO) --- */
+async function openEditClass(id, raw, dur, currentDojoId) { 
     const [d, t] = raw.split('T'); 
+    
+    // Obtenemos los dojos disponibles para que el Sensei pueda elegir
+    const dojoRes = await fetchSmart('/dojos', 'lista_dojos_selector', 24);
+    let optionsHtml = '<option value="">Selecciona Dojo...</option>';
+    
+    if(dojoRes && dojoRes.data) {
+        dojoRes.data.forEach(d => {
+            const idDojo = getID(d);
+            const nombre = d.attributes?.nombre || d.nombre;
+            // Marcamos 'selected' el Dojo que ya tenía la clase
+            const isSelected = (String(idDojo) === String(currentDojoId)) ? 'selected' : '';
+            optionsHtml += `<option value="${idDojo}" ${isSelected}>${nombre.toUpperCase()}</option>`;
+        });
+    }
+
     showModal("EDITAR KEIKO", `
         <div style="text-align:left; margin-top:10px;">
             <span class="modal-label">FECHA:</span>
@@ -2596,20 +2643,23 @@ function openEditClass(id, raw, dur) {
                 <option value="2" ${dur==2?'selected':''}>2.0h</option>
             </select>
 
+            <span class="modal-label">DOJO:</span>
+            <select id="e-dojo" class="modal-field">
+                ${optionsHtml}
+            </select>
+
             <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
                 <button class="action-btn primary" onclick="saveClass('${id}')">
                     <i class="fa-solid fa-floppy-disk"></i> GUARDAR CAMBIOS
                 </button>
-                
                 <button class="action-btn" style="background:#ef4444; color:white;" onclick="deleteClass('${id}')">
                     <i class="fa-solid fa-trash-can"></i> ELIMINAR KEIKO
                 </button>
-
                 <button class="action-btn" style="background:#334155; color:white;" onclick="closeModal()">
                     VOLVER SIN CAMBIOS
                 </button>
             </div>
-        </div>`, false); // Ponemos false para que no salga el botón "CERRAR" genérico de abajo y usemos el nuestro integrado
+        </div>`, false);
 }
 
 /* --- ACCIÓN: GUARDAR CAMBIOS --- */
@@ -2617,19 +2667,23 @@ async function saveClass(id) {
     const dVal = document.getElementById('e-d').value;
     const tVal = document.getElementById('e-h').value;
     const dur = document.getElementById('e-dur').value;
+    const dojo = document.getElementById('e-dojo').value; // 🥋 Capturamos el Dojo
     const token = localStorage.getItem('aikido_jwt');
 
     await fetch(`${API_URL}/clases/${id}`, { 
         method: 'PUT', 
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-        body: JSON.stringify({ data: { Fecha_Hora: `${dVal}T${tVal}:00.000Z`, Duracion: parseFloat(dur) } }) 
+        body: JSON.stringify({ data: { 
+            Fecha_Hora: `${dVal}T${tVal}:00.000Z`, 
+            Duracion: parseFloat(dur), 
+            dojo: dojo // 🥋 Lo enviamos a Strapi
+        } }) 
     }); 
 
-    // REGLA MAESTRA: Sincronización instantánea de la sábana de clases
     localStorage.removeItem('cache_clases_archivo'); 
     closeModal(); 
     loadManageClasses(); 
-    checkTodayClass(); // Actualizamos dashboard por si era la clase de hoy
+    checkTodayClass(); 
 }
 
 /* --- PREGUNTA DE BORRADO (MODAL PERSONALIZADO) --- */
