@@ -2422,7 +2422,7 @@ function renderClassSlider(clases, user) {
     const dots = document.getElementById('slider-dots');
     if(!slider || !dots) return;
 
-    // 1. ESCUDO: Si el contenido es exactamente el mismo, no hacemos NADA
+    // 1. ESCUDO ANTI-PARPADEO
     const nuevoHTML = JSON.stringify(clases);
     if (slider.dataset.lastRender === nuevoHTML) return; 
     slider.dataset.lastRender = nuevoHTML;
@@ -2466,10 +2466,6 @@ function renderClassSlider(clases, user) {
         dots.appendChild(dot);
     });
 
-   
-    }
-
-    // Control de deslizado para encender los puntitos
     slider.onscroll = () => {
         const index = Math.round(slider.scrollLeft / slider.offsetWidth);
         document.querySelectorAll('.slider-dot').forEach((d, i) => {
@@ -2477,25 +2473,17 @@ function renderClassSlider(clases, user) {
         });
     };
 
-    // 🥋 Lógica de arrastre táctil con ratón (A prueba de PC)
     if (!slider.dataset.dragSetup) {
         let isDown = false;
-        let startX;
-        let scrollLeft;
-
+        let startX, scrollLeft;
         slider.style.cursor = 'grab';
-
+        
         slider.addEventListener('mousedown', (e) => {
-            // Si hace clic en el botón de asistir, le dejamos pulsar normal
             if (e.target.closest('button')) return; 
-            
             isDown = true;
             slider.style.cursor = 'grabbing';
-            slider.style.scrollSnapType = 'none'; // Quitamos el imán
-            
-            // Bloquea el intento del PC de seleccionar texto o arrastrar "fantasmas"
+            slider.style.scrollSnapType = 'none';
             e.preventDefault(); 
-            
             startX = e.pageX - slider.offsetLeft;
             scrollLeft = slider.scrollLeft;
         });
@@ -2504,21 +2492,20 @@ function renderClassSlider(clases, user) {
             if (!isDown) return;
             isDown = false;
             slider.style.cursor = 'grab';
-            slider.style.scrollSnapType = 'x mandatory'; // Reactivamos el imán al soltar
+            slider.style.scrollSnapType = 'x mandatory';
         };
 
         slider.addEventListener('mouseleave', stopDrag);
         slider.addEventListener('mouseup', stopDrag);
-
+        
         slider.addEventListener('mousemove', (e) => {
             if (!isDown) return;
-            e.preventDefault(); // Mantenemos el bloqueo de selección mientras movemos
+            e.preventDefault();
             const x = e.pageX - slider.offsetLeft;
-            const walk = (x - startX) * 1.5; // El 1.5 es la sensibilidad/velocidad del arrastre
+            const walk = (x - startX) * 1.5;
             slider.scrollLeft = scrollLeft - walk;
         });
-
-        // Le ponemos una marca invisible para no duplicar esta lógica si se recarga la clase
+        
         slider.dataset.dragSetup = "true"; 
     }
 }
