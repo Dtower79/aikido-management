@@ -2755,9 +2755,18 @@ function setGenMonth(m, btn) {
     btn.classList.add('active'); 
 }
 
-/* --- UI: GENERADOR MULTI-MES FLEXIBLE --- */
-function uiGenerateMonth() {
-    const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+/* --- UI: GENERADOR MULTI-MES FLEXIBLE (VERSIÓN DOJO OBLIGATORIO) --- */
+async function uiGenerateMonth() {
+    // 0. CARGAR DOJOS PARA EL SELECTOR
+    const dojoRes = await fetchSmart('/dojos', 'lista_dojos_selector', 24);
+    let dojoOptions = '<option value="">-- SELECCIONA DOJO --</option>';
+    if(dojoRes && dojoRes.data) {
+        dojoRes.data.forEach(d => {
+            dojoOptions += `<option value="${getID(d)}">${(d.attributes?.nombre || d.nombre).toUpperCase()}</option>`;
+        });
+    }
+
+    const months =["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     
     // 1. DIBUJAR CUADRÍCULA CON SELECCIÓN MÚLTIPLE
     let monthGrid = `<div class="month-picker-grid" id="multi-month-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">`;
@@ -2774,7 +2783,7 @@ function uiGenerateMonth() {
     const currentYear = new Date().getFullYear();
     const nextYear = currentYear + 1;
 
-    const days = [
+    const days =[
         { n: "Lun", v: 1 }, { n: "Mar", v: 2 }, { n: "Mié", v: 3 },
         { n: "Jue", v: 4 }, { n: "Vie", v: 5 }, { n: "Sáb", v: 6 }, { n: "Dom", v: 0 }
     ];
@@ -2807,6 +2816,11 @@ function uiGenerateMonth() {
     showModal("PROGRAMACIÓN MASIVA", `
         <div class="no-scrollbar" style="text-align:left; max-height: 85vh; overflow-y: auto; width: 100%;">
             
+            <span class="modal-label">0. SELECCIONA EL DOJO (OBLIGATORIO):</span>
+            <select id="gen-dojo-select" class="modal-field" style="width: 100%; border-radius: 15px; margin-bottom: 15px; border: 2px solid var(--accent);">
+                ${dojoOptions}
+            </select>
+
             <span class="modal-label">1. SELECCIONA EL AÑO:</span>
             <select id="gen-year-select" class="modal-field" style="width: 100%; border-radius: 15px; margin-bottom: 20px;">
                 <option value="${currentYear}" selected>${currentYear}</option>
@@ -2885,6 +2899,11 @@ async function processGeneration() {
     const dojoId = document.getElementById('sensei-dojo-filter').value;
 
     // 1. VALIDACIONES
+    if (!dojoId) {
+        showModal("⚠️ ATENCIÓN", "Debes seleccionar un Dojo antes de programar.");
+        return;
+    }
+    
     if (!dojoId || dojoId === 'all') {
         showModal("⚠️ AVISO", "Selecciona un DOJO específico arriba antes de generar.");
         return;
@@ -2972,20 +2991,57 @@ function setGenMonth(m, btn) {
     btn.classList.add('active'); 
 }
 
-        function uiCreateSingleClass() { 
-            showModal("NUEVA CLASE SUELTA", `<div style="text-align:left; margin-top:10px;"><span class="modal-label">FECHA:</span><input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}"><span class="modal-label">HORA:</span><input type="time" id="single-time" class="modal-field" value="10:00"><span class="modal-label">DURACIÓN:</span><select id="single-dur" class="modal-field"><option value="1">1.0h</option><option value="1.5" selected>1.5h</option></select><button class="action-btn primary" onclick="processSingleClass()" style="margin-top:10px;">CREAR KEIKO</button></div>`, true); 
-        }
+        /* --- CREACIÓN DE CLASE SUELTA (CON DOJO) --- */
+async function uiCreateSingleClass() { 
+    // Obtenemos los dojos para el selector
+    const dojoRes = await fetchSmart('/dojos', 'lista_dojos_selector', 24);
+    let optionsHtml = '<option value="">Selecciona Dojo...</option>';
+    if(dojoRes && dojoRes.data) {
+        dojoRes.data.forEach(d => {
+            const idDojo = getID(d);
+            const nombre = d.attributes?.nombre || d.nombre;
+            optionsHtml += `<option value="${idDojo}">${nombre.toUpperCase()}</option>`;
+        });
+    }
 
-/* --- CREACIÓN DE CLASE (VERSION 7.5 - SINCRONIZACIÓN ATÓMICA) --- */
+    showModal("NUEVA CLASE SUELTA", `
+        <div style="text-align:left; margin-top:10px;">
+            <span class="modal-label">FECHA:</span>
+            <input type="date" id="single-date" class="modal-field" value="${new Date().toISOString().split('T')[0]}">
+            
+            <span class="modal-label">HORA:</span>
+            <input type="time" id="single-time" class="modal-field" value="10:00">
+            
+            <span class="modal-label">DURACIÓN:</span>
+            <select id="single-dur" class="modal-field">
+                <option value="1">1.0h</option>
+                <option value="1.5" selected>1.5h</option>
+                <option value="2">2.0h</option>
+            </select>
+
+            <span class="modal-label">DOJO:</span>
+            <select id="single-dojo" class="modal-field">
+                ${optionsHtml}
+            </select>
+
+            <button class="action-btn primary" onclick="processSingleClass()" style="margin-top:20px; width:100%;">
+                CREAR KEIKO
+            </button>
+            <button class="action-btn btn-secondary" onclick="closeModal()" style="margin-top:10px; width:100%;">
+                CANCELAR
+            </button>
+        </div>`, false); 
+}
+
 async function processSingleClass() { 
     const token = localStorage.getItem('aikido_jwt');
-    const dojoId = document.getElementById('sensei-dojo-filter').value;
+    const dojoId = document.getElementById('single-dojo').value; // 🥋 Capturamos el Dojo
     const dVal = document.getElementById('single-date').value;
     const tVal = document.getElementById('single-time').value;
     const dur = document.getElementById('single-dur').value;
 
-    if (!dojoId || dojoId === 'all') {
-        showModal("Aviso", "Selecciona un Dojo específico primero.");
+    if (!dojoId) {
+        showModal("Aviso", "Es obligatorio seleccionar un Dojo.");
         return;
     }
 
@@ -2993,44 +3049,32 @@ async function processSingleClass() {
 
     try {
         const btn = document.querySelector('#custom-modal .action-btn.primary');
-        btn.innerText = "VERIFICANDO..."; btn.disabled = true;
-
-        // VERIFICACIÓN DE DUPLICADOS
-        const checkRes = await fetch(`${API_URL}/clases?filters[Fecha_Hora][$eq]=${isoString}&filters[dojo][documentId][$eq]=${dojoId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const checkJ = await checkRes.json();
-
-        if (checkJ.data && checkJ.data.length > 0) {
-            btn.innerText = "CREAR KEIKO"; btn.disabled = false;
-            showModal("⚠️ CLASE DUPLICADA", "Ya existe un entrenamiento a esta misma hora en este Dojo.");
-            return;
-        }
+        btn.innerText = "CREANDO..."; btn.disabled = true;
 
         // CREACIÓN
         const res = await fetch(`${API_URL}/clases`, { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-            body: JSON.stringify({ data: { Fecha_Hora: isoString, Duracion: parseFloat(dur), dojo: dojoId } }) 
+            body: JSON.stringify({ data: { 
+                Fecha_Hora: isoString, 
+                Duracion: parseFloat(dur), 
+                dojo: dojoId // 🥋 Se lo enviamos a Strapi
+            } }) 
         }); 
 
         if (res.ok) {
-            // --- 🥋 LIMPIEZA DE TODAS LAS CACHÉS POSIBLES ---
             localStorage.removeItem('cache_clases_archivo'); 
-            localStorage.removeItem('cache_calendario_clases');
-            localStorage.removeItem('cache_calendario_clases_completo');
-            
             closeModal(); 
-            
-            // Refresco de todas las vistas
             await loadManageClasses(); 
-            await loadMonthlyClasses(); 
             await checkTodayClass(); 
-
-            showModal("¡OSS!", "Keiko creado y sincronizado en todo el sistema.");
+            showModal("¡OSS!", "Keiko creado con éxito en la sede seleccionada.");
+        } else {
+            throw new Error("Error en la respuesta del servidor");
         }
     } catch (e) {
         showModal("Error", "Fallo al conectar con Neon.");
+        const btn = document.querySelector('#custom-modal .action-btn.primary');
+        btn.innerText = "CREAR KEIKO"; btn.disabled = false;
     }
 }
 
