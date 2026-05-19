@@ -2155,18 +2155,17 @@ async function loadSenseiPanel() {
     }
 }
 
-/* --- VALIDACIÓN SENSEI (VERSIÓN 6.3 - SINCRONIZADA CON NEON) --- */
+/* --- VALIDACIÓN SENSEI (CON PURGA DE CACHÉ) --- */
 async function validateAttendance(asistId, asiste, aluId, dur) {
     const token = localStorage.getItem('aikido_jwt');
     const valorEstado = asiste ? 'Asistio' : 'No_asistio';
 
     console.log(`📡 [SENSEI] Validando: ${asistId} -> ${valorEstado}`);
 
-    // 1. Buscamos el elemento visual antes de hacer nada para poder borrarlo luego
     const itemElement = document.getElementById('it-' + asistId);
 
     try {
-        // Ejecución de la lógica en Neon (Strapi)
+        // 1. Actualizamos el estado en Strapi
         const resAsist = await fetch(`${API_URL}/asistencias/${asistId}`, { 
             method: 'PUT', 
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
@@ -2175,7 +2174,7 @@ async function validateAttendance(asistId, asiste, aluId, dur) {
 
         if (!resAsist.ok) throw new Error("Error al actualizar estado en Strapi");
 
-        // Si asiste, sumamos horas
+        // 2. Si asiste, sumamos horas
         if(asiste) {
             const alRes = await fetch(`${API_URL}/alumnos/${aluId}`, { headers: { 'Authorization': `Bearer ${token}` } });
             const alJson = await alRes.json();
@@ -2189,30 +2188,32 @@ async function validateAttendance(asistId, asiste, aluId, dur) {
             });
         }
 
-        // 🥋 CIRUGÍA DOM (SIN RECARGAR PÁGINA)
+        // 3. CIRUGÍA DOM (Limpieza visual sin recargar página)
         if (itemElement) {
             itemElement.style.transition = "opacity 0.3s ease";
             itemElement.style.opacity = "0";
             
             setTimeout(() => {
                 const parentGroup = itemElement.parentElement;
-                itemElement.remove(); // Eliminamos solo esta fila
+                itemElement.remove(); 
 
-                // Actualizamos el contador del grupo visualmente
                 const remaining = parentGroup.querySelectorAll('.student-item').length;
                 const header = parentGroup.parentElement.querySelector('.class-group-header p');
                 
                 if (header) {
                     header.innerText = remaining + " ALUMNOS PENDIENTES";
                     if (remaining === 0) {
-                        // Si ya no quedan, borramos la tarjeta de la clase entera
                         parentGroup.parentElement.remove();
                     }
                 }
             }, 300);
         }
 
-        // Refrescamos datos de fondo de forma silenciosa para mantener el perfil al día
+        // 🥋 EL ESCUDO ANTI-FANTASMAS: Limpiamos las cachés ANTES de refrescar
+        localStorage.removeItem('cache_perfil_alumno');
+        localStorage.removeItem('cache_alumnos_activos');
+
+        // Ahora sí, al refrescar, el móvil estará obligado a descargar la nueva cifra real
         await refreshStudentData();
 
     } catch (e) {
