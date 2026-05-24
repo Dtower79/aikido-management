@@ -1158,6 +1158,39 @@ body.app-ready #app-content {
     visibility: visible;
 }
 
+/* 🥋 EFECTO SKELETON: Pulso elegante de carga */
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0.4; }
+        }
+
+        .skeleton {
+            animation: pulse 1.5s infinite ease-in-out;
+            background: #1e293b !important;
+            border: none !important;
+            color: transparent !important;
+        }
+        .skeleton p, .skeleton h2, .skeleton span, .skeleton div {
+            visibility: hidden; /* Oculta textos internos durante el pulso de carga */
+        }
+
+        /* 🥋 MICRO-INTERACCIÓN: El botón responde al tacto encogiéndose un 5% */
+        .action-btn {
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        }
+        .action-btn:active {
+            transform: scale(0.95); 
+        }
+
+        /* Efecto de confirmación instantánea en verde esmeralda */
+        .btn-confirmed {
+            background: #22c55e !important;
+            color: white !important;
+            transform: scale(1) !important;
+            transition: background 0.3s ease !important;
+        }
+        
     </style>
 </head>
 <body>
@@ -1300,11 +1333,11 @@ body.app-ready #app-content {
             <div id="class-slider-wrapper" style="width: 100%; max-width: 600px; margin: 0 auto; position: relative;">
                 <div id="class-slider" style="display: flex; gap: 15px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 5px;">
 
-                    <!-- Tarjeta por defecto mientras carga -->
-                    <div class="class-hero" style="flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important;">
+                    <!-- Tarjeta por defecto mientras carga (Con esqueleto pulsante) -->
+                    <div class="class-hero skeleton" id="class-hero-card" style="flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important;">
                         <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Buscando Keikos...</p>
-                        <h2 style="margin:12px 0 4px; font-size:38px;">--:--</h2>
-                        <p style="margin:0 0 18px; font-size:17px; font-weight:700;">Conectando...</p>
+                        <h2 id="next-class-time" style="margin:12px 0 4px; font-size:38px;">--:--</h2>
+                        <p id="next-class-date" style="margin:0 0 18px; font-size:17px; font-weight:700;">Conectando...</p>
                     </div>
                 </div>
                 <!-- Los puntitos de navegación -->
@@ -3163,9 +3196,17 @@ async function confirmAttendance(cid = null) {
         });
 
         if (res.ok) {
+            // 🥋 Inyectamos la clase verde de éxito y cambiamos el texto al instante
+            btn.classList.add('btn-confirmed');
+            btn.innerText = "¡REGISTRADO!";
+            
             localStorage.removeItem('cache_asistencias_sensei'); 
-            await checkTodayClass(); 
-            showModal("¡OSS!", "Inscripción confirmada con éxito.");
+            
+            // Retardo sutil de 400ms para que el alumno disfrute de la animación de confirmación
+            setTimeout(async () => {
+                await checkTodayClass(); 
+                showModal("¡OSS!", "Inscripción confirmada con éxito.");
+            }, 400);
         }
     } catch (e) {
         console.error(e);
