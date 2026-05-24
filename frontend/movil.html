@@ -2030,30 +2030,55 @@ async function refreshStudentData() {
         
         if (circle) circle.insertAdjacentHTML('afterend', zenHTML);
     } else if (p) {
-        document.body.classList.remove('is-sensei-mode');
-        if (zenCard) zenCard.remove();
-        if (circle) circle.classList.remove('hidden');
-        
-        const horas = parseFloat(p.horas_acumuladas || 0);
-        document.getElementById('stat-hours').innerText = horas.toFixed(1);
+            document.body.classList.remove('is-sensei-mode');
+            if (zenCard) zenCard.remove();
+            if (circle) circle.classList.remove('hidden');
+            
+            const horas = parseFloat(p.horas_acumuladas || 0);
+            const objHours = document.getElementById('stat-hours');
 
-        let meta = p.grado_objetivo;
-        if (!meta) {
-            const miGrado = (p.grado || "S/G").toUpperCase();
-            const idx = GRADOS_ORDER.indexOf(miGrado);
-            meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "5º KYU";
-        }
+            // 🥋 ANIMACIÓN DEL CONTADOR (De 0.0 a su valor real)
+            if (objHours) {
+                let startTimestamp = null;
+                const duration = 1200; // Duración de la animación (1.2 segundos)
+                
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    const currentVal = progress * horas;
+                    objHours.innerText = currentVal.toFixed(1);
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    } else {
+                        objHours.innerText = horas.toFixed(1); // Forzamos el valor exacto final al terminar
+                    }
+                };
+                window.requestAnimationFrame(step);
+            }
 
-        const normMeta = normalize(meta);
-        const registro = requisitosGradoGlobal.find(r => r.NORM === normMeta);
-        let target = (registro && registro.HORAS > 0) ? registro.HORAS : (GRADOS_FALLBACK[meta] || 60);
-        
-        const bar = document.getElementById('progress-bar');
-        if (bar) {
-            const pct = Math.min((horas / target) * 100, 100);
-            bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
-        }
-        document.getElementById('stat-label').innerText = `HORAS / ${target}`;
+            let meta = p.grado_objetivo;
+            if (!meta) {
+                const miGrado = (p.grado || "S/G").toUpperCase();
+                const idx = GRADOS_ORDER.indexOf(miGrado);
+                meta = (idx !== -1 && idx < GRADOS_ORDER.length - 1) ? GRADOS_ORDER[idx + 1] : "5º KYU";
+            }
+
+            const normMeta = normalize(meta);
+            const registro = requisitosGradoGlobal.find(r => r.NORM === normMeta);
+            let target = (registro && registro.HORAS > 0) ? registro.HORAS : (GRADOS_FALLBACK[meta] || 60);
+            
+            const bar = document.getElementById('progress-bar');
+            if (bar) {
+                // 🥋 ANIMACIÓN DEL ANILLO: Lo ponemos a cero primero
+                bar.style.strokeDashoffset = "339.29";
+                
+                // Damos un respiro de 100ms para que el navegador asimile el cero y luego anime con suavidad hacia el valor real
+                setTimeout(() => {
+                    const pct = Math.min((horas / target) * 100, 100);
+                    bar.style.strokeDashoffset = 339.29 - (pct / 100 * 339.29);
+                }, 100);
+            }
+            document.getElementById('stat-label').innerText = `HORAS / ${target}`;
         if (nextGrade) {
             nextGrade.innerText = `CAMINO AL ${meta.toUpperCase()}`;
             nextGrade.classList.remove('hidden');
