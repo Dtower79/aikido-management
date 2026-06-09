@@ -2387,8 +2387,9 @@ function iniciarModoKiosko() {
 async function checkTodayClass(forcedDojoId = null) {
     const user = JSON.parse(localStorage.getItem('aikido_user')); 
     const aluId = alumnoGlobal ? getID(alumnoGlobal) : null;
-    
-    // 🥋 1. Obtenemos cuál es el "Dojo Casa" del alumno actual
+    const token = localStorage.getItem('aikido_jwt');
+
+    // Dojo del alumno
     const pAlu = alumnoGlobal ? (alumnoGlobal.attributes || alumnoGlobal) : null;
     const miDojoId = (pAlu && pAlu.dojo) ? String(getID(parseRelation(pAlu.dojo))) : null;
 
@@ -2398,17 +2399,25 @@ async function checkTodayClass(forcedDojoId = null) {
         const ahora = new Date();
         const tiempoLimite = new Date(ahora.getTime() - (3 * 3600000)).toISOString();
         
-        // 🥋 Pedimos 30 clases por si el grupo Arashi crece, para que no falte ninguna de ese día
-        const url = `${API_URL}/clases?filters[Fecha_Hora][$gte]=${tiempoLimite}&sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=30`;
-        
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } });
-        const json = await res.json();
+        // 🥋 PETICIÓN 1: Traemos las clases programadas (límite amplio de 40)
+        const urlClases = `${API_URL}/clases?filters[Fecha_Hora][$gte]=${tiempoLimite}&sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=40`;
+        const resC = await fetch(urlClases, { headers: { 'Authorization': `Bearer ${token}` } });
+        const jsonC = await resC.json();
 
-        if (!json.data || json.data.length === 0) return setEmptyDashboard("Sin keikos próximos");
+        if (!jsonC.data || jsonC.data.length === 0) return setEmptyDashboard("Sin keikos próximos");
+
+        // 🥋 PETICIÓN 2: Traemos TODAS las asistencias de este alumno de una sola vez
+        let misAsistencias = [];
+        if (aluId) {
+            const urlAsist = `${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&populate=clase&pagination[limit]=100`;
+            const resA = await fetch(urlAsist, { headers: { 'Authorization': `Bearer ${token}` } });
+            const jsonA = await resA.json();
+            misAsistencias = jsonA.data || [];
+        }
 
         let clasesDisponibles = [];
 
-        for (const c of json.data) {
+        for (const c of jsonC.data) {
             const d = parseData(c);
             const dIdClase = d.dojo ? String(getID(parseRelation(d.dojo))) : null;
             const [fechaPart, resto] = d.Fecha_Hora.split('T');
@@ -2418,23 +2427,21 @@ async function checkTodayClass(forcedDojoId = null) {
             const finLit = new Date(inicioLit.getTime() + (parseFloat(d.Duracion || 1.5) * 3600000));
 
             if (ahora > finLit) continue; 
-            
-            // 🥋 HEMOS ELIMINADO EL FILTRO QUE BLOQUEABA OTROS DOJOS
-            // Ahora dejamos pasar todas las clases de Arashi Group
 
             let estado = null;
             let asistId = null;
 
+            // 🥋 BÚSQUEDA EN MEMORIA: Comparamos en el móvil local, sin llamar a internet
             if (aluId) {
                 const cid = getID(c);
-                const chk = await fetch(`${API_URL}/asistencias?filters[alumno][documentId][$eq]=${aluId}&filters[clase][documentId][$eq]=${cid}`, { 
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('aikido_jwt')}` } 
+                const asistencia = misAsistencias.find(item => {
+                    const itemClass = parseRelation((item.attributes || item).clase);
+                    return getID(itemClass) === cid;
                 });
-                const chkJ = await chk.json();
-                const asistencia = chkJ.data?.[0];
                 
                 if (asistencia) {
-                    estado = asistencia.attributes?.Estado || asistencia.Estado;
+                    const attrA = asistencia.attributes || asistencia;
+                    estado = attrA.Estado || attrA.estado;
                     asistId = asistencia.documentId || asistencia.id;
                 }
                 
@@ -2445,21 +2452,13 @@ async function checkTodayClass(forcedDojoId = null) {
         }
 
         if (clasesDisponibles.length > 0) {
-            // 2. Filtramos para que SOLO queden las clases de ese día exacto
             const fechaObjetivo = clasesDisponibles[0].inicio.toDateString();
             clasesDisponibles = clasesDisponibles.filter(obj => obj.inicio.toDateString() === fechaObjetivo);
 
-            // 3. 🥋 MOTOR DE ORDENACIÓN INTELIGENTE (Mi Dojo -> Hora)
             clasesDisponibles.sort((a, b) => {
-                // Si la clase A es de mi dojo y la B no, la A va primero
                 const esMiDojoA = (a.dojoId === miDojoId) ? -1 : 1;
                 const esMiDojoB = (b.dojoId === miDojoId) ? -1 : 1;
-                
-                if (esMiDojoA !== esMiDojoB) {
-                    return esMiDojoA - esMiDojoB;
-                }
-                
-                // Si ambas son de mi dojo, o ambas son de fuera, ordenamos por Hora
+                if (esMiDojoA !== esMiDojoB) return esMiDojoA - esMiDojoB;
                 return a.inicio - b.inicio;
             });
 
@@ -2603,7 +2602,8 @@ async function loadManageClasses() {
     
     listDiv.innerHTML = `<button class="action-btn" style="margin-bottom:20px; background:#334155; color:white; width:100%;" onclick="loadSenseiPanel()">← VOLVER</button><p style='text-align:center; opacity:0.5; padding:20px;'>Actualizando Tatami Live...</p>`;
 
-    let endpoint = `/clases?sort=Fecha_Hora:asc&pagination[limit]=100&populate=dojo`;
+    let endpoint = `/clases?sort=Fecha_Hora:asc&pagination[limit]=1000&populate=dojo`;
+
     if (dojoId !== 'all') endpoint += `&filters[dojo][documentId][$eq]=${dojoId}`;
 
     const json = await fetchSmart(endpoint, 'clases_archivo', 0);
@@ -3147,7 +3147,7 @@ async function loadMonthlyClasses(el) {
     const listResults = document.getElementById('calendar-list-results');
     
     // LLAVE MAESTRA: 'clases_archivo'
-    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=150', 'clases_archivo', 1);
+    const json = await fetchSmart('/clases?sort=Fecha_Hora:asc&populate=dojo&pagination[limit]=1000', 'clases_archivo', 1);
     
     if (!json || !json.data) return;
 
