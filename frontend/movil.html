@@ -1731,7 +1731,7 @@ body.app-ready #app-content {
         /* --- UTILS --- */
         const parseData = (o) => o.attributes || o;
         const parseRelation = (o) => (!o || !o.data) ? o : (o.data.attributes || o.data);
-        const getID = (o) => o.documentId || o.id;
+        const getID = (o) => o ? (o.documentId || o.id) : null;
 
         /* --- SISTEMA DE CACHÉ Y DEBUG --- */
         // Implementar en tu app.js o movil.html
@@ -2436,8 +2436,9 @@ async function checkTodayClass(forcedDojoId = null) {
             if (aluId) {
                 const cid = getID(c);
                 const asistencia = misAsistencias.find(item => {
-                    const itemClass = parseRelation((item.attributes || item).clase);
-                    return getID(itemClass) === cid;
+                        const itemClass = parseRelation((item.attributes || item).clase);
+                        if (!itemClass) return false; // 🥋 ESCUDO: Evita el crash si hay datos huérfanos en la BD
+                        return getID(itemClass) === cid;
                 });
                 
                 if (asistencia) {
@@ -2573,10 +2574,18 @@ function renderClassSlider(clases, user) {
 }
 
 function setEmptyDashboard(msg) {
-    document.getElementById('next-class-time').innerText = "--:--";
-    document.getElementById('next-class-date').innerText = msg;
-    const btn = document.getElementById('confirm-btn');
-    if(btn) btn.classList.add('hidden');
+    const slider = document.getElementById('class-slider');
+    const dots = document.getElementById('slider-dots');
+    if (slider) {
+        slider.innerHTML = `
+            <div class="class-hero" style="flex: 0 0 100% !important; scroll-snap-align: center !important; margin: 0 !important; box-sizing: border-box !important;">
+                <p style="margin:0; font-size:14px; font-weight:800; opacity:0.9; letter-spacing:1px;">Tatami Cerrado</p>
+                <h2 style="margin:12px 0 4px; font-size:38px;">--:--</h2>
+                <p style="margin:0 0 18px; font-size:17px; font-weight:700;">${msg}</p>
+            </div>
+        `;
+    }
+    if (dots) dots.innerHTML = '';
 }
 
 function setEmptyDashboard(msg) {
