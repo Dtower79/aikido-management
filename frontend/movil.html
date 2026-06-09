@@ -2471,7 +2471,11 @@ async function checkTodayClass(forcedDojoId = null) {
             claseHoyInicio = null;
             setEmptyDashboard("Sin keikos pendientes hoy");
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error("🔥 Error de conexión:", e); 
+        // 🥋 Evitamos la pantalla vacía mostrando un mensaje elegante de fuera de línea
+        setEmptyDashboard("Tatami temporalmente fuera de línea");
+    }
 }
 
 // 🥋 FUNCIÓN DEFINITIVA QUE DIBUJA EL CARRUSEL (CON BLOQUEO DE REPINTADO)
