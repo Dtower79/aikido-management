@@ -1919,8 +1919,10 @@ async function initApp() {
     }
 
     try {
-        // 🥋 CARGA ATÓMICA EN PARALELO (Mata el parpadeo de carga)
-        // Ejecutamos las 3 peticiones a la vez. No se muestra nada hasta que las 3 terminen.
+        // 1. Primero traemos obligatoriamente tu perfil para saber quién eres (aluId)
+        await refreshStudentData();
+
+        // 2. Ahora que ya sabemos quién eres, cargamos el resto en paralelo sin parpadeos
         await Promise.all([
             (async () => {
                 const reqData = await fetchSmart('/requisito-grados?pagination[limit]=100', 'requisitos', 24);
@@ -1932,8 +1934,7 @@ async function initApp() {
                     };
                 });
             })(),
-            refreshStudentData(),
-            checkTodayClass()
+            checkTodayClass() // Ya tiene aluId perfectamente listo
         ]);
 
         // 🥋 DESPLIEGUE DE INTERFAZ (Todo el contenido ya está listo en el DOM)
