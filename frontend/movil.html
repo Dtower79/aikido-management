@@ -2606,7 +2606,8 @@ async function loadManageClasses() {
 
     if (dojoId !== 'all') endpoint += `&filters[dojo][documentId][$eq]=${dojoId}`;
 
-    const json = await fetchSmart(endpoint, 'clases_archivo', 0);
+    // Forzamos bypass de caché (0 horas) usando su propia llave de gestión
+    const json = await fetchSmart(endpoint, 'clases_gestion', 0);
     
     if (!json || !json.data) return;
 
@@ -2731,7 +2732,8 @@ async function saveClass(id) {
         } }) 
     }); 
 
-    localStorage.removeItem('cache_clases_archivo'); 
+    localStorage.removeItem('cache_clases_archivo');
+    localStorage.removeItem('cache_clases_gestion'); // 🥋 Limpiamos también el cajón de gestión
     closeModal(); 
     loadManageClasses(); 
     checkTodayClass(); 
@@ -2782,7 +2784,8 @@ async function executeDelete(id) {
         if (!res.ok) throw new Error("Fallo en la conexión");
 
         // Limpieza de caché e interfaz
-        localStorage.removeItem('cache_clases_archivo'); 
+        localStorage.removeItem('cache_clases_archivo');
+    localStorage.removeItem('cache_clases_gestion'); // 🥋 Limpiamos también el cajón de gestión 
         closeModal(); 
         
         await loadManageClasses(); 
@@ -3023,7 +3026,8 @@ async function processGeneration() {
     }
 
     // 3. FINALIZACIÓN
-    localStorage.removeItem('cache_clases_archivo'); 
+    localStorage.removeItem('cache_clases_archivo');
+    localStorage.removeItem('cache_clases_gestion'); // 🥋 Limpiamos también el cajón de gestión 
     
     // Reseteamos el array para la próxima vez
     selectedMonthsArray = [new Date().getMonth()]; 
