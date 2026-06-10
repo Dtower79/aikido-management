@@ -2123,9 +2123,15 @@ async function loadSenseiPanel() {
     limitDate.setDate(limitDate.getDate() - 7);
 
     try {
-        // 🥋 URL V5 CORREGIDA: Usamos populate[0/1/2] para traer relaciones profundas sin error 400
-        const endpoint = '/asistencias?populate[0]=alumno&populate[1]=clase&populate[2]=clase.dojo&pagination[limit]=500&sort=createdAt:desc';
-        const json = await fetchSmart(endpoint, 'asistencias_sensei_v5', 0); 
+        // 🥋 OPTIMIZACIÓN EXTREMA: Le pedimos a Strapi SOLO lo pendiente (El payload pasa de 500 a 5)
+        let endpoint = `/asistencias?filters[Estado][$eq]=Confirmado&populate[0]=alumno&populate[1]=clase&populate[2]=clase.dojo&pagination[limit]=100&sort=createdAt:desc`;
+        
+        // Si el Sensei ha elegido un Dojo, filtramos directamente desde el servidor
+        if (dojoFilter !== 'all') {
+            endpoint += `&filters[clase][dojo][documentId][$eq]=${dojoFilter}`;
+        }
+
+        const json = await fetchSmart(endpoint, 'asistencias_sensei_v5', 0);
         
         if (!json || !json.data) throw new Error("No hay datos");
 
