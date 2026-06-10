@@ -3389,9 +3389,10 @@ async function startQRScanner() {
     `, true);
 
     setTimeout(async () => {
-        try {
-            html5QrCode = new Html5Qrcode("qr-reader");
-            const config = { fps: 15, qrbox: { width: 220, height: 220 } };
+            try {
+                html5QrCode = new Html5Qrcode("qr-reader");
+                // 🥋 Eliminamos 'qrbox' para quitar el rectángulo blanco y escanear en pantalla completa
+                const config = { fps: 15 };
 
             // 1. OBTENEMOS TODAS LAS LENTES FÍSICAS DEL DISPOSITIVO
             Html5Qrcode.getCameras().then(async (devices) => {
@@ -3470,10 +3471,12 @@ async function switchQRCamera() {
         await html5QrCode.stop(); // Detenemos la lente actual
         
         // Saltamos a la siguiente lente de la lista de forma cíclica
-        currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
-        const nextCameraId = availableCameras[currentCameraIndex].id;
         
-        const config = { fps: 15, qrbox: { width: 220, height: 220 } };
+            currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+            const nextCameraId = availableCameras[currentCameraIndex].id;
+            
+            // 🥋 Eliminamos 'qrbox' para quitar el rectángulo blanco y escanear en pantalla completa
+            const config = { fps: 15 };
         
         await html5QrCode.start(nextCameraId, config, async (decodedText) => {
             if (isProcessingQR) return;
