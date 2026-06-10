@@ -2965,28 +2965,25 @@ function toggleAllYear(btn) {
 
 
 /* --- LÓGICA: PROCESADOR MULTI-MES (VERSIÓN 8.0) --- */
+/* --- PROCESADOR MASIVO DE CLASES --- */
 async function processGeneration() {
     const token = localStorage.getItem('aikido_jwt');
     const year = parseInt(document.getElementById('gen-year-select').value);
-    const dojoId = document.getElementById('sensei-dojo-filter').value;
+    
+    // 🥋 LA CLAVE: Capturamos estrictamente el Dojo del selector del propio Modal
+    const dojoId = document.getElementById('gen-dojo-select').value; 
 
-    // 1. VALIDACIONES
+    // 1. VALIDACIONES OBLIGATORIAS
     if (!dojoId) {
         showModal("⚠️ ATENCIÓN", "Debes seleccionar un Dojo antes de programar.");
         return;
     }
-    
-    if (!dojoId || dojoId === 'all') {
-        showModal("⚠️ AVISO", "Selecciona un DOJO específico arriba antes de generar.");
-        return;
-    }
-
     if (selectedMonthsArray.length === 0) {
-        alert("⚠️ Debes marcar al menos un mes en la cuadrícula.");
+        showModal("⚠️ ATENCIÓN", "Debes marcar al menos un mes en la cuadrícula.");
         return;
     }
 
-    // CAPTURAR EL PATRÓN SEMANAL
+    // 2. CAPTURAR EL PATRÓN SEMANAL
     const pattern = {}; 
     for (let day = 0; day <= 6; day++) {
         for (let slot = 1; slot <= 2; slot++) {
@@ -3000,19 +2997,21 @@ async function processGeneration() {
     }
 
     if (Object.keys(pattern).length === 0) {
-        alert("⚠️ Indica al menos un horario en la semana tipo.");
+        showModal("⚠️ ATENCIÓN", "Indica al menos un horario en la semana tipo.");
         return;
     }
 
     const btn = document.querySelector('#custom-modal .action-btn.primary');
+    const originalText = btn.innerHTML;
+    btn.innerText = "PROGRAMANDO..."; 
     btn.disabled = true;
 
     let totalCreadas = 0;
 
-    // 2. BUCLE POR CADA MES SELECCIONADO
-    // Ordenamos el array para que cree las clases en orden cronológico
+    // Ordenamos cronológicamente
     selectedMonthsArray.sort((a, b) => a - b);
 
+    // 3. INYECCIÓN EN STRAPI
     for (const m of selectedMonthsArray) {
         btn.innerText = `PROGRAMANDO MES ${m + 1}...`;
         let ultimoDia = new Date(year, m + 1, 0).getDate();
@@ -3023,7 +3022,6 @@ async function processGeneration() {
 
             if (pattern[dayOfWeek]) {
                 for (const entreno of pattern[dayOfWeek]) {
-                    // Timezone Fix Literal: Formateamos el string ISO manualmente
                     const iso = `${year}-${(m + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}T${entreno.hora}:00.000Z`;
                     
                     try {
@@ -3034,7 +3032,7 @@ async function processGeneration() {
                                 data: { 
                                     Fecha_Hora: iso, 
                                     Duracion: entreno.dur, 
-                                    dojo: dojoId 
+                                    dojo: dojoId // 🥋 AQUÍ ASEGURAMOS QUE SE GUARDE EL DOJO SELECCIONADO
                                 } 
                             }) 
                         }); 
@@ -3045,14 +3043,15 @@ async function processGeneration() {
         }
     }
 
-    // 3. FINALIZACIÓN
-    localStorage.removeItem('cache_clases_archivo');
-    localStorage.removeItem('cache_clases_gestion'); // 🥋 Limpiamos también el cajón de gestión 
+    // 4. LIMPIEZA TOTAL DE MEMORIA Y CERRADO
+    localStorage.removeItem('cache_clases_archivo'); 
+    localStorage.removeItem('cache_clases_gestion'); 
     
-    // Reseteamos el array para la próxima vez
+    // Reseteamos la selección de meses para la próxima vez
     selectedMonthsArray = [new Date().getMonth()]; 
     
-    showModal("¡MISIÓN CUMPLIDA!", `Se han añadido ${totalCreadas} clases en el calendario para los meses seleccionados.`); 
+    closeModal();
+    showModal("¡MISIÓN CUMPLIDA!", `Se han añadido ${totalCreadas} clases en la sede seleccionada.`); 
     
     if (typeof loadManageClasses === 'function') loadManageClasses();
 }
