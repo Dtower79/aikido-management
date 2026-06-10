@@ -3156,17 +3156,21 @@ async function loadMonthlyClasses(el) {
     const container = document.getElementById('calendar-content');
     
     if (!document.getElementById('cal-dojo-filter')) {
-        const dojoRes = await fetchSmart('/dojos', 'lista_dojos_cal', 24);
-        let options = `<option value="all">-- VER TODOS LOS DOJOS --</option>`;
-        if(dojoRes && dojoRes.data) {
-            dojoRes.data.forEach(d => {
-                options += `<option value="${getID(d)}" ${getID(d) == dojoIdGlobal ? 'selected' : ''}>${(d.attributes?.nombre || d.nombre).toUpperCase()}</option>`;
-            });
+            const dojoRes = await fetchSmart('/dojos', 'lista_dojos_cal', 24);
+            // 🥋 Forzamos que 'all' sea la opción seleccionada por defecto
+            let options = `<option value="all" selected>-- VER TODOS LOS DOJOS --</option>`;
+            if(dojoRes && dojoRes.data) {
+                dojoRes.data.forEach(d => {
+                    // 🥋 Quitamos la regla que marcaba automáticamente el dojo casa del alumno
+                    options += `<option value="${getID(d)}">${(d.attributes?.nombre || d.nombre).toUpperCase()}</option>`;
+                });
+            }
+            container.innerHTML = `<div style="padding: 0 20px 20px; margin-top:10px;"><p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">TATAMI ACTUAL:</p><select id="cal-dojo-filter" class="sensei-select" onchange="loadMonthlyClasses(); checkTodayClass();">${options}</select></div><div id="calendar-list-results"></div>`;
         }
-        container.innerHTML = `<div style="padding: 0 20px 20px; margin-top:10px;"><p style="font-size: 10px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">TATAMI ACTUAL:</p><select id="cal-dojo-filter" class="sensei-select" onchange="loadMonthlyClasses(); checkTodayClass();">${options}</select></div><div id="calendar-list-results"></div>`;
-    }
 
-    const filterDojo = document.getElementById('cal-dojo-filter')?.value || dojoIdGlobal || 'all';
+        // 🥋 El valor por defecto de búsqueda pasa a ser obligatoriamente 'all'
+        const filterDojo = document.getElementById('cal-dojo-filter')?.value || 'all';
+        
     const listResults = document.getElementById('calendar-list-results');
     
     // LLAVE MAESTRA: 'clases_archivo'
