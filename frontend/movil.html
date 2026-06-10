@@ -2124,7 +2124,7 @@ async function loadSenseiPanel() {
 
     try {
         // 🥋 URL V5 CORREGIDA: Usamos populate[0/1/2] para traer relaciones profundas sin error 400
-        const endpoint = '/asistencias?populate[alumno]=true&populate[clase][populate][dojo]=true&pagination[limit]=500&sort=createdAt:desc';
+        const endpoint = '/asistencias?populate[alumno]=*&populate[clase][populate][dojo]=*&pagination[limit]=500&sort=createdAt:desc';
         const json = await fetchSmart(endpoint, 'asistencias_sensei_v5', 0); 
         
         if (!json || !json.data) throw new Error("No hay datos");
