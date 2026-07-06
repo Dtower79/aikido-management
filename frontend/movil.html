@@ -3223,7 +3223,15 @@ async function loadMonthlyClasses(el) {
             if(grouped[m][per].length) {
                 html += `<div class="section-label">${per === 'morning' ? 'MAÑANA' : 'TARDE'}</div><div class="grid-container">`;
                 grouped[m][per].forEach(x => {
-                    html += `<div class="class-card"><span style="font-size:9px; color:var(--accent); font-weight:800; display:block; margin-bottom:4px;">${x.dNom.toUpperCase()}</span><h4>${x.date}</h4><p>${x.time} • ${x.dur}H</p></div>`;
+                    html += `<div class="class-card"><span
+                                style="font-size:9px;
+                                color:var(--accent);
+                                font-weight:800;
+                                display:block;
+                                margin-bottom:4px;">${
+                            x.dNom.toUpperCase()
+                            }</span><h4>${x.date}</h4><p>${x.time} • ${
+                            x.dur}h</p></div>`;
                 });
                 html += "</div>";
             }
