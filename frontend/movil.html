@@ -4333,8 +4333,9 @@ async function openHistoryModal() {
         // Obtenemos los datos y los filtramos
         let clasesAsistidas = (asisJson.data || []).filter(item => {
             const attr = item.attributes || item;
-            const est = (attr.Estado || attr.estado || "").toLowerCase();
-            return est.includes('asistio') || est.includes('asistió');
+            const est = (attr.Estado || attr.estado || "").toLowerCase().trim();
+            // 🥋 FIX: Exigimos coincidencia EXACTA para que "no_asistio" no se cuele
+            return est === 'asistio' || est === 'asistió';
         });
 
         // 🥋 MOTOR DE ORDENACIÓN CRONOLÓGICA EN CLIENTE (ESTO ES LO QUE TE FALTABA)
