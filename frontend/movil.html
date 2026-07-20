@@ -1191,16 +1191,30 @@ body.app-ready #app-content {
             transition: background 0.3s ease !important;
         }
 
-        /* 🥋 ANIMACIÓN POP (Zoom In -> Zoom Out -> Reposo) */
+        /* 🥋 ANIMACIÓN POP (Efecto Cinemático: Zoom extremo y fundido) */
         @keyframes popBounce {
-            0% { opacity: 0; transform: scale(0.5); }
-            60% { opacity: 1; transform: scale(1.2); }
-            100% { opacity: 1; transform: scale(1); }
+            0% { 
+                opacity: 0; 
+                transform: scale(0.1); /* Empieza desde muy al fondo */
+            }
+            45% { 
+                opacity: 0.5; /* Fase translúcida que pedías */
+                transform: scale(1.7); /* ¡Mucho más zoom in hacia la cámara! */
+            }
+            75% { 
+                opacity: 0.9; 
+                transform: scale(0.9); /* Se encoge un poquito más de la cuenta para tomar carrerilla */
+            }
+            100% { 
+                opacity: 1; /* Opaco total */
+                transform: scale(1); /* Aterriza y se clava en su sitio */
+            }
         }
 
         .animate-pop {
-            animation: popBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            display: inline-block; /* Necesario para que el transform funcione sobre texto */
+            /* Subimos a 0.85s para que la vista capte bien el paso de translúcido a sólido */
+            animation: popBounce 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            display: inline-block; 
         }
         
     /* 🥋 OPTIMIZACIÓN SÉNIOR: Tarjeta más estrecha alineada con la cabecera */
