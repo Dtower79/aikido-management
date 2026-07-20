@@ -1216,7 +1216,7 @@ body.app-ready #app-content {
             animation: popBounce 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
             display: inline-block; 
         }
-        
+
     /* 🥋 OPTIMIZACIÓN SÉNIOR: Tarjeta más estrecha alineada con la cabecera */
         .class-hero {
             width: 100% !important; /* Llena exactamente el wrapper que tiene los márgenes */
@@ -1229,6 +1229,24 @@ body.app-ready #app-content {
             padding: 13px !important; /* Reducido de 20px a 13px */
             font-size: 15px !important; /* Reducido de 17px a 15px */
             border-radius: 16px !important; /* Bordes más estilizados */
+        }
+
+        /* 🥋 ANIMACIÓN DE ENTRADA SUAVE PARA LAS TARJETAS (FADE IN) */
+        @keyframes smoothFadeIn {
+            0% { 
+                opacity: 0; 
+                transform: translateY(15px); /* Empieza un poco más abajo */
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateY(0); /* Sube a su posición original */
+            }
+        }
+
+        /* Aplicamos la animación al contenedor de la tarjeta roja */
+        #class-slider-wrapper .class-hero {
+            /* 0.8 segundos de duración, con una curva de velocidad que frena suavemente al final */
+            animation: smoothFadeIn 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
         }
 
 
