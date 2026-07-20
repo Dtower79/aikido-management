@@ -1190,6 +1190,19 @@ body.app-ready #app-content {
             transform: scale(1) !important;
             transition: background 0.3s ease !important;
         }
+
+        /* 🥋 ANIMACIÓN POP (Zoom In -> Zoom Out -> Reposo) */
+        @keyframes popBounce {
+            0% { opacity: 0; transform: scale(0.5); }
+            60% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .animate-pop {
+            animation: popBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            display: inline-block; /* Necesario para que el transform funcione sobre texto */
+        }
+        
     /* 🥋 OPTIMIZACIÓN SÉNIOR: Tarjeta más estrecha alineada con la cabecera */
         .class-hero {
             width: 100% !important; /* Llena exactamente el wrapper que tiene los márgenes */
@@ -1203,6 +1216,7 @@ body.app-ready #app-content {
             font-size: 15px !important; /* Reducido de 17px a 15px */
             border-radius: 16px !important; /* Bordes más estilizados */
         }
+
 
     </style>
 
@@ -2055,23 +2069,15 @@ async function refreshStudentData() {
             const horas = parseFloat(p.horas_acumuladas || 0);
             const objHours = document.getElementById('stat-hours');
 
-            // 🥋 ANIMACIÓN DEL CONTADOR (De 0.0 a su valor real)
+            // 🥋 ANIMACIÓN CSS (Zoom in + Zoom out seguro)
             if (objHours) {
-                let startTimestamp = null;
-                const duration = 1200; // Duración de la animación (1.2 segundos)
+                // 1. Ponemos el valor real al instante
+                objHours.innerText = horas.toFixed(1);
                 
-                const step = (timestamp) => {
-                    if (!startTimestamp) startTimestamp = timestamp;
-                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                    const currentVal = progress * horas;
-                    objHours.innerText = currentVal.toFixed(1);
-                    if (progress < 1) {
-                        window.requestAnimationFrame(step);
-                    } else {
-                        objHours.innerText = horas.toFixed(1); // Forzamos el valor exacto final al terminar
-                    }
-                };
-                window.requestAnimationFrame(step);
+                // 2. Truco de Lead Developer: Forzamos al navegador a reiniciar la animación CSS
+                objHours.classList.remove('animate-pop');
+                void objHours.offsetWidth; // Reflow forzado para que el navegador olvide el estado anterior
+                objHours.classList.add('animate-pop');
             }
 
             let meta = p.grado_objetivo;
