@@ -1983,7 +1983,7 @@ async function initApp() {
         ]);
 
         // 🥋 DESPLIEGUE DE INTERFAZ (Todo el contenido ya está listo en el DOM)
-        showView('dashboard');
+        showView('dashboard', null, true); // 🥋 El 'true' evita la recarga doble y el salto de los números
         const nav = document.getElementById('main-nav');
         if (nav) {
             nav.classList.remove('hidden');
@@ -3703,7 +3703,7 @@ function updateDashboardUI() {
 
 
 /* --- NAVEGACIÓN DE VISTAS (GATEKEEPER) --- */
-function showView(v, el) { 
+function showView(v, el, skipFetch = false) { 
     // 1. Ocultamos todas las secciones
     ['dashboard', 'login', 'sensei', 'clases'].forEach(x => {
         const view = document.getElementById(x + '-view');
@@ -3720,15 +3720,15 @@ function showView(v, el) {
         el.classList.add('active'); 
     }
 
-    // 4. DISPARADORES DE DATOS SEGÚN VISTA
-    if (v === 'dashboard') {
-        refreshStudentData();
-        checkTodayClass();
-    }
-    
-    if (v === 'sensei') {
-        // Al entrar en Sensei, forzamos recarga de filtros y panel
-        loadDojosFilter(); 
+    // 4. 🥋 DISPARADORES DE DATOS (Solo si NO venimos de la carga inicial)
+    if (!skipFetch) {
+        if (v === 'dashboard') {
+            refreshStudentData();
+            checkTodayClass();
+        }
+        if (v === 'sensei') {
+            loadDojosFilter(); 
+        }
     }
 }
         
