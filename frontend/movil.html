@@ -1231,22 +1231,22 @@ body.app-ready #app-content {
             border-radius: 16px !important; /* Bordes más estilizados */
         }
 
-        /* 🥋 ANIMACIÓN DE ENTRADA SUAVE PARA LAS TARJETAS (FADE IN) */
+        /* 🥋 ANIMACIÓN DE ENTRADA SUAVE PARA LAS TARJETAS (FADE IN LENTO Y CINEMÁTICO) */
         @keyframes smoothFadeIn {
             0% { 
                 opacity: 0; 
-                transform: translateY(15px); /* Empieza un poco más abajo */
+                transform: translateY(30px); /* 🥋 Nace desde más abajo para notar el recorrido */
             }
             100% { 
                 opacity: 1; 
-                transform: translateY(0); /* Sube a su posición original */
+                transform: translateY(0); /* Aterriza suavemente en su posición original */
             }
         }
 
         /* Aplicamos la animación al contenedor de la tarjeta roja */
         #class-slider-wrapper .class-hero {
-            /* 0.8 segundos de duración, con una curva de velocidad que frena suavemente al final */
-            animation: smoothFadeIn 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+            /* 🥋 1.5 segundos de duración para disfrutar del efecto */
+            animation: smoothFadeIn 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
         }
 
 
