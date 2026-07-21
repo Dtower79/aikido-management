@@ -1212,8 +1212,8 @@ body.app-ready #app-content {
         }
 
         .animate-pop {
-            /* Subimos a 0.85s para que la vista capte bien el paso de translúcido a sólido */
-            animation: popBounce 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            /* 🥋 Añadimos 0.3s de retraso y la palabra 'both' para que espere invisible */
+            animation: popBounce 0.85s cubic-bezier(0.25, 1, 0.5, 1) 0.3s both;
             display: inline-block; 
         }
 
@@ -1244,9 +1244,10 @@ body.app-ready #app-content {
         }
 
         /* Aplicamos la animación al contenedor de la tarjeta roja */
+        /* Aplicamos la animación al contenedor de la tarjeta roja */
         #class-slider-wrapper .class-hero {
-            /* 🥋 1.5 segundos de duración para disfrutar del efecto */
-            animation: smoothFadeIn 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+            /* 🥋 Añadimos 0.4s de retraso y 'both' para que arranque después de los números */
+            animation: smoothFadeIn 1.5s cubic-bezier(0.25, 1, 0.5, 1) 0.4s both !important;
         }
 
 
